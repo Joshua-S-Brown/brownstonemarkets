@@ -1,6 +1,9 @@
 import io
 from datetime import datetime
 import polars as pl
+
+from .freshness import is_stale
+
 PRICE_COLUMNS = {"marketValue": "market_value", "minBuyout": "min_buyout", "recent": "recent_value", "historical": "historical_value"}
 REQUIRED = {"itemId", "name", "updatedAt", *PRICE_COLUMNS}
 
@@ -40,7 +43,7 @@ def normalize(raw: bytes, market_id: str, snapshot_id: str, collected_at: dateti
         raise ValueError("Expected a single upstream timestamp per file")
     if timestamp_nulls == 0:
         age = (collected_at - frame["updated_at"][0]).total_seconds() / 3600
-        if age > max_age_hours or age < -0.25:
+        if is_stale(age, max_age_hours):
             raise ValueError(f"Upstream timestamp is stale or in the future (age={age:.2f}h)")
     # Zero is preserved as unavailable/no listing, then excluded from ranking.
     return frame.with_columns(

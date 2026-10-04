@@ -2,6 +2,9 @@ import re
 import tomllib
 from pathlib import Path
 
+# A market is this whole identity; item IDs never join across any of these.
+MARKET_KEYS = ("market_id", "game_version", "region", "scope", "realm")
+
 
 def read_config(path: Path) -> dict:
     path = path.resolve()

@@ -1,48 +1,65 @@
-"""Classic Tailoring shortlist policy; no storage, UI or network dependencies."""
-from datetime import datetime
+"""Crafting shortlist policy; no storage, UI or network dependencies.
 
-from .crafting import evaluate_recipe
+The board runs for any market whose game version and ruleset match the catalog, so moving
+from the Classic stand-in to WoW Forever is a configuration change, not a code change.
+"""
+from .config import MARKET_KEYS
+from .crafting import PRICE_BASES, basis_prices, evaluate_recipe
+from .freshness import assess
 
-MARKET = {
-    "market_id": "classic-us-mankrik-alliance", "game_version": "classic",
-    "region": "us", "scope": "realm", "realm": "mankrik-alliance",
-}
-POLICY_VERSION = "0.1"
+POLICY_VERSION = "0.2"
 
 
-def rank_recipes(catalog, prices, market, snapshot, *, now, sort_by="profit", max_age_hours=24,
-                 auction_cut=0.05):
+def compatible(catalog: dict, market: dict) -> bool:
+    return (catalog["game_version"] == market.get("game_version")
+            and catalog["ruleset"] == market.get("ruleset"))
+
+
+def rank_recipes(catalog, observations, market, snapshot, *, now, sort_by="profit",
+                 basis="cautious", max_age_hours=24, auction_cut=0.05):
     """Rank finished outputs; missing evidence sorts last, stale never signals action.
 
-    Prices are positive unit minimum buyouts from one scoped analytical snapshot.
-    Margin is profit / net revenue. Zero profit is conservatively non-actionable.
+    Observations map item ID to unit copper {"min_buyout", "market_value"} from one scoped
+    analytical snapshot. ``basis`` selects the ranked and labeled estimate; every row also
+    carries profit under each basis. Margin is profit / net revenue; zero profit is
+    conservatively non-actionable.
     """
-    if any(market.get(key) != value or snapshot.get(key) != value
-           for key, value in MARKET.items()):
-        raise ValueError("Action Board requires a Mankrik Alliance Classic Era snapshot")
-    if catalog["game_version"] != "classic" or catalog["ruleset"] != "classic-era":
-        raise ValueError("Action Board requires the Classic Era catalog")
+    if not compatible(catalog, market):
+        raise ValueError("The catalog's game version and ruleset must match the market")
+    if any(snapshot.get(key) != market.get(key) for key in MARKET_KEYS):
+        raise ValueError("The snapshot belongs to a different market")
     if sort_by not in {"profit", "margin"}:
         raise ValueError("sort_by must be profit or margin")
-    if max_age_hours <= 0:
-        raise ValueError("max_age_hours must be positive")
-    timestamp = snapshot.get("updated_at") or snapshot["collected_at"]
-    age = (now - datetime.fromisoformat(timestamp)).total_seconds() / 3600
-    stale = age > max_age_hours or age < -0.25
+    if basis not in PRICE_BASES:
+        raise ValueError(f"Unknown price basis {basis}")
+    freshness = assess(snapshot, now, max_age_hours)
+    prices = {name: basis_prices(observations, name) for name in PRICE_BASES}
     rows = []
     for recipe in catalog["recipes_by_id"].values():
-        if catalog["items_by_id"][recipe["output_item_id"]]["role"] != "finished":
+        output = catalog["items_by_id"][recipe["output_item_id"]]
+        if output["role"] != "finished":
             continue
-        result = evaluate_recipe(catalog, recipe["recipe_id"], prices, auction_cut)
+        try:
+            results = {name: evaluate_recipe(catalog, recipe["recipe_id"], buy, auction_cut, sell)
+                       for name, (buy, sell) in prices.items()}
+        except ValueError as error:
+            # One unsupported recipe (cycle, fractional units) must not hide the rest of the board.
+            rows.append({"recipe_id": recipe["recipe_id"], "output_item_id": output["item_id"],
+                         "output_name": output["name"], "valid": False, "error": str(error),
+                         "action": "unsupported recipe", "craft_cost_copper": None,
+                         "sale_price_copper": None, "net_revenue_copper": None,
+                         "profit_copper": None, "margin": None,
+                         "profit_by_basis": dict.fromkeys(PRICE_BASES)})
+            continue
+        result = results[basis]
+        result["profit_by_basis"] = {name: r["profit_copper"] for name, r in results.items()}
         result["action"] = ("missing prices" if not result["valid"] else
-                            "stale data" if stale else
+                            "stale data" if freshness["stale"] else
                             "potential craft" if result["profit_copper"] > 0 else "negative margin")
         rows.append(result)
     primary = "profit_copper" if sort_by == "profit" else "margin"
     secondary = "margin" if sort_by == "profit" else "profit_copper"
-    rows.sort(key=lambda row: (not row["valid"], -(row[primary] or 0),
+    rows.sort(key=lambda row: (not row["valid"], "error" in row, -(row[primary] or 0),
                                -(row[secondary] or 0), row["recipe_id"]))
     return {"rows": [{**row, "rank": rank} for rank, row in enumerate(rows, 1)],
-            "age_hours": age, "stale": stale,
-            "freshness_basis": "upstream scan" if snapshot.get("updated_at") else "collection",
-            "policy_version": POLICY_VERSION}
+            "freshness": freshness, "basis": basis, "policy_version": POLICY_VERSION}

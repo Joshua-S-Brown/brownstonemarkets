@@ -1,71 +1,81 @@
-# Brownstone design and delivery roadmap
+# Brownstone design
 
-## Objective
+How the system is built. Rules and their rationale live in `requirements.md`; this document covers structure, data contracts and extension points.
 
-Follow materials from their market prices through intermediate crafts to saleable products. Explain purchasing and crafting opportunities using observed prices, historical behavior and liquidity. Mankrik Alliance Classic Era is the active development market; Retail remains supported but is not the current product focus, and Forever waits for reliable pricing. Do not assume prices, recipe rules or item identifiers are interchangeable across game versions.
-
-## Immediate findings
-
-The current Area 52 source is a Retail non-commodity realm feed. Retail commodities have a separate regional feed. The missing materials are a coverage gap, not an intentional category filter. The first score is a discount screen, not a profit or liquidity model. Extreme discounts can favor illiquid finished goods. Categories cannot be inferred reliably from names or from commodity status: a commodity can be a finished consumable, and a material can also be a crafted intermediate.
-
-The Mankrik Classic feed provides useful minimum buyouts but leaves `updatedAt` blank and currently reports historical values as zero. Collection time is therefore an explicitly labeled freshness fallback, and the old discount screen is not the Classic decision surface. Crafting estimates use compatible positive minimum buyouts; demand and listing depth remain unknown.
-
-## Delivery order
-
-1. Establish GitHub source control and a baseline commit. Keep data, local environments, logs and credentials out of Git. Add CI using the offline tests; do not download live markets inside CI tests.
-2. Complete market coverage: realm items plus regional commodities. Add explicit game version, region, scope, realm and source timestamps. Compare schemas from live feeds before accepting them. Never join markets by item ID alone.
-3. Add a sourced item catalog: version, item ID, name, class/subclass and trade flags. Allow unknown categories. Keep metadata separate from changing price observations. Distinguish raw materials, intermediates and finished goods through recipe relationships and curated roles, with provenance.
-4. Demonstrate one profession and a small set of actual recipes. Store recipe inputs and outputs with quantities, source/version and assumptions. Answer what uses a material, what a product requires, and buy-versus-craft costs. Handle missing prices and recipe cycles explicitly.
-5. Improve analysis: regional sale statistics where available, history-based features, liquidity and confidence alongside price spreads. Keep feature calculation separate from ranking policy. Backtest only after sufficient distinct upstream scans exist.
-6. Automate collection and backup after replay/recovery and scan deduplication work. Choose snapshot storage separately from the code repository. Scheduling must operate independently of the browser UI.
-
-## Core data contracts
-
-| Entity | Key / purpose |
-| --- | --- |
-| Item | game version + item ID; descriptive metadata and provenance |
-| Market | game version + region + scope + optional realm; commodity scope is regional in Retail |
-| Snapshot | source + upstream scan time + content hash; collected_at tracks retrieval separately |
-| Price observation | snapshot + market + versioned item identity; integer copper and availability |
-| Recipe | game version + recipe ID + ruleset/version; profession, source and effective version |
-| Recipe input | recipe + input item + role/slot; required quantity and permitted alternatives |
-| Recipe output | recipe + output item; quantity or yield assumptions |
-| Analytical feature | observation/window + feature definition/version; liquidity, discount, volatility |
-
-Use ordinary relational tables in DuckDB and Parquet first. Recipe input/output tables represent a graph without a graph database. Recipe availability, rank/quality, optional reagents and variable yields require explicit handling when the chosen game version needs them; reject unsupported cases rather than implying precision. Intermediate crafting costs must preserve units and avoid counting the same material twice.
-
-## Code boundaries
-
-The current single pipeline module is a v0.1 proof. Extract focused modules as the next feature touches them:
+## Data flow
 
 ```text
-brownstone/
-  sources/       TSM downloads and later catalog/recipe adapters
-  transforms/    parsing, normalization and quality rules
-  storage/       snapshots, manifests, database loads and replay
-  catalog/       item metadata and category/role mapping
-  crafting/      recipe traversal, quantities and cost calculations
-  analysis/      reusable features and ranking policies
-  pipeline.py    orchestration only
-app.py           display and user-triggered actions
+TSM CSV ──download──▶ bronze (exact bytes + manifest JSON)
+        ──normalize─▶ silver (validated Parquet, one per collection)
+        ──load──────▶ DuckDB market_snapshots (deduplicated analytical snapshots)
+        ──rank──────▶ gold (discount-screen CSV/Parquet per collection)
+
+catalog TOML ──load──▶ crafting / action_board ◀── price_observations (DuckDB)
 ```
 
-Dependencies flow from interface to orchestration to domain functions and storage/adapters. Domain calculations do not import Streamlit or fetch URLs. Avoid shared mutable configuration and premature plugin frameworks. A new feature gets a narrow module, a documented input/output contract and tests for important behavior.
+Raw bytes are written before validation, so failures stay inspectable. DuckDB writes are transactional, but silver, DuckDB and gold together are not one atomic operation (see `status.md` for recovery).
 
-## Next milestone acceptance
+## Modules
 
-- A sourced subset of Classic Tailoring bags appears in a sortable crafting opportunity table.
-- Complete estimates show cost, net revenue, profit and margin; incomplete or stale estimates are clearly labeled.
-- Recipe detail explains direct and expanded inputs plus buy, craft or vendor choices.
-- Calculations remain outside Streamlit and have offline tests.
-- No action label implies liquidity, guaranteed sale or recommended quantity.
+```text
+app.py                  Streamlit entry: sidebar, Refresh, view dispatch
+views/                  Streamlit only; display, no calculations
+  common.py             snapshot loading, freshness display, gold columns
+  crafting.py           Action Board and recipe explanation
+  market.py             Browse market and Opportunities
+brownstone/             importable without Streamlit
+  config.py             market.toml loading/validation; MARKET_KEYS
+  sources.py            HTTP download
+  normalization.py      CSV → validated frame
+  pipeline.py           orchestration of one collection
+  storage.py            DuckDB load/dedup, manifests, scoped price reads
+  analysis.py           browse and discount screen queries
+  freshness.py          the one staleness policy
+  money.py              copper ↔ gold display helpers
+  crafting.py           catalog loading, expansion, route costs, price bases
+  action_board.py       ranking and label policy (versioned)
+launch.py               local server launcher with code-fingerprint restart
+```
 
-## Open decisions
+Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain modules (`crafting`, `action_board`, `freshness`, `money`) do no I/O and take the clock as a parameter. The `dashboard` extra (Streamlit) is needed only for `app.py` and `views/`.
 
-Repository confirmed: Joshua-S-Brown/brownstonemarkets. Mankrik Alliance Classic Era is the active market for the Tailoring proof, while Retail remains a regression surface and the separate Forever catalog is retained for later compatibility. Work priority and user stories live in `backlog.md`; implemented state lives in `status.md`.
+## Data contracts
 
-## Action Board v0.1 implementation
+| Entity | Identity | Notes |
+| --- | --- | --- |
+| Market | `market_id, game_version, region, scope, realm` (+ `ruleset` for crafting) | Defined per `[[sources]]` entry in `config/market.toml` |
+| Collection | `snapshot_id` (UTC time + random suffix) | Bronze CSV + manifest; manifest records `analytical_snapshot_id` |
+| Analytical snapshot | market + upstream scan time + SHA-256 | Repeated identical content reuses the earlier ID |
+| Price observation | analytical snapshot + market identity + item ID | Integer copper: `min_buyout, market_value, recent_value, historical_value` |
+| Catalog | `game_version, ruleset, catalog_version` | TOML; items with role and provenance, recipes with inputs and output quantity |
 
-`crafting.py` returns direct route costs, the all-craft expansion, selected-route shopping quantities and costs, margin and break-even unit price. Copper rounding uses Decimal: revenue floors and break-even ceilings. `action_board.py` owns the versioned ranking/label policy and accepts a scoped market, a snapshot manifest, unit prices and an explicit clock; it performs no downloads or UI operations. `storage.recipe_prices` filters snapshot, game version, market ID, region, scope and realm together. Streamlit renders the board and explanation in Crafting, the default view for the selected Classic market. Other markets retain the legacy browser/screen and catalog inspection.
+The `market_snapshots` table is created from the first silver file's schema, and identity columns are added by additive migration. An explicit DDL and schema version are planned before STORY-004/006.
 
-Catalog version 0.1 remains TOML, with three representative finished bags and their intermediates. The normalized relational catalog/import path remains STORY-004. Missing prices precede stale labels; stale estimates remain visible for inspection. Collection age is used only when upstream scan time is unavailable, including repeated-content collections, and is never described as upstream observation age.
+## Crafting calculation
+
+- `basis_prices(observations, basis)` turns observed prices into buy and sell unit price maps (CRAFT-04).
+- `evaluate_recipe(catalog, recipe_id, buy, auction_cut, sell)` chooses each input's cheapest route recursively. It returns:
+  - direct choices
+  - the chosen-route shopping list
+  - the all-craft expansion
+  - cost, net revenue, profit, margin and break-even
+- `Decimal` handles the auction-cut rounding.
+- `rank_recipes` checks that the catalog, market and snapshot are compatible, then:
+  - evaluates every finished output under both bases
+  - labels and sorts the rows (CRAFT-05)
+  - isolates per-recipe errors so one bad recipe doesn't hide the others
+
+## Switching to WoW Forever
+
+1. Add a `[[sources]]` entry with `game_version = "forever"`, the Forever `ruleset`, region, scope and the feed URL.
+2. Bring `config/forever-tailoring.toml` to the same ruleset and verification standard as the Classic catalog.
+3. If the feed is not TSM CSV, add an adapter in `sources.py` / `normalization.py` that produces the same silver columns.
+
+No change to crafting, the Action Board or the views should be needed. If one is, treat it as a design defect.
+
+## Known design debt
+
+- Configuration and records are plain dicts. A small typed `Source`/`Market` model would catch key typos.
+- DuckDB schema is implicit (see above).
+- `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.
+- No linter or type checker yet.

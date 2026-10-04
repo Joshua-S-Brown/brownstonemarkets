@@ -1,1 +1,3 @@
-"""Brownstone Markets v0.1."""
+"""Brownstone Markets."""
+
+__version__ = "0.2.0"  # Keep in step with pyproject.toml.

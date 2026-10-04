@@ -24,17 +24,21 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     monkeypatch.setattr("brownstone.config.read_config", lambda path: config)
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
-    assert any(h.value == "Classic Tailoring Action Board v0.1" for h in at.subheader)
+    assert any(m.value == "#### Tailoring Action Board" for m in at.markdown)
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert len(table) == 3
-    assert table.iloc[0]["Bag"] == "Mageweave Bag"
+    assert table.iloc[0]["Item"] == "Mageweave Bag"
     assert table.iloc[2]["Action"] == "negative margin"
     next(w for w in at.selectbox if w.label == "Rank by").set_value("margin").run()
     assert not at.exception
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
-    assert table.iloc[0]["Bag"] == "Woolen Bag"
-    assert any(m.label == "Break-even output unit price" for m in at.metric)
+    assert table.iloc[0]["Item"] == "Woolen Bag"
+    assert any(m.label == "Break-even sale price" for m in at.metric)
+    at.radio[0].set_value("Opportunities").run()
+    assert not at.exception
+    assert any("cannot run" in i.value for i in at.info)  # Classic historical values are zero.
     next(w for w in at.selectbox if w.label == "Data source").set_value(1).run()  # Retail keeps its existing view available.
     at.radio[0].set_value("Browse market").run()
     assert not at.exception
-    assert not any(h.value == "Classic Tailoring Action Board v0.1" for h in at.subheader)
+    assert not any(m.value == "#### Tailoring Action Board" for m in at.markdown)
+    assert any(h.value == "Browse market" for h in at.subheader)

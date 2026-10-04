@@ -1,18 +1,20 @@
 # Working on Brownstone Markets
 
-Use the project documents according to the task instead of loading all of them by default:
+Read the document that fits the task instead of loading all of them:
 
-- `docs/requirements.md` for product scope, accepted decisions and requirement changes.
-- `docs/design.md` for architecture or data-contract changes.
-- `docs/backlog.md` for priority, user stories and selecting the next feature.
-- `docs/status.md` for implemented state, limitations, verification and session handoff.
+- `docs/requirements.md`: product direction, rules and open decisions. This is the single home for rules.
+- `docs/design.md`: modules, data contracts, extension points (including switching to WoW Forever).
+- `docs/backlog.md`: priority and user stories.
+- `docs/status.md`: current state, limitations and how to verify. Describe *now*; history belongs in Git.
 
-Explicit user instructions take precedence. Update the relevant document when a decision or implementation changes it.
+Explicit user instructions take precedence. When a decision or implementation changes a document, update it there and link from elsewhere rather than restating it.
 
-- Preserve raw bytes and provenance; exclude data, environments, logs and credentials from Git.
-- Maintain game version and market scope. Item ID alone is not a cross-version identity.
-- Separate UI, ingestion, normalization, storage and calculations. No Streamlit or downloads in domain calculations.
-- Do not infer categories from names/commodity status or treat unavailable prices as free materials.
-- Keep tests offline and cover meaningful scope, units, freshness, deduplication and recipe quantities when implemented.
-- User handles commits/pushes in VS Code; leave changes reviewable unless explicitly instructed to commit or push.
-- Coverage work does not authorize crafting engine, addon, cloud deployment or scheduled collection.
+- WoW Forever is the target. Classic Era Mankrik Alliance is a development stand-in. Retail is regression-only; don't build features for it.
+- Preserve raw bytes and provenance. Keep data, environments, logs and credentials out of Git.
+- A market is its full identity (`MARKET_KEYS` plus ruleset for crafting). Item ID alone never joins across versions or scopes.
+- Calculate in integer copper. Display gold using `brownstone/money.py`.
+- `brownstone/` must not import Streamlit or download inside calculations. Display code goes in `views/`.
+- Never infer categories from names or commodity status. Never treat missing or zero prices as free.
+- Tests stay offline. Cover scope, units, freshness, deduplication and recipe quantities.
+- The user commits and pushes manually. Leave changes uncommitted unless asked.
+- Don't add addons, automated trading, cloud deployment or scheduled collection without an explicit decision.

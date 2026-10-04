@@ -12,6 +12,7 @@ game_version = "classic"
 region = "us"
 scope = "realm"
 realm = "mankrik-alliance"
+ruleset = "classic-era"  # Crafting catalogs with the same game_version and ruleset can price against this market.
 source_url = "https://public-data.tradeskillmaster.com/classic/us/realm/mankrik-alliance/items.csv"
 allow_missing_updated_at = true
 

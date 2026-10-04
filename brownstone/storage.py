@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import duckdb
 
+from .config import MARKET_KEYS
+
 
 def load_snapshot(db, silver, frame, config):
     db.execute("CREATE TABLE IF NOT EXISTS market_snapshots AS SELECT * FROM read_parquet(?) LIMIT 0", [str(silver)])
@@ -33,16 +35,25 @@ def completed_snapshots(config):
     return sorted(records, key=lambda r: r["collected_at"], reverse=True)
 
 
-def recipe_prices(db, config, snapshot_id, item_ids):
-    """Read unit buyouts with the entire market identity, never item ID alone."""
+def latest_snapshot(config):
+    """Newest completed manifest and the analytical snapshot ID its prices live under."""
+    manifests = completed_snapshots(config)
+    if not manifests:
+        return None, None, 0
+    latest = manifests[0]
+    return latest, latest.get("analytical_snapshot_id", latest["snapshot_id"]), len(manifests)
+
+
+def price_observations(db, config, snapshot_id, item_ids):
+    """Read unit copper prices with the entire market identity, never item ID alone."""
     if not item_ids:
         return {}
-    keys = ["market_id", "game_version", "region", "scope", "realm"]
-    predicates = " AND ".join(f"{key}=?" for key in keys)
+    predicates = " AND ".join(f"{key}=?" for key in MARKET_KEYS)
     placeholders = ", ".join("?" for _ in item_ids)
     rows = db.execute(
-        f"SELECT item_id, min_buyout FROM market_snapshots WHERE snapshot_id=? "
+        f"SELECT item_id, min_buyout, market_value FROM market_snapshots WHERE snapshot_id=? "
         f"AND {predicates} AND item_id IN ({placeholders})",
-        [snapshot_id, *[config[key] for key in keys], *item_ids],
+        [snapshot_id, *[config[key] for key in MARKET_KEYS], *item_ids],
     ).fetchall()
-    return dict(rows)
+    return {item_id: {"min_buyout": listed, "market_value": market}
+            for item_id, listed, market in rows}

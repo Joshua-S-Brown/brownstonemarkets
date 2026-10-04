@@ -9,6 +9,13 @@ def browse(connection, snapshot_id, search="", limit=100):
         ORDER BY item_name, item_id LIMIT ?""", [snapshot_id, search, search, limit]).pl()
 
 
+def screenable_count(connection, snapshot_id):
+    """Rows with every reference price positive; the discount screen can use only these."""
+    return connection.execute("""SELECT count(*) FROM market_snapshots WHERE snapshot_id=?
+        AND min_buyout > 0 AND market_value > 0 AND recent_value > 0 AND historical_value > 0""",
+        [snapshot_id]).fetchone()[0]
+
+
 def rank(connection: duckdb.DuckDBPyConnection, snapshot_id: str, config: dict) -> pl.DataFrame:
     return connection.execute("""
         WITH price_references AS (

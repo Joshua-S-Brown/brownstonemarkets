@@ -76,8 +76,41 @@ def material_plan(catalog: dict, recipe_id: int) -> dict[int, int]:
     return dict(sorted(totals.items()))
 
 
-def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05) -> dict:
-    """Cost a recipe, choosing the cheaper valid buy or craft path for intermediates."""
+PRICE_BASES = {
+    "cautious": "Buy inputs at the higher, sell output at the lower, of minimum buyout and market value",
+    "listed": "Buy and sell at the current minimum buyout",
+}
+
+
+def basis_prices(observations: dict[int, dict], basis: str) -> tuple[dict[int, int], dict[int, int]]:
+    """Return (buy, sell) unit copper prices for a price basis.
+
+    Observations map item ID to {"min_buyout", "market_value"}; zero means unavailable.
+    One cheap listing rarely covers a whole shopping list, so the cautious basis prices
+    purchases at the higher available value and sales at the lower. When only one value
+    is positive it is used for both; when neither is, the item stays missing.
+    """
+    if basis not in PRICE_BASES:
+        raise ValueError(f"Unknown price basis {basis}")
+    buy, sell = {}, {}
+    for item_id, observed in observations.items():
+        listed = observed.get("min_buyout")
+        if basis == "listed":
+            values = [listed]
+        else:
+            values = [listed, observed.get("market_value")]
+        values = [value for value in values if type(value) is int and value > 0]
+        if values:
+            buy[item_id], sell[item_id] = max(values), min(values)
+    return buy, sell
+
+
+def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05,
+                    sale_prices: dict[int, int] | None = None) -> dict:
+    """Cost a recipe, choosing the cheaper valid buy or craft path for intermediates.
+
+    ``prices`` are unit purchase prices; ``sale_prices`` (default: ``prices``) price the output.
+    """
     if not 0 <= auction_cut < 1:
         raise ValueError("auction_cut must be in [0, 1)")
     choices = []
@@ -135,7 +168,7 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
             total += cost * ingredient["quantity"]
 
     output_id = recipe["output_item_id"]
-    sale = prices.get(output_id)
+    sale = (prices if sale_prices is None else sale_prices).get(output_id)
     valid_sale = type(sale) is int and sale > 0
     valid = not missing and valid_sale
     retained = Decimal(1) - Decimal(str(auction_cut))
