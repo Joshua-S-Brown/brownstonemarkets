@@ -17,28 +17,15 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing active. Next up is SPIKE-008, which needs your in-game time on the beta. Launch market: Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`).
+Nothing active. SPIKE-008 is done: build the addon (decision and data format in `requirements.md`). Next up is STORY-010. Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers.
 
-Recently completed: STORY-009, market and source separated, 2026-10-04 (see `status.md`).
+Recently completed: SPIKE-008, addon scan prototype, 2026-10-04 (see `status.md`).
 
 ## Next
 
-### SPIKE-008 — Prove an addon can scan the auction house
-
-Time-boxed to about two sessions. Its output is a decision, not production code.
-
-As the product owner, I want to know whether a small in-game addon can capture every listing on an auction house, so that Brownstone can get Forever prices and inventory without depending on TSM.
-
-Acceptance:
-- **Prototype:** a minimal addon, written in Lua, the language WoW addons use. A scan starts only from a click at the auction house and records every listing: item, quantity, unit buyout, scan time and which auction house. It writes them to the addon's saved data file (WoW calls this SavedVariables), which the game saves on logout or `/reload`.
-- **Run it** on the Forever beta, on the Roleplaying Alliance auction house, and once at a neutral house. Confirm which auction API the client exposes: Forever reportedly uses `C_AuctionHouse` with Retail-style commodities.
-- **Record measurements:** scan time for a full house, throttling behaviour, file size, and anything that needs a hardware click.
-- **Confirm the rules:** it doesn't automate gameplay, it never buys or posts, and it stays within Blizzard's addon policy.
-- **Write up the decision** in `requirements.md`: build the addon or not, plus the listing-level data format STORY-010 will ingest.
-
 ### STORY-010 — Ingest addon scans
 
-Depends on SPIKE-008's decision.
+Ready: SPIKE-008 decided to build the addon; the format is in `requirements.md`.
 
 As a gold maker, I want my own auction house scans imported, so that I see how many units are listed at each price, not just the cheapest.
 
@@ -47,7 +34,8 @@ Acceptance:
 - **Listing-level storage.** A new listings table stores quantity and unit buyout per listing, keyed to the market and scan.
 - **Same price view.** Item-level prices are derived in the same shape the board already reads (`min_buyout`, plus a median or market-value equivalent), so crafting works on Forever with no calculation changes.
 - **Deduplication.** Re-importing the same scan is a no-op, and partial scans are labeled as partial.
-- **Tests** run on a checked-in sample scan file.
+- **Stack prices.** Forever buyouts are per stack. Listing-level storage keeps raw `buyout` and `quantity`, and the unit price handling for non-exact divisions is decided here (see `requirements.md`).
+- **Tests** run on the checked-in sample scan, `tests/fixtures/brownstone_scan_sample.lua`.
 
 ### STORY-011 — Optional third-party scan sources
 
@@ -107,6 +95,11 @@ These are grouped by what unblocks them.
 4. History, volatility and confidence features.
 5. Backtesting the ranking policies.
 6. Alerts.
+
+**Addon follow-ups** (any time, none urgent):
+- Scan the Roleplaying house once the beta offers it, and a neutral house when reachable, to confirm house identification and the 15% cut market.
+- Check whether `/bscan start` works without the button click.
+- Reduce file size (shorter field names or keeping fewer scans) if several scans make loading slow.
 
 **Other professions:** after STORY-004 proves the importer.
 

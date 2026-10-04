@@ -19,7 +19,12 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - **Optional sources:** other players' aggregated scans (third-party sites, TSM). They may only enrich or cross-check, never be required.
   - **Access rules:** a third-party source is used only through an official export or API whose terms allow it, never by scraping.
   - **Removability:** if an optional source disappears, Brownstone keeps working on the baseline.
-- **Addon:** a read-only scanning addon is under evaluation (SPIKE-008). If it's built, it only reads listings after a click at the auction house. It never buys, posts or scans unattended.
+- **Addon (decided 2026-10-04, SPIKE-008): build it.** A read-only addon, `addon/BrownstoneScan/`, scans only after a click or slash command at the auction house and never buys, posts, cancels or scans unattended.
+  - **Evidence:** on the Forever beta (client 1.60.1, build 70205), one scan of the Alliance Normal-server house in Stormwind used `C_AuctionHouse.ReplicateItems` and saved 101,485 listings in about 10.6 s, in a 24 MB SavedVariables file. A second scan three minutes later got no reply, as the documented 15-minute account-wide throttle predicts. The client has no legacy auction event.
+  - **Not measured:** the Roleplaying house (not yet available in the beta), a neutral house (out of reach for now), and whether a slash command alone is accepted without the button click. The button worked.
+  - **Scan format STORY-010 ingests:** `BrownstoneScanDB` with `schema_version` 1 and a list of scans; fields are documented in `addon/README.md`, with a sample at `tests/fixtures/brownstone_scan_sample.lua`. Each scan has a `scan_id`, UTC start and finish, `status` (`completed` or `stopped`), `listing_count` against `reported_count`, client build, region, realm, player faction, auctioneer and zone, and a free-text `label`. Importing must treat `label`, auctioneer and zone as evidence of which house it is, never as a configured `market_id`.
+  - **Listing semantics:** Forever's `buyout` is the price of the whole stack (Classic-style), with `quantity` the stack size, and no commodity status is reported. `unit_buyout` is present only when `buyout / quantity` is an exact copper amount, about three in four stacked listings. A missing `buyout` means no buyout, never free. Listings the client hadn't fully loaded have an empty `name` and no `link`, but valid item ID, quantity and buyout. STORY-010 must decide how to price stacks with no exact unit price.
+  - **Known costs:** about 240 bytes per listing, so a full scan is large and loads slowly if several accumulate. Region and realm are generic on the beta and do not identify the house.
 - **Out of scope:** automated buying, selling or posting, unattended in-game scanning, cloud deployment and AI-generated recommendations without explainable features.
 
 ## Rules
@@ -92,9 +97,8 @@ Demand, sale likelihood, listing depth, deposits, recommended quantities, vendor
 - Catalog source and import path at scale (STORY-004).
 - Useful action thresholds beyond profit > 0.
 - Classic regional demand integration (STORY-003).
-- Whether to build the scanning addon (SPIKE-008).
 - Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011).
 - Historical storage, backup and scheduling.
-- Whether to remove the Retail regression sources. Weigh this after SPIKE-008: if Forever uses Retail-style commodities, Retail's regional commodity feed may be the closest existing test of that model.
+- Whether to remove the Retail regression sources. SPIKE-008 found Forever listings are per-stack, not Retail-style per-unit commodities, so the Retail commodity feed is not a close test of Forever's model.
 
 None is approved by default.

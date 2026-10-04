@@ -12,3 +12,4 @@ data/**
 !data/bronze/.gitkeep
 !data/silver/.gitkeep
 !data/gold/.gitkeep
+.DS_Store

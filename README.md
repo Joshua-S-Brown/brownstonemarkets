@@ -66,6 +66,7 @@ data/bronze/<source>/   exact downloaded bytes + manifest JSON (hash, source, ti
 data/silver/<source>/   validated Parquet per collection
 data/gold/<source>/     discount-screen output per collection
 data/brownstone.duckdb  market_snapshots table (schema upgrades keep a brownstone.v<N>.backup.duckdb copy)
+data/inbox/addon-scans/ addon SavedVariables files copied out of the game, waiting to be imported
 ```
 
 Data is excluded from Git, so back up `data/` separately. Run one writer at a time. Validation and freshness rules are in [requirements](docs/requirements.md).
