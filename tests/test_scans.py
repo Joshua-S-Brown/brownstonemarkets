@@ -14,7 +14,7 @@ from brownstone import cli, scans
 from brownstone.action_board import rank_recipes
 from brownstone.config import build_source
 from brownstone.crafting import load_recipe_catalog
-from brownstone.pipeline import clear_reminder, import_scans
+from brownstone.pipeline import import_guidance, import_scans
 from brownstone.storage import MIGRATIONS, latest_snapshot, price_observations, schema_version
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -148,7 +148,7 @@ def test_import_preserves_bytes_dedupes_and_labels_partial_scans(tmp_path):
     # Stored compressed (DATA-01): decompressing gives back the exact bytes.
     assert manifest["bronze_file"].endswith(".lua.gz")
     assert gzip.decompress((bronze / manifest["bronze_file"]).read_bytes()) == FIXTURE.read_bytes()
-    assert manifest["already_imported"] == 0 and clear_reminder(manifest) is None
+    assert manifest["already_imported"] == 0 and "/bscan clear" in import_guidance(manifest)
     assert manifest["status"] == "complete" and manifest["scan_id"] == COMPLETE
     assert manifest["analytical_snapshot_id"] == f"my-scans:{COMPLETE}" and manifest["rows"] == 4
     assert manifest["updated_at"] == "2026-11-04T18:01:02+00:00" and manifest["freshness_basis"] == "upstream"
@@ -168,7 +168,9 @@ def test_import_preserves_bytes_dedupes_and_labels_partial_scans(tmp_path):
     assert again["analytical_snapshot_id"] == manifest["analytical_snapshot_id"] and not again["new_observation"]
     assert again["bronze_file"] == manifest["bronze_file"]  # Identical bytes are stored once.
     assert len(list(bronze.glob("*.lua.gz"))) == 1 and len(list(bronze.glob("*.json"))) == 2
-    assert again["already_imported"] == 2 and "/bscan clear" in clear_reminder(again)
+    # Nothing new usually means the latest scan is still in game memory: say /reload, never suggest clearing.
+    assert again["already_imported"] == 2 and import_guidance(again).startswith("Nothing new")
+    assert "/reload" in import_guidance(again) and "type /bscan clear" not in import_guidance(again)
     with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
         assert db.execute("SELECT count(*) FROM scan_listings").fetchone()[0] == 6
         assert db.execute("SELECT count(*) FROM market_snapshots").fetchone()[0] == 4
@@ -434,3 +436,9 @@ def test_a_packed_scan_file_imports_and_prices(tmp_path):
                           ).fetchone() == (35, 35)
         assert db.execute("SELECT count(*) FROM scan_listings WHERE item_name LIKE 'Raider Shortsword of%'"
                           ).fetchone()[0] == 2
+
+
+def test_an_empty_file_explains_that_scans_are_written_on_reload(tmp_path):
+    path = write_scans(tmp_path / "scan.lua")
+    with pytest.raises(ValueError, match="only on /reload or logout"):
+        import_scans(addon_source(tmp_path / "data", path), now=NOW)

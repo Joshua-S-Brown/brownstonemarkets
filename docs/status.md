@@ -10,7 +10,7 @@ _Last updated 2026-10-04._
 - **Addon scan import (STORY-010):** a `provider = "addon"` source imports BrownstoneScan SavedVariables through **Import addon scan** or `python -m brownstone --source <id> [--input file] [--scan ID]`. Rules ADDON-01 to ADDON-06 in `requirements.md`.
   - House evidence is checked against the configured market, and the whole file fails on a mismatch.
   - Stacks are priced per unit, rounded up when inexact. `market_value` is the quantity-weighted 25th percentile.
-  - Deduplication is by `scan_id`, and identical file bytes are stored once, gzip-compressed. Partial scans are stored and labeled but not priced. When the file still holds scans imported before, the app and CLI suggest `/bscan clear`.
+  - Deduplication is by `scan_id`, and identical file bytes are stored once, gzip-compressed. Partial scans are stored and labeled but not priced. After an import that saved something new, the app and CLI say `/bscan clear` is safe; an import with nothing new warns to `/reload` first instead. The addon refuses to clear scans it hasn't written to the file yet.
   - Reads scan format 1 (addon 0.1.0) and 2 (addon 0.2.0, compact). Converting the real scan to format 2 gives identical listings and item prices, at 2.8 MB instead of 24.8 MB.
   - The Forever Action Board works from imported scans with no calculation changes.
   - Source `forever-us-normal-alliance-addon` is disabled in the tracked `config/market.toml`. On the user's machine, the untracked `config/market.local.toml` enables it and points it at the game's SavedVariables file, to archive beta scans before the beta closes. Classic Mankrik stays the default development source.
@@ -42,7 +42,7 @@ _Last updated 2026-10-04._
 
 ## Limitations
 
-- **Addon 0.2.0 (format 2) hasn't run in game yet.** Brownstone's side is tested, but the Lua was changed without a client to run it. Take one scan with it, `/reload`, and import: it should succeed, and `BrownstoneScan.lua` should be about a tenth of the old size (around 3 MB per full scan). 0.1.0 is in Git if it misbehaves.
+- **No addon 0.2.0 scan has been imported yet.** It loaded and wrote its (empty) file on the beta on 2026-10-04, but the first scan was cleared before `/reload` wrote it. Brownstone's side is tested; the Lua was changed without a client to run it. Take one scan with it, `/reload`, and import: it should succeed, and `BrownstoneScan.lua` should be about a tenth of the old size (around 3 MB per full scan). 0.1.0 is in Git if it misbehaves.
 - The addon was measured on one beta house only: not the Roleplaying or a neutral house, and `/bscan start` without the button is untested. Beta region and realm values are generic, so scans are identified by auctioneer, zone and label. The `.toc` interface number 16001 may change with beta builds.
 - Required skill levels are display-only.
 - **Forever values still to confirm in game** (shown on the recipe view):
@@ -67,7 +67,7 @@ _Last updated 2026-10-04._
 .venv/bin/python -m mypy
 ```
 
-Expected: 155 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 157 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Last live check (2026-10-04, Mankrik, 5,868 rows), cautious basis:
 

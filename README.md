@@ -73,7 +73,7 @@ After each scan and `/reload`, click **Import addon scan** or run:
 .venv/bin/python -m brownstone --source forever-us-normal-alliance-addon
 ```
 
-`--input <file>` imports a different file, and `--scan <scan_id>` imports one scan from it. Once a scan is imported, type `/bscan clear` and `/reload` in game so the file only holds new scans; Brownstone reminds you when it finds old ones.
+`--input <file>` imports a different file, and `--scan <scan_id>` imports one scan from it. The order matters: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A scan you haven't `/reload`ed is only in game memory, so the addon refuses to clear it, and Brownstone says *Nothing new* if you import before reloading.
 
 ## Markets and catalogs
 

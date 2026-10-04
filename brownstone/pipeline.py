@@ -174,17 +174,24 @@ def import_scans(config: Source, input_path: Path | None = None, scan_ids: Itera
     return manifest
 
 
-def clear_reminder(manifest: dict) -> str | None:
-    """After an import, suggest clearing the addon's file when it still holds scans imported before.
+def new_scans(manifest: dict) -> int:
+    """Scans this import stored for the first time (anything but a duplicate)."""
+    return sum(scan["outcome"] != "duplicate" for scan in manifest["scans"])
 
-    The addon keeps every scan until /bscan clear, and each import reads the whole file, so old scans
-    only cost time and disk. Everything in the file is stored once an import succeeds.
+
+def import_guidance(manifest: dict) -> str:
+    """What to do in game after an import, for the app and the CLI.
+
+    The game writes scans to the file only on /reload or logout, so a file with nothing new usually means
+    the latest scan is still in game memory: clearing then would lose it. Clearing is suggested only after
+    an import stored something new (the addon also refuses to clear scans it hasn't written yet).
     """
-    count = manifest.get("already_imported", 0)
-    if not count:
-        return None
-    return (f"{count} scan(s) in this file were already imported before. Everything in it is now saved, so you can "
-            "type /bscan clear in game, then /reload, to keep the next file small.")
+    if not new_scans(manifest):
+        return (f"Nothing new: all {len(manifest['scans'])} scan(s) in this file were imported before. If you "
+                "scanned since, type /reload in game so the game writes the scan to the file, then import again. "
+                "Don't /bscan clear until it's imported.")
+    return ("Everything in this file is now saved. To keep the next file small, type /bscan clear, then /reload, "
+            "in game.")
 
 
 def _select_scans(records: list[dict], scan_ids: Iterable[str] | None) -> list[dict]:
@@ -196,7 +203,8 @@ def _select_scans(records: list[dict], scan_ids: Iterable[str] | None) -> list[d
             raise ValueError(f"Scan(s) not in this file: {sorted(unknown)}")
         records = [record for record in records if record.get("scan_id") in wanted]
     if not records:
-        raise ValueError("No scans to import")
+        raise ValueError("The file has no scans. The game writes scans to it only on /reload or logout, and "
+                         "/bscan clear empties it; take a scan, /reload, then import")
     return records
 
 

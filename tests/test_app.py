@@ -130,3 +130,17 @@ def test_no_enabled_source_explains_how_to_enable_one(monkeypatch):
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert any("No enabled data source" in e.value for e in at.error)
+
+
+def test_importing_nothing_new_warns_to_reload_instead_of_claiming_success(tmp_path, monkeypatch):
+    from test_scans import finished_now, forever_scan_file
+    addon = next(source for source in read_sources(ROOT / "config/market.toml") if source["provider"] == "addon")
+    addon.update(enabled=True, data_dir=tmp_path / "data", scan_path=forever_scan_file(tmp_path, finished_now()),
+                 scan_evidence={"faction": "Alliance"})
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [addon])
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert any("/bscan clear" in i.value for i in at.info)  # Something new was saved: clearing is safe.
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert not at.success
+    assert any(w.value.startswith("Nothing new") and "/reload" in w.value for w in at.warning)

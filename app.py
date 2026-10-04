@@ -9,7 +9,7 @@ import streamlit as st
 from brownstone.action_board import compatible
 from brownstone.config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
 from brownstone.crafting import load_recipe_catalog
-from brownstone.pipeline import clear_reminder, import_scans, run
+from brownstone.pipeline import import_guidance, import_scans, new_scans, run
 from brownstone.storage import upgrade_database
 from views import crafting, market
 
@@ -59,12 +59,14 @@ if refresh and addon:
         try:
             manifest = import_scans(config)
             outcomes = "; ".join(f"{s['scan_id']} {s['status']}: {s['outcome']}" for s in manifest["scans"])
-            if manifest["status"] == "complete":
-                st.success(f"Imported. Prices now come from scan {manifest['scan_id']}. {outcomes}.")
+            if not new_scans(manifest):
+                st.warning(f"{import_guidance(manifest)} ({outcomes})")
             else:
-                st.warning(f"No complete scan in the file, so prices are unchanged. {outcomes}.")
-            if reminder := clear_reminder(manifest):
-                st.info(reminder)
+                if manifest["status"] == "complete":
+                    st.success(f"Imported. Prices now come from scan {manifest['scan_id']}. {outcomes}.")
+                else:
+                    st.warning(f"No complete scan in the file, so prices are unchanged. {outcomes}.")
+                st.info(import_guidance(manifest))
         except Exception as error:
             st.error(f"Import failed: {error}. Your previous successful snapshot remains available.")
 elif refresh:

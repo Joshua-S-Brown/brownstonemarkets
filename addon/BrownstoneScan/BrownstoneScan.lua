@@ -22,6 +22,9 @@ local frame = CreateFrame("Frame")
 local button
 local ensureButton
 local scan  -- the scan in progress, or nil
+-- Scans finished since login or the last /reload. They are only in memory until the game writes the
+-- file on /reload or logout, so /bscan clear refuses to delete them (Brownstone hasn't seen them yet).
+local unsavedScans = 0
 
 local function say(msg)
     print("|cff66ccffBrownstoneScan:|r " .. msg)
@@ -198,6 +201,7 @@ local function finish(status, reason)
         return
     end
     BrownstoneScanDB.scans[#BrownstoneScanDB.scans + 1] = s
+    unsavedScans = unsavedScans + 1
     say(("%s: %d of %d listings in %.1fs%s. Type /reload to write the file."):format(
         status, s.listing_count, s.reported_count or 0, s.duration_seconds, reason and (" (" .. reason .. ")") or ""))
 end
@@ -421,9 +425,15 @@ SlashCmdList["BROWNSTONESCAN"] = function(msg)
         say(("%d saved scan(s). API: %s. Last: %s."):format(n, tostring(detectApi()),
             last and (last.scan_id .. " " .. last.status .. ", " .. (last.listing_count or 0) .. " listings") or "none"))
     elseif cmd == "clear" then
+        if unsavedScans > 0 and rest:lower() ~= "all" then
+            say(("%d scan(s) from this session aren't in the file yet, so nothing was cleared. Type /reload, "
+                .. "import into Brownstone, then /bscan clear. (/bscan clear all deletes them anyway.)"):format(unsavedScans))
+            return
+        end
         BrownstoneScanDB.scans = {}
+        unsavedScans = 0
         say("Saved scans cleared (written at the next /reload).")
     else
-        say("/bscan start | stop | status | label <text> | clear")
+        say("/bscan start | stop | status | label <text> | clear [all]")
     end
 end

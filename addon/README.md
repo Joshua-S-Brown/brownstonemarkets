@@ -30,9 +30,9 @@ I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C
 4. When chat says the scan is finished, type `/reload` to make the game write the file.
 5. Repeat once at a neutral auction house with `/bscan label neutral`. Wait 15 minutes between scans.
 
-Commands: `/bscan start | stop | status | label <text> | clear`.
+Commands: `/bscan start | stop | status | label <text> | clear [all]`.
 
-**Keep the file small:** the addon keeps every scan until you clear it, and each import reads the whole file. After Brownstone imports a scan, type `/bscan clear`, then `/reload`. Brownstone reminds you when a file still holds scans it imported before.
+**Keep the file small, in this order:** scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. The addon keeps every scan until you clear it, and each import reads the whole file. `/bscan clear` refuses while a scan from this session hasn't been written to the file yet (`/bscan clear all` overrides that). After an import that saved something new, Brownstone says clearing is safe; if it says *Nothing new*, `/reload` and import again first.
 
 **Updating the addon:** copy the new `BrownstoneScan` folder over the old one and `/reload`. Scans saved by an older version stay in their format and still import.
 

@@ -21,7 +21,7 @@ Nothing active. Brownstone can now run on our own addon scans alone (STORY-010).
 
 Recently completed: STORY-004, recipe import from saved Wowhead pages, 2026-10-04; STORY-010, addon scan import, 2026-10-04; SPIKE-008, addon scan prototype, 2026-10-04 (see `status.md`).
 
-**First, once:** install addon 0.2.0 (copy `addon/BrownstoneScan` over the old folder), take one scan, `/reload`, import it and check it succeeds; see `status.md` → *Limitations*. Then `/bscan clear` and `/reload` after each successful import.
+**First, once:** finish checking addon 0.2.0: it loaded and wrote its file in game on 2026-10-04, but no 0.2.0 scan has been imported yet. Take one scan, `/reload`, import and check it succeeds (`status.md` → *Limitations*). From then on: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`.
 
 **Time-sensitive, before the beta closes:** take several more scans, at least 15 minutes apart and ideally a few hours apart, and import each copy of the file. Bronze keeps them after the beta ends. Repeated scans are the only data for *Demand from your own scans*, and a Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit at the auction house, not automation.
 
