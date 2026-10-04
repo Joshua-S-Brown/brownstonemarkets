@@ -31,3 +31,18 @@ def completed_snapshots(config):
         except (OSError, ValueError):
             continue
     return sorted(records, key=lambda r: r["collected_at"], reverse=True)
+
+
+def recipe_prices(db, config, snapshot_id, item_ids):
+    """Read unit buyouts with the entire market identity, never item ID alone."""
+    if not item_ids:
+        return {}
+    keys = ["market_id", "game_version", "region", "scope", "realm"]
+    predicates = " AND ".join(f"{key}=?" for key in keys)
+    placeholders = ", ".join("?" for _ in item_ids)
+    rows = db.execute(
+        f"SELECT item_id, min_buyout FROM market_snapshots WHERE snapshot_id=? "
+        f"AND {predicates} AND item_id IN ({placeholders})",
+        [snapshot_id, *[config[key] for key in keys], *item_ids],
+    ).fetchall()
+    return dict(rows)

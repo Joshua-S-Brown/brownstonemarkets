@@ -26,6 +26,9 @@ The user handles commits/pushes in VS Code; leave development changes reviewable
 | CRAFT-01 | Versioned recipe proof | Classic and Forever Runecloth Bag catalogs retain separate ruleset and provenance identities |
 | CRAFT-02 | Expand intermediates | Runecloth Bag expands through Bolt of Runecloth without cycles or double counting |
 | CRAFT-03 | Conservative recipe costs | Choose cheapest valid buy/craft/vendor route; missing prices invalidate estimates |
+| CRAFT-05 | Classic Tailoring Action Board v0.1 | Rank the sourced representative Woolen, Mageweave and Runecloth bag subset for Mankrik Alliance Classic Era; preserve Retail support |
+| CRAFT-06 | Explain costs and evidence | Direct quantities, cheapest valid buy/craft/vendor unit and total costs, all-craft expansion, selected-route shopping list, break-even unit output price, catalog and snapshot provenance |
+| CRAFT-07 | Conservative ranking and freshness | Profit or margin descending, incomplete last, deterministic recipe-ID ties; potential craft / negative margin / missing prices / stale data; collection fallback explicitly labeled |
 | UI-01 | Browse separately from scoring | Name/ID searches find below-threshold and unavailable-price items |
 | UI-02 | Explain screening assumptions | Conservative reference, positive prices, configurable cut; no profit guarantee |
 | UI-03 | Local launcher | Start or reuse localhost server with readable startup failures |
@@ -41,15 +44,22 @@ When a specifically configured source such as Mankrik Classic supplies an entire
 - CAT-01: Sourced versioned item catalog, class/subclass, provenance and explicit unknowns.
 - CAT-02: Ingredient/intermediate/output roles may overlap; categories need metadata or recipe evidence.
 - CRAFT-04: Quality, rank and reagent alternatives require explicit rules for the chosen version. Start with simple supported recipes.
-- CRAFT-05: Rank a sourced subset of Classic Tailoring recipes by profit and margin with conservative action labels and explainable inputs.
 - ANALYSIS-01: Liquidity from regional statistics where available, separated from realm prices. No invented sale rates.
 - ANALYSIS-02: History-based movement, discount frequency, volatility and recovery using distinct scans with explicit minimum sample counts.
 - ANALYSIS-03: Explain scores through features and policy versions; backtests must avoid future-data leakage.
 - OPS-02: Collection independent of UI after recovery/storage decisions. Roughly match upstream refresh cadence.
 - OPS-03: Backups/sync outside Git with retention and recovery documented. Personal transactions remain a separate future dataset.
 
+## Action Board policy v0.1
+
+The board is restricted to Classic Era, US, realm scope, Mankrik Alliance. Item IDs never join across versions or scopes. The catalog is a hand-authored representative subset, version 0.1, with recipe/item provenance and verification date; it is not the complete profession. Classic Bolt of Runecloth uses five Runecloth (25 per bag); the separate Forever proof retains its own rules.
+
+Economics use one saved analytical snapshot of unit minimum buyouts and the configured auction cut (default 5%). Net revenue rounds down to copper, break-even output unit price rounds up, and margin is estimated profit divided by net revenue. Cost covers one recipe execution; output quantity scales revenue. Positive complete fresh profit is labeled potential craft; zero or negative profit uses negative margin. Missing prices take precedence over stale data. Estimates older than the configured 24-hour default or more than 15 minutes future-dated cannot be labeled potential craft. Unknown upstream time uses explicitly labeled collection age and does not establish upstream observation age.
+
+Rank by profit descending by default or margin descending, then the other metric, then recipe ID; incomplete results sort last. Cheapest valid positive buy/craft/vendor routes win (equal-cost choices use a deterministic method ordering). Missing/zero prices never become free inputs. Vendor prices are undiscounted single-unit catalog assumptions; reputation discounts and stock availability are not modeled. All-craft expansion and the shopping list for chosen routes are displayed separately so purchased bolts are not double-counted. Sale likelihood, demand, listing depth, deposits and recommended quantities are not modeled.
+
 ## Scope limits and next slice
 
-This project does not implement addons, automatic trading, cloud deployment or scheduling. The next slice is the **Classic Tailoring Action Board v0.1** described in `backlog.md`: expand a small sourced set of Classic bags, rank complete current estimates by profit and margin, explain buy/craft/vendor choices, and label missing or stale evidence. Do not claim sale likelihood or recommended quantity until compatible demand data is modeled.
+This project does not implement addons, automatic trading, cloud deployment or scheduling. The **Classic Tailoring Action Board v0.1** (STORY-001 and STORY-002) is complete. Next candidates are separate Classic regional demand context, normalized recipe import and catalog expansion in backlog order. Do not claim sale likelihood or recommended quantity until compatible demand data is modeled.
 
 Open decisions: scalable catalog source/import, useful action thresholds, Classic regional demand integration, Forever price source and launch scope, historical storage and scheduling. None is silently approved.

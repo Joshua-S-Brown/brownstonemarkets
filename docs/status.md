@@ -16,7 +16,7 @@ This file records implemented state and verification. Use `backlog.md` for plann
 
 ## Limitations and recovery
 
-- The legacy discount screen is not useful for the current Classic feed because its historical values are zero. Crafting estimates cover only the hand-authored Runecloth Bag proof; broader recipes, listing depth, deposit costs, sale speed and recommended quantities are not modeled.
+- The legacy discount screen is not useful for the current Classic feed because historical values are zero. The Action Board covers three representative bags, not the complete profession. Listing depth, deposits, demand, sale speed and recommended quantities are not modeled. Vendor stock and reputation discounts are assumptions.
 - Legacy rows have no source hash and are not retroactively deduplicated. Only known v0.1 Area 52 identity is backfilled; unknown markets stay unclassified.
 - Duplicate collections use analytical_snapshot_id from the manifest. Changed content at the same upstream time is retained as a correction; future features must choose one correction per scan.
 - Old silver schema remains unchanged. Use schema alignment/union-by-name when combining Parquet history.
@@ -25,9 +25,17 @@ This file records implemented state and verification. Use `backlog.md` for plann
 - GitHub HTTPS verification initially hit a Windows schannel error in this tool environment. Read-only remote verification succeeded using OpenSSL; this repo now has a local OpenSSL setting. The remote had no advertised refs. No push was performed. User uses VS Code for commits/pushes.
 - Bundled Python backs this local environment; other machines need normal Python 3.11+. Recreate .venv after relocation.
 
+## Classic Tailoring Action Board v0.1 — complete
+
+- STORY-001 and STORY-002 implemented for Mankrik Alliance Classic Era. The default Classic Crafting view ranks Woolen Bag, Mageweave Bag and Runecloth Bag by profit or margin, with complete economics and conservative missing/stale/negative/potential labels.
+- Catalog version 0.1 records sourced representative coverage and verification date. Classic Runecloth bolt was corrected from four to five cloth using the Classic recipe source; one bag now expands to 25 Runecloth, two Rugged Leather and one Rune Thread. Forever remains a separate unchanged proof.
+- Detail shows direct ingredients, unit/total buy/craft/vendor choices, all-craft expanded quantities, selected-route shopping costs, break-even output price and catalog/snapshot source, hash, analytical identity and freshness assumptions.
+- Calculations and policy remain outside Streamlit. Scoped storage reads and policy checks enforce the full Mankrik Alliance Classic identity. Retail configuration, browsing, ranking and ingestion remain supported.
+- All changes are uncommitted for user review; no live collection, scheduling, bulk catalog import or deployment was performed.
+
 ## Next
 
-Implement the **Classic Tailoring Action Board v0.1** in `backlog.md`: add a small sourced set of Classic bags, rank complete estimates by profit and margin, explain material choices and label missing or stale evidence. Demand context, normalized bulk recipe import and replay/rebuild follow in backlog order. Retail remains supported but receives no near-term feature work; Forever waits for reliable pricing.
+No active milestone. STORY-003 (separate compatible regional demand context) is the next backlog candidate; normalized recipe import, broader catalog coverage and replay/rebuild follow. Retail remains supported; Forever waits for reliable pricing.
 
 ## Verification
 
@@ -35,4 +43,6 @@ From the project folder: `.venv\Scripts\python.exe -m pytest -p no:cacheprovider
 Commodity run: `.venv\Scripts\python.exe -m brownstone --market retail-us-commodities`.
 Browser: Start Brownstone.cmd. Tests are offline; live ingestion is a separate check.
 
-Latest validation: 26 offline tests pass. Live Mankrik ingestion completed with 5,868 rows and repeated identical downloads reused one analytical snapshot. The preserved response also replayed twice into a temporary database and calculated a 1.5778g Runecloth Bag craft cost versus a 4.5097g observed minimum buyout and 2.7064g estimated profit after the 5% cut. The earlier live commodity ingestion produced 10,992 rows, and Mac setup ingested 18,152 Area 52 rows. Crafting tests cover version separation, Runecloth Bag expansion, buy-versus-craft choice, vendor thread cost, missing prices and cycle rejection.
+Latest validation: **42 offline tests pass** using `.venv/bin/python -m pytest -p no:cacheprovider`. Tests cover ranking by both metrics, deterministic ties, market/version isolation, freshness boundaries and future timestamps, missing/zero prices, recipe quantities, vendor versus buy/craft routes, multi-output units, selected shopping costs and copper rounding. Streamlit AppTest exercises an isolated saved Classic snapshot, margin reordering, calculation detail and switching back to Retail browsing. The prior 26-test ingestion/deduplication/launcher regression suite still passes. No live download is needed for these checks.
+
+Historical live validation: the prior Mankrik ingestion contained 5,868 rows and identical downloads reused one analytical snapshot. The earlier 1.5778g Runecloth Bag cost and 2.7064g profit used the now-corrected four-cloth Classic bolt recipe and must not be reused as valid Classic estimates. Earlier Retail ingestion observed 10,992 commodity rows and 18,152 Area 52 rows. Raw bytes and manifests remain untouched.

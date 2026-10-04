@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 import tomllib
+from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
 
 
 def load_recipe_catalog(path: Path) -> dict:
@@ -80,32 +81,39 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     if not 0 <= auction_cut < 1:
         raise ValueError("auction_cut must be in [0, 1)")
     choices = []
+    shopping = defaultdict(int)
 
-    def unit_cost(item_id: int, trail: tuple[int, ...]) -> tuple[int | None, str]:
+    def unit_cost(item_id: int, trail: tuple[int, ...]) -> tuple[int | None, str, dict[int, int]]:
         item = catalog["items_by_id"][item_id]
         candidates = []
         market = prices.get(item_id)
-        if isinstance(market, int) and market > 0:
-            candidates.append((market, "buy"))
+        if type(market) is int and market > 0:
+            candidates.append((market, "buy", {item_id: 1}))
         vendor = item.get("vendor_price_copper")
-        if isinstance(vendor, int) and vendor > 0:
-            candidates.append((vendor, "vendor"))
+        if type(vendor) is int and vendor > 0:
+            candidates.append((vendor, "vendor", {item_id: 1}))
         nested_id = catalog["recipe_for_output"].get(item_id)
         if nested_id is not None:
             if nested_id in trail:
                 raise ValueError("Recipe cycle detected")
             nested = catalog["recipes_by_id"][nested_id]
             subtotal = 0
+            leaves = defaultdict(int)
             for ingredient in nested["inputs"]:
-                cost, _ = unit_cost(ingredient["item_id"], trail + (nested_id,))
+                cost, _, nested_leaves = unit_cost(ingredient["item_id"], trail + (nested_id,))
                 if cost is None:
                     break
                 subtotal += cost * ingredient["quantity"]
+                for leaf_id, quantity in nested_leaves.items():
+                    leaves[leaf_id] += quantity * ingredient["quantity"]
             else:
                 if subtotal % nested["output_quantity"]:
                     raise ValueError("Fractional unit costs are not supported")
-                candidates.append((subtotal // nested["output_quantity"], "craft"))
-        return min(candidates) if candidates else (None, "missing")
+                if any(q % nested["output_quantity"] for q in leaves.values()):
+                    raise ValueError("Fractional shopping quantities are not supported")
+                candidates.append((subtotal // nested["output_quantity"], "craft",
+                                   {i: q // nested["output_quantity"] for i, q in leaves.items()}))
+        return min(candidates, key=lambda candidate: (candidate[0], candidate[1])) if candidates else (None, "missing", {item_id: 1})
 
     recipe = catalog["recipes_by_id"].get(recipe_id)
     if recipe is None:
@@ -113,11 +121,14 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     total = 0
     missing = []
     for ingredient in recipe["inputs"]:
-        cost, method = unit_cost(ingredient["item_id"], (recipe_id,))
+        cost, method, leaves = unit_cost(ingredient["item_id"], (recipe_id,))
         name = catalog["items_by_id"][ingredient["item_id"]]["name"]
         choices.append({"item_id": ingredient["item_id"], "item_name": name,
                         "quantity": ingredient["quantity"], "method": method,
-                        "unit_cost_copper": cost})
+                        "unit_cost_copper": cost,
+                        "total_cost_copper": cost * ingredient["quantity"] if cost is not None else None})
+        for leaf_id, quantity in leaves.items():
+            shopping[leaf_id] += quantity * ingredient["quantity"]
         if cost is None:
             missing.append(ingredient["item_id"])
         else:
@@ -125,10 +136,19 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
 
     output_id = recipe["output_item_id"]
     sale = prices.get(output_id)
-    valid_sale = isinstance(sale, int) and sale > 0
+    valid_sale = type(sale) is int and sale > 0
     valid = not missing and valid_sale
-    net_revenue = int(sale * recipe["output_quantity"] * (1 - auction_cut)) if valid_sale else None
+    retained = Decimal(1) - Decimal(str(auction_cut))
+    net_revenue = int((Decimal(sale * recipe["output_quantity"]) * retained).to_integral_value(rounding=ROUND_FLOOR)) if valid_sale else None
     profit = net_revenue - total if valid else None
+    shopping_choices = []
+    for item_id, quantity in sorted(shopping.items()):
+        cost, method, _ = unit_cost(item_id, (recipe_id,))
+        shopping_choices.append({
+            "item_id": item_id, "quantity": quantity, "method": method,
+            "unit_cost_copper": cost,
+            "total_cost_copper": cost * quantity if cost is not None else None,
+        })
     return {
         "recipe_id": recipe_id, "output_item_id": output_id,
         "output_name": catalog["items_by_id"][output_id]["name"],
@@ -138,4 +158,9 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
         "sale_price_copper": sale if valid_sale else None,
         "net_revenue_copper": net_revenue, "profit_copper": profit,
         "choices": choices,
+        "shopping_list": dict(sorted(shopping.items())),
+        "shopping_choices": shopping_choices,
+        "expanded_materials": material_plan(catalog, recipe_id),
+        "margin": profit / net_revenue if valid and net_revenue else None,
+        "break_even_copper": int((Decimal(total) / (retained * recipe["output_quantity"])).to_integral_value(rounding=ROUND_CEILING)) if not missing else None,
     }

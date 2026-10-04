@@ -16,29 +16,13 @@ Suggested story format:
 >
 > Acceptance: observable conditions that prove the story is complete.
 
-## Now — Classic Tailoring Action Board v0.1
+## Completed — Classic Tailoring Action Board v0.1
 
-### STORY-001 — Rank crafting opportunities
+STORY-001 (rank crafting opportunities) and STORY-002 (explain each calculation) are implemented and verified on 2026-10-04. Completion evidence and limitations live in `status.md`; durable behavior is recorded in `requirements.md`.
 
-As a gold maker, I want supported Mankrik Alliance Tailoring recipes ranked by current economics so that I can find candidates worth investigating.
+## Now
 
-Acceptance:
-
-- Start with a sourced, versioned set of representative Classic bags; do not silently treat it as the complete profession catalog.
-- Show craft cost, output minimum buyout, net revenue after auction cut, estimated profit and margin.
-- Label each result conservatively as potential craft, negative margin, missing prices or stale data.
-- Keep calculations outside Streamlit and cover ranking behavior with offline tests.
-
-### STORY-002 — Explain each calculation
-
-As a gold maker, I want to understand why an opportunity was surfaced so that I can decide whether to act on it.
-
-Acceptance:
-
-- Show direct ingredients and a fully expanded shopping list.
-- Show buy, craft or vendor choice for each direct input with unit and total costs.
-- Show break-even output price and the price/provenance/freshness assumptions used.
-- Never treat missing or zero prices as free materials.
+No active milestone. The next ready candidate is STORY-003; implementation is not yet scheduled.
 
 ## Next
 

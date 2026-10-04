@@ -63,3 +63,9 @@ Dependencies flow from interface to orchestration to domain functions and storag
 ## Open decisions
 
 Repository confirmed: Joshua-S-Brown/brownstonemarkets. Mankrik Alliance Classic Era is the active market for the Tailoring proof, while Retail remains a regression surface and the separate Forever catalog is retained for later compatibility. Work priority and user stories live in `backlog.md`; implemented state lives in `status.md`.
+
+## Action Board v0.1 implementation
+
+`crafting.py` returns direct route costs, the all-craft expansion, selected-route shopping quantities and costs, margin and break-even unit price. Copper rounding uses Decimal: revenue floors and break-even ceilings. `action_board.py` owns the versioned ranking/label policy and accepts a scoped market, a snapshot manifest, unit prices and an explicit clock; it performs no downloads or UI operations. `storage.recipe_prices` filters snapshot, game version, market ID, region, scope and realm together. Streamlit renders the board and explanation in Crafting, the default view for the selected Classic market. Other markets retain the legacy browser/screen and catalog inspection.
+
+Catalog version 0.1 remains TOML, with three representative finished bags and their intermediates. The normalized relational catalog/import path remains STORY-004. Missing prices precede stale labels; stale estimates remain visible for inspection. Collection age is used only when upstream scan time is unavailable, including repeated-content collections, and is never described as upstream observation age.

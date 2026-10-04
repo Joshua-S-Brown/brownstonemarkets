@@ -18,7 +18,7 @@ def test_classic_catalog_is_separate_but_supports_same_proof():
     catalog = load_recipe_catalog(CLASSIC_CATALOG)
     assert catalog["game_version"] == "classic"
     assert catalog["ruleset"] == "classic-era"
-    assert material_plan(catalog, 18405) == {8170: 2, 14047: 20, 14341: 1}
+    assert material_plan(catalog, 18405) == {8170: 2, 14047: 25, 14341: 1}
 
 
 def test_buy_versus_craft_uses_cheapest_valid_path_and_vendor_thread():

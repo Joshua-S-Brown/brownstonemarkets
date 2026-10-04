@@ -3,19 +3,21 @@ game_version = "classic"
 ruleset = "classic-era"
 profession = "tailoring"
 status = "reference-observed"
-notes = "Classic Era development catalog. Keep separate from the evolving WoW Forever ruleset."
+catalog_version = "0.1"
+verified_at = "2026-10-04"
+notes = "Representative subset: Woolen, Mageweave and Runecloth bags; not the complete Tailoring catalog. Vendor prices are undiscounted single-unit prices; availability and reputation discounts are not modeled."
 
 [[items]]
 item_id = 14046
 name = "Runecloth Bag"
 role = "finished"
-source_url = "https://warcraft.wiki.gg/wiki/Pattern%3A_Runecloth_Bag"
+source_url = "https://classicdb.ch/?spell=18405"
 
 [[items]]
 item_id = 14048
 name = "Bolt of Runecloth"
 role = "intermediate"
-source_url = "https://warcraft.wiki.gg/wiki/Bolt_of_Runecloth"
+source_url = "https://classicdb.ch/?spell=18401"
 
 [[items]]
 item_id = 14047
@@ -43,11 +45,11 @@ profession = "tailoring"
 required_skill = 250
 output_item_id = 14048
 output_quantity = 1
-source_url = "https://warcraft.wiki.gg/wiki/Bolt_of_Runecloth"
+source_url = "https://classicdb.ch/?spell=18401"
 
 [[recipes.inputs]]
 item_id = 14047
-quantity = 4
+quantity = 5
 
 [[recipes]]
 recipe_id = 18405
@@ -56,7 +58,7 @@ profession = "tailoring"
 required_skill = 260
 output_item_id = 14046
 output_quantity = 1
-source_url = "https://warcraft.wiki.gg/wiki/Pattern%3A_Runecloth_Bag"
+source_url = "https://classicdb.ch/?spell=18405"
 
 [[recipes.inputs]]
 item_id = 14048
@@ -69,3 +71,113 @@ quantity = 2
 [[recipes.inputs]]
 item_id = 14341
 quantity = 1
+
+[[items]]
+item_id = 4240
+name = "Woolen Bag"
+role = "finished"
+source_url = "https://classicdb.ch/?item=4240"
+
+[[items]]
+item_id = 2997
+name = "Bolt of Woolen Cloth"
+role = "intermediate"
+source_url = "https://classicdb.ch/?item=2997"
+
+[[items]]
+item_id = 2592
+name = "Wool Cloth"
+role = "material"
+source_url = "https://classicdb.ch/?item=2592"
+
+[[items]]
+item_id = 2321
+name = "Fine Thread"
+role = "vendor_material"
+source_url = "https://classicdb.ch/?item=2321"
+vendor_price_copper = 100
+
+[[items]]
+item_id = 10050
+name = "Mageweave Bag"
+role = "finished"
+source_url = "https://classicdb.ch/?item=10050"
+
+[[items]]
+item_id = 4339
+name = "Bolt of Mageweave"
+role = "intermediate"
+source_url = "https://classicdb.ch/?item=4339"
+
+[[items]]
+item_id = 4338
+name = "Mageweave Cloth"
+role = "material"
+source_url = "https://classicdb.ch/?item=4338"
+
+[[items]]
+item_id = 4291
+name = "Silken Thread"
+role = "vendor_material"
+source_url = "https://classicdb.ch/?item=4291"
+vendor_price_copper = 500
+
+[[recipes]]
+recipe_id = 2964
+name = "Bolt of Woolen Cloth"
+profession = "tailoring"
+required_skill = 75
+output_item_id = 2997
+output_quantity = 1
+source_url = "https://classicdb.ch/?spell=2964"
+
+[[recipes.inputs]]
+item_id = 2592
+quantity = 3
+
+[[recipes]]
+recipe_id = 3757
+name = "Woolen Bag"
+profession = "tailoring"
+required_skill = 80
+output_item_id = 4240
+output_quantity = 1
+source_url = "https://classicdb.ch/?spell=3757"
+
+[[recipes.inputs]]
+item_id = 2997
+quantity = 3
+
+[[recipes.inputs]]
+item_id = 2321
+quantity = 1
+
+[[recipes]]
+recipe_id = 3865
+name = "Bolt of Mageweave"
+profession = "tailoring"
+required_skill = 175
+output_item_id = 4339
+output_quantity = 1
+source_url = "https://classicdb.ch/?spell=3865"
+
+[[recipes.inputs]]
+item_id = 4338
+quantity = 5
+
+[[recipes]]
+recipe_id = 12065
+name = "Mageweave Bag"
+profession = "tailoring"
+required_skill = 225
+output_item_id = 10050
+output_quantity = 1
+source_url = "https://classicdb.ch/?spell=12065"
+
+[[recipes.inputs]]
+item_id = 4339
+quantity = 4
+
+[[recipes.inputs]]
+item_id = 4291
+quantity = 2
