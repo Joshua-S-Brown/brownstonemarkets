@@ -1,8 +1,8 @@
 from pathlib import Path
+
 import pytest
 
 from brownstone.crafting import evaluate_recipe, load_recipe_catalog, material_plan
-
 
 CATALOG = Path(__file__).resolve().parents[1] / "config/forever-tailoring.toml"
 CLASSIC_CATALOG = Path(__file__).resolve().parents[1] / "config/classic-era-tailoring.toml"
@@ -19,6 +19,33 @@ def test_classic_catalog_is_separate_but_supports_same_proof():
     assert catalog["game_version"] == "classic"
     assert catalog["ruleset"] == "classic-era"
     assert material_plan(catalog, 18405) == {8170: 2, 14047: 25, 14341: 1}
+
+
+def test_classic_catalog_quantities_and_vendor_prices_are_verified():
+    # STORY-007: values checked against Wowhead Classic. Changing one needs new evidence.
+    catalog = load_recipe_catalog(CLASSIC_CATALOG)
+    for recipe in catalog["recipes_by_id"].values():
+        assert recipe["verified_at"] and recipe["verification_url"].startswith("https://")
+    for item in catalog["items_by_id"].values():
+        if "vendor_price_copper" in item:
+            assert item["vendor_price_source_url"].startswith("https://")
+    assert {i: item["vendor_price_copper"] for i, item in catalog["items_by_id"].items()
+            if "vendor_price_copper" in item} == {2321: 100, 4291: 500, 14341: 5000}
+    assert {r: [(x["item_id"], x["quantity"]) for x in recipe["inputs"]]
+            for r, recipe in catalog["recipes_by_id"].items()} == {
+        2964: [(2592, 3)], 3757: [(2997, 3), (2321, 1)],
+        3865: [(4338, 5)], 12065: [(4339, 4), (4291, 2)],
+        18401: [(14047, 5)], 18405: [(14048, 5), (8170, 2), (14341, 1)],
+    }
+
+
+def test_catalog_rejects_non_https_verification(tmp_path):
+    path = tmp_path / "bad-catalog.toml"
+    path.write_text(CLASSIC_CATALOG.read_text().replace(
+        'verification_url = "https://nether.wowhead.com/classic/tooltip/spell/18401"',
+        'verification_url = "http://example.com"'))
+    with pytest.raises(ValueError, match="verification"):
+        load_recipe_catalog(path)
 
 
 def test_buy_versus_craft_uses_cheapest_valid_path_and_vendor_thread():

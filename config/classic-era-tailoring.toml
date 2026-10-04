@@ -5,19 +5,20 @@ profession = "tailoring"
 status = "reference-observed"
 catalog_version = "0.1"
 verified_at = "2026-10-04"
+verification = "Recipe reagent and output quantities and thread vendor prices checked against Wowhead Classic on 2026-10-04; see per-record verification fields."
 notes = "Representative subset: Woolen, Mageweave and Runecloth bags; not the complete Tailoring catalog. Vendor prices are undiscounted single-unit prices; availability and reputation discounts are not modeled."
 
 [[items]]
 item_id = 14046
 name = "Runecloth Bag"
 role = "finished"
-source_url = "https://classicdb.ch/?spell=18405"
+source_url = "https://www.wowhead.com/classic/item=14046"
 
 [[items]]
 item_id = 14048
 name = "Bolt of Runecloth"
 role = "intermediate"
-source_url = "https://classicdb.ch/?spell=18401"
+source_url = "https://www.wowhead.com/classic/item=14048"
 
 [[items]]
 item_id = 14047
@@ -37,6 +38,8 @@ name = "Rune Thread"
 role = "vendor_material"
 vendor_price_copper = 5000
 source_url = "https://warcraft.wiki.gg/wiki/Rune_Thread"
+vendor_price_source_url = "https://nether.wowhead.com/classic/tooltip/item/14341"
+vendor_price_note = "Wowhead Classic sell price 12s 50c is one quarter of the vendor price"
 
 [[recipes]]
 recipe_id = 18401
@@ -46,6 +49,9 @@ required_skill = 250
 output_item_id = 14048
 output_quantity = 1
 source_url = "https://classicdb.ch/?spell=18401"
+verified_at = "2026-10-04"
+verification_url = "https://nether.wowhead.com/classic/tooltip/spell/18401"
+required_skill_source_url = "https://warcraft.wiki.gg/wiki/Bolt_of_Runecloth"
 
 [[recipes.inputs]]
 item_id = 14047
@@ -59,6 +65,9 @@ required_skill = 260
 output_item_id = 14046
 output_quantity = 1
 source_url = "https://classicdb.ch/?spell=18405"
+verified_at = "2026-10-04"
+verification_url = "https://nether.wowhead.com/classic/tooltip/spell/18405"
+required_skill_verified = false
 
 [[recipes.inputs]]
 item_id = 14048
@@ -96,6 +105,8 @@ name = "Fine Thread"
 role = "vendor_material"
 source_url = "https://classicdb.ch/?item=2321"
 vendor_price_copper = 100
+vendor_price_source_url = "https://nether.wowhead.com/classic/tooltip/item/2321"
+vendor_price_note = "Wowhead Classic sell price 25c is one quarter of the vendor price"
 
 [[items]]
 item_id = 10050
@@ -121,6 +132,8 @@ name = "Silken Thread"
 role = "vendor_material"
 source_url = "https://classicdb.ch/?item=4291"
 vendor_price_copper = 500
+vendor_price_source_url = "https://nether.wowhead.com/classic/tooltip/item/4291"
+vendor_price_note = "Wowhead Classic sell price 1s 25c is one quarter of the vendor price"
 
 [[recipes]]
 recipe_id = 2964
@@ -130,6 +143,9 @@ required_skill = 75
 output_item_id = 2997
 output_quantity = 1
 source_url = "https://classicdb.ch/?spell=2964"
+verified_at = "2026-10-04"
+verification_url = "https://nether.wowhead.com/classic/tooltip/spell/2964"
+required_skill_verified = false
 
 [[recipes.inputs]]
 item_id = 2592
@@ -143,6 +159,9 @@ required_skill = 80
 output_item_id = 4240
 output_quantity = 1
 source_url = "https://classicdb.ch/?spell=3757"
+verified_at = "2026-10-04"
+verification_url = "https://nether.wowhead.com/classic/tooltip/spell/3757"
+required_skill_source_url = "https://warcraft.wiki.gg/wiki/Woolen_Bag"
 
 [[recipes.inputs]]
 item_id = 2997
@@ -160,6 +179,9 @@ required_skill = 175
 output_item_id = 4339
 output_quantity = 1
 source_url = "https://classicdb.ch/?spell=3865"
+verified_at = "2026-10-04"
+verification_url = "https://nether.wowhead.com/classic/tooltip/spell/3865"
+required_skill_verified = false
 
 [[recipes.inputs]]
 item_id = 4338
@@ -173,6 +195,9 @@ required_skill = 225
 output_item_id = 10050
 output_quantity = 1
 source_url = "https://classicdb.ch/?spell=12065"
+verified_at = "2026-10-04"
+verification_url = "https://nether.wowhead.com/classic/tooltip/spell/12065"
+required_skill_source_url = "https://warcraft.wiki.gg/wiki/Mageweave_Bag"
 
 [[recipes.inputs]]
 item_id = 4339

@@ -15,6 +15,7 @@ Explicit user instructions take precedence. When a decision or implementation ch
 - Calculate in integer copper. Display gold using `brownstone/money.py`.
 - `brownstone/` must not import Streamlit or download inside calculations. Display code goes in `views/`.
 - Never infer categories from names or commodity status. Never treat missing or zero prices as free.
-- Tests stay offline. Cover scope, units, freshness, deduplication and recipe quantities.
+- Tests stay offline. Cover scope, units, freshness, deduplication and recipe quantities. Finish with pytest, `ruff check .` and `mypy` passing.
+- Schema changes go through a new numbered migration in `storage.py`. Catalog value changes need source evidence.
 - The user commits and pushes manually. Leave changes uncommitted unless asked.
-- Don't add addons, automated trading, cloud deployment or scheduled collection without an explicit decision.
+- A read-only scanning addon is under evaluation (SPIKE-008). Never add buying, posting, unattended scanning, cloud deployment or scheduled collection without an explicit decision.

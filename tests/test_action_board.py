@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import duckdb
@@ -9,7 +9,7 @@ from brownstone.crafting import basis_prices, evaluate_recipe, load_recipe_catal
 from brownstone.storage import price_observations
 
 ROOT = Path(__file__).resolve().parents[1]
-NOW = datetime(2026, 10, 4, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 4, tzinfo=UTC)
 MARKET = {"market_id": "classic-us-mankrik-alliance", "game_version": "classic",
           "region": "us", "scope": "realm", "realm": "mankrik-alliance", "ruleset": "classic-era"}
 
@@ -115,17 +115,21 @@ def test_multi_output_units_and_vendor_vs_market():
 
 def test_price_read_enforces_full_market_identity():
     with duckdb.connect(":memory:") as db:
-        db.execute("CREATE TABLE market_snapshots (snapshot_id VARCHAR, item_id INTEGER, min_buyout INTEGER, market_value INTEGER, market_id VARCHAR, game_version VARCHAR, region VARCHAR, scope VARCHAR, realm VARCHAR)")
+        db.execute("CREATE TABLE market_snapshots (snapshot_id VARCHAR, item_id INTEGER, min_buyout INTEGER, "
+                   "market_value INTEGER, market_id VARCHAR, game_version VARCHAR, region VARCHAR, "
+                   "scope VARCHAR, realm VARCHAR)")
         identity = [MARKET[key] for key in ("market_id", "game_version", "region", "scope", "realm")]
         db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 400, 450, ?, ?, ?, ?, ?)", identity)
-        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 999, 999, ?, 'retail', 'us', 'realm', 'area-52')", [MARKET["market_id"]])
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 999, 999, ?, 'retail', 'us', 'realm', "
+                   "'area-52')", [MARKET["market_id"]])
         assert price_observations(db, MARKET, "same", [4240]) == {4240: {"min_buyout": 400, "market_value": 450}}
         assert price_observations(db, {**MARKET, "realm": "wrong"}, "same", [4240]) == {}
 
 
 def test_future_snapshot_is_non_actionable_and_ties_are_stable():
     metadata = snapshot(collected_at=(NOW + timedelta(hours=1)).isoformat())
-    assert {r["action"] for r in rank_recipes(catalog(), observed(prices()), MARKET, metadata, now=NOW)["rows"]} == {"stale data"}
+    rows = rank_recipes(catalog(), observed(prices()), MARKET, metadata, now=NOW)["rows"]
+    assert {r["action"] for r in rows} == {"stale data"}
     c = catalog()
     for recipe in c["recipes_by_id"].values():
         if c["items_by_id"][recipe["output_item_id"]]["role"] == "finished":

@@ -1,10 +1,10 @@
 """Versioned recipe loading and conservative crafting-cost evaluation."""
 from __future__ import annotations
 
-from collections import defaultdict
-from pathlib import Path
 import tomllib
-from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
+from collections import defaultdict
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
+from pathlib import Path
 
 
 def load_recipe_catalog(path: Path) -> dict:
@@ -31,6 +31,8 @@ def load_recipe_catalog(path: Path) -> dict:
             raise ValueError("Every item requires an HTTPS provenance URL")
         if item.get("vendor_price_copper", 1) <= 0:
             raise ValueError("Vendor prices must be positive copper integers")
+        if not str(item.get("vendor_price_source_url", "https://")).startswith("https://"):
+            raise ValueError("Vendor price provenance must be an HTTPS URL")
     for recipe in recipes.values():
         if recipe.get("profession") != raw["profession"]:
             raise ValueError("Recipe profession must match its catalog")
@@ -40,6 +42,8 @@ def load_recipe_catalog(path: Path) -> dict:
             raise ValueError("This milestone supports one recipe per output item")
         if not str(recipe.get("source_url", "")).startswith("https://"):
             raise ValueError("Every recipe requires an HTTPS provenance URL")
+        if not str(recipe.get("verification_url", "https://")).startswith("https://"):
+            raise ValueError("Recipe verification must be an HTTPS URL")
         for ingredient in recipe.get("inputs", []):
             if ingredient.get("item_id") not in items or ingredient.get("quantity", 0) <= 0:
                 raise ValueError("Recipe inputs must reference items with positive quantities")
@@ -92,17 +96,23 @@ def basis_prices(observations: dict[int, dict], basis: str) -> tuple[dict[int, i
     """
     if basis not in PRICE_BASES:
         raise ValueError(f"Unknown price basis {basis}")
-    buy, sell = {}, {}
+    buy: dict[int, int] = {}
+    sell: dict[int, int] = {}
     for item_id, observed in observations.items():
-        listed = observed.get("min_buyout")
-        if basis == "listed":
-            values = [listed]
-        else:
-            values = [listed, observed.get("market_value")]
-        values = [value for value in values if type(value) is int and value > 0]
+        keys = ["min_buyout"] if basis == "listed" else ["min_buyout", "market_value"]
+        values: list[int] = [observed[key] for key in keys if _positive(observed.get(key))]
         if values:
             buy[item_id], sell[item_id] = max(values), min(values)
     return buy, sell
+
+
+def _positive(value) -> bool:
+    """A usable copper price: a positive int. Zero, None and bools mean unavailable."""
+    return type(value) is int and value > 0
+
+
+def _to_copper(amount: Decimal, rounding: str) -> int:
+    return int(amount.to_integral_value(rounding=rounding))
 
 
 def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05,
@@ -114,24 +124,22 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     if not 0 <= auction_cut < 1:
         raise ValueError("auction_cut must be in [0, 1)")
     choices = []
-    shopping = defaultdict(int)
+    shopping: defaultdict[int, int] = defaultdict(int)
 
     def unit_cost(item_id: int, trail: tuple[int, ...]) -> tuple[int | None, str, dict[int, int]]:
         item = catalog["items_by_id"][item_id]
         candidates = []
-        market = prices.get(item_id)
-        if type(market) is int and market > 0:
-            candidates.append((market, "buy", {item_id: 1}))
-        vendor = item.get("vendor_price_copper")
-        if type(vendor) is int and vendor > 0:
-            candidates.append((vendor, "vendor", {item_id: 1}))
+        if _positive(prices.get(item_id)):
+            candidates.append((prices[item_id], "buy", {item_id: 1}))
+        if _positive(item.get("vendor_price_copper")):
+            candidates.append((item["vendor_price_copper"], "vendor", {item_id: 1}))
         nested_id = catalog["recipe_for_output"].get(item_id)
         if nested_id is not None:
             if nested_id in trail:
                 raise ValueError("Recipe cycle detected")
             nested = catalog["recipes_by_id"][nested_id]
             subtotal = 0
-            leaves = defaultdict(int)
+            leaves: defaultdict[int, int] = defaultdict(int)
             for ingredient in nested["inputs"]:
                 cost, _, nested_leaves = unit_cost(ingredient["item_id"], trail + (nested_id,))
                 if cost is None:
@@ -146,7 +154,9 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
                     raise ValueError("Fractional shopping quantities are not supported")
                 candidates.append((subtotal // nested["output_quantity"], "craft",
                                    {i: q // nested["output_quantity"] for i, q in leaves.items()}))
-        return min(candidates, key=lambda candidate: (candidate[0], candidate[1])) if candidates else (None, "missing", {item_id: 1})
+        if not candidates:
+            return None, "missing", {item_id: 1}
+        return min(candidates, key=lambda candidate: candidate[:2])  # Cost, then method name.
 
     recipe = catalog["recipes_by_id"].get(recipe_id)
     if recipe is None:
@@ -169,11 +179,14 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
 
     output_id = recipe["output_item_id"]
     sale = (prices if sale_prices is None else sale_prices).get(output_id)
-    valid_sale = type(sale) is int and sale > 0
+    valid_sale = _positive(sale)
     valid = not missing and valid_sale
     retained = Decimal(1) - Decimal(str(auction_cut))
-    net_revenue = int((Decimal(sale * recipe["output_quantity"]) * retained).to_integral_value(rounding=ROUND_FLOOR)) if valid_sale else None
-    profit = net_revenue - total if valid else None
+    net_revenue = (_to_copper(Decimal(sale * recipe["output_quantity"]) * retained, ROUND_FLOOR)
+                   if valid_sale else None)
+    break_even = (_to_copper(Decimal(total) / (retained * recipe["output_quantity"]), ROUND_CEILING)
+                  if not missing else None)
+    profit = net_revenue - total if valid and net_revenue is not None else None
     shopping_choices = []
     for item_id, quantity in sorted(shopping.items()):
         cost, method, _ = unit_cost(item_id, (recipe_id,))
@@ -194,6 +207,6 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
         "shopping_list": dict(sorted(shopping.items())),
         "shopping_choices": shopping_choices,
         "expanded_materials": material_plan(catalog, recipe_id),
-        "margin": profit / net_revenue if valid and net_revenue else None,
-        "break_even_copper": int((Decimal(total) / (retained * recipe["output_quantity"])).to_integral_value(rounding=ROUND_CEILING)) if not missing else None,
+        "margin": profit / net_revenue if profit is not None and net_revenue else None,
+        "break_even_copper": break_even,
     }

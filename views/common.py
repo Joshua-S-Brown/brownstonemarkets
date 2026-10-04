@@ -1,6 +1,6 @@
 """Shared snapshot loading, freshness display and money columns for every view."""
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import duckdb
 import streamlit as st
@@ -26,7 +26,7 @@ def read_db(config):
 
 def show_freshness(config, manifest):
     """Caption the price age honestly and warn when the policy calls it stale."""
-    freshness = assess(manifest, datetime.now(timezone.utc), config["max_age_hours"])
+    freshness = assess(manifest, datetime.now(UTC), config["max_age_hours"])
     if freshness["upstream_known"]:
         st.caption(f"Prices scanned {freshness['age_hours']:.1f} hours ago "
                    f"({freshness['observed_at']:%Y-%m-%d %H:%M} UTC) · stale after {config['max_age_hours']} hours")

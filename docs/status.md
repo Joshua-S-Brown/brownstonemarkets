@@ -13,11 +13,16 @@ _Last updated 2026-10-04._
   - Browse market and Opportunities are also available. Opportunities explains when a source can't support it.
   - All money is displayed in gold.
 - **Launcher:** `launch.py` (via `Start Brownstone.command` / `.cmd`) restarts its own server when the code has changed.
-- **CI:** macOS and Windows, installed from the lock file, including the Streamlit UI test.
+- **Catalog verification (STORY-007):**
+  - All six recipes' reagent and output quantities and all three thread vendor prices match Wowhead Classic. Evidence URLs are recorded per record, and a test pins the verified values.
+  - Bolt of Runecloth uses 5 Runecloth.
+  - No catalog values changed, so it stays at version 0.1.
+- **Storage:** explicit DuckDB schema, version 1, with ordered one-time migrations. Your existing database migrates on its next Refresh; a dry run on a copy kept all 24,020 rows.
+- **Quality gates:** CI runs Ruff, mypy and the tests on macOS and Windows from the lock file, including the Streamlit UI test. Config loads into typed, individually validated `Source` records.
 
 ## Limitations
 
-- The catalog's quantities and vendor prices are hand-entered and not independently verified (STORY-007). The Classic Bolt of Runecloth uses 5 Runecloth; this was changed from 4 on 2026-10-04 and is the main item to confirm.
+- Required skill levels are display-only. Three are sourced: Woolen Bag 80, Mageweave Bag 225, Bolt of Runecloth 250. Three are unconfirmed and marked `required_skill_verified = false`: Runecloth Bag 260, Bolt of Woolen Cloth 75, Bolt of Mageweave 175.
 - Mankrik has no upstream scan time, so price age is unknown and "stale" only measures time since download.
 - Classic historical values are zero, so the discount screen cannot run on Classic.
 - Not modeled: see `requirements.md` → *Not modeled*.
@@ -29,9 +34,11 @@ _Last updated 2026-10-04._
 
 ```bash
 .venv/bin/python -m pytest -p no:cacheprovider
+.venv/bin/python -m ruff check .
+.venv/bin/python -m mypy
 ```
 
-Expected: 60 tests pass, offline. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 64 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Last live check (2026-10-04, Mankrik, 5,868 rows), cautious basis:
 

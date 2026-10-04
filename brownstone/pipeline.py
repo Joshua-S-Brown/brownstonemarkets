@@ -3,21 +3,23 @@ import hashlib
 import io
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
 import duckdb
 import polars as pl
 import pyarrow.parquet as pq
-from .config import read_config
-from .sources import download
-from .normalization import normalize, PRICE_COLUMNS
+
 from .analysis import rank
+from .config import Source
+from .normalization import PRICE_COLUMNS, normalize
+from .sources import download
 from .storage import load_snapshot
 
 
-def run(config: dict, input_path: Path | None = None) -> tuple[pl.DataFrame, Path]:
+def run(config: Source, input_path: Path | None = None) -> tuple[pl.DataFrame, Path]:
     raw = input_path.read_bytes() if input_path else download(config["source_url"])
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     sid = now.strftime("%Y%m%dT%H%M%S%fZ") + "_" + uuid.uuid4().hex[:8]
     base = Path(config["data_dir"])
     folders = {layer: base / layer / config["market_id"] for layer in ("bronze", "silver", "gold")}
@@ -58,7 +60,8 @@ def run(config: dict, input_path: Path | None = None) -> tuple[pl.DataFrame, Pat
                         **{key: config.get(key) for key in ["game_version", "region", "scope", "realm"]},
                         updated_at=upstream_time.isoformat() if upstream_time else None,
                         freshness_basis="upstream" if upstream_time else "collected_at",
-                        zero_price_rows=frame.filter(pl.any_horizontal([pl.col(c) == 0 for c in PRICE_COLUMNS.values()])).height,
+                        zero_price_rows=frame.filter(
+                            pl.any_horizontal([pl.col(c) == 0 for c in PRICE_COLUMNS.values()])).height,
                         missing_name_rows=pl.read_csv(io.BytesIO(raw), infer_schema=False).filter(
                             pl.col("name").is_null() | (pl.col("name") == "")).height)
     except Exception as error:

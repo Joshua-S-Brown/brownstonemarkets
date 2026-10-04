@@ -1,13 +1,15 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import duckdb
 import polars as pl
 import pytest
 
-from brownstone.pipeline import normalize, read_config, run
+from brownstone.config import read_sources
+from brownstone.normalization import normalize
+from brownstone.pipeline import run
 
-NOW = datetime.now(timezone.utc)
+NOW = datetime.now(UTC)
 HEADER = "itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n"
 
 
@@ -99,5 +101,26 @@ def test_failed_source_preserved(tmp_path):
 
 
 def test_config():
-    config = read_config(Path(__file__).resolve().parents[1] / "config/market.toml")
-    assert config["data_dir"].is_absolute()
+    sources = read_sources(Path(__file__).resolve().parents[1] / "config/market.toml")
+    assert all(source["data_dir"].is_absolute() for source in sources)
+
+
+def test_single_source_file_and_per_source_validation(tmp_path):
+    shared = 'data_dir = "data"\nmax_age_hours = 24\nauction_cut = 0.05\nmin_discount = 0.2\ntop_n = 20\n'
+    source = ('market_id = "{id}"\ngame_version = "classic"\nregion = "us"\nscope = "realm"\n'
+              'realm = "x"\nsource_url = "https://example.com/items.csv"\n')
+    (tmp_path / "config").mkdir()
+    path = tmp_path / "config/market.toml"
+    path.write_text(shared + source.format(id="solo"))
+    [only] = read_sources(path)
+    assert only["market_id"] == "solo" and only["data_dir"] == (tmp_path / "data").resolve()
+    # A per-source override is validated, not just the shared value.
+    path.write_text(shared + "[[sources]]\n" + source.format(id="a") + "auction_cut = 1.5\n")
+    with pytest.raises(ValueError, match="auction_cut"):
+        read_sources(path)
+    path.write_text(shared + "[[sources]]\n" + source.format(id="a") + "[[sources]]\n" + source.format(id="a"))
+    with pytest.raises(ValueError, match="unique"):
+        read_sources(path)
+    path.write_text(shared + "[[sources]]\nmarket_id = \"a\"\n")
+    with pytest.raises(ValueError, match="missing"):
+        read_sources(path)

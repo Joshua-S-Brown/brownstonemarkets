@@ -15,5 +15,7 @@ jobs:
       # Pinned versions first, then the project without re-resolving, so CI matches local setups.
       - run: python -m pip install -r requirements.lock.txt
       - run: python -m pip install --no-deps -e .
+      - run: python -m ruff check .
+      - run: python -m mypy
       # Streamlit is in the lock file, so the UI test runs instead of skipping.
       - run: python -m pytest -p no:cacheprovider

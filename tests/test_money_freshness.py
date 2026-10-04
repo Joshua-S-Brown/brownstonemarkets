@@ -1,11 +1,11 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from brownstone.freshness import assess, is_stale
 from brownstone.money import format_money, to_gold
 
-NOW = datetime(2026, 10, 4, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 4, tzinfo=UTC)
 
 
 @pytest.mark.parametrize("copper,text", [

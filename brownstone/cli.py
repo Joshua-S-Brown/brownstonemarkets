@@ -2,7 +2,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from .pipeline import read_config, run
+from .config import read_sources
+from .pipeline import run
 
 
 def main() -> None:
@@ -14,9 +15,10 @@ def main() -> None:
     parser.add_argument("--market", help="Configured market ID (defaults to the first source)")
     args = parser.parse_args()
     try:
-        config = read_config(args.config)
+        sources = read_sources(args.config)
+        config = sources[0]
         if args.market:
-            matches = [source for source in config.get("sources", [config]) if source["market_id"] == args.market]
+            matches = [source for source in sources if source["market_id"] == args.market]
             if not matches:
                 raise ValueError(f"Unknown market: {args.market}")
             config = matches[0]

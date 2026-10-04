@@ -7,7 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from brownstone.action_board import compatible
-from brownstone.config import read_config
+from brownstone.config import read_sources
 from brownstone.crafting import load_recipe_catalog
 from brownstone.pipeline import run
 from views import crafting, market
@@ -18,7 +18,7 @@ st.title("Brownstone Markets")
 st.caption("Your local WoW market research desk · prices in gold")
 
 try:
-    all_config = read_config(ROOT / "config/market.toml")
+    sources = read_sources(ROOT / "config/market.toml")
     catalogs = [load_recipe_catalog(path) for path in sorted((ROOT / "config").glob("*-tailoring.toml"))]
 except Exception as error:
     st.error(f"Could not read configuration: {error}")
@@ -26,7 +26,6 @@ except Exception as error:
 
 with st.sidebar:
     st.header("Market")
-    sources = all_config.get("sources", [all_config])
     selected = st.selectbox("Data source", range(len(sources)),
                             format_func=lambda i: sources[i].get("label", sources[i]["market_id"]))
     config = sources[selected]

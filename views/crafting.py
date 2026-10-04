@@ -1,5 +1,5 @@
 """Crafting: the Action Board, then one recipe's summary and the evidence behind it."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import streamlit as st
 
@@ -41,7 +41,7 @@ def render(config, catalogs):
     try:
         with read_db(config) as db:
             observations = price_observations(db, config, sid, sorted(catalog["items_by_id"]))
-        board = rank_recipes(catalog, observations, config, manifest, now=datetime.now(timezone.utc),
+        board = rank_recipes(catalog, observations, config, manifest, now=datetime.now(UTC),
                              sort_by=sort_by, basis=basis, max_age_hours=config["max_age_hours"],
                              auction_cut=config["auction_cut"])
     except Exception as error:

@@ -24,7 +24,7 @@ views/                  Streamlit only; display, no calculations
   crafting.py           Action Board and recipe explanation
   market.py             Browse market and Opportunities
 brownstone/             importable without Streamlit
-  config.py             market.toml loading/validation; MARKET_KEYS
+  config.py             market.toml → list[Source] (typed, each fully validated); MARKET_KEYS
   sources.py            HTTP download
   normalization.py      CSV → validated frame
   pipeline.py           orchestration of one collection
@@ -47,9 +47,9 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 | Collection | `snapshot_id` (UTC time + random suffix) | Bronze CSV + manifest; manifest records `analytical_snapshot_id` |
 | Analytical snapshot | market + upstream scan time + SHA-256 | Repeated identical content reuses the earlier ID |
 | Price observation | analytical snapshot + market identity + item ID | Integer copper: `min_buyout, market_value, recent_value, historical_value` |
-| Catalog | `game_version, ruleset, catalog_version` | TOML; items with role and provenance, recipes with inputs and output quantity |
+| Catalog | `game_version, ruleset, catalog_version` | TOML; items with role and provenance, recipes with inputs and output quantity. Optional evidence: recipe `verified_at` / `verification_url`, item `vendor_price_source_url` |
 
-The `market_snapshots` table is created from the first silver file's schema, and identity columns are added by additive migration. An explicit DDL and schema version are planned before STORY-004/006.
+`storage.py` owns an explicit `market_snapshots` DDL and a `schema_info` table that records `schema_version`. `ensure_schema` runs each pending migration once, in order. It refuses a database newer than the code. To change the schema, add a `_migrate_to_N` function, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`. Columns are nullable so that v0.1 databases and fresh ones are identical; validation happens in normalization.
 
 ## Crafting calculation
 
@@ -67,15 +67,19 @@ The `market_snapshots` table is created from the first silver file's schema, and
 
 ## Switching to WoW Forever
 
-1. Add a `[[sources]]` entry with `game_version = "forever"`, the Forever `ruleset`, region, scope and the feed URL.
-2. Bring `config/forever-tailoring.toml` to the same ruleset and verification standard as the Classic catalog.
-3. If the feed is not TSM CSV, add an adapter in `sources.py` / `normalization.py` that produces the same silver columns.
+1. **Market identity (STORY-009).** Forever has no realms: markets are region + server type + faction. Extend the identity, and separate the catalog's `ruleset` (game-rules version) from Forever's server types, before adding a Forever source.
+2. **Price source (SPIKE-008 / STORY-010).** There is no TSM or Blizzard feed. Ingest the scanning addon's SavedVariables file as a new source: bronze stays byte-for-byte, listings go to a new table, and item-level prices are derived in the `market_snapshots` shape.
+3. **Catalog (STORY-004).** Generate `config/forever-tailoring.toml` with the recipe importer to the same verification standard as the Classic catalog.
+4. **Configuration.** Add the `[[sources]]` entry. If the feed is not TSM CSV, the adapter goes in `sources.py` / `normalization.py` and produces the same silver columns.
 
 No change to crafting, the Action Board or the views should be needed. If one is, treat it as a design defect.
 
+## Quality gates
+
+Ruff (lint and import order) and mypy (on `brownstone/` and `launch.py`) run locally and in CI; configuration is in `pyproject.toml`. `Source` is a `TypedDict`, so mypy checks config key names wherever a function is annotated with it.
+
 ## Known design debt
 
-- Configuration and records are plain dicts. A small typed `Source`/`Market` model would catch key typos.
-- DuckDB schema is implicit (see above).
+- Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
+- `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.
-- No linter or type checker yet.

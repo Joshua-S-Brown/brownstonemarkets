@@ -5,17 +5,30 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 ## Product direction
 
 - **Purpose:** a local WoW market research tool that traces materials through intermediate crafts to finished goods and explains which crafts are worth investigating.
-- **Target game:** WoW Forever. It has no reliable public price feed yet.
+- **Target game:** WoW Forever (beta since 17 September 2026; launches 4 November 2026). It has no public price feed, so the planned source is our own read-only scanning addon (SPIKE-008, STORY-010).
+- **Known Forever market facts** (checked 2026-10-04, mostly third-party; re-verify at launch):
+  - Forever has no realms. Each region (US, EU and so on) has one auction house per server type (Normal, PvP, RP, later Hardcore) and faction, plus a neutral house with a 15% cut instead of 5%.
+  - Blizzard's API publishes no Forever auction data, and TSM has no Forever data.
+  - Existing Forever price sites are fed by players' addon scans. Forever addons reportedly use the modern `C_AuctionHouse` API, which has Retail-style commodities.
+  - Sources: [Wikipedia](https://en.wikipedia.org/wiki/World_of_Warcraft:_Forever), [AHledger](https://ahledger.com/wow-forever/auction-house), [WowGuide realms](https://wowguide.net/en/guides/wow-forever-realms-rulesets), [Blizzard API forum: Classic Era auction 404s](https://us.forums.blizzard.com/en/blizzard/t/404-for-all-classic-era-namespace-auction-house-endpoints/54307), [WOW4E_AH_Trader](https://github.com/1nd1v1d/WOW4E_AH_Trader).
 - **Development stand-in:** Mankrik Alliance, Classic Era (TSM public realm CSV). Classic is used to build and prove the product, not as the end market. Switching to Forever must be a configuration and catalog change: add a source with the Forever `game_version` and `ruleset`, plus a matching catalog. It must not require code changes.
 - **Retail:** not a product requirement (decided 2026-10-04). Retail sources remain configured only as an ingestion regression check, because they exercise regional scope and upstream timestamps that Classic lacks. No feature work targets Retail. They may be removed when they stop earning their keep.
-- **Out of scope:** addons, automated buying or selling, cloud deployment, scheduled collection and AI-generated recommendations without explainable features.
+- **Launch market (decided 2026-10-04):** Forever, US region (assumed; confirm), Roleplaying server type, Alliance faction. The neutral auction house is a separate, secondary market. The user has beta access, so SPIKE-008 targets the Forever beta directly.
+- **Dependable data (decided 2026-10-04):** nothing in the architecture may require a source the user doesn't control.
+  - **Baseline source:** the user's own addon scans. Every feature must work with only this.
+  - **Optional sources:** other players' aggregated scans (third-party sites, TSM). They may only enrich or cross-check, never be required.
+  - **Access rules:** a third-party source is used only through an official export or API whose terms allow it, never by scraping.
+  - **Removability:** if an optional source disappears, Brownstone keeps working on the baseline.
+- **Addon:** a read-only scanning addon is under evaluation (SPIKE-008). If it's built, it only reads listings after a click at the auction house. It never buys, posts or scans unattended.
+- **Out of scope:** automated buying, selling or posting, unattended in-game scanning, cloud deployment and AI-generated recommendations without explainable features.
 
 ## Rules
 
 ### Data integrity
 - **DATA-01 Raw preservation:** every download is saved byte-for-byte before validation. Each has a manifest with source, SHA-256, UTC collection time and status, including failures. Raw files are never overwritten.
 - **DATA-02 Validation:** required columns, integer copper prices, unique positive item IDs and timestamps that are either all present or all absent. A missing name becomes `Item <ID>`. Zero means unavailable or no listing.
-- **DATA-03 Market identity:** a market is `market_id + game_version + region + scope + realm`. Item IDs never join across any of these.
+- **DATA-03 Market identity:** a market is `market_id + game_version + region + scope + realm`. Item IDs never join across any of these. (STORY-009 replaces this with an identity that fits Forever and is separate from the data source.)
+- **DATA-08 Source independence:** a market's identity says *which auction house*. A source's identity says *who observed it* (your addon, TSM, a third-party site). The same market can have several sources. Every price observation records its source, and combining sources follows an explicit, versioned policy, never silent mixing.
 - **DATA-04 Deduplication:** identical market, scan time and content hash reuse one analytical snapshot. Every raw collection is still archived.
 - **DATA-05 Freshness:** age comes from upstream scan time when the source provides it. Otherwise it comes from collection time, explicitly labeled as "price age unknown". Stale means older than `max_age_hours` (default 24) or more than 15 minutes in the future. A source may opt out of upstream time only when the entire column is blank (`allow_missing_updated_at`).
 
@@ -24,7 +37,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 - **MONEY-02:** display gold. Tables show decimal gold with four places, so one copper is exact and columns sort numerically. Headline figures and prose use `4g 50s 97c`.
 
 ### Crafting
-- **CRAFT-01 Versioned catalogs:** each catalog declares `game_version`, `ruleset`, `catalog_version`, status, and provenance URLs for every item and recipe. Classic and Forever catalogs never share rules implicitly.
+- **CRAFT-01 Versioned catalogs:** each catalog declares `game_version`, `ruleset`, `catalog_version`, status, and provenance URLs for every item and recipe. Classic and Forever catalogs never share rules implicitly. A catalog used for decisions records verification evidence for every recipe quantity and vendor price. Changing a verified value requires new evidence and a `catalog_version` bump.
 - **CRAFT-02 Expansion:** intermediates expand without cycles or double counting. Unsupported cases (cycles, fractional units) are rejected, not approximated.
 - **CRAFT-03 Routes:** each input uses its cheapest valid route: buy, craft or vendor. Missing or zero prices are never free. Equal costs resolve deterministically.
 - **CRAFT-04 Price bases:**
@@ -57,7 +70,8 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 - **UI-05:** the launcher reuses a running server only if its code is current. It restarts its own outdated server and never stops a server it did not start.
 
 ### Operations
-- **OPS-01:** tests are offline and run in CI on macOS and Windows from the lock file, including the UI test. No market data is stored in Git.
+- **OPS-01:** tests are offline and run in CI on macOS and Windows from the lock file, including the UI test, alongside Ruff and mypy. No market data is stored in Git.
+- **OPS-02:** database schema changes go through numbered migrations. A database newer than the code is refused, never modified.
 
 ## Not modeled (do not imply otherwise)
 
@@ -68,8 +82,9 @@ Demand, sale likelihood, listing depth, deposits, recommended quantities, vendor
 - Catalog source and import path at scale (STORY-004).
 - Useful action thresholds beyond profit > 0.
 - Classic regional demand integration (STORY-003).
-- Forever price source and launch market.
+- Whether to build the scanning addon (SPIKE-008).
+- Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011).
 - Historical storage, backup and scheduling.
-- Whether to remove the Retail regression sources.
+- Whether to remove the Retail regression sources. Weigh this after SPIKE-008: if Forever uses Retail-style commodities, Retail's regional commodity feed may be the closest existing test of that model.
 
 None is approved by default.

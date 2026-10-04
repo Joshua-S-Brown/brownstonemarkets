@@ -21,6 +21,8 @@ python3 -m venv .venv
 .venv/bin/python -m pytest -p no:cacheprovider
 ```
 
+Before committing, also run `.venv/bin/python -m ruff check .` and `.venv/bin/python -m mypy`. CI runs both.
+
 On Windows, use `py -m venv .venv` and `.venv\Scripts\python.exe` in place of `.venv/bin/python`.
 
 ## Run

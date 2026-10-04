@@ -1,16 +1,19 @@
 import json
-from datetime import datetime, timezone
-import duckdb
-from brownstone.analysis import browse
-from brownstone.pipeline import run
-from brownstone.config import read_config
+from datetime import UTC, datetime
 from pathlib import Path
+
+import duckdb
+import pytest
+
+from brownstone.analysis import browse
+from brownstone.config import read_sources
+from brownstone.pipeline import run
 
 
 def test_market_scopes_and_dedup(tmp_path):
     source = tmp_path / "items.csv"
     source.write_text("itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n" +
-        f"1,Test Ore,10000,9500,10000,10000,{datetime.now(timezone.utc).isoformat()}\n")
+        f"1,Test Ore,10000,9500,10000,10000,{datetime.now(UTC).isoformat()}\n")
     base = dict(data_dir=tmp_path / "data", max_age_hours=24, source_url="https://example.com/items.csv",
                 auction_cut=.05, min_discount=.2, top_n=20, game_version="retail", region="us")
     for scope, market, realm in [("realm", "realm-test", "area-52"), ("region", "commodity-test", "")]:
@@ -29,21 +32,21 @@ def test_market_scopes_and_dedup(tmp_path):
 
 
 def test_source_config():
-    config = read_config(Path(__file__).resolve().parents[1] / "config/market.toml")
-    assert [s["market_id"] for s in config["sources"]] == [
+    sources = read_sources(Path(__file__).resolve().parents[1] / "config/market.toml")
+    assert [s["market_id"] for s in sources] == [
         "classic-us-mankrik-alliance", "retail-us-area-52", "retail-us-commodities",
     ]
-    assert [s["scope"] for s in config["sources"]] == ["realm", "realm", "region"]
-    assert config["sources"][2]["realm"] == ""
-    assert config["sources"][0]["game_version"] == "classic"
-    assert config["sources"][0]["realm"] == "mankrik-alliance"
-    assert config["sources"][0]["allow_missing_updated_at"] is True
+    assert [s["scope"] for s in sources] == ["realm", "realm", "region"]
+    assert sources[2]["realm"] == ""
+    assert sources[0]["game_version"] == "classic"
+    assert sources[0]["realm"] == "mankrik-alliance"
+    assert sources[0]["allow_missing_updated_at"] is True
 
 
 def test_legacy_database_migration(tmp_path):
     from brownstone.normalization import normalize
     source = tmp_path / "items.csv"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     source.write_text("itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n" +
         f"1,Test Ore,10000,9500,10000,10000,{now.isoformat()}\n")
     config = dict(data_dir=tmp_path / "data", market_id="retail-us-area-52", max_age_hours=24,
@@ -57,4 +60,31 @@ def test_legacy_database_migration(tmp_path):
     run(config, source)
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb")) as db:
         assert db.execute("SELECT count(*) FROM market_snapshots").fetchone()[0] == 2
-        assert db.execute("SELECT game_version,scope,realm FROM market_snapshots WHERE snapshot_id='legacy'").fetchone() == ("retail", "realm", "area-52")
+        identity = db.execute("SELECT game_version,scope,realm FROM market_snapshots "
+                              "WHERE snapshot_id='legacy'").fetchone()
+        assert identity == ("retail", "realm", "area-52")
+
+
+def test_fresh_database_matches_legacy_schema_and_records_version(tmp_path):
+    from brownstone.storage import SCHEMA_VERSION, ensure_schema
+    source = tmp_path / "items.csv"
+    source.write_text("itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n" +
+        f"1,Test Ore,10000,9500,10000,10000,{datetime.now(UTC).isoformat()}\n")
+    config = dict(data_dir=tmp_path / "data", market_id="retail-us-area-52", max_age_hours=24,
+                  source_url="https://example.com/items.csv", auction_cut=.05, min_discount=.2, top_n=20,
+                  game_version="retail", region="us", scope="realm", realm="area-52")
+    run(config, source)
+    with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb")) as db:
+        columns = [row[:2] for row in db.execute("DESCRIBE market_snapshots").fetchall()]
+        assert db.execute("SELECT value FROM schema_info").fetchone() == (str(SCHEMA_VERSION),)
+        ensure_schema(db)  # Idempotent.
+        db.execute("UPDATE schema_info SET value='99'")
+        with pytest.raises(RuntimeError, match="newer"):
+            ensure_schema(db)
+    # Parquet-derived v0.1 schema plus identity columns: what existing databases contain.
+    assert columns == [
+        ("item_id", "BIGINT"), ("item_name", "VARCHAR"), ("market_value", "BIGINT"), ("min_buyout", "BIGINT"),
+        ("recent_value", "BIGINT"), ("historical_value", "BIGINT"), ("updated_at", "TIMESTAMP WITH TIME ZONE"),
+        ("market_id", "VARCHAR"), ("snapshot_id", "VARCHAR"), ("collected_at", "TIMESTAMP WITH TIME ZONE"),
+        ("game_version", "VARCHAR"), ("region", "VARCHAR"), ("scope", "VARCHAR"), ("realm", "VARCHAR"),
+        ("source_sha256", "VARCHAR")]

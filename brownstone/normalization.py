@@ -1,10 +1,14 @@
 import io
 from datetime import datetime
+
 import polars as pl
 
 from .freshness import is_stale
 
-PRICE_COLUMNS = {"marketValue": "market_value", "minBuyout": "min_buyout", "recent": "recent_value", "historical": "historical_value"}
+PRICE_COLUMNS = {
+    "marketValue": "market_value", "minBuyout": "min_buyout",
+    "recent": "recent_value", "historical": "historical_value",
+}
 REQUIRED = {"itemId", "name", "updatedAt", *PRICE_COLUMNS}
 
 

@@ -4,6 +4,7 @@ Streamlit reloads app.py on each rerun but not imported modules, so a server lef
 across code changes fails with confusing import errors. The launcher fingerprints the
 Python sources it started with and restarts its own server when they change.
 """
+import contextlib
 import hashlib
 import os
 import signal
@@ -40,10 +41,8 @@ def stop_own_server(work):
     pid_file, code_file = work / "server.pid", work / "server.code"
     if not pid_file.exists():
         return False
-    try:
+    with contextlib.suppress(OSError, ValueError):  # Already gone; the health check below decides.
         os.kill(int(pid_file.read_text(encoding="utf-8")), signal.SIGTERM)
-    except (OSError, ValueError):
-        pass  # Already gone; the health check below decides.
     pid_file.unlink(missing_ok=True)
     code_file.unlink(missing_ok=True)
     for _ in range(40):

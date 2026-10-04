@@ -1,3 +1,6 @@
+from collections.abc import Mapping
+from typing import Any
+
 import duckdb
 import polars as pl
 
@@ -16,7 +19,7 @@ def screenable_count(connection, snapshot_id):
         [snapshot_id]).fetchone()[0]
 
 
-def rank(connection: duckdb.DuckDBPyConnection, snapshot_id: str, config: dict) -> pl.DataFrame:
+def rank(connection: duckdb.DuckDBPyConnection, snapshot_id: str, config: Mapping[str, Any]) -> pl.DataFrame:
     return connection.execute("""
         WITH price_references AS (
             SELECT *, least(market_value, recent_value, historical_value) AS reference_copper
