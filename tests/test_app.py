@@ -62,6 +62,9 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     assert any("Imported" in s.value for s in at.success)
+    catalog = next(w for w in at.selectbox if w.label == "Recipe catalog")  # Other professions may exist.
+    catalog.set_value(next(i for i, label in enumerate(catalog.options) if label.startswith("Forever Tailoring")))
+    at.run()
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert table.iloc[0]["Item"].startswith("Runecloth Bag") and table.iloc[0]["Action"] == "potential craft"
     assert set(table["Action"][1:]) == {"missing prices"}  # Bags without listings in the fixture scan.
