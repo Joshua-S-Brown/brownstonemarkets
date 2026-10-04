@@ -1,6 +1,6 @@
 """Crafting shortlist policy; no storage, UI or network dependencies.
 
-The board runs for any market whose game version and ruleset match the catalog, so moving
+The board runs for any market whose game version and rules version match the catalog, so moving
 from the Classic stand-in to WoW Forever is a configuration change, not a code change.
 """
 from .config import MARKET_KEYS
@@ -12,7 +12,7 @@ POLICY_VERSION = "0.2"
 
 def compatible(catalog: dict, market: dict) -> bool:
     return (catalog["game_version"] == market.get("game_version")
-            and catalog["ruleset"] == market.get("ruleset"))
+            and catalog["rules_version"] == market.get("rules_version"))
 
 
 def rank_recipes(catalog, observations, market, snapshot, *, now, sort_by="profit",
@@ -25,7 +25,7 @@ def rank_recipes(catalog, observations, market, snapshot, *, now, sort_by="profi
     conservatively non-actionable.
     """
     if not compatible(catalog, market):
-        raise ValueError("The catalog's game version and ruleset must match the market")
+        raise ValueError("The catalog's game version and rules version must match the market")
     if any(snapshot.get(key) != market.get(key) for key in MARKET_KEYS):
         raise ValueError("The snapshot belongs to a different market")
     if sort_by not in {"profit", "margin"}:

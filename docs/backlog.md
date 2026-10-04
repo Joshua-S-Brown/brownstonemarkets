@@ -17,7 +17,9 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing active. Next up are SPIKE-008, which needs your in-game time on the beta, and STORY-009, which is code only; they can run in parallel. Launch market: Forever US, Roleplaying, Alliance.
+Nothing active. Next up is SPIKE-008, which needs your in-game time on the beta. Launch market: Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`).
+
+Recently completed: STORY-009, market and source separated, 2026-10-04 (see `status.md`).
 
 ## Next
 
@@ -34,18 +36,6 @@ Acceptance:
 - **Confirm the rules:** it doesn't automate gameplay, it never buys or posts, and it stays within Blizzard's addon policy.
 - **Write up the decision** in `requirements.md`: build the addon or not, plus the listing-level data format STORY-010 will ingest.
 
-### STORY-009 — Model Forever markets
-
-As a gold maker, I want a Forever market to be identified the way the game actually works, and separately from whoever observed it, so that prices from different auction houses never mix and one market can have several sources.
-
-Acceptance:
-- **Market separate from source** (DATA-08). Today `market_id` is really a source ID, used in folder paths, the database and manifests. Split it into a market identity (which auction house) and a source identity (who observed it), with a schema migration that keeps existing Classic and Retail data intact.
-- **Identity covers the new shape.** Forever has no realms: each region has one auction house per server type (Normal, PvP, RP, later Hardcore) and faction (Alliance, Horde, Neutral).
-- **No forced realm.** A Forever source can be configured without inventing a realm. Existing Classic and Retail identities keep working, with a schema migration if one is needed.
-- **Fix the naming clash.** Our `ruleset` (a catalog's game-rules version, for example `forever-beta-1.60`) is separated from Forever's server types; one of them is renamed.
-- **Per-house auction cut.** The neutral house takes 15% instead of 5%, and a test covers it.
-- **Recorded in the docs.** `requirements.md` (DATA-03) and the design data contracts are updated.
-
 ### STORY-010 — Ingest addon scans
 
 Depends on SPIKE-008's decision.
@@ -61,7 +51,7 @@ Acceptance:
 
 ### STORY-011 — Optional third-party scan sources
 
-Depends on STORY-009. It can come before or after STORY-010.
+It can come before or after STORY-010.
 
 As a gold maker, I want to add other players' Forever scans when a trustworthy one exists, so that I have broader coverage than my own scans without relying on it.
 

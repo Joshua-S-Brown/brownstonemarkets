@@ -11,10 +11,10 @@ import polars as pl
 import pyarrow.parquet as pq
 
 from .analysis import rank
-from .config import Source
+from .config import MARKET_KEYS, Source
 from .normalization import PRICE_COLUMNS, normalize
 from .sources import download
-from .storage import load_snapshot
+from .storage import load_snapshot, upgrade_database
 
 
 def run(config: Source, input_path: Path | None = None) -> tuple[pl.DataFrame, Path]:
@@ -22,14 +22,17 @@ def run(config: Source, input_path: Path | None = None) -> tuple[pl.DataFrame, P
     now = datetime.now(UTC)
     sid = now.strftime("%Y%m%dT%H%M%S%fZ") + "_" + uuid.uuid4().hex[:8]
     base = Path(config["data_dir"])
-    folders = {layer: base / layer / config["market_id"] for layer in ("bronze", "silver", "gold")}
+    folders = {layer: base / layer / config["source_id"] for layer in ("bronze", "silver", "gold")}
     for folder in folders.values():
         folder.mkdir(parents=True, exist_ok=True)
     bronze = folders["bronze"] / f"{sid}.csv"
     with bronze.open("xb") as file:
         file.write(raw)
+    # Who observed (source) and which auction house (market), recorded even if validation fails.
+    identity = {"source_id": config["source_id"], "provider": config["provider"],
+                **{key: config[key] for key in MARKET_KEYS}}  # type: ignore[literal-required]
     manifest = {
-        "snapshot_id": sid, "market_id": config["market_id"], "collected_at": now.isoformat(),
+        "snapshot_id": sid, **identity, "collected_at": now.isoformat(),
         "source": str(input_path.resolve()) if input_path else config["source_url"],
         "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw), "status": "received",
     }
@@ -40,12 +43,12 @@ def run(config: Source, input_path: Path | None = None) -> tuple[pl.DataFrame, P
             config.get("allow_missing_updated_at", False),
         )
         frame = frame.with_columns(
-            *[pl.lit(config.get(key), dtype=pl.String).alias(key)
-              for key in ["game_version", "region", "scope", "realm"]],
+            *[pl.lit(identity[key], dtype=pl.String).alias(key) for key in ("source_id", *MARKET_KEYS)],
             pl.lit(manifest["sha256"]).alias("source_sha256"),
         )
         silver = folders["silver"] / f"{sid}.parquet"
         pq.write_table(frame.to_arrow(), silver, compression="zstd")
+        upgrade_database(base, create=True)
         with duckdb.connect(str(base / "brownstone.duckdb")) as db:
             db.begin()
             analytical_sid, inserted = load_snapshot(db, silver, frame, config)
@@ -57,7 +60,6 @@ def run(config: Source, input_path: Path | None = None) -> tuple[pl.DataFrame, P
         upstream_time = frame["updated_at"][0]
         manifest.update(status="complete", rows=frame.height, opportunities=result.height,
                         analytical_snapshot_id=analytical_sid, new_observation=inserted,
-                        **{key: config.get(key) for key in ["game_version", "region", "scope", "realm"]},
                         updated_at=upstream_time.isoformat() if upstream_time else None,
                         freshness_basis="upstream" if upstream_time else "collected_at",
                         zero_price_rows=frame.filter(

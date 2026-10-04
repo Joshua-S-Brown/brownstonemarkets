@@ -24,7 +24,8 @@ views/                  Streamlit only; display, no calculations
   crafting.py           Action Board and recipe explanation
   market.py             Browse market and Opportunities
 brownstone/             importable without Streamlit
-  config.py             market.toml → list[Source] (typed, each fully validated); MARKET_KEYS
+  config.py             market.toml → list[Source] (typed, each fully validated)
+  markets.py            market identity: MARKET_KEYS, derived market_id, validation, legacy upgrade
   sources.py            HTTP download
   normalization.py      CSV → validated frame
   pipeline.py           orchestration of one collection
@@ -43,13 +44,24 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 
 | Entity | Identity | Notes |
 | --- | --- | --- |
-| Market | `market_id, game_version, region, scope, realm` (+ `ruleset` for crafting) | Defined per `[[sources]]` entry in `config/market.toml` |
-| Collection | `snapshot_id` (UTC time + random suffix) | Bronze CSV + manifest; manifest records `analytical_snapshot_id` |
-| Analytical snapshot | market + upstream scan time + SHA-256 | Repeated identical content reuses the earlier ID |
-| Price observation | analytical snapshot + market identity + item ID | Integer copper: `min_buyout, market_value, recent_value, historical_value` |
-| Catalog | `game_version, ruleset, catalog_version` | TOML; items with role and provenance, recipes with inputs and output quantity. Optional evidence: recipe `verified_at` / `verification_url`, item `vendor_price_source_url` |
+| Market | `game_version, region, scope, realm, server_type, faction` → derived `market_id` | One auction house. Crafting also needs the source's `rules_version` |
+| Source | `source_id` (+ `provider`, `source_url`) | One feed observing one market; a `[[sources]]` entry; names its data folders |
+| Collection | `snapshot_id` (UTC time + random suffix) | Bronze CSV + manifest with source and market identity; manifest records `analytical_snapshot_id` |
+| Analytical snapshot | source + upstream scan time + SHA-256 | Repeated identical content from the same source reuses the earlier ID |
+| Price observation | analytical snapshot + source + market identity + item ID | Integer copper: `min_buyout, market_value, recent_value, historical_value` |
+| Catalog | `game_version, rules_version, catalog_version` | TOML; items with role and provenance, recipes with inputs and output quantity. Optional evidence: recipe `verified_at` / `verification_url`, item `vendor_price_source_url` |
 
-`storage.py` owns an explicit `market_snapshots` DDL and a `schema_info` table that records `schema_version`. `ensure_schema` runs each pending migration once, in order. It refuses a database newer than the code. To change the schema, add a `_migrate_to_N` function, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`. Columns are nullable so that v0.1 databases and fresh ones are identical; validation happens in normalization.
+### Schema migrations
+
+- **Versioning.** `storage.py` records `schema_version` in a `schema_info` table.
+- **Migrations are frozen.** A fresh database replays every migration, so it is identical to an upgraded one; a test enforces this.
+  - Version 1: explicit table, plus the identity columns.
+  - Version 2: market/source split. Adds `source_id`, `server_type` and `faction`, moves Classic faction out of the realm slug, renames scope `realm` to `house`, and re-derives `market_id`.
+- **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
+- **Callers.** The app calls it at startup and the pipeline before its write transaction. `load_snapshot` refuses an outdated schema.
+- **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
+- **Nullable columns,** so v0.1 databases match fresh ones; validation happens in normalization.
+- **Manifests are never rewritten.** `markets.upgrade_legacy` reads pre-split manifests in the current shape.
 
 ## Crafting calculation
 
@@ -67,7 +79,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 
 ## Switching to WoW Forever
 
-1. **Market identity (STORY-009).** Forever has no realms: markets are region + server type + faction. Extend the identity, and separate the catalog's `ruleset` (game-rules version) from Forever's server types, before adding a Forever source.
+1. **Market identity (done, STORY-009).** Configure `scope = "house"`, `server_type`, `faction` and no realm, for example `forever-us-roleplaying-alliance`. Neutral houses default to a 15% cut.
 2. **Price source (SPIKE-008 / STORY-010).** There is no TSM or Blizzard feed. Ingest the scanning addon's SavedVariables file as a new source: bronze stays byte-for-byte, listings go to a new table, and item-level prices are derived in the `market_snapshots` shape.
 3. **Catalog (STORY-004).** Generate `config/forever-tailoring.toml` with the recipe importer to the same verification standard as the Classic catalog.
 4. **Configuration.** Add the `[[sources]]` entry. If the feed is not TSM CSV, the adapter goes in `sources.py` / `normalization.py` and produces the same silver columns.

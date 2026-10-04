@@ -16,15 +16,15 @@ def render(config, catalogs):
     st.subheader("Crafting")
     default = next((i for i, c in enumerate(catalogs) if compatible(c, config)), 0)
     index = st.selectbox("Recipe catalog", range(len(catalogs)), index=default, format_func=lambda i: (
-        f"{catalogs[i]['game_version'].title()} {catalogs[i]['profession'].title()} — {catalogs[i]['ruleset']}"))
+        f"{catalogs[i]['game_version'].title()} {catalogs[i]['profession'].title()} — {catalogs[i]['rules_version']}"))
     catalog = catalogs[index]
     st.caption(f"Catalog {catalog.get('catalog_version', 'unversioned')} · status {catalog['status']} · "
                f"{len(catalog['recipes_by_id'])} recipes · {catalog.get('notes', '')}")
 
     if not compatible(catalog, config):
-        st.info(f"Inspection only: this catalog is {catalog['game_version']} / {catalog['ruleset']}, but the "
-                f"selected market is {config['game_version']} / {config.get('ruleset', 'no ruleset')}. "
-                "Prices are never joined across game versions or rulesets.")
+        st.info(f"Inspection only: this catalog is {catalog['game_version']} / {catalog['rules_version']}, but the "
+                f"selected market is {config['game_version']} / {config.get('rules_version', 'no rules version')}. "
+                "Prices are never joined across game versions or rules versions.")
         recipe_id = _pick_recipe(catalog, sorted(catalog["recipes_by_id"],
                                                  key=lambda r: catalog["recipes_by_id"][r]["name"]))
         _recipe_heading(catalog, recipe_id)

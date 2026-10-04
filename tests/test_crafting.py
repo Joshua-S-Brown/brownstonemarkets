@@ -17,7 +17,7 @@ def test_runecloth_bag_expands_intermediate_quantities():
 def test_classic_catalog_is_separate_but_supports_same_proof():
     catalog = load_recipe_catalog(CLASSIC_CATALOG)
     assert catalog["game_version"] == "classic"
-    assert catalog["ruleset"] == "classic-era"
+    assert catalog["rules_version"] == "classic-era"
     assert material_plan(catalog, 18405) == {8170: 2, 14047: 25, 14341: 1}
 
 

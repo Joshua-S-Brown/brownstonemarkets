@@ -12,7 +12,7 @@ def load_recipe_catalog(path: Path) -> dict:
         raw = tomllib.load(file)
     if raw.get("schema_version") != 1:
         raise ValueError("Unsupported recipe catalog schema")
-    for key in ("game_version", "ruleset", "profession", "status"):
+    for key in ("game_version", "rules_version", "profession", "status"):
         if not raw.get(key):
             raise ValueError(f"Recipe catalog requires {key}")
 
@@ -198,7 +198,7 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     return {
         "recipe_id": recipe_id, "output_item_id": output_id,
         "output_name": catalog["items_by_id"][output_id]["name"],
-        "ruleset": catalog["ruleset"], "status": catalog["status"],
+        "rules_version": catalog["rules_version"], "status": catalog["status"],
         "valid": valid, "missing_item_ids": missing + ([] if valid_sale else [output_id]),
         "craft_cost_copper": total if not missing else None,
         "sale_price_copper": sale if valid_sale else None,

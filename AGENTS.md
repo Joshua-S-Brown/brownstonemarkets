@@ -11,7 +11,7 @@ Explicit user instructions take precedence. When a decision or implementation ch
 
 - WoW Forever is the target. Classic Era Mankrik Alliance is a development stand-in. Retail is regression-only; don't build features for it.
 - Preserve raw bytes and provenance. Keep data, environments, logs and credentials out of Git.
-- A market is its full identity (`MARKET_KEYS` plus ruleset for crafting). Item ID alone never joins across versions or scopes.
+- A market (which auction house: `brownstone/markets.py`) is separate from a source (who observed it: `source_id`). Join prices on the full `MARKET_KEYS`, plus `rules_version` for crafting; item ID alone never joins. Never configure `market_id`, which is derived, and never mix sources silently.
 - Calculate in integer copper. Display gold using `brownstone/money.py`.
 - `brownstone/` must not import Streamlit or download inside calculations. Display code goes in `views/`.
 - Never infer categories from names or commodity status. Never treat missing or zero prices as free.

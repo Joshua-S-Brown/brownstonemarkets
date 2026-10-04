@@ -1,6 +1,6 @@
 schema_version = 1
 game_version = "classic"
-ruleset = "classic-era"
+rules_version = "classic-era"
 profession = "tailoring"
 status = "reference-observed"
 catalog_version = "0.1"

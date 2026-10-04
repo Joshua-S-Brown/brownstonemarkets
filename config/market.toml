@@ -1,35 +1,48 @@
-# Verified public development dataset; change URL and market_id together.
+# Shared settings; any source may override them. Paths are relative to the project folder.
 data_dir = "data"
 max_age_hours = 24
-auction_cut = 0.05
+auction_cut = 0.05  # Neutral auction houses default to 0.15 unless a source sets its own.
 min_discount = 0.20
 top_n = 20
 
+# Each [[sources]] entry is one feed (source_id, provider, URL) observing one market.
+# The market is the auction house: game_version + region + scope + realm/server_type + faction.
+# market_id is derived from those fields, so several sources can observe the same market.
+# source_id also names the source's data folder; the IDs below predate the split and match
+# their market IDs, which keeps existing data in place.
+#
+# A Forever market has no realm, for example:
+#   game_version = "forever", region = "us", scope = "house",
+#   server_type = "roleplaying", faction = "alliance"   # -> forever-us-roleplaying-alliance
+
 [[sources]]
-label = "Mankrik Alliance — Classic Era"
-market_id = "classic-us-mankrik-alliance"
+source_id = "classic-us-mankrik-alliance"
+provider = "tsm"
+label = "Mankrik Alliance — Classic Era (TSM)"
+source_url = "https://public-data.tradeskillmaster.com/classic/us/realm/mankrik-alliance/items.csv"
 game_version = "classic"
 region = "us"
-scope = "realm"
-realm = "mankrik-alliance"
-ruleset = "classic-era"  # Crafting catalogs with the same game_version and ruleset can price against this market.
-source_url = "https://public-data.tradeskillmaster.com/classic/us/realm/mankrik-alliance/items.csv"
+scope = "house"
+realm = "mankrik"
+faction = "alliance"
+rules_version = "classic-era"  # Catalogs with the same game_version and rules_version price this market.
 allow_missing_updated_at = true
 
 [[sources]]
-label = "Area 52 realm items"
-market_id = "retail-us-area-52"
+source_id = "retail-us-area-52"
+provider = "tsm"
+label = "Area 52 realm items (TSM, regression only)"
+source_url = "https://public-data.tradeskillmaster.com/retail/us/realm/area-52/items.csv"
 game_version = "retail"
 region = "us"
-scope = "realm"
+scope = "house"
 realm = "area-52"
-source_url = "https://public-data.tradeskillmaster.com/retail/us/realm/area-52/items.csv"
 
 [[sources]]
-label = "US regional commodities"
-market_id = "retail-us-commodities"
+source_id = "retail-us-commodities"
+provider = "tsm"
+label = "US regional commodities (TSM, regression only)"
+source_url = "https://public-data.tradeskillmaster.com/retail/us/commodities.csv"
 game_version = "retail"
 region = "us"
 scope = "region"
-realm = ""
-source_url = "https://public-data.tradeskillmaster.com/retail/us/commodities.csv"

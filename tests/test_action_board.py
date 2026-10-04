@@ -6,12 +6,14 @@ import pytest
 
 from brownstone.action_board import compatible, rank_recipes
 from brownstone.crafting import basis_prices, evaluate_recipe, load_recipe_catalog, material_plan
+from brownstone.markets import MARKET_KEYS
 from brownstone.storage import price_observations
 
 ROOT = Path(__file__).resolve().parents[1]
 NOW = datetime(2026, 10, 4, tzinfo=UTC)
-MARKET = {"market_id": "classic-us-mankrik-alliance", "game_version": "classic",
-          "region": "us", "scope": "realm", "realm": "mankrik-alliance", "ruleset": "classic-era"}
+MARKET = {"market_id": "classic-us-mankrik-alliance", "game_version": "classic", "region": "us",
+          "scope": "house", "realm": "mankrik", "server_type": "", "faction": "alliance",
+          "rules_version": "classic-era"}
 
 
 def catalog():
@@ -74,7 +76,8 @@ def test_independent_freshness_basis_and_stale_boundary(basis):
 
 
 @pytest.mark.parametrize("key,value", [("game_version", "retail"), ("region", "eu"),
-    ("realm", "mankrik-horde"), ("scope", "region"), ("market_id", "other")])
+    ("realm", "stormrage"), ("faction", "horde"), ("server_type", "roleplaying"), ("scope", "region"),
+    ("market_id", "other")])
 def test_rejects_incompatible_snapshot_scope(key, value):
     with pytest.raises(ValueError, match="different market"):
         rank_recipes(catalog(), observed(prices()), MARKET, snapshot(**{key: value}), now=NOW)
@@ -82,7 +85,7 @@ def test_rejects_incompatible_snapshot_scope(key, value):
 
 def test_forever_catalog_cannot_use_classic_prices():
     c = load_recipe_catalog(ROOT / "config/forever-tailoring.toml")
-    with pytest.raises(ValueError, match="ruleset"):
+    with pytest.raises(ValueError, match="rules version"):
         rank_recipes(c, observed(prices()), MARKET, snapshot(), now=NOW)
 
 
@@ -117,11 +120,12 @@ def test_price_read_enforces_full_market_identity():
     with duckdb.connect(":memory:") as db:
         db.execute("CREATE TABLE market_snapshots (snapshot_id VARCHAR, item_id INTEGER, min_buyout INTEGER, "
                    "market_value INTEGER, market_id VARCHAR, game_version VARCHAR, region VARCHAR, "
-                   "scope VARCHAR, realm VARCHAR)")
-        identity = [MARKET[key] for key in ("market_id", "game_version", "region", "scope", "realm")]
-        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 400, 450, ?, ?, ?, ?, ?)", identity)
-        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 999, 999, ?, 'retail', 'us', 'realm', "
-                   "'area-52')", [MARKET["market_id"]])
+                   "scope VARCHAR, realm VARCHAR, server_type VARCHAR, faction VARCHAR)")
+        identity = [MARKET[key] for key in MARKET_KEYS]
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 400, 450, ?, ?, ?, ?, ?, ?, ?)", identity)
+        # Same snapshot and item, but the Horde house: must never leak into Alliance prices.
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 999, 999, ?, ?, ?, ?, ?, ?, 'horde')",
+                   identity[:-1])
         assert price_observations(db, MARKET, "same", [4240]) == {4240: {"min_buyout": 400, "market_value": 450}}
         assert price_observations(db, {**MARKET, "realm": "wrong"}, "same", [4240]) == {}
 
@@ -183,9 +187,9 @@ def test_cautious_basis_falls_back_to_the_only_positive_value_and_never_zero():
 
 
 def test_board_follows_configuration_not_a_hard_coded_realm():
-    other = {**MARKET, "market_id": "classic-us-other-horde", "realm": "other-horde"}
+    other = {**MARKET, "market_id": "classic-us-stormrage-horde", "realm": "stormrage", "faction": "horde"}
     assert rank_recipes(catalog(), observed(prices()), other, snapshot(**other), now=NOW)["rows"]
     forever = load_recipe_catalog(ROOT / "config/forever-tailoring.toml")
     assert not compatible(forever, MARKET)
-    assert compatible(forever, {**MARKET, "game_version": "forever", "ruleset": forever["ruleset"]})
-    assert not compatible(catalog(), {k: v for k, v in MARKET.items() if k != "ruleset"})
+    assert compatible(forever, {**MARKET, "game_version": "forever", "rules_version": forever["rules_version"]})
+    assert not compatible(catalog(), {k: v for k, v in MARKET.items() if k != "rules_version"})

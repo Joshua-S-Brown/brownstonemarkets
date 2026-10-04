@@ -1,6 +1,6 @@
 schema_version = 1
 game_version = "forever"
-ruleset = "forever-beta-1.60"
+rules_version = "forever-beta-1.60"  # Game build rules; not a Forever server type.
 profession = "tailoring"
 status = "beta-observed"
 notes = "Forever is still in beta. Revalidate recipe and vendor data after material game builds."

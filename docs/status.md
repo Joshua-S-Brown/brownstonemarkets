@@ -17,7 +17,16 @@ _Last updated 2026-10-04._
   - All six recipes' reagent and output quantities and all three thread vendor prices match Wowhead Classic. Evidence URLs are recorded per record, and a test pins the verified values.
   - Bolt of Runecloth uses 5 Runecloth.
   - No catalog values changed, so it stays at version 0.1.
-- **Storage:** explicit DuckDB schema, version 1, with ordered one-time migrations. Your existing database migrates on its next Refresh; a dry run on a copy kept all 24,020 rows.
+- **Markets and sources (STORY-009):**
+  - A market is the auction house; a source is the feed that observed it. `market_id` is derived, so several sources can observe one market, each with its own folder and deduplication.
+  - Forever houses (server type + faction, no realm) can be configured. Neutral houses default to a 15% cut.
+  - The catalog `ruleset` field is now `rules_version`.
+  - The CLI uses `--source`; `--market` still works as an alias.
+- **Storage:** explicit DuckDB schema, version 2, with backed-up, idempotent migrations.
+  - The app upgrades the database on startup. On 2026-10-04 the live database went from version 0 to 2, with `data/brownstone.v0.backup.duckdb` kept. All 24,020 rows were kept and the board was unchanged.
+  - A dry run on a copy kept all 24,020 rows and split Mankrik's realm and faction correctly. The board gave identical results.
+  - Re-importing an old raw file was recognised as a duplicate.
+  - Old manifests are read through an adapter and never edited.
 - **Quality gates:** CI runs Ruff, mypy and the tests on macOS and Windows from the lock file, including the Streamlit UI test. Config loads into typed, individually validated `Source` records.
 
 ## Limitations
@@ -38,7 +47,7 @@ _Last updated 2026-10-04._
 .venv/bin/python -m mypy
 ```
 
-Expected: 64 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 79 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Last live check (2026-10-04, Mankrik, 5,868 rows), cautious basis:
 

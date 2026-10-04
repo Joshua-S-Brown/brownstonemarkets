@@ -1,16 +1,21 @@
 """DuckDB schema, snapshot loading with deduplication, manifests and scoped price reads."""
 import json
+import shutil
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+import duckdb
+
+from . import markets
 from .config import MARKET_KEYS, Source
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
-# Columns stay nullable so databases created by v0.1 (schema copied from Parquet) match
-# fresh ones exactly; normalization already rejects nulls where they are not allowed.
-MARKET_SNAPSHOTS_DDL = """CREATE TABLE IF NOT EXISTS market_snapshots (
+# Each migration is frozen once released: a fresh database replays them all, so it ends up
+# identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
+# from Parquet) allowed nulls; normalization rejects nulls where they are not allowed.
+_V1_DDL = """CREATE TABLE IF NOT EXISTS market_snapshots (
     item_id BIGINT, item_name VARCHAR,
     market_value BIGINT, min_buyout BIGINT, recent_value BIGINT, historical_value BIGINT,
     updated_at TIMESTAMPTZ, market_id VARCHAR, snapshot_id VARCHAR, collected_at TIMESTAMPTZ,
@@ -18,7 +23,7 @@ MARKET_SNAPSHOTS_DDL = """CREATE TABLE IF NOT EXISTS market_snapshots (
 
 
 def _migrate_to_1(db):
-    db.execute(MARKET_SNAPSHOTS_DDL)
+    db.execute(_V1_DDL)
     # v0.1 tables predate market identity and source hashes.
     for column in ["game_version", "region", "scope", "realm", "source_sha256"]:
         db.execute(f"ALTER TABLE market_snapshots ADD COLUMN IF NOT EXISTS {column} VARCHAR")
@@ -27,14 +32,49 @@ def _migrate_to_1(db):
         scope='realm', realm='area-52' WHERE market_id='retail-us-area-52' AND game_version IS NULL""")
 
 
-MIGRATIONS = {1: _migrate_to_1}
+def _migrate_to_2(db):
+    """Separate market (which auction house) from source (who observed it); add Forever fields.
+
+    Before this, market_id held the source's ID; it becomes the derived market ID, which is the
+    same string for every market known at the time. Classic faction moves out of the realm slug.
+    """
+    for column in ["source_id", "server_type", "faction"]:
+        db.execute(f"ALTER TABLE market_snapshots ADD COLUMN IF NOT EXISTS {column} VARCHAR")
+    db.execute("UPDATE market_snapshots SET source_id = market_id WHERE source_id IS NULL")
+    db.execute("""UPDATE market_snapshots SET
+        faction = CASE WHEN game_version = 'classic' AND realm LIKE '%-alliance' THEN 'alliance'
+                       WHEN game_version = 'classic' AND realm LIKE '%-horde' THEN 'horde' ELSE '' END,
+        realm = CASE WHEN game_version = 'classic' AND realm LIKE '%-alliance' THEN realm[:-10]
+                     WHEN game_version = 'classic' AND realm LIKE '%-horde' THEN realm[:-7] ELSE realm END,
+        server_type = '',
+        scope = CASE WHEN scope = 'realm' THEN 'house' ELSE scope END
+        WHERE game_version IS NOT NULL AND faction IS NULL""")
+    # Same rule as markets.market_id(); unclassified legacy rows keep their old ID.
+    db.execute("""UPDATE market_snapshots SET market_id = concat_ws('-', game_version, region,
+        nullif(realm, ''), nullif(server_type, ''), nullif(faction, ''),
+        CASE WHEN scope = 'region' THEN 'commodities' END)
+        WHERE game_version IS NOT NULL""")
+
+
+MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2}
+
+
+def _has_table(db, name: str) -> bool:
+    return db.execute("SELECT 1 FROM duckdb_tables() WHERE table_name = ?", [name]).fetchone() is not None
+
+
+def schema_version(db) -> int:
+    """The database's recorded schema version; 0 for a v0.1 database or an empty one."""
+    if not _has_table(db, "schema_info"):
+        return 0
+    row = db.execute("SELECT value FROM schema_info WHERE key='schema_version'").fetchone()
+    return int(row[0]) if row else 0
 
 
 def ensure_schema(db):
     """Bring the database to SCHEMA_VERSION, running each pending migration once."""
+    version = schema_version(db)
     db.execute("CREATE TABLE IF NOT EXISTS schema_info (key VARCHAR PRIMARY KEY, value VARCHAR NOT NULL)")
-    row = db.execute("SELECT value FROM schema_info WHERE key='schema_version'").fetchone()
-    version = int(row[0]) if row else 0
     if version > SCHEMA_VERSION:
         raise RuntimeError(f"Database schema {version} is newer than this code supports ({SCHEMA_VERSION})")
     for target in range(version + 1, SCHEMA_VERSION + 1):
@@ -42,11 +82,44 @@ def ensure_schema(db):
         db.execute("INSERT OR REPLACE INTO schema_info VALUES ('schema_version', ?)", [str(target)])
 
 
+def upgrade_database(data_dir: Path, create: bool = False) -> bool:
+    """Bring the database to SCHEMA_VERSION before use. Returns True if anything changed.
+
+    DuckDB cannot reliably add a column and update the table in one transaction, so
+    migrations run statement by statement. For safety, an existing database is copied to
+    ``brownstone.v<N>.backup.duckdb`` first; every migration step is idempotent, and the
+    version is recorded only after a migration completes, so a failed upgrade reruns cleanly.
+    """
+    path = Path(data_dir) / "brownstone.duckdb"
+    if not path.exists() and not create:
+        return False
+    existed = path.exists()
+    with duckdb.connect(str(path)) as db:
+        version = schema_version(db)
+        has_data = _has_table(db, "market_snapshots")
+    if version == SCHEMA_VERSION:
+        return False
+    if version > SCHEMA_VERSION:
+        raise RuntimeError(f"Database schema {version} is newer than this code supports ({SCHEMA_VERSION})")
+    if existed and has_data:
+        backup = path.with_name(f"brownstone.v{version}.backup.duckdb")
+        if not backup.exists():
+            shutil.copy2(path, backup)
+    with duckdb.connect(str(path)) as db:
+        ensure_schema(db)
+    return True
+
+
 def load_snapshot(db, silver: Path, frame, config: Source) -> tuple[str, bool]:
-    ensure_schema(db)
+    """Insert one silver snapshot unless this source already holds identical content.
+
+    The database must already be at SCHEMA_VERSION (see ``upgrade_database``).
+    """
+    if schema_version(db) != SCHEMA_VERSION:
+        raise RuntimeError("Database schema is out of date; call upgrade_database first")
     existing = db.execute("""SELECT snapshot_id FROM market_snapshots
-        WHERE market_id=? AND updated_at IS NOT DISTINCT FROM ? AND source_sha256=? LIMIT 1""",
-        [config["market_id"], frame["updated_at"][0], frame["source_sha256"][0]]).fetchone()
+        WHERE source_id=? AND updated_at IS NOT DISTINCT FROM ? AND source_sha256=? LIMIT 1""",
+        [config["source_id"], frame["updated_at"][0], frame["source_sha256"][0]]).fetchone()
     if existing:
         return existing[0], False
     db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(silver)])
@@ -54,13 +127,17 @@ def load_snapshot(db, silver: Path, frame, config: Source) -> tuple[str, bool]:
 
 
 def completed_snapshots(config: Source) -> list[dict]:
+    """A source's completed manifests, newest first, in the current shape.
+
+    Manifests written before the market/source split are upgraded in memory; files are never edited.
+    """
     records = []
-    folder = Path(config["data_dir"]) / "bronze" / config["market_id"]
+    folder = Path(config["data_dir"]) / "bronze" / config["source_id"]
     for path in folder.glob("*.json"):
         try:
             record = json.loads(path.read_text(encoding="utf-8"))
             if record.get("status") == "complete":
-                records.append(record)
+                records.append(markets.upgrade_legacy(record))
         except (OSError, ValueError):
             continue
     return sorted(records, key=lambda r: r["collected_at"], reverse=True)

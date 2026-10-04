@@ -49,23 +49,23 @@ All money is shown in gold: decimal in tables, `4g 50s 97c` in summaries.
 Command-line collection, which also accepts a saved CSV:
 
 ```bash
-.venv/bin/python -m brownstone --market classic-us-mankrik-alliance
+.venv/bin/python -m brownstone --source classic-us-mankrik-alliance
 .venv/bin/python -m brownstone --input path/to/items.csv
 ```
 
 ## Markets and catalogs
 
-- `config/market.toml` lists sources: market identity, feed URL, freshness and auction cut. TSM feed URLs follow `https://public-data.tradeskillmaster.com/{game}/{region}/realm/{realm}/items.csv`; slugs are on [TSM Public Pricing Data](https://tradeskillmaster.com/public-data).
+- `config/market.toml` lists sources. Each one is a feed (`source_id`, `provider`, URL) observing one market: game version, region, and realm or Forever server type, plus faction. The file's comments show a Forever example. Freshness and auction cut can be set per source; neutral houses default to 15%. TSM feed URLs follow `https://public-data.tradeskillmaster.com/{game}/{region}/realm/{realm}/items.csv`; slugs are on [TSM Public Pricing Data](https://tradeskillmaster.com/public-data).
 - `config/*-tailoring.toml` are versioned recipe catalogs.
-- The Action Board appears when a catalog's `game_version` and `ruleset` match the selected source.
+- The Action Board appears when a catalog's `game_version` and `rules_version` match the selected source.
 
 ## Data on disk
 
 ```text
-data/bronze/<market>/   exact downloaded bytes + manifest JSON (hash, source, times, status)
-data/silver/<market>/   validated Parquet per collection
-data/gold/<market>/     discount-screen output per collection
-data/brownstone.duckdb  market_snapshots table
+data/bronze/<source>/   exact downloaded bytes + manifest JSON (hash, source, times, status)
+data/silver/<source>/   validated Parquet per collection
+data/gold/<source>/     discount-screen output per collection
+data/brownstone.duckdb  market_snapshots table (schema upgrades keep a brownstone.v<N>.backup.duckdb copy)
 ```
 
 Data is excluded from Git, so back up `data/` separately. Run one writer at a time. Validation and freshness rules are in [requirements](docs/requirements.md).
