@@ -50,11 +50,11 @@ _Last updated 2026-10-04._
 
 ## Limitations
 
-- **No addon 0.2.0 scan has been imported yet.** It loaded and wrote its (empty) file on the beta on 2026-10-04, but the first scan was cleared before `/reload` wrote it. Brownstone's side is tested; the Lua was changed without a client to run it. Take one scan with it, `/reload`, and import: it should succeed, and `BrownstoneScan.lua` should be about a tenth of the old size (around 3 MB per full scan). 0.1.0 is in Git if it misbehaves.
+- **One addon 0.2.0 scan so far:** `20261004T225430Z-31f52b` (110,330 listings, 2,976 items) imported on 2026-10-04, kept in bronze as a 584 KB `.lua.gz`. The live database holds three complete Normal Alliance scans (16:47Z, 17:46Z, 22:54Z), all from the beta, and nothing yet distinguishes them from a live house (STORY-017).
 - The addon was measured on one beta house only: not the Roleplaying or a neutral house, and `/bscan start` without the button is untested. Beta region and realm values are generic, so scans are identified by auctioneer, zone and label. The `.toc` interface number 16001 may change with beta builds.
 - Required skill levels are display-only.
 - The Recipe catalogs page shows a catalog's game build only when its archived page is on this machine (`data/` isn't in Git). Regenerating records the uploaded file's name as the manifest's `original_name`, as the CLI does.
-- The Crafting view still shows one catalog at a time; using several professions together is STORY-015.
+- The Crafting view still shows one catalog at a time; combining catalogs on one board is STORY-015a, and routing across professions is STORY-015b.
 - **Forever values still to confirm in game** (shown on the recipe view):
   - **Output counts:** every recipe keeps Wowhead's list value of 1, marked `output_quantity_verified = false`, because its spell tooltips show "(2)". Craft one Bolt of Linen Cloth on the beta and count.
   - **Vendor items:** Coarse Thread, Fine Thread, Red Dye and Rune Thread are assumed sold by vendors (`vendor_verified = false`); check a Forever trade supplies vendor.

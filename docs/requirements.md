@@ -44,7 +44,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
     - `faction` is alliance, horde, neutral, or blank for cross-faction houses.
   - **`market_id` is derived, never configured** (for example `classic-us-mankrik-alliance`, `forever-us-roleplaying-alliance`), so two sources for one house always agree.
   - **Auction cut:** set per source. Neutral houses default to 15%.
-- **DATA-08 Source independence:** a market's identity says *which auction house*. A source's identity (`source_id`, `provider`) says *who observed it*: your addon, TSM or a third-party site. The same market can have several sources. Every manifest and price observation records its source, deduplication is per source, and each source keeps its own data folder. Combining sources follows an explicit, versioned policy, never silent mixing. Until that policy exists (STORY-011), each view reads one selected source.
+- **DATA-08 Source independence:** a market's identity says *which auction house*. A source's identity (`source_id`, `provider`) says *who observed it*: your addon, TSM or a third-party site. The same market can have several sources. Every manifest and price observation records its source, deduplication is per source, and each source keeps its own data folder. Combining sources follows an explicit, versioned policy, never silent mixing. Until that policy exists (STORY-011b), each view reads one selected source.
 - **DATA-04 Deduplication:** identical market, scan time and content hash reuse one analytical snapshot. Every raw collection is still recorded with its own manifest. Addon scans deduplicate by `scan_id` per source instead (ADDON-04).
 - **DATA-05 Freshness:** age comes from upstream scan time when the source provides it (for addon scans, the scan's finish time). Otherwise it comes from collection time, explicitly labeled as "price age unknown". Stale means older than `max_age_hours` (default 24) or more than 15 minutes in the future. A source may opt out of upstream time only when the entire column is blank (`allow_missing_updated_at`).
 
@@ -127,9 +127,10 @@ Demand, sale likelihood, listing depth (addon listings are stored but no calcula
 ## Open decisions
 
 - Useful action thresholds beyond profit > 0.
-- Classic regional demand integration (STORY-003).
-- Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011).
-- Historical storage, backup and scheduling.
+- Classic regional demand integration (Classic demand context, under Later in `backlog.md`).
+- Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011a).
+- How a beta house is told apart from the live house of the same server type and faction. Today both would derive the same `market_id` (STORY-017).
+- Historical storage, backup (STORY-016) and scheduling.
 - Whether to remove the Retail regression sources. SPIKE-008 found Forever listings are per-stack, not Retail-style per-unit commodities, so the Retail commodity feed is not a close test of Forever's model.
 
 None is approved by default.
