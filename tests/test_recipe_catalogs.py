@@ -231,6 +231,9 @@ def test_add_preview_writes_nothing_then_create_matches_the_cli(tmp_path, monkey
     assert (tmp_path / "cli.toml").read_text() == result["tracked"][1].read_text()
     with pytest.raises(ValueError, match="already has a selection"):
         rc.preview_new(config, LEATHER_PAGE.encode(), selection, "2026-10-04")
+    result["tracked"][0].unlink()  # A catalog without its selection file is never overwritten.
+    with pytest.raises(ValueError, match="exists without a selection file"):
+        rc.preview_new(config, LEATHER_PAGE.encode(), selection, "2026-10-04")
 
 
 def test_add_refuses_catalogs_the_board_could_not_load(tmp_path):
@@ -395,3 +398,32 @@ def test_items_several_recipes_make_are_bought_and_their_recipes_not_offered():
     # Water to Undeath is offered; its Water is bought, so there is no loop.
     catalog = build_catalog(extract, rc._draft_selection(extract, rc.choices([17564])))
     assert [r["recipe_id"] for r in catalog["recipes"]] == [17564]
+
+
+def test_comments_inside_a_block_stay_with_it_and_a_closing_comment_is_kept():
+    text = (ROOT / "config/recipe-selections/forever-tailoring.toml").read_text(encoding="utf-8").replace(
+        "recipe_id = 6686  # Red Linen Bag (pattern from a vendor or drop)\n",
+        "recipe_id = 6686  # Red Linen Bag\n# Counted in game.\noutput_quantity_verified = true\n")
+    extract = fixture_extract("forever")
+    recipes = [3755, 3757, 18405]  # Drop Red Linen Bag: its override must not move to Linen Bag.
+    used = used_items(extract, recipes)
+    edited, _ = selection_files.edit_recipes(text, extract, recipes, [2320, 2321, 14341], used)
+    assert all("output_quantity_verified" not in pick for pick in tomllib.loads(edited)["recipes"])
+    assert "Counted in game" not in edited
+
+    closing = SELECTION + "\n# Closing note.\n"
+    extract = rc.read_page(PAGE.encode(), "forever", "tailoring", "2026-10-04")
+    used = used_items(extract, [3755])
+    assert selection_files.edit_recipes(closing, extract, [3755], [2320], used)[0] == closing
+
+
+def test_a_version_bumped_by_hand_is_not_bumped_again(workspace):
+    config, _ = workspace
+    (entry,) = rc.find_catalogs(config)
+    path = entry["selection_path"]
+    path.write_text(path.read_text(encoding="utf-8").replace('catalog_version = "0.1"', 'catalog_version = "1.0"'),
+                    encoding="utf-8")
+    (entry,) = rc.find_catalogs(config)
+    preview = rc.preview_update(entry, PAGE.encode(), "2026-10-01")
+    assert preview["changed"] and preview["catalog_version"] == "1.0"
+    assert tomllib.loads(preview["text"])["catalog_version"] == "1.0"

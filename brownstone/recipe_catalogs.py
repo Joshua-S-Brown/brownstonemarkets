@@ -210,6 +210,8 @@ def preview_update(entry: dict, raw: bytes, saved_at: str, chosen: dict | None =
         return result
     if prepared["text"] == current and text == original:
         return {**result, "changed": False}
+    if tomllib.loads(current).get("catalog_version") != edited["catalog_version"]:
+        return result  # The selection's version was already moved on by hand.
     version = bump_version(edited["catalog_version"])
     catalog = {**prepared["catalog"], "catalog_version": version}  # The version is a header value only.
     return {**result, "catalog": catalog, "text": dumps_catalog(catalog), "catalog_version": version,
@@ -338,11 +340,15 @@ def preview_new(config_dir: Path, raw: bytes, selection: dict, saved_at: str) ->
     selection_path = config_dir / SELECTIONS / f"{name}.toml"
     if selection_path.exists():
         raise ValueError(f"{name} already has a selection file; update it instead")
+    catalog_path = config_dir / f"{name}.toml"
+    if catalog_path.exists():
+        raise ValueError(f"config/{name}.toml exists without a selection file; move it aside or write its "
+                         "selection file by hand")
     prepared = prepare_catalog(raw, selection, saved_at, None)
     selection_text = dumps_selection(selection, prepared["extract"])
     if tomllib.loads(selection_text) != selection:
         raise ValueError("The selection file would not read back as chosen")  # Guards the writer above.
-    return {**prepared, "name": name, "selection_path": selection_path, "catalog_path": config_dir / f"{name}.toml",
+    return {**prepared, "name": name, "selection_path": selection_path, "catalog_path": catalog_path,
             "selection_text": selection_text}
 
 

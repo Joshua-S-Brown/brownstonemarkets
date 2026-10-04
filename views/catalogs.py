@@ -116,9 +116,11 @@ def _update(game, entries, sources, archive_dir):
     if not entries:
         st.info(f"No {GAMES[game]} catalogs yet. Add a profession first.")
         return
-    index = st.selectbox("Profession", range(len(entries)), key=f"update-catalog-{game}",
-                         format_func=lambda i: rc.profession_title(entries[i]["selection"]["profession"]))
-    entry = entries[index]
+    # Chosen by name, so adding a catalog (which reorders the list) never switches the selection.
+    by_name = {entry["name"]: entry for entry in entries}
+    name = st.selectbox("Profession", list(by_name), key=f"update-catalog-{game}",
+                        format_func=lambda n: rc.profession_title(by_name[n]["selection"]["profession"]))
+    entry = by_name[name]
     page = _page_for_update(entry, archive_dir)
     if page is None:
         return

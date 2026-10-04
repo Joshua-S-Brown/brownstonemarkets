@@ -125,6 +125,8 @@ def test_add_a_profession_previews_then_creates_its_selection_and_catalog(tmp_pa
     assert any("Wrote forever-leatherworking" in s.value for s in at.success)
     assert (config / "recipe-selections/forever-leatherworking.toml").exists()
     assert "Leatherworking" in list(at.dataframe[0].value["Profession"])
+    # Leatherworking now sorts first; the Update tab stays on Tailoring.
+    assert [s for s in at.selectbox if s.label == "Profession"][0].value == "forever-tailoring"
 
 
 def test_matching_recipes_are_added_and_removed_by_name(tmp_path, monkeypatch):

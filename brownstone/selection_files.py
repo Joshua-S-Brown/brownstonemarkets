@@ -23,15 +23,17 @@ def set_value(text: str, key: str, value: str) -> str:
 
 
 def _blocks(lines: list[str], table: str) -> list[tuple[int, int, dict]]:
-    """(first line, line after the last, parsed values) of each ``[[table]]``; a block ends at a blank line,
-    a comment line or the next table."""
+    """(first line, line after the last, parsed values) of each ``[[table]]``; a block ends at a blank line
+    or the next table. Comments inside a block belong to it; comments just before the next table don't."""
     blocks = []
     for start, line in enumerate(lines):
         if line.strip() != f"[[{table}]]":
             continue
         end = start + 1
-        while end < len(lines) and lines[end].strip() and not lines[end].startswith(("[", "#")):
+        while end < len(lines) and lines[end].strip() and not lines[end].startswith("["):
             end += 1
+        while lines[end - 1].startswith("#"):
+            end -= 1
         blocks.append((start, end, tomllib.loads("\n".join(lines[start + 1:end]))))
     return blocks
 
@@ -45,6 +47,14 @@ def _block_lines(lines: list[str], start: int, end: int) -> set[int]:
     return set(range(start - 1 if start and not lines[start - 1].strip() else start, end))
 
 
+def _split_tail(lines: list[str]) -> tuple[list[str], list[str]]:
+    """(lines, the comments and blank lines ending the file): those introduce nothing, so they are kept."""
+    end = len(lines)
+    while end and (not lines[end - 1].strip() or lines[end - 1].startswith("#")):
+        end -= 1
+    return lines[:end], lines[end:]
+
+
 def edit_recipes(text: str, extract: dict, recipe_ids: list[int], vendor_ids: list[int],
                  used_item_ids: set[int]) -> tuple[str, list[str]]:
     """The selection with exactly ``recipe_ids`` and vendor marks on exactly ``vendor_ids``.
@@ -53,7 +63,7 @@ def edit_recipes(text: str, extract: dict, recipe_ids: list[int], vendor_ids: li
     the dropped notes, for the preview.
     """
     wanted, vendors = set(recipe_ids), set(vendor_ids) & used_item_ids  # Only used items can be marked.
-    lines = text.rstrip("\n").split("\n")
+    lines, tail = _split_tail(text.rstrip("\n").split("\n"))
     recipes = _blocks(lines, "recipes")
     current = {block[2]["recipe_id"] for block in recipes}
     lines = _drop(lines, {i for start, end, values in recipes if values["recipe_id"] not in wanted
@@ -66,7 +76,7 @@ def edit_recipes(text: str, extract: dict, recipe_ids: list[int], vendor_ids: li
     remaining = _blocks(lines, "recipes")
     at = remaining[-1][1] if remaining else _first_table(lines, "items")
     lines[at:at] = new_blocks
-    result = "\n".join(lines) + "\n"
+    result = "\n".join(lines + tail) + "\n"
     _check(result, wanted, vendors)
     return result, dropped
 
@@ -83,8 +93,9 @@ def _edit_items(lines: list[str], extract: dict, vendors: set[int], used: set[in
             drop |= _block_lines(lines, start, end)
         elif values.get("vendor") and item_id not in vendors:
             # Unmarking a vendor drops its vendor lines; other notes (availability) stay.
-            vendor_lines = {i for i in range(start + 1, end) if lines[i].startswith("vendor")}
-            drop |= _block_lines(lines, start, end) if len(vendor_lines) == end - start - 2 else vendor_lines
+            values_lines = [i for i in range(start + 2, end) if not lines[i].startswith("#")]
+            vendor_lines = {i for i in values_lines if lines[i].startswith("vendor")}
+            drop |= _block_lines(lines, start, end) if len(vendor_lines) == len(values_lines) else vendor_lines
             dropped.append(f"{name} (vendor mark)")
     lines = _drop(lines, drop)
     marked = {values["item_id"] for _, _, values in blocks if values.get("vendor")}
