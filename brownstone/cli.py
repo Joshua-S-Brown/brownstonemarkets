@@ -1,16 +1,55 @@
 import argparse
 import sys
+import tomllib
 from pathlib import Path
 
 from .config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
 from .pipeline import import_scans, run
+from .recipe_import import archive_page, build_catalog, catalog_changes, dumps_catalog, extract_page, load_selection
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def recipes_main(argv: list[str]) -> None:
+    """Generate a recipe catalog from a Wowhead profession page saved in a browser (never downloads)."""
+    parser = argparse.ArgumentParser(prog="python -m brownstone recipes", description=recipes_main.__doc__)
+    parser.add_argument("--page", type=Path, required=True,
+                        help="Saved page, e.g. https://www.wowhead.com/forever/spells/professions/tailoring")
+    parser.add_argument("--selection", type=Path, required=True, help="config/recipe-selections/<catalog>.toml")
+    parser.add_argument("--output", type=Path, help="Catalog to write (default: config/<selection name>.toml)")
+    parser.add_argument("--saved-at", help="Date the page was saved, YYYY-MM-DD (default: earlier archive, then "
+                                           "the file's date)")
+    parser.add_argument("--archive-dir", type=Path, default=ROOT / "data/recipe-sources")
+    args = parser.parse_args(argv)
+    output = args.output or ROOT / "config" / args.selection.name
+    try:
+        copy, manifest = archive_page(args.page, args.archive_dir, args.saved_at)
+        extract = extract_page(copy.read_text(encoding="utf-8", errors="replace"), manifest["sha256"],
+                               manifest["saved_at"])
+        catalog = build_catalog(extract, load_selection(args.selection))
+        text = dumps_catalog(catalog)
+        changes = None
+        if output.exists():
+            changes = catalog_changes(tomllib.loads(output.read_text(encoding="utf-8")), tomllib.loads(text))
+        output.write_text(text, encoding="utf-8")
+    except Exception as error:
+        print(f"Recipe import failed: {error}", file=sys.stderr)
+        sys.exit(1)
+    print(f"Archived {manifest['source_url']} (saved {manifest['saved_at']}, SHA-256 {manifest['sha256'][:12]}...) "
+          f"as {copy}")
+    print(f"Wrote {len(catalog['recipes'])} recipes and {len(catalog['items'])} items to {output}")
+    for line in changes or (["no recipe or vendor price changes"] if changes is not None else []):
+        print(f"  {line}")
 
 
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
+    if sys.argv[1:2] == ["recipes"]:
+        recipes_main(sys.argv[2:])
+        return
     parser = argparse.ArgumentParser(description="Collect TSM snapshots or import BrownstoneScan addon scans")
-    parser.add_argument("--config", type=Path, default=Path(__file__).resolve().parents[1] / "config/market.toml")
+    parser.add_argument("--config", type=Path, default=ROOT / "config/market.toml")
     parser.add_argument("--input", type=Path,
                         help="Use a local TSM CSV, or for an addon source a SavedVariables file other than scan_path")
     parser.add_argument("--source", "--market", dest="source",

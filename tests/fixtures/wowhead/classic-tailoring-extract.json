@@ -1,0 +1,188 @@
+{
+ "source_url": "https://www.wowhead.com/classic/spells/professions/tailoring",
+ "game_path": "classic",
+ "profession": "tailoring",
+ "sha256": "aab9c70c29edfe43fbadb6e2c28a5319e68ccfaddcd384ea6c2e2b7c024cabf5",
+ "saved_at": "2026-10-04",
+ "recipes": {
+  "2964": {
+   "id": 2964,
+   "name": "Bolt of Woolen Cloth",
+   "learnedat": 75,
+   "creates": [
+    2997,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     2592,
+     3
+    ]
+   ]
+  },
+  "3757": {
+   "id": 3757,
+   "name": "Woolen Bag",
+   "learnedat": 80,
+   "creates": [
+    4240,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     2997,
+     3
+    ],
+    [
+     2321,
+     1
+    ]
+   ]
+  },
+  "3865": {
+   "id": 3865,
+   "name": "Bolt of Mageweave",
+   "learnedat": 175,
+   "creates": [
+    4339,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     4338,
+     5
+    ]
+   ]
+  },
+  "12065": {
+   "id": 12065,
+   "name": "Mageweave Bag",
+   "learnedat": 225,
+   "creates": [
+    10050,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     4339,
+     4
+    ],
+    [
+     4291,
+     2
+    ]
+   ]
+  },
+  "18401": {
+   "id": 18401,
+   "name": "Bolt of Runecloth",
+   "learnedat": 250,
+   "creates": [
+    14048,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     14047,
+     5
+    ]
+   ]
+  },
+  "18405": {
+   "id": 18405,
+   "name": "Runecloth Bag",
+   "learnedat": 260,
+   "creates": [
+    14046,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     14048,
+     5
+    ],
+    [
+     8170,
+     2
+    ],
+    [
+     14341,
+     1
+    ]
+   ]
+  }
+ },
+ "items": {
+  "2321": {
+   "name": "Fine Thread",
+   "sellprice": 25,
+   "buyprice": 100
+  },
+  "2592": {
+   "name": "Wool Cloth",
+   "sellprice": 33,
+   "buyprice": null
+  },
+  "2997": {
+   "name": "Bolt of Woolen Cloth",
+   "sellprice": 100,
+   "buyprice": null
+  },
+  "4240": {
+   "name": "Woolen Bag",
+   "sellprice": 300,
+   "buyprice": null
+  },
+  "4291": {
+   "name": "Silken Thread",
+   "sellprice": 125,
+   "buyprice": 500
+  },
+  "4338": {
+   "name": "Mageweave Cloth",
+   "sellprice": 250,
+   "buyprice": null
+  },
+  "4339": {
+   "name": "Bolt of Mageweave",
+   "sellprice": 1250,
+   "buyprice": null
+  },
+  "8170": {
+   "name": "Rugged Leather",
+   "sellprice": 500,
+   "buyprice": 2000
+  },
+  "10050": {
+   "name": "Mageweave Bag",
+   "sellprice": 2500,
+   "buyprice": null
+  },
+  "14046": {
+   "name": "Runecloth Bag",
+   "sellprice": 5000,
+   "buyprice": null
+  },
+  "14047": {
+   "name": "Runecloth",
+   "sellprice": 400,
+   "buyprice": null
+  },
+  "14048": {
+   "name": "Bolt of Runecloth",
+   "sellprice": 2000,
+   "buyprice": null
+  },
+  "14341": {
+   "name": "Rune Thread",
+   "sellprice": 1250,
+   "buyprice": 5000
+  }
+ }
+}

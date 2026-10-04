@@ -13,22 +13,23 @@ _Last updated 2026-10-04._
   - Deduplication is by `scan_id`, and identical file bytes are stored once. Partial scans are stored and labeled but not priced.
   - The Forever Action Board works from imported scans with no calculation changes.
   - Source `forever-us-normal-alliance-addon` is disabled in the tracked `config/market.toml`. On the user's machine, the untracked `config/market.local.toml` enables it and points it at the game's SavedVariables file, to archive beta scans before the beta closes. Classic Mankrik stays the default development source.
-- **Crafting:** Classic Tailoring catalog 0.1 with Woolen, Mageweave and Runecloth bags and their bolts. Route costing, cautious and listed price bases, and an Action Board under policy 0.2 with five labels and per-recipe error isolation.
+- **Recipe import (STORY-004):** `python -m brownstone recipes --page <saved page> --selection config/recipe-selections/<catalog>.toml` generates a catalog from a Wowhead profession page saved in a browser (CRAFT-08). It never downloads. The page is archived under `data/recipe-sources/`, and the command lists recipe and vendor price changes.
+  - Pages saved 2026-10-04: Classic Tailoring (287 recipes, SHA-256 `aab9c70c…`) and Forever Tailoring (471 recipes, `9ab28c15…`). Copies are in `data/recipe-sources/wowhead/`, ignored by Git like all of `data/`.
+- **Crafting:** two generated Tailoring catalogs. Route costing, cautious and listed price bases, and an Action Board under policy 0.2 with five labels and per-recipe error isolation.
 - **Interface:**
   - Crafting opens by default for markets with a compatible catalog. It shows the board, a recipe summary in g/s/c and expandable evidence.
   - Browse market and Opportunities are also available. Opportunities explains when a source can't support it.
   - All money is displayed in gold.
 - **Launcher:** `launch.py` (via `Start Brownstone.command` / `.cmd`) restarts its own server when the code has changed.
-- **Catalog verification (STORY-007):**
-  - All six recipes' reagent and output quantities and all three thread vendor prices match Wowhead Classic. Evidence URLs are recorded per record, and a test pins the verified values.
-  - Bolt of Runecloth uses 5 Runecloth.
-  - No catalog values changed, so it stays at version 0.1.
+- **Catalogs:**
+  - **Classic Era 0.2:** Woolen, Mageweave and Runecloth bags with their bolts. Regenerated from the saved page with the same quantities, roles and vendor prices hand-verified in STORY-007 (a test pins them). It now has all six skill levels from the page: Bolt of Woolen Cloth 75, Woolen Bag 80, Bolt of Mageweave 175, Mageweave Bag 225, Bolt of Runecloth 250, Runecloth Bag 260.
+  - **Forever beta 0.1** (`forever-beta-1.60`): Linen, Red Linen and Woolen bags with Linen and Woolen bolts, plus Runecloth Bag and its bolt, marked post-launch. It replaces the hand-typed file, which had two errors: Bolt of Runecloth takes 5 Runecloth, not 4, and Runecloth Bag also takes 4 Magenta Dye and 2 Cerulean Dye.
 - **Markets and sources (STORY-009):**
   - A market is the auction house; a source is the feed that observed it. `market_id` is derived, so several sources can observe one market, each with its own folder and deduplication.
   - Forever houses (server type + faction, no realm) can be configured. Neutral houses default to a 15% cut.
   - The catalog `ruleset` field is now `rules_version`.
   - The CLI uses `--source`; `--market` still works as an alias.
-- **Storage:** explicit DuckDB schema, version 3 (`addon_scans` and `scan_listings` added), with backed-up, idempotent migrations. The live `data/brownstone.duckdb` is still at version 2; the app or the first import upgrades it, keeping `brownstone.v2.backup.duckdb`.
+- **Storage:** explicit DuckDB schema, version 3 (`addon_scans` and `scan_listings` added), with backed-up, idempotent migrations. The live `data/brownstone.duckdb` is at version 3, with `brownstone.v2.backup.duckdb` kept.
   - The app upgrades the database on startup. On 2026-10-04 the live database went from version 0 to 2, with `data/brownstone.v0.backup.duckdb` kept. All 24,020 rows were kept and the board was unchanged.
   - A dry run on a copy kept all 24,020 rows and split Mankrik's realm and faction correctly. The board gave identical results.
   - Re-importing an old raw file was recognised as a duplicate.
@@ -41,7 +42,12 @@ _Last updated 2026-10-04._
 ## Limitations
 
 - The addon was measured on one beta house only: not the Roleplaying or a neutral house, and `/bscan start` without the button is untested. Beta region and realm values are generic, so scans are identified by auctioneer, zone and label. The `.toc` interface number 16001 may change with beta builds.
-- Required skill levels are display-only. Three are sourced: Woolen Bag 80, Mageweave Bag 225, Bolt of Runecloth 250. Three are unconfirmed and marked `required_skill_verified = false`: Runecloth Bag 260, Bolt of Woolen Cloth 75, Bolt of Mageweave 175.
+- Required skill levels are display-only.
+- **Forever values still to confirm in game** (shown on the recipe view):
+  - **Output counts:** every recipe keeps Wowhead's list value of 1, marked `output_quantity_verified = false`, because its spell tooltips show "(2)". Craft one Bolt of Linen Cloth on the beta and count.
+  - **Vendor items:** Coarse Thread, Fine Thread, Red Dye and Rune Thread are assumed sold by vendors (`vendor_verified = false`); check a Forever trade supplies vendor.
+  - **Availability:** Runecloth Bag and its two dyes are marked post-launch, but the 2026-10-04 17:46Z scan has both dyes on the beta auction house (Magenta 44 units, Cerulean 261).
+- Multi-yield recipes aren't supported (see `requirements.md` → *Not modeled*). Every current recipe makes 1.
 - Addon prices come from one scan: no history, so no recent or historical values and no discount screen. Listing depth is stored but not yet used in calculations.
 - The real beta scan has thin high-level Tailoring coverage, because most beta characters are low level; low-tier bags and cloth are well listed. Runecloth Bag has no listings, so its board row shows missing prices, and Runecloth has two listings, which carry no loaded name.
 - Mankrik has no upstream scan time, so price age is unknown and "stale" only measures time since download.
@@ -59,7 +65,7 @@ _Last updated 2026-10-04._
 .venv/bin/python -m mypy
 ```
 
-Expected: 111 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 125 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Last live check (2026-10-04, Mankrik, 5,868 rows), cautious basis:
 
@@ -88,3 +94,14 @@ Addon import dry run (2026-10-04, on copies of `data/brownstone.duckdb` at versi
 | Mageweave Cloth | 79 / 203 | 35s 94c | 43s 94c |
 
 The Forever Action Board labels Runecloth Bag **missing prices**, because there's no bag listing. Its cautious craft cost is 4g 95s, buying bolts (87s) rather than crafting them from 2g 55s Runecloth.
+
+Forever Action Board (2026-10-04, on a copy of `data/brownstone.duckdb`; the original was unchanged). Source `forever-us-normal-alliance-addon`, scan `20261004T174645Z-0076af` (observed 17:46Z), cautious basis. Depth is listings / units in that scan:
+
+| Rank | Bag | Label | Craft cost | Sale | Profit (cautious / listed) | Bag depth | Input depth |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Red Linen Bag | potential craft | 4s 30c | 6s | 1s 40c / 1s 80c | 471 / 471 | Linen Cloth 482 / 24,029; Bolt of Linen 214 / 3,069 |
+| 2 | Linen Bag | potential craft | 2s 40c | 3s | 45c / 75c | 1,374 / 1,374 | Linen Cloth 482 / 24,029 |
+| 3 | Woolen Bag | potential craft | 7s 30c | 8s | 30c / 84c | 173 / 173 | Wool Cloth 266 / 5,593; Bolt of Woolen 27 / 161 |
+| 4 | Runecloth Bag (post-launch) | missing prices | 24g 47s 6c | — | — | none | Bolt of Runecloth 37 / 152; Magenta Dye 29 / 44; Cerulean Dye 111 / 261; Rugged Leather 24 / 129 |
+
+All three low-tier bags craft their bolts (2 Linen Cloth at 35c, 3 Wool Cloth at 70c) and buy thread and dye from vendors. Runecloth Bag would buy its bolts (87s); the dyes alone cost 19g 52s 6c.

@@ -1,0 +1,247 @@
+{
+ "source_url": "https://www.wowhead.com/forever/spells/professions/tailoring",
+ "game_path": "forever",
+ "profession": "tailoring",
+ "sha256": "9ab28c15b769b86e8126d132ed5311451a1580cdcc81d65bad9ea95451511b17",
+ "saved_at": "2026-10-04",
+ "recipes": {
+  "2963": {
+   "id": 2963,
+   "name": "Bolt of Linen Cloth",
+   "learnedat": 1,
+   "creates": [
+    2996,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     2589,
+     2
+    ]
+   ],
+   "env_status": "unchanged"
+  },
+  "2964": {
+   "id": 2964,
+   "name": "Bolt of Woolen Cloth",
+   "learnedat": 75,
+   "creates": [
+    2997,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     2592,
+     3
+    ]
+   ],
+   "env_status": "unchanged"
+  },
+  "3755": {
+   "id": 3755,
+   "name": "Linen Bag",
+   "learnedat": 45,
+   "creates": [
+    4238,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     2996,
+     3
+    ],
+    [
+     2320,
+     3
+    ]
+   ],
+   "env_status": "unchanged"
+  },
+  "3757": {
+   "id": 3757,
+   "name": "Woolen Bag",
+   "learnedat": 80,
+   "creates": [
+    4240,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     2997,
+     3
+    ],
+    [
+     2321,
+     1
+    ]
+   ],
+   "env_status": "unchanged"
+  },
+  "6686": {
+   "id": 6686,
+   "name": "Red Linen Bag",
+   "learnedat": 70,
+   "creates": [
+    5762,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     2996,
+     4
+    ],
+    [
+     2321,
+     1
+    ],
+    [
+     2604,
+     1
+    ]
+   ],
+   "env_status": "unchanged"
+  },
+  "18401": {
+   "id": 18401,
+   "name": "Bolt of Runecloth",
+   "learnedat": 250,
+   "creates": [
+    14048,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     14047,
+     5
+    ]
+   ],
+   "env_status": "unchanged"
+  },
+  "18405": {
+   "id": 18405,
+   "name": "Runecloth Bag",
+   "learnedat": 260,
+   "creates": [
+    14046,
+    1,
+    1
+   ],
+   "reagents": [
+    [
+     14048,
+     5
+    ],
+    [
+     8170,
+     2
+    ],
+    [
+     14341,
+     1
+    ],
+    [
+     249430,
+     4
+    ],
+    [
+     249409,
+     2
+    ]
+   ],
+   "env_status": "unchanged"
+  }
+ },
+ "items": {
+  "2320": {
+   "name": "Coarse Thread",
+   "sellprice": 2,
+   "buyprice": 10
+  },
+  "2321": {
+   "name": "Fine Thread",
+   "sellprice": 25,
+   "buyprice": 100
+  },
+  "2589": {
+   "name": "Linen Cloth",
+   "sellprice": 13,
+   "buyprice": null
+  },
+  "2592": {
+   "name": "Wool Cloth",
+   "sellprice": 33,
+   "buyprice": null
+  },
+  "2604": {
+   "name": "Red Dye",
+   "sellprice": 12,
+   "buyprice": 50
+  },
+  "2996": {
+   "name": "Bolt of Linen Cloth",
+   "sellprice": 40,
+   "buyprice": null
+  },
+  "2997": {
+   "name": "Bolt of Woolen Cloth",
+   "sellprice": 100,
+   "buyprice": null
+  },
+  "4238": {
+   "name": "Linen Bag",
+   "sellprice": 200,
+   "buyprice": null
+  },
+  "4240": {
+   "name": "Woolen Bag",
+   "sellprice": 300,
+   "buyprice": null
+  },
+  "5762": {
+   "name": "Red Linen Bag",
+   "sellprice": 250,
+   "buyprice": null
+  },
+  "8170": {
+   "name": "Rugged Leather",
+   "sellprice": 500,
+   "buyprice": 2000
+  },
+  "14046": {
+   "name": "Runecloth Bag",
+   "sellprice": 5000,
+   "buyprice": null
+  },
+  "14047": {
+   "name": "Runecloth",
+   "sellprice": 400,
+   "buyprice": null
+  },
+  "14048": {
+   "name": "Bolt of Runecloth",
+   "sellprice": 2000,
+   "buyprice": null
+  },
+  "14341": {
+   "name": "Rune Thread",
+   "sellprice": 1250,
+   "buyprice": 5000
+  },
+  "249409": {
+   "name": "Cerulean Dye",
+   "sellprice": 125,
+   "buyprice": null
+  },
+  "249430": {
+   "name": "Magenta Dye",
+   "sellprice": 250,
+   "buyprice": null
+  }
+ }
+}

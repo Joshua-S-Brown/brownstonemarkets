@@ -11,7 +11,8 @@ CLASSIC_CATALOG = Path(__file__).resolve().parents[1] / "config/classic-era-tail
 def test_runecloth_bag_expands_intermediate_quantities():
     catalog = load_recipe_catalog(CATALOG)
     assert catalog["game_version"] == "forever"
-    assert material_plan(catalog, 18405) == {8170: 2, 14047: 20, 14341: 1}
+    # Forever adds two dyes to the Classic recipe (STORY-004).
+    assert material_plan(catalog, 18405) == {8170: 2, 14047: 25, 14341: 1, 249409: 2, 249430: 4}
 
 
 def test_classic_catalog_is_separate_but_supports_same_proof():
@@ -42,24 +43,24 @@ def test_classic_catalog_quantities_and_vendor_prices_are_verified():
 def test_catalog_rejects_non_https_verification(tmp_path):
     path = tmp_path / "bad-catalog.toml"
     path.write_text(CLASSIC_CATALOG.read_text().replace(
-        'verification_url = "https://nether.wowhead.com/classic/tooltip/spell/18401"',
+        'verification_url = "https://www.wowhead.com/classic/spells/professions/tailoring"',
         'verification_url = "http://example.com"'))
     with pytest.raises(ValueError, match="verification"):
         load_recipe_catalog(path)
 
 
 def test_buy_versus_craft_uses_cheapest_valid_path_and_vendor_thread():
-    catalog = load_recipe_catalog(CATALOG)
+    catalog = load_recipe_catalog(CLASSIC_CATALOG)
     result = evaluate_recipe(catalog, 18405, {
         14046: 200_000,  # 20g finished bag
-        14048: 50_000,   # 5g bolt; crafting is cheaper
-        14047: 10_000,   # 1g raw cloth -> 4g bolt
+        14048: 60_000,   # 6g bolt; crafting is cheaper
+        14047: 10_000,   # 1g raw cloth -> 5g bolt
         8170: 5_000,     # 50s leather
     })
     assert result["valid"]
-    assert result["craft_cost_copper"] == 215_000  # 20g cloth + 1g leather + 50s thread
+    assert result["craft_cost_copper"] == 265_000  # 25g cloth + 1g leather + 50s thread
     assert result["net_revenue_copper"] == 190_000
-    assert result["profit_copper"] == -25_000
+    assert result["profit_copper"] == -75_000
     assert [choice["method"] for choice in result["choices"]] == ["craft", "buy", "vendor"]
 
 
@@ -68,7 +69,7 @@ def test_missing_prices_invalidate_estimate_instead_of_becoming_zero():
     result = evaluate_recipe(catalog, 18405, {14046: 200_000})
     assert not result["valid"]
     assert result["craft_cost_copper"] is None
-    assert set(result["missing_item_ids"]) == {14048, 8170}
+    assert set(result["missing_item_ids"]) == {14048, 8170, 249430, 249409}
     assert result["profit_copper"] is None
 
 

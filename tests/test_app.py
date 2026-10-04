@@ -60,4 +60,5 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     assert not at.exception
     assert any("Imported" in s.value for s in at.success)
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
-    assert list(table["Item"]) == ["Runecloth Bag"] and table.iloc[0]["Action"] == "potential craft"
+    assert table.iloc[0]["Item"].startswith("Runecloth Bag") and table.iloc[0]["Action"] == "potential craft"
+    assert set(table["Action"][1:]) == {"missing prices"}  # Bags without listings in the fixture scan.

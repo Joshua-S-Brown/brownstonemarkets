@@ -19,11 +19,45 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 Nothing active. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
-Recently completed: STORY-010, addon scan import, 2026-10-04; SPIKE-008, addon scan prototype, 2026-10-04 (see `status.md`).
+Recently completed: STORY-004, recipe import from saved Wowhead pages, 2026-10-04; STORY-010, addon scan import, 2026-10-04; SPIKE-008, addon scan prototype, 2026-10-04 (see `status.md`).
 
 **Time-sensitive, before the beta closes:** take several more scans, at least 15 minutes apart and ideally a few hours apart, and import each copy of the file. Bronze keeps them after the beta ends. Repeated scans are the only data for *Demand from your own scans*, and a Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit at the auction house, not automation.
 
+**Also on the beta, once:** confirm the Forever catalog's unconfirmed values (`status.md` → *Limitations*). Craft one Bolt of Linen Cloth and count the bolts made. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result in the selection file (`config/recipe-selections/forever-tailoring.toml`) with the date, then regenerate. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
+
 ## Next
+
+### STORY-014 — App command centre
+
+Absorbs STORY-013 (one-click import from the game folder).
+
+As a gold maker, I want every routine Brownstone action available as a button in the app, so that I never have to look up or type a command.
+
+**Why first:** the beta closes on 4 November, and until then the routine is frequent: scan, import, confirm recipe values in-game, regenerate the catalog. Today, import exists as a button, but pointing it at the game folder means hand-editing `config/market.local.toml`. Recipe regeneration and the in-game confirmations are CLI- or editor-only. The CLI stays, for scripting.
+
+**Principles** (all slices):
+- **One explicit button per action.** Never a free-form command box.
+- **Preview before every write.** A preview writes nothing. Writing happens only on a separate click, and the app then lists which tracked files changed, so you can review and commit them yourself.
+- **No background work.** Browsing never imports, downloads or searches the disk (UI-01, ADDON-06).
+- **Same code paths.** Buttons call the same `brownstone` functions as the CLI, so behaviour can't drift between the two.
+
+**Slice 1 — Scan import from the game folder** (was STORY-013):
+- **Find the file.** On a click, offer the SavedVariables files found under the usual WoW install folders (macOS `/Applications/World of Warcraft/_*_/`, Windows `C:\Program Files (x86)\World of Warcraft\_*_\`), one per account. The confirmed choice is saved as `scan_path` (and `enabled`) in the untracked `config/market.local.toml`, never the tracked config, because the path contains the account folder name.
+- **Preview.** Before importing, show new, already-imported and partial scans, with times and listing counts. Optionally pick which scans to import, matching `--scan`. If nothing is new, say so and write nothing.
+- **Safe reads.** A file being rewritten by the game (`/reload` or logout) fails cleanly and can be retried. The game folder is never written, watched or polled.
+
+**Slice 2 — Recipe catalogs page:**
+- **Status per selection file:** catalog version, the archived Wowhead page's save date and SHA-256, and the outstanding unconfirmed values (yield, vendor status and price, post-launch flags).
+- **Upload a newly saved Wowhead page.** The page is archived byte-for-byte as the CLI does. Brownstone still never downloads from Wowhead. Then **Preview changes**, which shows the recipe and vendor-price diff and writes nothing, and **Regenerate**, which writes the catalog.
+
+**Slice 3 — In-game confirmations:**
+- Tick off values checked on the beta (the yield you saw, a vendor confirmed with its price, a post-launch decision), each with a date. This writes to the selection file and offers Regenerate. It replaces hand-editing for the *Also on the beta, once* list under Now.
+
+Acceptance:
+- **No CLI or hand-editing** is needed for routine scan import, recipe regeneration or in-game confirmations.
+- **Every write is previewed first** and happens only on an explicit click. Afterwards the app lists changed tracked files and never commits.
+- **Personal paths stay out of Git.** They live only in `market.local.toml`.
+- **Tests cover the logic** behind each button offline: discovery, preview and dry run, and the selection-file writes. Streamlit tests cover the preview → confirm flow.
 
 ### STORY-011 — Optional third-party scan sources
 
@@ -35,20 +69,6 @@ Acceptance:
 - **Visible and optional.** The board shows which source each price came from. Disabling the source leaves everything working on your own scans.
 - **Cross-check.** Where both sources cover an item, show how far apart they are, as a data-quality signal.
 
-### STORY-004 — Import recipes for any game version
-
-As a gold maker, I want recipe catalogs generated from a public source instead of typed by hand, so that I can cover whole professions on Classic now and on Forever at launch.
-
-Acceptance:
-- **Allowed and recorded.** Check the source's terms of use and record them before importing. Wowhead's tooltip data has the reagents and quantities; it's the source used for STORY-007.
-- **Same catalog shape.** The importer writes a catalog with the current structure and per-recipe provenance. Its output matches the hand-verified Classic catalog exactly (a test enforces this) and fills in the three unconfirmed skill levels.
-- **Forever beta Tailoring.** The importer produces a Forever beta Tailoring catalog for review, from the first tier up. Beta listings are concentrated in low-level goods: the 2026-10-04 scan had 1,378 Linen Bag and 301 Woolen Bag listings but no Runecloth Bag. Low-tier bags are what the board can exercise before launch. Profession, category and name filters keep large catalogs usable.
-- **Rebuildable.** Imports are cached and reproducible; no live network access in tests.
-- **Forever recipes differ from Classic; never copy across.** Wowhead's Forever data (checked 2026-10-04) differs in two ways:
-  - Real reagent changes: Forever Runecloth Bag adds 4 Magenta Dye and 2 Cerulean Dye. The current hand-typed `config/forever-tailoring.toml` misses them, so it's wrong and must be replaced.
-  - An output of "(2)" on nearly every Forever recipe, including bolts, bags, a vest and Smelt Copper, where Classic shows none. This may be a real double-yield rule or a Forever formatting quirk: Linen Bandage shows no output at all and Anti-Venom drops its "(3)". **Confirm the yield in-game before trusting it:** craft one Bolt of Linen Cloth or Linen Bag on the beta and count what's created. Record the evidence per recipe.
-- **Multi-yield intermediates must work.** If bolts yield 2, the calculator currently rejects any odd cost as "Fractional unit costs" and marks the bag unsupported. Design conservative handling: buy whole crafts, round unit costs up to the copper, and show leftovers rather than counting them as free. Keep the shopping list and all-craft totals consistent.
-
 ### STORY-003 — Classic demand context
 
 As a gold maker, I want to see how often an item sells, so that a profitable craft isn't one that never sells.
@@ -57,17 +77,6 @@ Acceptance:
 - **Separate data.** TSM's Classic regional file is ingested as its own source and never mixed with realm prices. Its columns are `avgSalePrice, saleRate, soldPerDay` (feasibility confirmed 2026-10-04).
 - **Shown with care.** The board shows sold-per-day and sale rate with their own timestamp, labeled as context, not a promise to sell.
 - **Forever caveat.** Nothing equivalent exists for Forever yet. A later demand estimate from repeated scans (see Later) should replace or check this.
-
-### STORY-013 — Import straight from the game folder
-
-As a gold maker, I want to click one button after a scan without copying files around, so that importing is part of the scan habit.
-
-Already possible: `scan_path` can point at the game's own SavedVariables file (`<WoW>/_classic_beta_/WTF/Account/<account>/SavedVariables/BrownstoneScan.lua`). Import reads it without writing, stores identical bytes in bronze once, and skips scans already imported. No copy into `data/inbox/` is needed; bronze is the archive.
-
-Acceptance:
-- **Find the file.** Offer the SavedVariables files found under the usual WoW install folders (macOS `/Applications/World of Warcraft/_*_/`, Windows `C:\Program Files (x86)\World of Warcraft\_*_\`), one per account. The user confirms the choice, and it is saved as `scan_path` in the untracked `config/market.local.toml`, never the tracked config, because the path contains the account folder name. Nothing is searched on startup.
-- **Preview before import.** Show what the file holds and what import would do: new, already imported and partial scans, with times and listing counts. If nothing is new, say so and import nothing, so no manifest or bronze copy is written.
-- **Safe reads.** A file being rewritten by the game (`/reload` or logout) fails cleanly and can be retried. The game folder is never written, watched or polled, and import still happens only on a click (ADDON-06).
 
 ### STORY-012 — Compare a market with a reference market
 
@@ -113,7 +122,10 @@ These are grouped by what unblocks them.
 - Find out why the 2026-10-04 scan has no `unit_buyout` on any of its 28,105 stacked listings, although every one divides exactly. The importer doesn't depend on it (it divides `buyout` by `quantity` itself), but the addon's documented behaviour and the file disagree.
 - Item names: 4,690 listings arrived before the client loaded the item, and some items (Runecloth, 14047) appear only that way, so Browse shows `Item <ID>`. Crafting uses catalog names, so it's unaffected.
 
-**Other professions:** after STORY-004 proves the importer.
+**Recipe coverage** (unblocked by STORY-004):
+- **More recipes and professions:** add recipes to a selection file, or save another profession's page and add a selection, then regenerate. A filter by tier or name on the board will matter once catalogs grow past a few dozen recipes.
+- **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*).
+- **In-game recipe reader (optional):** the addon could read the Tailoring window (reagents, `GetTradeSkillNumMade`) and the trainer list (required skill) to confirm Wowhead values automatically. This widens the read-only addon and needs its own decision.
 
 ## Out of scope
 

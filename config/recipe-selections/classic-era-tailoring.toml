@@ -1,0 +1,34 @@
+# Which recipes `python -m brownstone recipes` puts in config/classic-era-tailoring.toml.
+# List finished recipes; the intermediates they need (bolts) are added from the same page.
+# Source page: https://www.wowhead.com/classic/spells/professions/tailoring, saved in a browser.
+game_version = "classic"
+rules_version = "classic-era"
+profession = "tailoring"
+status = "reference-observed"
+catalog_version = "0.2"
+notes = "Representative subset: Woolen, Mageweave and Runecloth bags; not the complete Tailoring catalog. Vendor prices are undiscounted single-unit prices; availability and reputation discounts are not modeled."
+
+[[recipes]]
+recipe_id = 3757  # Woolen Bag
+
+[[recipes]]
+recipe_id = 12065  # Mageweave Bag
+
+[[recipes]]
+recipe_id = 18405  # Runecloth Bag
+
+# Sold by trade supplies vendors (checked in STORY-007); the price comes from the page.
+[[items]]
+item_id = 2321  # Fine Thread
+vendor = true
+vendor_evidence_url = "https://warcraft.wiki.gg/wiki/Fine_Thread"
+
+[[items]]
+item_id = 4291  # Silken Thread
+vendor = true
+vendor_evidence_url = "https://warcraft.wiki.gg/wiki/Silken_Thread"
+
+[[items]]
+item_id = 14341  # Rune Thread
+vendor = true
+vendor_evidence_url = "https://warcraft.wiki.gg/wiki/Rune_Thread"

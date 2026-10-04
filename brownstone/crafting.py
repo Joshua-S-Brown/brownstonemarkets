@@ -12,7 +12,7 @@ def load_recipe_catalog(path: Path) -> dict:
         raw = tomllib.load(file)
     if raw.get("schema_version") != 1:
         raise ValueError("Unsupported recipe catalog schema")
-    for key in ("game_version", "rules_version", "profession", "status"):
+    for key in ("game_version", "rules_version", "profession", "status", "catalog_version"):
         if not raw.get(key):
             raise ValueError(f"Recipe catalog requires {key}")
 
@@ -33,6 +33,7 @@ def load_recipe_catalog(path: Path) -> dict:
             raise ValueError("Vendor prices must be positive copper integers")
         if not str(item.get("vendor_price_source_url", "https://")).startswith("https://"):
             raise ValueError("Vendor price provenance must be an HTTPS URL")
+        _check_flags(item)
     for recipe in recipes.values():
         if recipe.get("profession") != raw["profession"]:
             raise ValueError("Recipe profession must match its catalog")
@@ -44,6 +45,7 @@ def load_recipe_catalog(path: Path) -> dict:
             raise ValueError("Every recipe requires an HTTPS provenance URL")
         if not str(recipe.get("verification_url", "https://")).startswith("https://"):
             raise ValueError("Recipe verification must be an HTTPS URL")
+        _check_flags(recipe)
         for ingredient in recipe.get("inputs", []):
             if ingredient.get("item_id") not in items or ingredient.get("quantity", 0) <= 0:
                 raise ValueError("Recipe inputs must reference items with positive quantities")
@@ -51,6 +53,18 @@ def load_recipe_catalog(path: Path) -> dict:
 
     return {**raw, "items_by_id": items, "recipes_by_id": recipes,
             "recipe_for_output": output_recipes}
+
+
+AVAILABILITY = {"available", "post-launch"}
+
+
+def _check_flags(record: dict) -> None:
+    """Display-only evidence flags: availability and the *_verified markers on unconfirmed values."""
+    if record.get("availability", "available") not in AVAILABILITY:
+        raise ValueError(f"availability must be one of {sorted(AVAILABILITY)}")
+    for key, value in record.items():
+        if key.endswith("_verified") and not isinstance(value, bool):
+            raise ValueError(f"{key} must be true or false")
 
 
 def material_plan(catalog: dict, recipe_id: int) -> dict[int, int]:

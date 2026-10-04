@@ -1,0 +1,66 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-tailoring.toml.
+# List finished recipes; the intermediates they need (bolts) are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/professions/tailoring, saved in a browser.
+# Never fill gaps from the Classic page: Forever recipes differ (STORY-004).
+game_version = "forever"
+rules_version = "forever-beta-1.60"  # Game build rules; not a Forever server type.
+profession = "tailoring"
+status = "beta-observed"
+catalog_version = "0.1"
+notes = "Forever beta, first tiers: Linen, Red Linen and Woolen bags with their bolts, plus Runecloth Bag for launch. Revalidate after material game builds by re-saving the page and regenerating."
+
+# Output counts: Wowhead's list data gives every recipe exactly 1, but its spell tooltips show "(2)".
+# Until one craft is counted in game, every recipe keeps the list value and says so.
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 3755  # Linen Bag
+
+[[recipes]]
+recipe_id = 6686  # Red Linen Bag (pattern from a vendor or drop)
+
+[[recipes]]
+recipe_id = 3757  # Woolen Bag
+
+[[recipes]]
+recipe_id = 18405  # Runecloth Bag
+availability = "post-launch"
+availability_note = "Needs Tailoring 260 and Forever's new dyes; not reachable on the level-capped beta."
+
+[[items]]
+item_id = 249430  # Magenta Dye
+availability = "post-launch"
+availability_note = "New in Forever; no vendor price in Wowhead's data, so it is priced from the auction house."
+
+[[items]]
+item_id = 249409  # Cerulean Dye
+availability = "post-launch"
+availability_note = "New in Forever; no vendor price in Wowhead's data, so it is priced from the auction house."
+
+# Vendor materials. Wowhead's Forever item data has their buy prices but no vendor listings, and Classic
+# evidence is not Forever evidence, so each is unconfirmed until seen at a Forever trade supplies vendor.
+[[items]]
+item_id = 2320  # Coarse Thread
+vendor = true
+vendor_verified = false
+vendor_note = "Confirm at a Forever trade supplies vendor."
+
+[[items]]
+item_id = 2321  # Fine Thread
+vendor = true
+vendor_verified = false
+vendor_note = "Confirm at a Forever trade supplies vendor."
+
+[[items]]
+item_id = 2604  # Red Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Confirm at a Forever trade supplies vendor."
+
+[[items]]
+item_id = 14341  # Rune Thread
+vendor = true
+vendor_verified = false
+vendor_note = "Confirm at a Forever trade supplies vendor."

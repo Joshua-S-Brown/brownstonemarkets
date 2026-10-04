@@ -15,6 +15,9 @@ SavedVariables .lua ──copy──▶ bronze (exact bytes, stored once per SHA
         ──silver──────▶ per scan: _scan, _listings and, if complete, _prices Parquet
         ──load────────▶ DuckDB addon_scans + scan_listings + market_snapshots (complete scans only)
 
+saved Wowhead page ──archive─▶ data/recipe-sources (exact bytes once per SHA-256 + manifest)
+        ──extract─▶ recipes and items ──select─▶ catalog TOML (config/recipe-selections/*.toml)
+
 catalog TOML ──load──▶ crafting / action_board ◀── price_observations (DuckDB)
 ```
 
@@ -40,6 +43,7 @@ brownstone/             importable without Streamlit
   freshness.py          the one staleness policy
   money.py              copper ↔ gold display helpers
   crafting.py           catalog loading, expansion, route costs, price bases
+  recipe_import.py      saved Wowhead profession page → archive, extract, catalog TOML (no network)
   action_board.py       ranking and label policy (versioned)
 launch.py               local server launcher with code-fingerprint restart
 ```
@@ -57,7 +61,9 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 | Price observation | analytical snapshot + source + market identity + item ID | Integer copper: `min_buyout, market_value, recent_value, historical_value` |
 | Addon scan | `source_id, scan_id` → `snapshot_id = <source_id>:<scan_id>` | `addon_scans`: status, `partial`, `priced`, times, counts, `nonexact_stacks`, client, house evidence, scan and file SHA-256. Its import manifest lists every scan with an outcome (`imported`, `duplicate`, `partial (not priced)`, `empty`); `scan_id`, `updated_at` and `analytical_snapshot_id` name the newest complete scan, and status is `no_complete_scan` when there is none |
 | Listing | `source_id, scan_id, listing_index` + market identity | `scan_listings`: `item_id, item_name, quantity, buyout` (whole stack), `unit_buyout` (exact only), `unit_buyout_ceil`, `min_bid, bid, complete_info` |
-| Catalog | `game_version, rules_version, catalog_version` | TOML; items with role and provenance, recipes with inputs and output quantity. Optional evidence: recipe `verified_at` / `verification_url`, item `vendor_price_source_url` |
+| Catalog | `game_version, rules_version, catalog_version` | TOML generated from a selection file and one saved page (CRAFT-08). Header: `source_url`, `source_sha256`, `verified_at`. Items: role, Wowhead URL, optional `vendor_price_copper` with `vendor_price_source_url`, `vendor_verified`, `availability`. Recipes: inputs, `output_quantity`, `required_skill`, Wowhead spell URL, `verification_url`, `evidence_sha256`, optional `output_quantity_verified`, `availability` |
+| Recipe selection | file name = catalog name | `config/recipe-selections/<catalog>.toml`: catalog header fields, finished `[[recipes]]` (with optional overrides), `[recipe_defaults]`, `[[items]]` vendor evidence and notes |
+| Recipe source page | SHA-256 | `data/recipe-sources/wowhead/<game>/<profession>/<sha16>.html` + `.json` manifest: page URL, `saved_at`, `archived_at`, original file name |
 
 ### Schema migrations
 
@@ -86,11 +92,19 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
   - labels and sorts the rows (CRAFT-05)
   - isolates per-recipe errors so one bad recipe doesn't hide the others
 
+## Recipe import
+
+- `archive_page` copies the saved page once per SHA-256 and writes a manifest. A rerun from the archived copy reuses the recorded `saved_at`, so catalogs rebuild identically offline.
+- `extract_page` reads the page's `listviewspells` array (recipes) and the `WH.Gatherer.addData(3, …)` object (items). Wowhead leaves a few keys unquoted; everything else is JSON.
+- `build_catalog` applies the selection: it adds intermediates, assigns roles (finished, intermediate, vendor material only with selection evidence, material), stamps evidence and rejects version mismatches, ambiguous creators and variable yields.
+- `dumps_catalog` writes deterministic TOML. `catalog_changes` lists recipe and vendor price differences against the current file for review.
+- Tests use trimmed extracts in `tests/fixtures/wowhead/` and assert that each tracked catalog equals the importer's output.
+
 ## Switching to WoW Forever
 
 1. **Market identity (done, STORY-009).** Configure `scope = "house"`, `server_type`, `faction` and no realm, for example `forever-us-roleplaying-alliance`. Neutral houses default to a 15% cut.
 2. **Price source (done, STORY-010).** There is no TSM or Blizzard feed. A `provider = "addon"` source imports the addon's SavedVariables file: bronze stays byte-for-byte, listings go to `scan_listings`, and item-level prices are derived in the `market_snapshots` shape (rules ADDON-01 to ADDON-06).
-3. **Catalog (STORY-004).** Generate `config/forever-tailoring.toml` with the recipe importer to the same verification standard as the Classic catalog.
+3. **Catalog (done, STORY-004).** `config/forever-tailoring.toml` is generated from the saved Forever Tailoring page (CRAFT-08). To cover more, add recipes to its selection file, or add a selection for another profession, and regenerate.
 4. **Configuration.** Add the `[[sources]]` entry: market fields, `rules_version`, `provider = "addon"`, `scan_path` and `scan_evidence` (see the disabled example in `config/market.toml`). Other non-TSM feeds get their own adapter producing the same `market_snapshots` columns.
 
 No change to crafting, the Action Board or the views should be needed. If one is, treat it as a design defect.

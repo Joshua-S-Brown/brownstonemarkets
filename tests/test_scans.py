@@ -252,13 +252,15 @@ def finished_now():
 
 
 def forever_scan_file(folder, finished=FINISHED):
-    runecloth, bolt, bag, leather = 14047, 14048, 14046, 8170
+    runecloth, bolt, bag, leather, magenta, cerulean = 14047, 14048, 14046, 8170, 249430, 249409
     return write_scans(folder / "forever.lua", scan("rc", finished, [
         listing(runecloth, 20, 20000, "Runecloth"),          # 1,000c each
         listing(runecloth, 5, 5001, "Runecloth"),            # 1,000.2c: priced 1,001c
         listing(runecloth, 1, 900, "Runecloth"),             # cheapest single
-        listing(bolt, 2, 9000, "Bolt of Runecloth"),         # 4,500c each
+        listing(bolt, 2, 12000, "Bolt of Runecloth"),        # 6,000c each
         listing(leather, 10, 5000, "Rugged Leather"),        # 500c each
+        listing(magenta, 4, 2000, "Magenta Dye"),            # 500c each
+        listing(cerulean, 2, 500, "Cerulean Dye"),           # 250c each
         listing(bag, 1, 60000, "Runecloth Bag"),
         listing(bag, 1, 80000, "Runecloth Bag"),
     ]))
@@ -277,11 +279,14 @@ def test_derived_prices_feed_the_forever_action_board_unchanged(tmp_path):
     assert observations[bag] == {"min_buyout": 60000, "market_value": 60000}
     board = rank_recipes(catalog, observations, config, manifest, now=NOW,
                          max_age_hours=config["max_age_hours"], auction_cut=config["auction_cut"])
-    [row] = board["rows"]
-    # Cautious: Bolt crafts at 4 × 1,000 = 4,000c (< 4,500c bought); 5 bolts + 2 leather + thread.
-    assert row["craft_cost_copper"] == 5 * 4000 + 2 * 500 + 5000
+    row = next(row for row in board["rows"] if row["output_item_id"] == bag)
+    # Unlisted bags stay missing prices, never free.
+    assert {r["action"] for r in board["rows"] if r is not row} == {"missing prices"}
+    # Cautious: Bolt crafts at 5 × 1,000 = 5,000c (< 6,000c bought); 5 bolts + 2 leather + thread + dyes.
+    dyes = 4 * 500 + 2 * 250
+    assert row["craft_cost_copper"] == 5 * 5000 + 2 * 500 + 5000 + dyes
     assert row["net_revenue_copper"] == 57000 and row["action"] == "potential craft"
-    assert row["profit_by_basis"] == {"cautious": 57000 - 26000, "listed": 57000 - (5 * 3600 + 1000 + 5000)}
+    assert row["profit_by_basis"] == {"cautious": 57000 - 33500, "listed": 57000 - (5 * 4500 + 1000 + 5000 + dyes)}
     assert not board["freshness"]["stale"] and board["freshness"]["basis"] == "upstream scan"
 
 

@@ -79,11 +79,12 @@ def render(config, catalogs):
 def _board(catalog, config, manifest, sid, board, basis):
     st.markdown(f"#### {catalog['profession'].title()} Action Board")
     st.caption("Representative subset, not the complete profession. Potential craft means positive estimated "
-               "profit; demand and sale likelihood are unknown.")
+               "profit; demand and sale likelihood are unknown. Post-launch recipes can't be crafted yet.")
     show_freshness(config, manifest)
     other = next(name for name in PRICE_BASES if name != basis)
     rows = [{
-        "Rank": row["rank"], "Item": row["output_name"], "Action": row["action"],
+        "Rank": row["rank"], "Item": _labeled(catalog["recipes_by_id"][row["recipe_id"]], row["output_name"]),
+        "Action": row["action"],
         "Craft cost (g)": to_gold(row["craft_cost_copper"]),
         "Sale price (g)": to_gold(row["sale_price_copper"]),
         "Net revenue (g)": to_gold(row["net_revenue_copper"]),
@@ -102,6 +103,10 @@ def _board(catalog, config, manifest, sid, board, basis):
                f"snapshot {sid} · source {manifest['source']} · SHA-256 {manifest['sha256'][:12]}…")
 
 
+def _labeled(record, name):
+    return f"{name} (post-launch)" if record.get("availability") == "post-launch" else name
+
+
 def _pick_recipe(catalog, recipe_ids):
     return st.selectbox("Recipe", recipe_ids, format_func=lambda r: catalog["recipes_by_id"][r]["name"])
 
@@ -112,6 +117,17 @@ def _recipe_heading(catalog, recipe_id):
     st.markdown(f"### {recipe['name']}")
     st.caption(f"Recipe {recipe_id} · skill {recipe['required_skill']} · makes {recipe['output_quantity']} × "
                f"{output['name']} (item {output['item_id']})")
+    notes = [recipe.get("availability_note")]
+    if recipe.get("output_quantity_verified") is False:
+        notes.append(f"Output count unconfirmed: {recipe.get('output_quantity_note', '')}")
+    for ingredient in recipe["inputs"]:
+        item = catalog["items_by_id"][ingredient["item_id"]]
+        if item.get("vendor_verified") is False:
+            notes.append(f"{item['name']} vendor price unconfirmed. {item.get('vendor_note', '')}")
+        if item.get("availability") == "post-launch":
+            notes.append(f"{item['name']}: {item.get('availability_note', 'post-launch')}")
+    for note in filter(None, notes):
+        st.caption(f"⚠ {note}")
 
 
 def _summary(catalog, evaluation, basis):

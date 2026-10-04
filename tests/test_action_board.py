@@ -41,7 +41,7 @@ def board(**kwargs):
 
 def test_representative_catalog_quantities_and_version():
     c = catalog()
-    assert c["catalog_version"] == "0.1"
+    assert c["catalog_version"] == "0.2"
     assert material_plan(c, 3757) == {2321: 1, 2592: 9}
     assert material_plan(c, 12065) == {4291: 2, 4338: 20}
     assert material_plan(c, 18405) == {8170: 2, 14047: 25, 14341: 1}
