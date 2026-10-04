@@ -12,7 +12,7 @@ PRICE_COLUMNS = {
 REQUIRED = {"itemId", "name", "updatedAt", *PRICE_COLUMNS}
 
 
-def normalize(raw: bytes, market_id: str, snapshot_id: str, collected_at: datetime,  # noqa: C901
+def normalize(raw: bytes, market_id: str, snapshot_id: str, collected_at: datetime,
               max_age_hours: float, allow_missing_updated_at: bool = False) -> pl.DataFrame:
     frame = pl.read_csv(io.BytesIO(raw), infer_schema=False)
     missing = REQUIRED - set(frame.columns)
@@ -28,6 +28,17 @@ def normalize(raw: bytes, market_id: str, snapshot_id: str, collected_at: dateti
         *[pl.col(src).cast(pl.Int64, strict=True).alias(dst) for src, dst in PRICE_COLUMNS.items()],
         pl.col("updatedAt").str.to_datetime(time_zone="UTC", strict=True).alias("updated_at"),
     )
+    _check_values(frame)
+    _check_timestamps(frame, collected_at, max_age_hours, allow_missing_updated_at)
+    # Zero is preserved as unavailable/no listing, then excluded from ranking.
+    return frame.with_columns(
+        pl.lit(market_id).alias("market_id"),
+        pl.lit(snapshot_id).alias("snapshot_id"),
+        pl.lit(collected_at).alias("collected_at"),
+    )
+
+
+def _check_values(frame: pl.DataFrame) -> None:
     required_values = ["item_id", "item_name", *PRICE_COLUMNS.values()]
     if any(frame.select(required_values).null_count().row(0)):
         raise ValueError("Required fields cannot be null")
@@ -37,21 +48,20 @@ def normalize(raw: bytes, market_id: str, snapshot_id: str, collected_at: dateti
         raise ValueError("Item IDs must be positive")
     if frame.filter(pl.any_horizontal([pl.col(c) < 0 for c in PRICE_COLUMNS.values()])).height:
         raise ValueError("Prices must be nonnegative integer copper")
+
+
+def _check_timestamps(frame: pl.DataFrame, collected_at: datetime, max_age_hours: float,
+                      allow_missing_updated_at: bool) -> None:
+    """One upstream time for the whole file, fresh at collection, or (when allowed) none at all."""
     timestamp_nulls = frame["updated_at"].null_count()
     if timestamp_nulls == frame.height:
         if not allow_missing_updated_at:
             raise ValueError("Required fields cannot be null")
-    elif timestamp_nulls:
+        return
+    if timestamp_nulls:
         raise ValueError("Upstream timestamps must be either complete or entirely unavailable")
-    elif frame["updated_at"].n_unique() != 1:
+    if frame["updated_at"].n_unique() != 1:
         raise ValueError("Expected a single upstream timestamp per file")
-    if timestamp_nulls == 0:
-        age = (collected_at - frame["updated_at"][0]).total_seconds() / 3600
-        if is_stale(age, max_age_hours):
-            raise ValueError(f"Upstream timestamp is stale or in the future (age={age:.2f}h)")
-    # Zero is preserved as unavailable/no listing, then excluded from ranking.
-    return frame.with_columns(
-        pl.lit(market_id).alias("market_id"),
-        pl.lit(snapshot_id).alias("snapshot_id"),
-        pl.lit(collected_at).alias("collected_at"),
-    )
+    age = (collected_at - frame["updated_at"][0]).total_seconds() / 3600
+    if is_stale(age, max_age_hours):
+        raise ValueError(f"Upstream timestamp is stale or in the future (age={age:.2f}h)")

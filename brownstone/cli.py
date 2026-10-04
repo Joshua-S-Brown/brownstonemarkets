@@ -3,7 +3,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from .config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
+from .config import ADDON_PROVIDER, LOCAL_OVERRIDES, Source, read_sources
 from .pipeline import import_scans, run
 from .recipe_import import archive_page, build_catalog, catalog_changes, dumps_catalog, extract_page, load_selection
 
@@ -42,7 +42,7 @@ def recipes_main(argv: list[str]) -> None:
         print(f"  {line}")
 
 
-def main() -> None:  # noqa: C901
+def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     if sys.argv[1:2] == ["recipes"]:
@@ -58,17 +58,7 @@ def main() -> None:  # noqa: C901
                         help="Addon sources: import only this scan from the file (repeatable)")
     args = parser.parse_args()
     try:
-        sources = read_sources(args.config, args.config.with_name(LOCAL_OVERRIDES))
-        if args.source:
-            matches = [source for source in sources if source["source_id"] == args.source]
-            if not matches:
-                raise ValueError(f"Unknown source: {args.source}")
-            config = matches[0]
-            if not config["enabled"]:
-                raise ValueError(f"Source {args.source} is disabled; set enabled = true in "
-                                 f"{args.config.with_name(LOCAL_OVERRIDES)}")
-        else:
-            config = next(source for source in sources if source["enabled"])
+        config = _select_source(args)
         if config["provider"] == ADDON_PROVIDER:
             manifest = import_scans(config, args.input, args.scans)
         else:
@@ -79,13 +69,31 @@ def main() -> None:  # noqa: C901
         print(f"Pipeline failed: {error}", file=sys.stderr)
         sys.exit(1)
     if config["provider"] == ADDON_PROVIDER:
-        for scan in manifest["scans"]:
-            print(f"Scan {scan['scan_id']}: {scan['status']}, {scan['listing_count']:,} listings, {scan['outcome']}")
-        if manifest["status"] == "complete":
-            print(f"Prices for {manifest['rows']:,} items from scan {manifest['scan_id']} "
-                  f"(finished {manifest['updated_at']}) are now current for {config['market_id']}")
-        else:
-            print("No complete scan in this file; prices are unchanged")
+        _report_scans(config, manifest)
         return
     print(result.select("rank", "item_id", "item_name", "buy_gold", "discount", "net_spread_gold"))
     print(f"Saved {result.height} screening candidates to {output}")
+
+
+def _select_source(args: argparse.Namespace) -> Source:
+    """The source named by --source (which must be enabled), else the first enabled source."""
+    sources = read_sources(args.config, args.config.with_name(LOCAL_OVERRIDES))
+    if not args.source:
+        return next(source for source in sources if source["enabled"])
+    matches = [source for source in sources if source["source_id"] == args.source]
+    if not matches:
+        raise ValueError(f"Unknown source: {args.source}")
+    if not matches[0]["enabled"]:
+        raise ValueError(f"Source {args.source} is disabled; set enabled = true in "
+                         f"{args.config.with_name(LOCAL_OVERRIDES)}")
+    return matches[0]
+
+
+def _report_scans(config: Source, manifest: dict) -> None:
+    for scan in manifest["scans"]:
+        print(f"Scan {scan['scan_id']}: {scan['status']}, {scan['listing_count']:,} listings, {scan['outcome']}")
+    if manifest["status"] == "complete":
+        print(f"Prices for {manifest['rows']:,} items from scan {manifest['scan_id']} "
+              f"(finished {manifest['updated_at']}) are now current for {config['market_id']}")
+    else:
+        print("No complete scan in this file; prices are unchanged")

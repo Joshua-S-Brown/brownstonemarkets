@@ -10,6 +10,7 @@ import duckdb
 
 from . import markets
 from .config import MARKET_KEYS, Source
+from .freshness import observed_at
 
 SCHEMA_VERSION = 3
 
@@ -94,12 +95,21 @@ def schema_version(db) -> int:
     return int(row[0]) if row else 0
 
 
+def _refuse_newer(version: int) -> None:
+    if version > SCHEMA_VERSION:
+        raise RuntimeError(f"Database schema {version} is newer than this code supports ({SCHEMA_VERSION})")
+
+
+def _require_current(db) -> None:
+    if schema_version(db) != SCHEMA_VERSION:
+        raise RuntimeError("Database schema is out of date; call upgrade_database first")
+
+
 def ensure_schema(db):
     """Bring the database to SCHEMA_VERSION, running each pending migration once."""
     version = schema_version(db)
     db.execute("CREATE TABLE IF NOT EXISTS schema_info (key VARCHAR PRIMARY KEY, value VARCHAR NOT NULL)")
-    if version > SCHEMA_VERSION:
-        raise RuntimeError(f"Database schema {version} is newer than this code supports ({SCHEMA_VERSION})")
+    _refuse_newer(version)
     for target in range(version + 1, SCHEMA_VERSION + 1):
         MIGRATIONS[target](db)
         db.execute("INSERT OR REPLACE INTO schema_info VALUES ('schema_version', ?)", [str(target)])
@@ -122,8 +132,7 @@ def upgrade_database(data_dir: Path, create: bool = False) -> bool:
         has_data = _has_table(db, "market_snapshots")
     if version == SCHEMA_VERSION:
         return False
-    if version > SCHEMA_VERSION:
-        raise RuntimeError(f"Database schema {version} is newer than this code supports ({SCHEMA_VERSION})")
+    _refuse_newer(version)
     if existed and has_data:
         backup = path.with_name(f"brownstone.v{version}.backup.duckdb")
         if not backup.exists():
@@ -138,8 +147,7 @@ def load_snapshot(db, silver: Path, frame, config: Source) -> tuple[str, bool]:
 
     The database must already be at SCHEMA_VERSION (see ``upgrade_database``).
     """
-    if schema_version(db) != SCHEMA_VERSION:
-        raise RuntimeError("Database schema is out of date; call upgrade_database first")
+    _require_current(db)
     existing = db.execute("""SELECT snapshot_id FROM market_snapshots
         WHERE source_id=? AND updated_at IS NOT DISTINCT FROM ? AND source_sha256=? LIMIT 1""",
         [config["source_id"], frame["updated_at"][0], frame["source_sha256"][0]]).fetchone()
@@ -161,16 +169,11 @@ def known_scan(db, source_id: str, scan_id: str) -> dict | None:
 def load_scan(db, scan: Path, listings: Path, prices: Path | None) -> None:
     """Insert one new addon scan from its silver files: the scan row, its listings and, when the scan
     is complete, its item prices. Callers check ``known_scan`` first; a repeat insert fails on the key."""
-    if schema_version(db) != SCHEMA_VERSION:
-        raise RuntimeError("Database schema is out of date; call upgrade_database first")
+    _require_current(db)
     db.execute("INSERT INTO addon_scans BY NAME SELECT * FROM read_parquet(?)", [str(scan)])
     db.execute("INSERT INTO scan_listings BY NAME SELECT * FROM read_parquet(?)", [str(listings)])
     if prices is not None:
         db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(prices)])
-
-
-def _observed(record: dict) -> datetime:
-    return datetime.fromisoformat(record.get("updated_at") or record["collected_at"])
 
 
 def completed_snapshots(config: Source) -> list[dict]:
@@ -190,7 +193,7 @@ def completed_snapshots(config: Source) -> list[dict]:
                 records.append(markets.upgrade_legacy(record))
         except (OSError, ValueError):
             continue
-    return sorted(records, key=lambda r: (_observed(r), datetime.fromisoformat(r["collected_at"])), reverse=True)
+    return sorted(records, key=lambda r: (observed_at(r), datetime.fromisoformat(r["collected_at"])), reverse=True)
 
 
 def latest_snapshot(config: Source) -> tuple[dict | None, str | None, int]:

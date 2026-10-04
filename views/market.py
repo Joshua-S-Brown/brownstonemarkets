@@ -3,6 +3,7 @@ import polars as pl
 import streamlit as st
 
 from brownstone.analysis import browse, rank, screenable_count
+from brownstone.money import COPPER_PER_GOLD
 from views.common import gold_columns, load_latest, read_db, show_freshness
 
 EMPTY = "No completed snapshot yet. Click Refresh from TSM or Import addon scan to collect this market."
@@ -33,7 +34,7 @@ def render_browse(config):
                "Blank means unavailable or no listing, not free.")
     display = results.select(
         pl.col("item_name").alias("Item"), pl.col("item_id").alias("Item ID"),
-        *[(pl.when(pl.col(src) > 0).then(pl.col(src) / 10000)).alias(dst) for src, dst in [
+        *[(pl.when(pl.col(src) > 0).then(pl.col(src) / COPPER_PER_GOLD)).alias(dst) for src, dst in [
             ("min_buyout", "Minimum buyout (g)"), ("market_value", "Market value (g)"),
             ("recent_value", "Recent (g)"), ("historical_value", "Historical (g)")]],
     )
@@ -81,10 +82,10 @@ def render_opportunities(config):
         return
     display = results.select(
         pl.col("rank").alias("Rank"), pl.col("item_name").alias("Item"),
-        pl.col("item_id").alias("Item ID"), (pl.col("min_buyout") / 10000).alias("Minimum buyout (g)"),
-        (pl.col("reference_copper") / 10000).alias("Reference (g)"),
+        pl.col("item_id").alias("Item ID"), (pl.col("min_buyout") / COPPER_PER_GOLD).alias("Minimum buyout (g)"),
+        (pl.col("reference_copper") / COPPER_PER_GOLD).alias("Reference (g)"),
         (pl.col("discount") * 100).alias("Discount (%)"),
-        (pl.col("net_spread_copper") / 10000).alias("Estimated spread (g)"),
+        (pl.col("net_spread_copper") / COPPER_PER_GOLD).alias("Estimated spread (g)"),
     )
     st.dataframe(display, hide_index=True, width="stretch", height=600, column_config={
         **gold_columns("Minimum buyout (g)", "Reference (g)", "Estimated spread (g)"),

@@ -101,7 +101,7 @@ def archive_page(page: Path, archive_dir: Path, saved_at: str | None = None) -> 
         raise ValueError("Not a Wowhead profession spell list page (no canonical .../spells/professions/... link)")
     folder = archive_dir / "wowhead" / match.group(1) / match.group(2)
     copy, manifest_path = folder / f"{sha256[:16]}.html", folder / f"{sha256[:16]}.json"
-    previous = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    previous = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
     saved_at = (saved_at or previous.get("saved_at")
                 or datetime.fromtimestamp(page.stat().st_mtime, UTC).date().isoformat())
     date.fromisoformat(saved_at)
@@ -112,7 +112,7 @@ def archive_page(page: Path, archive_dir: Path, saved_at: str | None = None) -> 
                 "saved_at": saved_at, "original_name": page.name,
                 "archived_at": previous.get("archived_at") or datetime.now(UTC).isoformat(timespec="seconds"),
                 "bronze_file": copy.name, "capture": "saved by the user in a web browser"}
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return copy, manifest
 
 
@@ -129,7 +129,7 @@ def load_selection(path: Path) -> dict:
     return selection
 
 
-def build_catalog(extract: dict, selection: dict) -> dict:  # noqa: C901
+def build_catalog(extract: dict, selection: dict) -> dict:
     """Catalog for the selected recipes plus every intermediate they need, in the loader's shape.
 
     A reagent created by exactly one recipe on the page is crafted (an intermediate); a reagent created
@@ -141,83 +141,22 @@ def build_catalog(extract: dict, selection: dict) -> dict:  # noqa: C901
     if extract["game_path"] != GAME_PATHS[game] or extract["profession"] != selection["profession"]:
         raise ValueError(f"The page is {extract['game_path']} {extract['profession']}, but the selection is "
                          f"{game} {selection['profession']}; catalogs never borrow another version's data")
-    recipes, items = extract["recipes"], extract["items"]
+    recipes = extract["recipes"]
     picks = {str(pick["recipe_id"]): pick for pick in selection["recipes"]}
     unknown = sorted(set(picks) - set(recipes), key=int)
     if unknown:
         raise ValueError(f"Selected recipes are not on the page: {unknown}")
-    creators: dict[int, list[str]] = {}
-    for recipe_id, recipe in recipes.items():
-        if recipe["creates"]:
-            creators.setdefault(recipe["creates"][0], []).append(recipe_id)
-
-    included: dict[str, dict] = {}  # Recipe ID -> pick (or {} for an automatic intermediate).
-
-    def include(recipe_id: str, trail: tuple[str, ...]) -> None:
-        if recipe_id in trail:
-            raise ValueError(f"Recipe cycle through {recipe_id}")
-        if recipe_id in included:
-            return
-        recipe = recipes[recipe_id]
-        if not recipe["creates"]:
-            raise ValueError(f"Recipe {recipe_id} ({recipe['name']}) creates no item")
-        included[recipe_id] = picks.get(recipe_id, {})
-        for reagent_id, _ in recipe["reagents"]:
-            options = creators.get(reagent_id, [])
-            chosen = [option for option in options if option in picks]
-            if len(chosen) > 1 or (len(options) > 1 and not chosen):
-                raise ValueError(f"Item {reagent_id} is made by recipes {options}; select exactly one of them")
-            if chosen or options:
-                include((chosen or options)[0], trail + (recipe_id,))
-
-    for recipe_id in picks:
-        include(recipe_id, ())
+    included = _included_recipes(recipes, picks)
 
     defaults = selection.get("recipe_defaults", {})
     item_notes = {str(entry["item_id"]): entry for entry in selection.get("items", [])}
     consumed = {reagent for rid in included for reagent, _ in recipes[rid]["reagents"]}
     outputs = {recipes[rid]["creates"][0] for rid in included}
-    catalog_recipes = []
-    for recipe_id in sorted(included, key=lambda rid: (recipes[rid]["learnedat"] or 0, int(rid))):
-        recipe, pick = recipes[recipe_id], included[recipe_id]
-        output_id, made_min, made_max = recipe["creates"]
-        if made_min != made_max or made_min <= 0:
-            raise ValueError(f"Recipe {recipe_id} makes {made_min}-{made_max}; variable yields are not supported")
-        entry: dict[str, Any] = {
-            "recipe_id": int(recipe_id), "name": recipe["name"], "profession": selection["profession"],
-            "required_skill": recipe["learnedat"], "output_item_id": output_id, "output_quantity": made_min,
-            "source_url": f"https://www.wowhead.com/{extract['game_path']}/spell={recipe_id}",
-            "verified_at": extract["saved_at"], "verification_url": extract["source_url"],
-            "evidence_sha256": extract["sha256"],
-        }
-        entry.update(defaults)
-        entry.update({key: value for key, value in pick.items() if key != "recipe_id"})
-        if entry.get("availability", "available") not in AVAILABILITY:
-            raise ValueError(f"Recipe {recipe_id}: availability must be one of {sorted(AVAILABILITY)}")
-        entry["inputs"] = [{"item_id": reagent, "quantity": quantity} for reagent, quantity in recipe["reagents"]]
-        catalog_recipes.append(entry)
-
-    catalog_items = []
-    for item_id in sorted(consumed | outputs):
-        row = items.get(str(item_id))
-        if row is None:
-            raise ValueError(f"Item {item_id} is used by a selected recipe but missing from the page")
-        note = item_notes.get(str(item_id), {})
-        role = ("intermediate" if item_id in outputs and item_id in consumed else "finished" if item_id in outputs
-                else "vendor_material" if note.get("vendor") else "material")
-        item: dict[str, Any] = {"item_id": item_id, "name": row["name"], "role": role,
-                                "source_url": f"https://www.wowhead.com/{extract['game_path']}/item={item_id}"}
-        if note.get("vendor"):
-            # Wowhead gives many items a buy price that no vendor sells them for (Felcloth, raid gear), so
-            # vendor status comes from the selection's evidence; only the price comes from the page.
-            if not row["buyprice"]:
-                raise ValueError(f"Item {item_id} is marked as sold by vendors but the page has no buy price")
-            item.update(vendor_price_copper=row["buyprice"], vendor_price_source_url=extract["source_url"],
-                        vendor_price_note="Wowhead buy price; availability and reputation discounts are not modeled")
-        item.update({key: value for key, value in note.items() if key not in ("item_id", "vendor")})
-        if item.get("availability", "available") not in AVAILABILITY:
-            raise ValueError(f"Item {item_id}: availability must be one of {sorted(AVAILABILITY)}")
-        catalog_items.append(item)
+    catalog_recipes = [_catalog_recipe(extract, selection["profession"], recipe_id, defaults, included[recipe_id])
+                       for recipe_id in sorted(included, key=lambda rid: (recipes[rid]["learnedat"] or 0, int(rid)))]
+    catalog_items = [_catalog_item(extract, item_id, _role(item_id, consumed, outputs, item_notes),
+                                   item_notes.get(str(item_id), {}))
+                     for item_id in sorted(consumed | outputs)]
     unused = sorted(set(item_notes) - {str(item["item_id"]) for item in catalog_items}, key=int)
     if unused:
         raise ValueError(f"Selection notes items no selected recipe uses: {unused}")
@@ -234,6 +173,85 @@ def build_catalog(extract: dict, selection: dict) -> dict:  # noqa: C901
         **({"notes": selection["notes"]} if selection.get("notes") else {}),
         "items": catalog_items, "recipes": catalog_recipes,
     }
+
+
+def _included_recipes(recipes: dict, picks: dict) -> dict[str, dict]:
+    """Recipe ID -> its selection entry, or {} for an intermediate added because a selected recipe needs it."""
+    creators: dict[int, list[str]] = {}
+    for recipe_id, recipe in recipes.items():
+        if recipe["creates"]:
+            creators.setdefault(recipe["creates"][0], []).append(recipe_id)
+    included: dict[str, dict] = {}
+    for recipe_id in picks:
+        _include(recipe_id, (), recipes, picks, creators, included)
+    return included
+
+
+def _include(recipe_id: str, trail: tuple[str, ...], recipes: dict, picks: dict,
+             creators: dict[int, list[str]], included: dict[str, dict]) -> None:
+    if recipe_id in trail:
+        raise ValueError(f"Recipe cycle through {recipe_id}")
+    if recipe_id in included:
+        return
+    recipe = recipes[recipe_id]
+    if not recipe["creates"]:
+        raise ValueError(f"Recipe {recipe_id} ({recipe['name']}) creates no item")
+    included[recipe_id] = picks.get(recipe_id, {})
+    for reagent_id, _ in recipe["reagents"]:
+        options = creators.get(reagent_id, [])
+        chosen = [option for option in options if option in picks]
+        if len(chosen) > 1 or (len(options) > 1 and not chosen):
+            raise ValueError(f"Item {reagent_id} is made by recipes {options}; select exactly one of them")
+        if chosen or options:
+            _include((chosen or options)[0], trail + (recipe_id,), recipes, picks, creators, included)
+
+
+def _check_availability(record: dict, label: str) -> None:
+    if record.get("availability", "available") not in AVAILABILITY:
+        raise ValueError(f"{label}: availability must be one of {sorted(AVAILABILITY)}")
+
+
+def _catalog_recipe(extract: dict, profession: str, recipe_id: str, defaults: dict, pick: dict) -> dict:
+    recipe = extract["recipes"][recipe_id]
+    output_id, made_min, made_max = recipe["creates"]
+    if made_min != made_max or made_min <= 0:
+        raise ValueError(f"Recipe {recipe_id} makes {made_min}-{made_max}; variable yields are not supported")
+    entry: dict[str, Any] = {
+        "recipe_id": int(recipe_id), "name": recipe["name"], "profession": profession,
+        "required_skill": recipe["learnedat"], "output_item_id": output_id, "output_quantity": made_min,
+        "source_url": f"https://www.wowhead.com/{extract['game_path']}/spell={recipe_id}",
+        "verified_at": extract["saved_at"], "verification_url": extract["source_url"],
+        "evidence_sha256": extract["sha256"],
+    }
+    entry.update(defaults)
+    entry.update({key: value for key, value in pick.items() if key != "recipe_id"})
+    _check_availability(entry, f"Recipe {recipe_id}")
+    entry["inputs"] = [{"item_id": reagent, "quantity": quantity} for reagent, quantity in recipe["reagents"]]
+    return entry
+
+
+def _role(item_id: int, consumed: set[int], outputs: set[int], item_notes: dict) -> str:
+    if item_id in outputs:
+        return "intermediate" if item_id in consumed else "finished"
+    return "vendor_material" if item_notes.get(str(item_id), {}).get("vendor") else "material"
+
+
+def _catalog_item(extract: dict, item_id: int, role: str, note: dict) -> dict:
+    row = extract["items"].get(str(item_id))
+    if row is None:
+        raise ValueError(f"Item {item_id} is used by a selected recipe but missing from the page")
+    item: dict[str, Any] = {"item_id": item_id, "name": row["name"], "role": role,
+                            "source_url": f"https://www.wowhead.com/{extract['game_path']}/item={item_id}"}
+    if note.get("vendor"):
+        # Wowhead gives many items a buy price that no vendor sells them for (Felcloth, raid gear), so
+        # vendor status comes from the selection's evidence; only the price comes from the page.
+        if not row["buyprice"]:
+            raise ValueError(f"Item {item_id} is marked as sold by vendors but the page has no buy price")
+        item.update(vendor_price_copper=row["buyprice"], vendor_price_source_url=extract["source_url"],
+                    vendor_price_note="Wowhead buy price; availability and reputation discounts are not modeled")
+    item.update({key: value for key, value in note.items() if key not in ("item_id", "vendor")})
+    _check_availability(item, f"Item {item_id}")
+    return item
 
 
 def _toml_value(value: Any) -> str:

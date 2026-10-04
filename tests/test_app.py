@@ -62,3 +62,64 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert table.iloc[0]["Item"].startswith("Runecloth Bag") and table.iloc[0]["Action"] == "potential craft"
     assert set(table["Action"][1:]) == {"missing prices"}  # Bags without listings in the fixture scan.
+
+
+def classic_sources(tmp_path):
+    sources = [source for source in read_sources(ROOT / "config/market.toml") if source["enabled"]]
+    for source in sources:
+        source["data_dir"] = tmp_path / "data"
+    return sources
+
+
+def test_browse_market_lists_saved_items_blanks_zero_prices_and_searches(tmp_path, monkeypatch):
+    sources = classic_sources(tmp_path)
+    items = tmp_path / "items.csv"
+    items.write_text("itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n"
+                     "2592,Wool Cloth,0,120,0,0,\n4306,Silk Cloth,900,0,0,0,\n", encoding="utf-8")
+    run(sources[0], items)
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    at.radio[0].set_value("Browse market").run()
+    assert not at.exception
+    table = at.dataframe[0].value
+    assert list(table["Item"]) == ["Silk Cloth", "Wool Cloth"]
+    assert table.set_index("Item").loc["Wool Cloth", "Minimum buyout (g)"] == 0.012
+    assert table["Market value (g)"].isna().sum() == 1  # Zero is unavailable, shown blank, never free.
+    next(t for t in at.text_input if t.label == "Find an item").set_value("silk").run()
+    assert list(at.dataframe[0].value["Item"]) == ["Silk Cloth"]
+    next(t for t in at.text_input if t.label == "Find an item").set_value("no such item").run()
+    assert any("No items match" in i.value for i in at.info)
+
+
+def test_refresh_reports_success_and_failure_without_losing_saved_data(tmp_path, monkeypatch):
+    sources = classic_sources(tmp_path)
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
+    calls = []
+
+    def offline(config):
+        calls.append(config["source_id"])
+        if len(calls) == 1:
+            raise RuntimeError("network unreachable")
+
+    monkeypatch.setattr("brownstone.pipeline.run", offline)
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert not calls  # Opening the app never downloads (UI-01).
+    next(b for b in at.button if b.label == "Refresh from TSM").click().run()
+    assert any("Refresh failed: network unreachable" in e.value for e in at.error)
+    next(b for b in at.button if b.label == "Refresh from TSM").click().run()
+    assert any("refreshed and saved" in s.value for s in at.success)
+    assert calls == ["classic-us-mankrik-alliance"] * 2
+
+
+def test_import_of_a_file_without_a_complete_scan_says_prices_are_unchanged(tmp_path, monkeypatch):
+    from test_scans import finished_now, scan, write_scans
+    addon = next(source for source in read_sources(ROOT / "config/market.toml") if source["provider"] == "addon")
+    scan_file = write_scans(tmp_path / "scan.lua", scan("cut-short", finished_now(), [], status="stopped",
+                                                        reported=5, house={"zone": "Stormwind City",
+                                                                           "npc_name": "Auctioneer Fitch"}))
+    addon.update(enabled=True, data_dir=tmp_path / "data", scan_path=scan_file)
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [addon])
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert not at.exception
+    assert any("No complete scan in the file, so prices are unchanged" in w.value for w in at.warning)

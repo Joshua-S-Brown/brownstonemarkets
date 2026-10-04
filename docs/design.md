@@ -38,17 +38,18 @@ brownstone/             importable without Streamlit
   scans.py              BrownstoneScan SavedVariables: parse, validate, house check, unit and item prices
   normalization.py      CSV → validated frame
   pipeline.py           orchestration of one collection: run (TSM CSV) or import_scans (addon)
-  storage.py            DuckDB load/dedup, manifests, scoped price reads
+  storage.py            DuckDB schema and migrations, load/dedup, manifests, scoped price reads
   analysis.py           browse and discount screen queries
   freshness.py          the one staleness policy
   money.py              copper ↔ gold display helpers
   crafting.py           catalog loading, expansion, route costs, price bases
   recipe_import.py      saved Wowhead profession page → archive, extract, catalog TOML (no network)
   action_board.py       ranking and label policy (versioned)
+  cli.py                `python -m brownstone`: collect or import a source; `recipes` subcommand
 launch.py               local server launcher with code-fingerprint restart
 ```
 
-Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain modules (`crafting`, `action_board`, `freshness`, `money`) do no I/O and take the clock as a parameter. The `dashboard` extra (Streamlit) is needed only for `app.py` and `views/`.
+Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain modules (`action_board`, `freshness`, `money`, and `crafting` apart from reading a catalog file) do no other I/O and take the clock as a parameter. The `dashboard` extra (Streamlit) is needed only for `app.py` and `views/`.
 
 ## Data contracts
 
@@ -115,18 +116,10 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 
 ## Known design debt
 
-- **Complexity debt:** these functions exceed Ruff's limit of 10 and carry `# noqa: C901`. Refactor them when touched, and remove the noqa when one is fixed. Scores are as of 2026-10-04.
-  - `recipe_import.build_catalog` (22)
-  - `crafting.load_recipe_catalog` (19)
-  - `crafting.evaluate_recipe` (18)
-  - `scans.parse_lua` (13)
-  - `normalization.normalize` (13)
-  - `cli.main` (12)
-  - `crafting.unit_cost` (11)
-  - `pipeline.import_scans` (11)
-- **Coverage gaps** (85% overall as of 2026-10-04): `cli.py` 51% (the `recipes` command), `views/market.py` 53% (Browse market), `launch.py` 77%, `app.py` 72%. `sources.py` downloads over the network, which offline tests don't exercise.
+- **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
+- **Coverage gaps** (90% overall as of 2026-10-04): `views/market.py` 74% (Opportunities with data, which only Retail can supply), `app.py` 85% (configuration and upgrade errors). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.
-- Re-importing an addon file parses it in full (about 1 s for 24 MB) before deduplication can skip its scans.
+- Re-importing an addon file parses it in full (about 0.9 s per 24 MB scan) before deduplication can skip its scans. The addon keeps every scan until `/bscan clear`, so this grows with each scan left in the file, and bronze keeps a full copy of each distinct file.
 - Addon silver, DuckDB and the manifest are not one atomic write, like TSM collections.

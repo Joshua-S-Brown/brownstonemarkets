@@ -59,3 +59,28 @@ def test_unknown_server_on_port_is_left_alone(tmp_path):
 def test_fingerprint_changes_with_package_code():
     assert launch.code_fingerprint() == launch.code_fingerprint()
     assert len(launch.code_fingerprint()) == 64
+
+
+def test_failed_start_shows_the_log(tmp_path, capsys):
+    def crash(*args, stdout, **kwargs):
+        stdout.write("ModuleNotFoundError: streamlit\n")
+        return Mock(poll=Mock(return_value=1))
+
+    with patch.object(launch, "ROOT", tmp_path), \
+         patch.object(launch, "code_fingerprint", return_value="abc"), \
+         patch.object(launch, "healthy", return_value=False), \
+         patch.object(launch.subprocess, "Popen", side_effect=crash):
+        assert launch.main() == 1
+    assert "ModuleNotFoundError: streamlit" in capsys.readouterr().out
+    assert not (tmp_path / "work/server.pid").exists()
+
+
+def test_health_check_needs_an_ok_reply():
+    reply = Mock(status=200, read=Mock(return_value=b"ok\n"))
+    with patch.object(launch.urllib.request, "urlopen") as urlopen:
+        urlopen.return_value.__enter__.return_value = reply
+        assert launch.healthy()
+        reply.read.return_value = b"starting"
+        assert not launch.healthy()
+        urlopen.side_effect = OSError("refused")
+        assert not launch.healthy()

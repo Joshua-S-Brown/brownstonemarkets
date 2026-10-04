@@ -19,7 +19,7 @@ I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C
    ```
    /dump select(4, GetBuildInfo())
    ```
-   Open `BrownstoneScan.toc` and replace the `0` in the first line, `## Interface: 0`, with that number. Restart the client (or `/reload`). If the AddOns list still shows "out of date", tick **Load out of date AddOns**.
+   Open `BrownstoneScan.toc` and replace the number in the first line, `## Interface: 16001`, with that number. Restart the client (or `/reload`). If the AddOns list still shows "out of date", tick **Load out of date AddOns**.
 
 ## Run a scan
 

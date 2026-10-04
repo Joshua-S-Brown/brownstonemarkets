@@ -31,10 +31,14 @@ def _folders(config: Source, layers: Iterable[str]) -> dict[str, Path]:
     return folders
 
 
+def _observation_keys(config: Source) -> dict[str, str]:
+    """The source and full market identity that every stored price and listing row carries."""
+    return {"source_id": config["source_id"], **{key: config[key] for key in MARKET_KEYS}}  # type: ignore[literal-required]
+
+
 def _identity(config: Source) -> dict:
     """Who observed (source) and which auction house (market); recorded even if validation fails."""
-    return {"source_id": config["source_id"], "provider": config["provider"],
-            **{key: config[key] for key in MARKET_KEYS}}  # type: ignore[literal-required]
+    return {"source_id": config["source_id"], "provider": config["provider"], **_observation_keys(config)}
 
 
 def run(config: Source, input_path: Path | None = None) -> tuple[pl.DataFrame, Path]:
@@ -61,7 +65,7 @@ def run(config: Source, input_path: Path | None = None) -> tuple[pl.DataFrame, P
             config.get("allow_missing_updated_at", False),
         )
         frame = frame.with_columns(
-            *[pl.lit(identity[key], dtype=pl.String).alias(key) for key in ("source_id", *MARKET_KEYS)],
+            *[pl.lit(value, dtype=pl.String).alias(key) for key, value in _observation_keys(config).items()],
             pl.lit(manifest["sha256"]).alias("source_sha256"),
         )
         silver = folders["silver"] / f"{sid}.parquet"
@@ -108,7 +112,7 @@ def _bronze_copy(folder: Path, sid: str, raw: bytes, sha256: str) -> str:
     return name
 
 
-def import_scans(config: Source, input_path: Path | None = None, scan_ids: Iterable[str] | None = None,  # noqa: C901
+def import_scans(config: Source, input_path: Path | None = None, scan_ids: Iterable[str] | None = None,
                  now: datetime | None = None) -> dict:
     """Import BrownstoneScan SavedVariables for an addon source; returns the collection manifest.
 
@@ -133,24 +137,8 @@ def import_scans(config: Source, input_path: Path | None = None, scan_ids: Itera
         "bronze_file": bronze_file, "sha256": sha256, "bytes": len(raw), "status": "received",
     }
     try:
-        records = scans.read_saved_variables(raw)
-        if scan_ids is not None:
-            wanted = list(scan_ids)
-            unknown = set(wanted) - {record.get("scan_id") for record in records}
-            if unknown:
-                raise ValueError(f"Scan(s) not in this file: {sorted(unknown)}")
-            records = [record for record in records if record.get("scan_id") in wanted]
-        if not records:
-            raise ValueError("No scans to import")
-        summaries = [scans.summarize(record) for record in records]
-        problems = [problem for record in records for problem in scans.check_house(record, config)]
-        if problems:
-            raise ValueError("Scan does not match the configured market " + config["market_id"] + ": "
-                             + "; ".join(problems))
-        for summary in summaries:
-            if summary["finished_at"] > now + timedelta(hours=FUTURE_TOLERANCE_HOURS):
-                raise ValueError(f"Scan {summary['scan_id']} finished in the future ({summary['finished_at']}); "
-                                 "check the computer's clock")
+        records = _select_scans(scans.read_saved_variables(raw), scan_ids)
+        summaries = _check_scans(records, config, now)
         upgrade_database(base, create=True)
         results = []
         with duckdb.connect(str(base / "brownstone.duckdb")) as db:
@@ -176,6 +164,33 @@ def import_scans(config: Source, input_path: Path | None = None, scan_ids: Itera
     return manifest
 
 
+def _select_scans(records: list[dict], scan_ids: Iterable[str] | None) -> list[dict]:
+    """The file's scans, or only the requested ones; an unknown scan ID fails the import."""
+    if scan_ids is not None:
+        wanted = list(scan_ids)
+        unknown = set(wanted) - {record.get("scan_id") for record in records}
+        if unknown:
+            raise ValueError(f"Scan(s) not in this file: {sorted(unknown)}")
+        records = [record for record in records if record.get("scan_id") in wanted]
+    if not records:
+        raise ValueError("No scans to import")
+    return records
+
+
+def _check_scans(records: list[dict], config: Source, now: datetime) -> list[dict]:
+    """Validate every scan before anything is stored: header, house evidence and clock (ADDON-01, ADDON-05)."""
+    summaries = [scans.summarize(record) for record in records]
+    problems = [problem for record in records for problem in scans.check_house(record, config)]
+    if problems:
+        raise ValueError("Scan does not match the configured market " + config["market_id"] + ": "
+                         + "; ".join(problems))
+    for summary in summaries:
+        if summary["finished_at"] > now + timedelta(hours=FUTURE_TOLERANCE_HOURS):
+            raise ValueError(f"Scan {summary['scan_id']} finished in the future ({summary['finished_at']}); "
+                             "check the computer's clock")
+    return summaries
+
+
 def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha256: str,
                  record: dict, summary: dict) -> dict:
     """Store one scan unless this source already has it; return its manifest entry."""
@@ -189,8 +204,7 @@ def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha2
         return {**result, "outcome": "duplicate", "snapshot_id": existing["snapshot_id"],
                 "priced": bool(existing["priced"]), "items": existing["item_count"]}
     snapshot_id = f"{config['source_id']}:{summary['scan_id']}"
-    identity = {"source_id": config["source_id"], **{key: config[key] for key in MARKET_KEYS},  # type: ignore[literal-required]
-                "snapshot_id": snapshot_id}
+    identity = {**_observation_keys(config), "snapshot_id": snapshot_id}
     listings = scans.listing_frame(record)
     priced = not summary["partial"] and listings.height > 0
     prices = scans.item_prices(listings) if priced else None

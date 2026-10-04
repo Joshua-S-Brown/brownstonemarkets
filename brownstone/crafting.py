@@ -6,8 +6,10 @@ from collections import defaultdict
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from pathlib import Path
 
+ROLES = {"material", "vendor_material", "intermediate", "finished"}
 
-def load_recipe_catalog(path: Path) -> dict:  # noqa: C901
+
+def load_recipe_catalog(path: Path) -> dict:
     with path.open("rb") as file:
         raw = tomllib.load(file)
     if raw.get("schema_version") != 1:
@@ -23,36 +25,49 @@ def load_recipe_catalog(path: Path) -> dict:  # noqa: C901
     if not items or not recipes:
         raise ValueError("Recipe catalog must contain items and recipes")
 
-    output_recipes = {}
     for item in items.values():
-        if item.get("role") not in {"material", "vendor_material", "intermediate", "finished"}:
-            raise ValueError("Unsupported item role")
-        if not str(item.get("source_url", "")).startswith("https://"):
-            raise ValueError("Every item requires an HTTPS provenance URL")
-        if item.get("vendor_price_copper", 1) <= 0:
-            raise ValueError("Vendor prices must be positive copper integers")
-        if not str(item.get("vendor_price_source_url", "https://")).startswith("https://"):
-            raise ValueError("Vendor price provenance must be an HTTPS URL")
-        _check_flags(item)
+        _check_item(item)
+    output_recipes: dict[int, int] = {}
     for recipe in recipes.values():
-        if recipe.get("profession") != raw["profession"]:
-            raise ValueError("Recipe profession must match its catalog")
-        if recipe.get("output_item_id") not in items or recipe.get("output_quantity", 0) <= 0:
-            raise ValueError("Recipe output must reference an item with a positive quantity")
-        if recipe["output_item_id"] in output_recipes:
-            raise ValueError("This milestone supports one recipe per output item")
-        if not str(recipe.get("source_url", "")).startswith("https://"):
-            raise ValueError("Every recipe requires an HTTPS provenance URL")
-        if not str(recipe.get("verification_url", "https://")).startswith("https://"):
-            raise ValueError("Recipe verification must be an HTTPS URL")
-        _check_flags(recipe)
-        for ingredient in recipe.get("inputs", []):
-            if ingredient.get("item_id") not in items or ingredient.get("quantity", 0) <= 0:
-                raise ValueError("Recipe inputs must reference items with positive quantities")
+        _check_recipe(recipe, raw["profession"], items, output_recipes)
         output_recipes[recipe["output_item_id"]] = recipe["recipe_id"]
 
     return {**raw, "items_by_id": items, "recipes_by_id": recipes,
             "recipe_for_output": output_recipes}
+
+
+def _https(value: object) -> bool:
+    return str(value).startswith("https://")
+
+
+def _check_item(item: dict) -> None:
+    if item.get("role") not in ROLES:
+        raise ValueError("Unsupported item role")
+    if not _https(item.get("source_url", "")):
+        raise ValueError("Every item requires an HTTPS provenance URL")
+    if "vendor_price_copper" in item and not _positive(item["vendor_price_copper"]):
+        raise ValueError("Vendor prices must be positive copper integers")
+    if not _https(item.get("vendor_price_source_url", "https://")):
+        raise ValueError("Vendor price provenance must be an HTTPS URL")
+    _check_flags(item)
+
+
+def _check_recipe(recipe: dict, profession: str, items: dict, output_recipes: dict) -> None:
+    """Validate one recipe; ``output_recipes`` holds the outputs of the recipes checked before it."""
+    if recipe.get("profession") != profession:
+        raise ValueError("Recipe profession must match its catalog")
+    if recipe.get("output_item_id") not in items or not _positive(recipe.get("output_quantity")):
+        raise ValueError("Recipe output must reference an item with a positive quantity")
+    if recipe["output_item_id"] in output_recipes:
+        raise ValueError("This milestone supports one recipe per output item")
+    if not _https(recipe.get("source_url", "")):
+        raise ValueError("Every recipe requires an HTTPS provenance URL")
+    if not _https(recipe.get("verification_url", "https://")):
+        raise ValueError("Recipe verification must be an HTTPS URL")
+    _check_flags(recipe)
+    for ingredient in recipe.get("inputs", []):
+        if ingredient.get("item_id") not in items or not _positive(ingredient.get("quantity")):
+            raise ValueError("Recipe inputs must reference items with positive quantities")
 
 
 AVAILABILITY = {"available", "post-launch"}
@@ -129,7 +144,57 @@ def _to_copper(amount: Decimal, rounding: str) -> int:
     return int(amount.to_integral_value(rounding=rounding))
 
 
-def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05,  # noqa: C901
+Route = tuple[int | None, str, dict[int, int]]  # Unit cost (None: no usable route), method, leaves per unit.
+
+
+def _cheapest_route(catalog: dict, prices: dict[int, int], item_id: int, trail: tuple[int, ...]) -> Route:
+    """The cheapest valid buy, vendor or craft route for one unit; equal costs resolve by method name."""
+    item = catalog["items_by_id"][item_id]
+    candidates: list[tuple[int, str, dict[int, int]]] = []
+    if _positive(prices.get(item_id)):
+        candidates.append((prices[item_id], "buy", {item_id: 1}))
+    if _positive(item.get("vendor_price_copper")):
+        candidates.append((item["vendor_price_copper"], "vendor", {item_id: 1}))
+    nested_id = catalog["recipe_for_output"].get(item_id)
+    if nested_id is not None:
+        craft = _craft_route(catalog, prices, nested_id, trail)
+        if craft is not None:
+            candidates.append(craft)
+    if not candidates:
+        return None, "missing", {item_id: 1}
+    return min(candidates, key=lambda candidate: candidate[:2])  # Cost, then method name.
+
+
+def _craft_route(catalog: dict, prices: dict[int, int], recipe_id: int,
+                 trail: tuple[int, ...]) -> tuple[int, str, dict[int, int]] | None:
+    """Unit cost of crafting through ``recipe_id``; None when any input has no usable route."""
+    if recipe_id in trail:
+        raise ValueError("Recipe cycle detected")
+    recipe = catalog["recipes_by_id"][recipe_id]
+    subtotal = 0
+    leaves: defaultdict[int, int] = defaultdict(int)
+    for ingredient in recipe["inputs"]:
+        cost, _, nested_leaves = _cheapest_route(catalog, prices, ingredient["item_id"], trail + (recipe_id,))
+        if cost is None:
+            return None
+        subtotal += cost * ingredient["quantity"]
+        for leaf_id, quantity in nested_leaves.items():
+            leaves[leaf_id] += quantity * ingredient["quantity"]
+    made = recipe["output_quantity"]
+    if subtotal % made:
+        raise ValueError("Fractional unit costs are not supported")
+    if any(quantity % made for quantity in leaves.values()):
+        raise ValueError("Fractional shopping quantities are not supported")
+    return subtotal // made, "craft", {leaf_id: quantity // made for leaf_id, quantity in leaves.items()}
+
+
+def _cost_row(item_id: int, quantity: int, route: Route) -> dict:
+    cost, method, _ = route
+    return {"item_id": item_id, "quantity": quantity, "method": method, "unit_cost_copper": cost,
+            "total_cost_copper": cost * quantity if cost is not None else None}
+
+
+def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05,
                     sale_prices: dict[int, int] | None = None) -> dict:
     """Cost a recipe, choosing the cheaper valid buy or craft path for intermediates.
 
@@ -137,59 +202,19 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     """
     if not 0 <= auction_cut < 1:
         raise ValueError("auction_cut must be in [0, 1)")
-    choices = []
-    shopping: defaultdict[int, int] = defaultdict(int)
-
-    def unit_cost(item_id: int, trail: tuple[int, ...]) -> tuple[int | None, str, dict[int, int]]:  # noqa: C901
-        item = catalog["items_by_id"][item_id]
-        candidates = []
-        if _positive(prices.get(item_id)):
-            candidates.append((prices[item_id], "buy", {item_id: 1}))
-        if _positive(item.get("vendor_price_copper")):
-            candidates.append((item["vendor_price_copper"], "vendor", {item_id: 1}))
-        nested_id = catalog["recipe_for_output"].get(item_id)
-        if nested_id is not None:
-            if nested_id in trail:
-                raise ValueError("Recipe cycle detected")
-            nested = catalog["recipes_by_id"][nested_id]
-            subtotal = 0
-            leaves: defaultdict[int, int] = defaultdict(int)
-            for ingredient in nested["inputs"]:
-                cost, _, nested_leaves = unit_cost(ingredient["item_id"], trail + (nested_id,))
-                if cost is None:
-                    break
-                subtotal += cost * ingredient["quantity"]
-                for leaf_id, quantity in nested_leaves.items():
-                    leaves[leaf_id] += quantity * ingredient["quantity"]
-            else:
-                if subtotal % nested["output_quantity"]:
-                    raise ValueError("Fractional unit costs are not supported")
-                if any(q % nested["output_quantity"] for q in leaves.values()):
-                    raise ValueError("Fractional shopping quantities are not supported")
-                candidates.append((subtotal // nested["output_quantity"], "craft",
-                                   {i: q // nested["output_quantity"] for i, q in leaves.items()}))
-        if not candidates:
-            return None, "missing", {item_id: 1}
-        return min(candidates, key=lambda candidate: candidate[:2])  # Cost, then method name.
-
     recipe = catalog["recipes_by_id"].get(recipe_id)
     if recipe is None:
         raise ValueError(f"Unknown recipe {recipe_id}")
-    total = 0
-    missing = []
+    choices = []
+    shopping: defaultdict[int, int] = defaultdict(int)
     for ingredient in recipe["inputs"]:
-        cost, method, leaves = unit_cost(ingredient["item_id"], (recipe_id,))
-        name = catalog["items_by_id"][ingredient["item_id"]]["name"]
-        choices.append({"item_id": ingredient["item_id"], "item_name": name,
-                        "quantity": ingredient["quantity"], "method": method,
-                        "unit_cost_copper": cost,
-                        "total_cost_copper": cost * ingredient["quantity"] if cost is not None else None})
-        for leaf_id, quantity in leaves.items():
+        route = _cheapest_route(catalog, prices, ingredient["item_id"], (recipe_id,))
+        choices.append({**_cost_row(ingredient["item_id"], ingredient["quantity"], route),
+                        "item_name": catalog["items_by_id"][ingredient["item_id"]]["name"]})
+        for leaf_id, quantity in route[2].items():
             shopping[leaf_id] += quantity * ingredient["quantity"]
-        if cost is None:
-            missing.append(ingredient["item_id"])
-        else:
-            total += cost * ingredient["quantity"]
+    missing = [choice["item_id"] for choice in choices if choice["unit_cost_copper"] is None]
+    total = sum(choice["total_cost_copper"] for choice in choices if choice["unit_cost_copper"] is not None)
 
     output_id = recipe["output_item_id"]
     sale = (prices if sale_prices is None else sale_prices).get(output_id)
@@ -201,14 +226,8 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     break_even = (_to_copper(Decimal(total) / (retained * recipe["output_quantity"]), ROUND_CEILING)
                   if not missing else None)
     profit = net_revenue - total if valid and net_revenue is not None else None
-    shopping_choices = []
-    for item_id, quantity in sorted(shopping.items()):
-        cost, method, _ = unit_cost(item_id, (recipe_id,))
-        shopping_choices.append({
-            "item_id": item_id, "quantity": quantity, "method": method,
-            "unit_cost_copper": cost,
-            "total_cost_copper": cost * quantity if cost is not None else None,
-        })
+    shopping_choices = [_cost_row(item_id, quantity, _cheapest_route(catalog, prices, item_id, (recipe_id,)))
+                        for item_id, quantity in sorted(shopping.items())]
     return {
         "recipe_id": recipe_id, "output_item_id": output_id,
         "output_name": catalog["items_by_id"][output_id]["name"],

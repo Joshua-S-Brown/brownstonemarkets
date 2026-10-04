@@ -83,3 +83,19 @@ def test_recipe_cycle_is_rejected():
     catalog["recipe_for_output"][14047] = 18405
     with pytest.raises(ValueError, match="cycle"):
         material_plan(catalog, 18405)
+
+
+@pytest.mark.parametrize("old, new", [
+    ("vendor_price_copper = 100\n", "vendor_price_copper = 100.5\n"),
+    ("vendor_price_copper = 100\n", "vendor_price_copper = true\n"),
+    ("item_id = 2592\nquantity = 3\n", "item_id = 2592\nquantity = 2.5\n"),
+    ("output_quantity = 1\n", "output_quantity = 1.0\n"),
+])
+def test_catalog_quantities_and_vendor_prices_must_be_positive_integers(tmp_path, old, new):
+    # A fractional or boolean value would otherwise be silently ignored or break integer copper.
+    text = CLASSIC_CATALOG.read_text()
+    assert old in text
+    path = tmp_path / "bad-catalog.toml"
+    path.write_text(text.replace(old, new, 1))
+    with pytest.raises(ValueError, match="positive"):
+        load_recipe_catalog(path)

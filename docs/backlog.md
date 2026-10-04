@@ -139,7 +139,7 @@ These are grouped by what unblocks them.
 **Addon follow-ups** (any time, none urgent):
 - Scan the Roleplaying house once the beta offers it, and a neutral house when reachable, to confirm house identification and the 15% cut market.
 - Check whether `/bscan start` works without the button click.
-- Reduce file size (shorter field names or keeping fewer scans) if several scans make loading slow. Import parses the 24 MB file in about 0.9 s, so this isn't pressing.
+- Reduce file size (shorter field names or keeping fewer scans). The addon keeps every scan until `/bscan clear`, and each import parses the whole file (about 0.9 s and 220 MB of memory per 24 MB scan) and, when its bytes are new, keeps a full bronze copy. Ten scans left in the file mean about 9 s per import and roughly 1.3 GB of bronze across the ten imports. `/bscan clear` after a successful import avoids this today.
 - Find out why the 2026-10-04 scan has no `unit_buyout` on any of its 28,105 stacked listings, although every one divides exactly. The importer doesn't depend on it (it divides `buyout` by `quantity` itself), but the addon's documented behaviour and the file disagree.
 - Item names: 4,690 listings arrived before the client loaded the item, and some items (Runecloth, 14047) appear only that way, so Browse shows `Item <ID>`. Crafting uses catalog names, so it's unaffected.
 

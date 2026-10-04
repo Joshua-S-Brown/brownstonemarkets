@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "brownstone-markets"
 version = "0.2.0"
-description = "Local TSM market snapshots and opportunity screening"
+description = "Local WoW market research: price snapshots, addon scans and crafting analysis"
 requires-python = ">=3.11"
 dependencies = ["duckdb>=1.2,<2", "polars>=1.20,<2", "pyarrow>=19,<26", "requests>=2.32,<3", "tzdata>=2025.1",
                 # DuckDB needs pytz to return TIMESTAMPTZ values to Python.
@@ -35,8 +35,8 @@ extend-exclude = ["work", "data"]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "C90"]
 
 [tool.ruff.lint.mccabe]
-# New code stays at or under 10. Older functions over it carry `# noqa: C901` and are listed
-# as complexity debt in docs/design.md; remove the noqa when one is refactored.
+# New code stays at or under 10. The one exemption carries `# noqa: C901` and is listed as
+# complexity debt in docs/design.md.
 max-complexity = 10
 
 [tool.coverage.run]
@@ -47,7 +47,7 @@ branch = true
 show_missing = true
 skip_covered = true
 # Floor, not target: CI fails if coverage drops below it. Raise it as coverage improves.
-fail_under = 83
+fail_under = 88
 
 [tool.mypy]
 python_version = "3.12"  # The tested version; installed stubs (numpy) need 3.12 syntax.
