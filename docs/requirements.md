@@ -5,7 +5,8 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 ## Product direction
 
 - **Purpose:** a local WoW market research tool that traces materials through intermediate crafts to finished goods and explains which crafts are worth investigating.
-- **Target game:** WoW Forever (beta since 17 September 2026; launches 4 November 2026). It has no public price feed, so the baseline source is our own read-only scanning addon, imported as described under *Addon scans* below.
+- **Target game:** WoW Forever (beta since 17 September 2026; last full beta testing day 21 October; launches 4 November 2026). It has no public price feed, so the baseline source is our own read-only scanning addon, imported as described under *Addon scans* below.
+  - **Official dates** (checked 2026-10-04): [Blizzard beta announcement](https://worldofwarcraft.blizzard.com/en-us/news/24304160/) gives 21 October as the last full testing day; [Blizzard Forever page](https://worldofwarcraft.blizzard.com/en-us/forever) lists launch on 4 November 2026.
 - **Known Forever market facts** (checked 2026-10-04, mostly third-party; re-verify at launch):
   - Forever has no realms. Each region (US, EU and so on) has one auction house per server type (Normal, PvP, RP, later Hardcore) and faction, plus a neutral house with a 15% cut instead of 5%.
   - Blizzard's API publishes no Forever auction data, and TSM has no Forever data.
