@@ -1,0 +1,8 @@
+# Verified public development dataset; change URL and market_id together.
+market_id = "retail-us-area-52"
+source_url = "https://public-data.tradeskillmaster.com/retail/us/realm/area-52/items.csv"
+data_dir = "data"
+max_age_hours = 24
+auction_cut = 0.05
+min_discount = 0.20
+top_n = 20

@@ -1,0 +1,88 @@
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import duckdb
+import polars as pl
+import pytest
+
+from brownstone.pipeline import normalize, read_config, run
+
+NOW = datetime.now(timezone.utc)
+HEADER = "itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n"
+
+
+def csv(rows):
+    return (HEADER + "\n".join(
+        f"{item},Item {item},{market},{buy},{recent},{historical},{updated}"
+        for item, market, buy, recent, historical, updated in rows
+    )).encode()
+
+
+def norm(raw):
+    return normalize(raw, "test", "snapshot", NOW, 24)
+
+
+def test_schema_and_zero_prices():
+    frame = norm(csv([(1, 100, 0, 100, 100, NOW.isoformat())]))
+    assert frame.schema["min_buyout"] == pl.Int64
+    assert frame["min_buyout"][0] == 0
+    assert frame["updated_at"][0] == NOW
+
+
+def test_missing_name_fallback():
+    raw = csv([(1, 100, 50, 100, 100, NOW.isoformat())]).replace(b"Item 1", b"")
+    assert norm(raw)["item_name"][0] == "Item 1"
+
+
+@pytest.mark.parametrize("raw,match", [
+    (b"wrong,column\n1,2", "Missing"),
+    (HEADER.encode(), "no rows"),
+    (csv([(1, 100, 50, 100, 100, NOW.isoformat())] * 2), "Duplicate"),
+    (csv([(1, -1, 50, 100, 100, NOW.isoformat())]), "nonnegative"),
+    (csv([(0, 100, 50, 100, 100, NOW.isoformat())]), "positive"),
+    (csv([(1, 100, 50, 100, 100, (NOW-timedelta(days=2)).isoformat())]), "stale"),
+    (csv([(1, 100, 50, 100, 100, (NOW+timedelta(hours=1)).isoformat())]), "future"),
+    (csv([(1, "", 50, 100, 100, NOW.isoformat())]), "null"),
+])
+def test_bad_data(raw, match):
+    with pytest.raises(ValueError, match=match):
+        norm(raw)
+
+
+def test_round_trip_and_ranking(tmp_path):
+    raw = csv([
+        (1, 10000, 4000, 8000, 9000, NOW.isoformat()),
+        (2, 10000, 7000, 10000, 10000, NOW.isoformat()),
+        (3, 10000, 0, 10000, 10000, NOW.isoformat()),
+        (4, 10000, 2000, 0, 10000, NOW.isoformat()),
+    ])
+    source = tmp_path / "input.csv"
+    source.write_bytes(raw)
+    config = dict(data_dir=tmp_path / "data", market_id="test", max_age_hours=24,
+                  source_url="https://example.com/items.csv", auction_cut=.05, min_discount=.2, top_n=20)
+    result, gold = run(config, source)
+    assert result["item_id"].to_list() == [1, 2]
+    assert result["reference_copper"][0] == 8000
+    assert result["net_spread_copper"][0] == 3600
+    assert next((tmp_path / "data/bronze/test").glob("*.csv")).read_bytes() == raw
+    assert pl.read_csv(gold).height == 2
+    result2, gold2 = run(config, source)
+    assert gold2 != gold  # Repeated pulls preserve distinct collection observations.
+    with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
+        assert db.execute("SELECT count(*) FROM market_snapshots").fetchone()[0] == 8
+    assert len(list((tmp_path / "data/silver/test").glob("*.parquet"))) == 2
+
+
+def test_failed_source_preserved(tmp_path):
+    source = tmp_path / "bad.csv"
+    source.write_bytes(b"html instead of CSV")
+    config = dict(data_dir=tmp_path / "data", market_id="test", max_age_hours=24)
+    with pytest.raises(ValueError):
+        run(config, source)
+    assert next((tmp_path / "data/bronze/test").glob("*.csv")).read_bytes() == source.read_bytes()
+    assert '"status": "failed"' in next((tmp_path / "data/bronze/test").glob("*.json")).read_text()
+
+
+def test_config():
+    config = read_config(Path(__file__).resolve().parents[1] / "config/market.toml")
+    assert config["data_dir"].is_absolute()
