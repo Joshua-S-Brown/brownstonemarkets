@@ -93,14 +93,15 @@ def test_variable_yields_and_unknown_recipes_are_rejected():
         build_catalog(page, selection(recipes=[{"recipe_id": 1}]))
 
 
-def test_reagent_made_by_several_recipes_needs_an_explicit_choice():
+def test_reagent_made_by_several_recipes_is_bought_never_chosen():
     page = extract_page(PAGE, "abc", "2026-10-04")
     page["recipes"]["8888"] = {"id": 8888, "name": "Other Bolt", "learnedat": 1, "creates": [2996, 1, 1],
                                "reagents": [[2589, 3]]}
-    with pytest.raises(ValueError, match="select exactly one"):
-        build_catalog(page, selection())
-    chosen = build_catalog(page, selection(recipes=[{"recipe_id": 3755}, {"recipe_id": 2963}]))
-    assert {r["recipe_id"] for r in chosen["recipes"]} == {2963, 3755}
+    catalog = build_catalog(page, selection())
+    assert [r["recipe_id"] for r in catalog["recipes"]] == [3755]
+    assert next(i for i in catalog["items"] if i["item_id"] == 2996)["role"] == "material"
+    with pytest.raises(ValueError, match="other recipes also make"):
+        build_catalog(page, selection(recipes=[{"recipe_id": 3755}, {"recipe_id": 2963}]))
 
 
 def test_never_builds_one_game_version_from_another_versions_page():

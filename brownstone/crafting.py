@@ -11,7 +11,11 @@ ROLES = {"material", "vendor_material", "intermediate", "finished"}
 
 def load_recipe_catalog(path: Path) -> dict:
     with path.open("rb") as file:
-        raw = tomllib.load(file)
+        return parse_recipe_catalog(tomllib.load(file))
+
+
+def parse_recipe_catalog(raw: dict) -> dict:
+    """Validate a catalog's TOML data and index it by item, recipe and output."""
     if raw.get("schema_version") != 1:
         raise ValueError("Unsupported recipe catalog schema")
     for key in ("game_version", "rules_version", "profession", "status", "catalog_version"):

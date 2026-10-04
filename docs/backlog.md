@@ -48,7 +48,7 @@ As a gold maker, I want every routine Brownstone action available as a button in
 - **Preview.** Before importing, show new, already-imported and partial scans, with times and listing counts. Optionally pick which scans to import, matching `--scan`. If nothing is new, say so and write nothing.
 - **Safe reads.** A file being rewritten by the game (`/reload` or logout) fails cleanly and can be retried. The game folder is never written, watched or polled.
 
-**Slice 2 — Recipe catalogs page, for every profession and game version:**
+**Slice 2 — Recipe catalogs page, for every profession and game version** (done 2026-10-04; see `status.md`):
 - **One catalog per game version and profession**, for example Forever Tailoring, Classic Tailoring and Forever Leatherworking. The page lists every catalog that exists, plus which professions don't have one yet.
 - **Status for each catalog:**
   - catalog version and recipe count
@@ -56,7 +56,8 @@ As a gold maker, I want every routine Brownstone action available as a button in
   - the outstanding unconfirmed values (yield, vendor status and price, post-launch flags)
   - a **refresh due** flag when the page predates the market's current `rules_version` or a configurable age
 - **Add a profession.** Pick the game version and profession. The app shows the exact Wowhead page to save (for example `wowhead.com/forever/spells/professions/leatherworking`) as a link for you to save in your browser; Brownstone still never downloads from Wowhead. Upload the saved page, choose the recipes (all of them, or filtered by name and skill range, with intermediates added automatically as today), then preview and create the selection file and catalog.
-- **Update a profession.** Upload a newly saved page for an existing catalog. It's archived byte-for-byte as the CLI does. **Preview changes** shows the recipe and vendor-price diff and writes nothing; **Regenerate** writes the catalog and bumps its version.
+- **Update a profession.** Use the catalog's archived page, or upload a newly saved one (archived byte-for-byte as the CLI does). Add or remove recipes, change vendor marks and the rules version: every aspect of a catalog except in-game confirmations (Slice 3). **Preview changes** shows the recipe and vendor-price diff and the edited selection file and writes nothing; **Regenerate** writes both and bumps the version. Selection files are edited line by line, so their comments survive.
+- **One game version at a time.** The page shows either WoW Forever or Classic Era: its catalogs, missing professions, and the add and update forms. The two are never mixed on screen.
 - **Never across versions.** Uploading a page whose game version or profession doesn't match the chosen catalog is refused. A Classic page never fills a Forever catalog.
 - **Any profession counts.** Catalogs are found by their selection files, not by a `*-tailoring` file name (today `app.py` only loads Tailoring).
 
@@ -80,6 +81,7 @@ Acceptance:
 - **One recipe graph.** Intermediates from other professions resolve across catalogs, with the cheapest valid buy, craft or vendor route still per CRAFT-03. Today a catalog allows one recipe per output item; define what happens when two professions make the same item, such as choosing the cheapest valid route and showing which profession it came from.
 - **Your professions.** An optional list of the professions you actually have restricts craft routes to those. Anything else is bought or flagged, never assumed craftable.
 - **Board filters** by profession, tier or skill range, and name, so large catalogs stay usable.
+- **One clear choice of what you're looking at.** Picking a data source in the sidebar and then a catalog on the page is confusing (feedback 2026-10-04). With catalogs combined per market, the market should be the only choice, and the board should follow from it.
 - **Same rules.** Missing prices are never free, unsupported recipes are isolated per row, and the policy version is shown. Tests cover a cross-profession chain.
 
 ### STORY-011 — Optional third-party scan sources

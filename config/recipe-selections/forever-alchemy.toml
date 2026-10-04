@@ -1,0 +1,513 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-alchemy.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/professions/alchemy, saved in a browser. Added in the app.
+game_version = "forever"
+rules_version = "forever-beta-1.60"
+profession = "alchemy"
+status = "beta-observed"
+catalog_version = "0.1"
+
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "From Wowhead's list data; confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 2329  # Elixir of Minor Strength
+
+[[recipes]]
+recipe_id = 2331  # Minor Mana Potion
+
+[[recipes]]
+recipe_id = 2332  # Minor Rejuvenation Potion
+
+[[recipes]]
+recipe_id = 2333  # Elixir of Lesser Agility
+
+[[recipes]]
+recipe_id = 2334  # Elixir of Minor Fortitude
+
+[[recipes]]
+recipe_id = 2335  # Swiftness Potion
+
+[[recipes]]
+recipe_id = 3170  # Minor Troll's Blood Elixir
+
+[[recipes]]
+recipe_id = 3171  # Elixir of Wisdom
+
+[[recipes]]
+recipe_id = 3172  # Minor Magic Resistance Potion
+
+[[recipes]]
+recipe_id = 3173  # Lesser Mana Potion
+
+[[recipes]]
+recipe_id = 3174  # Potion of Poison Cleansing
+
+[[recipes]]
+recipe_id = 3175  # Limited Invulnerability Potion
+
+[[recipes]]
+recipe_id = 3176  # Lesser Troll's Blood Elixir
+
+[[recipes]]
+recipe_id = 3177  # Elixir of Lesser Defense
+
+[[recipes]]
+recipe_id = 3188  # Elixir of Ogre Strength
+
+[[recipes]]
+recipe_id = 3230  # Elixir of Minor Agility
+
+[[recipes]]
+recipe_id = 3448  # Lesser Invisibility Potion
+
+[[recipes]]
+recipe_id = 3449  # Shadow Oil
+
+[[recipes]]
+recipe_id = 3450  # Elixir of Lesser Fortitude
+
+[[recipes]]
+recipe_id = 3451  # Troll's Blood Elixir
+
+[[recipes]]
+recipe_id = 3452  # Mana Potion
+
+[[recipes]]
+recipe_id = 3453  # Draught of Detect Lesser Invisibility
+
+[[recipes]]
+recipe_id = 3454  # Frost Oil
+
+[[recipes]]
+recipe_id = 4508  # Minor Discolored Healing Potion
+
+[[recipes]]
+recipe_id = 4942  # Lesser Stoneshield Potion
+
+[[recipes]]
+recipe_id = 6617  # Rage Potion
+
+[[recipes]]
+recipe_id = 6618  # Great Rage Potion
+
+[[recipes]]
+recipe_id = 6624  # Free Action Potion
+
+[[recipes]]
+recipe_id = 7179  # Draught of Water Breathing
+
+[[recipes]]
+recipe_id = 7183  # Elixir of Minor Defense
+
+[[recipes]]
+recipe_id = 7255  # Holy Protection Potion
+
+[[recipes]]
+recipe_id = 7256  # Shadow Protection Potion
+
+[[recipes]]
+recipe_id = 7257  # Fire Protection Potion
+
+[[recipes]]
+recipe_id = 7258  # Frost Protection Potion
+
+[[recipes]]
+recipe_id = 7259  # Nature Protection Potion
+
+[[recipes]]
+recipe_id = 7836  # Blackmouth Oil
+
+[[recipes]]
+recipe_id = 7837  # Fire Oil
+
+[[recipes]]
+recipe_id = 7841  # Swim Speed Potion
+
+[[recipes]]
+recipe_id = 7845  # Elixir of Fire Power
+
+[[recipes]]
+recipe_id = 8240  # Elixir of Giant Growth
+
+[[recipes]]
+recipe_id = 11448  # Greater Mana Potion
+
+[[recipes]]
+recipe_id = 11449  # Elixir of Agility
+
+[[recipes]]
+recipe_id = 11450  # Elixir of Defense
+
+[[recipes]]
+recipe_id = 11451  # Oil of Immolation
+
+[[recipes]]
+recipe_id = 11452  # Restorative Potion
+
+[[recipes]]
+recipe_id = 11453  # Magic Resistance Potion
+
+[[recipes]]
+recipe_id = 11456  # Goblin Rocket Fuel
+
+[[recipes]]
+recipe_id = 11458  # Wildvine Potion
+
+[[recipes]]
+recipe_id = 11459  # Philosopher's Stone
+
+[[recipes]]
+recipe_id = 11460  # Draught of Detect Undead
+
+[[recipes]]
+recipe_id = 11461  # Arcane Elixir
+
+[[recipes]]
+recipe_id = 11464  # Invisibility Potion
+
+[[recipes]]
+recipe_id = 11465  # Elixir of Greater Intellect
+
+[[recipes]]
+recipe_id = 11466  # Gift of Arthas
+
+[[recipes]]
+recipe_id = 11467  # Elixir of Greater Agility
+
+[[recipes]]
+recipe_id = 11468  # Draught of Dream Vision
+
+[[recipes]]
+recipe_id = 11472  # Elixir of Greater Strength
+
+[[recipes]]
+recipe_id = 11473  # Ghost Dye
+
+[[recipes]]
+recipe_id = 11476  # Elixir of Shadow Power
+
+[[recipes]]
+recipe_id = 11477  # Potion of Demon Slaying
+
+[[recipes]]
+recipe_id = 11478  # Draught of Detect Demon
+
+[[recipes]]
+recipe_id = 12609  # Catseye Draught
+
+[[recipes]]
+recipe_id = 15833  # Dreamless Sleep Potion
+
+[[recipes]]
+recipe_id = 17551  # Stonescale Oil
+
+[[recipes]]
+recipe_id = 17552  # Mighty Rage Potion
+
+[[recipes]]
+recipe_id = 17553  # Superior Mana Potion
+
+[[recipes]]
+recipe_id = 17554  # Elixir of Greater Defense
+
+[[recipes]]
+recipe_id = 17555  # Elixir of the Sages
+
+[[recipes]]
+recipe_id = 17557  # Elixir of Brute Force
+
+[[recipes]]
+recipe_id = 17570  # Greater Stoneshield Potion
+
+[[recipes]]
+recipe_id = 17571  # Elixir of the Mongoose
+
+[[recipes]]
+recipe_id = 17572  # Purification Potion
+
+[[recipes]]
+recipe_id = 17573  # Greater Arcane Elixir
+
+[[recipes]]
+recipe_id = 17574  # Greater Fire Protection Potion
+
+[[recipes]]
+recipe_id = 17575  # Greater Frost Protection Potion
+
+[[recipes]]
+recipe_id = 17576  # Greater Nature Protection Potion
+
+[[recipes]]
+recipe_id = 17577  # Greater Arcane Protection Potion
+
+[[recipes]]
+recipe_id = 17578  # Greater Shadow Protection Potion
+
+[[recipes]]
+recipe_id = 17580  # Major Mana Potion
+
+[[recipes]]
+recipe_id = 17632  # Alchemist's Stone
+
+[[recipes]]
+recipe_id = 17634  # Flask of Petrification
+
+[[recipes]]
+recipe_id = 17635  # Flask of the Titans
+
+[[recipes]]
+recipe_id = 17636  # Flask of Distilled Wisdom
+
+[[recipes]]
+recipe_id = 17637  # Flask of Supreme Power
+
+[[recipes]]
+recipe_id = 17638  # Flask of Chromatic Resistance
+
+[[recipes]]
+recipe_id = 21923  # Elixir of Frost Power
+
+[[recipes]]
+recipe_id = 22732  # Major Rejuvenation Potion
+
+[[recipes]]
+recipe_id = 22808  # Draught of Greater Water Breathing
+
+[[recipes]]
+recipe_id = 24266  # Gurubashi Mojo Madness
+
+[[recipes]]
+recipe_id = 24365  # Mageblood Elixir
+
+[[recipes]]
+recipe_id = 24366  # Greater Dreamless Sleep Potion
+
+[[recipes]]
+recipe_id = 24367  # Living Action Potion
+
+[[recipes]]
+recipe_id = 24368  # Major Troll's Blood Elixir
+
+[[recipes]]
+recipe_id = 25146  # Transmute: Elemental Fire
+
+[[recipes]]
+recipe_id = 26277  # Elixir of Holy Power
+
+[[recipes]]
+recipe_id = 426607  # Elixir of Coalesced Regret
+
+[[recipes]]
+recipe_id = 439960  # Lesser Arcane Elixir
+
+[[recipes]]
+recipe_id = 1230564  # Mana Well
+
+[[recipes]]
+recipe_id = 1231583  # Major Discolored Healing Potion
+
+[[recipes]]
+recipe_id = 1244421  # Distilled Firewater
+
+[[recipes]]
+recipe_id = 1244645  # Lesser Discolored Healing Potion
+
+[[recipes]]
+recipe_id = 1244646  # Discolored Healing Potion
+
+[[recipes]]
+recipe_id = 1244647  # Greater Discolored Healing Potion
+
+[[recipes]]
+recipe_id = 1244648  # Superior Discolored Healing Potion
+
+[[recipes]]
+recipe_id = 1245246  # Minor Arcane Elixir
+
+[[recipes]]
+recipe_id = 1245250  # Elixir of Minor Force
+
+[[recipes]]
+recipe_id = 1249630  # Cerulean Dye
+
+[[recipes]]
+recipe_id = 1249631  # Magenta Dye
+
+[[recipes]]
+recipe_id = 1249632  # Viridian Dye
+
+[[recipes]]
+recipe_id = 1249633  # Sulfuric Acid
+
+[[recipes]]
+recipe_id = 1250776  # Draught of Predatory Senses
+
+[[recipes]]
+recipe_id = 1250777  # Elixir of Cunning
+
+[[recipes]]
+recipe_id = 1250778  # Elixir of the Phalanx
+
+[[recipes]]
+recipe_id = 1250779  # Minor Cleric's Elixir
+
+[[recipes]]
+recipe_id = 1250780  # Lesser Cleric's Elixir
+
+[[recipes]]
+recipe_id = 1250781  # Cleric's Elixir
+
+[[recipes]]
+recipe_id = 1250782  # Greater Cleric's Elixir
+
+[[recipes]]
+recipe_id = 1250783  # Elixir of Fortitude
+
+[[recipes]]
+recipe_id = 1250784  # Elixir of Greater Fortitude
+
+[[recipes]]
+recipe_id = 1250785  # Elixir of Wicked Regeneration
+
+[[recipes]]
+recipe_id = 1250786  # Elixir of the Owl
+
+[[recipes]]
+recipe_id = 1250787  # Elixir of Sages
+
+[[recipes]]
+recipe_id = 1250788  # Minor Mageblood Elixir
+
+[[recipes]]
+recipe_id = 1250789  # Lesser Mageblood Elixir
+
+[[recipes]]
+recipe_id = 1250790  # Greater Mageblood Elixir
+
+[[recipes]]
+recipe_id = 1250791  # Lesser Arcane Elixir
+
+[[recipes]]
+recipe_id = 1250792  # Elixir of Nature Power
+
+[[recipes]]
+recipe_id = 1250793  # Elixir of Minor Spirit
+
+[[recipes]]
+recipe_id = 1250794  # Elixir of Lesser Spirit
+
+[[recipes]]
+recipe_id = 1250795  # Elixir of Spirit
+
+[[recipes]]
+recipe_id = 1250796  # Elixir of Greater Spirit
+
+[[recipes]]
+recipe_id = 1250797  # Elixir of the Whale
+
+[[recipes]]
+recipe_id = 1250798  # Elixir of Strength
+
+[[recipes]]
+recipe_id = 1250799  # Elixir of Ferocity
+
+[[recipes]]
+recipe_id = 1250800  # Elixir of the Grizzly
+
+[[recipes]]
+recipe_id = 1250801  # Elixir of Lesser Intellect
+
+[[recipes]]
+recipe_id = 1250802  # Elixir of Intellect
+
+[[recipes]]
+recipe_id = 1251729  # Minor Spellblasting Potion
+
+[[recipes]]
+recipe_id = 1251730  # Lesser Spellblasting Potion
+
+[[recipes]]
+recipe_id = 1251731  # Spellblasting Potion
+
+[[recipes]]
+recipe_id = 1251732  # Greater Spellblasting Potion
+
+[[recipes]]
+recipe_id = 1251733  # Superior Spellblasting Potion
+
+[[recipes]]
+recipe_id = 1251734  # Major Spellblasting Potion
+
+[[recipes]]
+recipe_id = 1251735  # Minor Frenzy Potion
+
+[[recipes]]
+recipe_id = 1251736  # Lesser Frenzy Potion
+
+[[recipes]]
+recipe_id = 1251737  # Frenzy Potion
+
+[[recipes]]
+recipe_id = 1251738  # Greater Frenzy Potion
+
+[[recipes]]
+recipe_id = 1251739  # Superior Frenzy Potion
+
+[[recipes]]
+recipe_id = 1251740  # Major Frenzy Potion
+
+[[recipes]]
+recipe_id = 1251741  # Minor Mender's Potion
+
+[[recipes]]
+recipe_id = 1251742  # Lesser Mender's Potion
+
+[[recipes]]
+recipe_id = 1251743  # Mender's Potion
+
+[[recipes]]
+recipe_id = 1251744  # Greater Mender's Potion
+
+[[recipes]]
+recipe_id = 1251745  # Superior Mender's Potion
+
+[[recipes]]
+recipe_id = 1251747  # Major Mender's Potion
+
+[[recipes]]
+recipe_id = 1251748  # Potion of Venomous Blood
+
+[[recipes]]
+recipe_id = 1251749  # Caustic Smog Potion
+
+[[recipes]]
+recipe_id = 1251750  # Disorienting Smog Potion
+
+[[recipes]]
+recipe_id = 1251751  # Dragonfire Potion
+
+[[recipes]]
+recipe_id = 1251752  # Potion of Elemental Purging
+
+[[recipes]]
+recipe_id = 1251753  # Potion of Beast Slaying
+
+[[recipes]]
+recipe_id = 1263005  # Fermenter
+
+[[recipes]]
+recipe_id = 1263078  # Alchemy Laboratory
+
+[[recipes]]
+recipe_id = 1293559  # Flask of Natural Accuracy
+
+[[recipes]]
+recipe_id = 1293560  # Flask of Natural Aggression
+
+[[recipes]]
+recipe_id = 1293561  # Flask of Natural Precision
+
+[[recipes]]
+recipe_id = 1293562  # Flask of Natural Swiftness

@@ -1,0 +1,44 @@
+# Which recipes `python -m brownstone recipes` puts in config/classic-era-enchanting.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/classic/spells/professions/enchanting, saved in a browser. Added in the app.
+game_version = "classic"
+rules_version = "classic-era"
+profession = "enchanting"
+status = "reference-observed"
+catalog_version = "0.1"
+
+[[recipes]]
+recipe_id = 7421  # Runed Copper Rod
+
+[[recipes]]
+recipe_id = 7795  # Runed Silver Rod
+
+[[recipes]]
+recipe_id = 13628  # Runed Golden Rod
+
+[[recipes]]
+recipe_id = 13702  # Runed Truesilver Rod
+
+[[recipes]]
+recipe_id = 14293  # Lesser Magic Wand
+
+[[recipes]]
+recipe_id = 14807  # Greater Magic Wand
+
+[[recipes]]
+recipe_id = 14809  # Lesser Mystic Wand
+
+[[recipes]]
+recipe_id = 14810  # Greater Mystic Wand
+
+[[recipes]]
+recipe_id = 15596  # Smoking Heart of the Mountain
+
+[[recipes]]
+recipe_id = 17180  # Enchanted Thorium
+
+[[recipes]]
+recipe_id = 17181  # Enchanted Leather
+
+[[recipes]]
+recipe_id = 20051  # Runed Arcanite Rod

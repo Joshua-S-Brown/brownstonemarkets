@@ -14,6 +14,9 @@ BASIS_LABELS = {"cautious": "Cautious (recommended)", "listed": "Cheapest listin
 
 def render(config, catalogs):
     st.subheader("Crafting")
+    if not catalogs:
+        st.info("No recipe catalog yet. Add a profession on the Recipe catalogs page.")
+        return
     default = next((i for i, c in enumerate(catalogs) if compatible(c, config)), 0)
     index = st.selectbox("Recipe catalog", range(len(catalogs)), index=default, format_func=lambda i: (
         f"{catalogs[i]['game_version'].title()} {catalogs[i]['profession'].title()} — {catalogs[i]['rules_version']}"))

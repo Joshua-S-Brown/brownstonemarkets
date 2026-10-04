@@ -8,9 +8,11 @@ import streamlit as st
 
 from brownstone.action_board import compatible
 from brownstone.config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
-from brownstone.crafting import load_recipe_catalog
+from brownstone.crafting import parse_recipe_catalog
 from brownstone.pipeline import import_guidance, import_scans, new_scans, run
+from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
 from brownstone.storage import upgrade_database
+from views import catalogs as catalogs_view
 from views import crafting, market
 
 ROOT = Path(__file__).resolve().parent
@@ -21,10 +23,15 @@ st.caption("Your local WoW market research desk · prices in gold")
 try:
     sources = [source for source in read_sources(ROOT / "config/market.toml", ROOT / "config" / LOCAL_OVERRIDES)
                if source["enabled"]]
-    catalogs = [load_recipe_catalog(path) for path in sorted((ROOT / "config").glob("*-tailoring.toml"))]
 except Exception as error:
     st.error(f"Could not read configuration: {error}")
     st.stop()
+try:
+    # Every profession's catalog, found by its selection file (STORY-014).
+    catalogs = [parse_recipe_catalog(entry["catalog"]) for entry in find_catalogs(CONFIG_DIR) if entry["catalog"]]
+except Exception as error:  # A bad catalog must not hide the other views.
+    st.warning(f"Recipe catalogs unavailable: {error}")
+    catalogs = []
 if not sources:
     st.error("No enabled data source. Set enabled = true for a source in config/market.toml or "
              "config/market.local.toml, then reload.")
@@ -49,7 +56,7 @@ with st.sidebar:
     addon = config["provider"] == ADDON_PROVIDER
     refresh = st.button("Import addon scan" if addon else "Refresh from TSM", type="primary", width="stretch",
                         help=f"Reads {config['scan_path']}" if addon else None)
-    views = ["Crafting", "Browse market", "Opportunities"]
+    views = ["Crafting", "Browse market", "Opportunities", "Recipe catalogs"]
     craftable = any(compatible(catalog, config) for catalog in catalogs)
     # Keyed per source so each market remembers its own view.
     view = st.radio("View", views, index=0 if craftable else 1, key=f"view-{config['source_id']}")
@@ -81,5 +88,7 @@ if view == "Crafting":
     crafting.render(config, catalogs)
 elif view == "Browse market":
     market.render_browse(config)
+elif view == "Recipe catalogs":
+    catalogs_view.render(sources, CONFIG_DIR, ARCHIVE_DIR)
 else:
     market.render_opportunities(config)

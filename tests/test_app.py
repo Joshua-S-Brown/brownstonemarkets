@@ -25,6 +25,9 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
+    catalog = next(w for w in at.selectbox if w.label == "Recipe catalog")  # Other professions may exist.
+    catalog.set_value(next(i for i, label in enumerate(catalog.options) if label.startswith("Classic Tailoring")))
+    at.run()
     assert any(m.value == "#### Tailoring Action Board" for m in at.markdown)
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert len(table) == 3

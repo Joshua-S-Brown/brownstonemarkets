@@ -30,6 +30,7 @@ app.py                  Streamlit entry: sidebar, Refresh, view dispatch
 views/                  Streamlit only; display, no calculations
   common.py             snapshot loading, freshness display, gold columns
   crafting.py           Action Board and recipe explanation
+  catalogs.py           Recipe catalogs page: status, add and update a profession (preview, then write)
   market.py             Browse market and Opportunities
 brownstone/             importable without Streamlit
   config.py             market.toml (+ untracked market.local.toml overrides) → list[Source] (typed, validated)
@@ -44,6 +45,8 @@ brownstone/             importable without Streamlit
   money.py              copper ↔ gold display helpers
   crafting.py           catalog loading, expansion, route costs, price bases
   recipe_import.py      saved Wowhead profession page → archive, extract, catalog TOML (no network)
+  recipe_catalogs.py    catalogs found by selection file: status, previews and the add/update writes
+  selection_files.py    in-place edits of a selection file that keep its comments
   action_board.py       ranking and label policy (versioned)
   cli.py                `python -m brownstone`: collect or import a source; `recipes` subcommand
 launch.py               local server launcher with code-fingerprint restart
@@ -99,13 +102,19 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 - `extract_page` reads the page's `listviewspells` array (recipes) and the `WH.Gatherer.addData(3, …)` object (items). Wowhead leaves a few keys unquoted; everything else is JSON.
 - `build_catalog` applies the selection: it adds intermediates, assigns roles (finished, intermediate, vendor material only with selection evidence, material), stamps evidence and rejects version mismatches, ambiguous creators and variable yields.
 - `dumps_catalog` writes deterministic TOML. `catalog_changes` lists recipe and vendor price differences against the current file for review.
+- `prepare_catalog(raw, selection, saved_at, current)` is the one generation path: extract, build, dump, validate with the board's `parse_recipe_catalog`, and diff, writing nothing. The CLI and the app call it after `archive_bytes` (which `archive_page` wraps for files on disk).
+- `page_build` reads the game patch from the page's "latest patch (…)" description and the newest build Wowhead's "Added in build" filter lists for that patch.
+- `recipe_catalogs` drives the app page. `find_catalogs` reads every selection file and its catalog, if generated. `catalog_status` gives version, recipe count, page date, build (from the archived copy, when it is on this machine), SHA-256, `unconfirmed_values` and `refresh_reasons`. `preview_update`/`regenerate` and `preview_new`/`create` are preview and write pairs: each write recomputes its preview, so it writes exactly what was shown. `CONFIG_DIR` and `ARCHIVE_DIR` are the defaults the CLI and app share.
+- `selection_files` edits a selection file in place: `set_value` replaces one header line, and `edit_recipes` removes and adds `[[recipes]]` blocks, adds or removes vendor marks (keeping an item's other notes), drops notes on items no chosen recipe uses, and reads the result back, refusing if it doesn't match. `preview_update(entry, raw, saved_at, recipe_ids, vendor_ids, rules_version)` runs these edits before generating, so a write is exactly the preview.
+- `single_makers` (in `recipe_import`) maps each item to its one usable recipe; items several usable recipes make are left out, so they are bought. The importer and the app's recipe list both use it. Choices travel as `choices(recipes, vendor)`.
+- The view keys each preview by a hash of the page bytes, date and selection; changing any of them hides the write button until a new preview. After a write it reloads and lists the tracked files written (catalog and selection), never committing.
 - Tests use trimmed extracts in `tests/fixtures/wowhead/` and assert that each tracked catalog equals the importer's output.
 
 ## Switching to WoW Forever
 
 1. **Market identity (done, STORY-009).** Configure `scope = "house"`, `server_type`, `faction` and no realm, for example `forever-us-roleplaying-alliance`. Neutral houses default to a 15% cut.
 2. **Price source (done, STORY-010).** There is no TSM or Blizzard feed. A `provider = "addon"` source imports the addon's SavedVariables file: bronze stays byte-for-byte, listings go to `scan_listings`, and item-level prices are derived in the `market_snapshots` shape (rules ADDON-01 to ADDON-06).
-3. **Catalog (done, STORY-004).** `config/forever-tailoring.toml` is generated from the saved Forever Tailoring page (CRAFT-08). To cover more, add recipes to its selection file, or add a selection for another profession, and regenerate.
+3. **Catalog (done, STORY-004).** `config/forever-tailoring.toml` is generated from the saved Forever Tailoring page (CRAFT-08). To cover another profession or more recipes, use **Add a profession** or **Update a profession** on the Recipe catalogs page.
 4. **Configuration.** Add the `[[sources]]` entry: market fields, `rules_version`, `provider = "addon"`, `scan_path` and `scan_evidence` (see the disabled example in `config/market.toml`). Other non-TSM feeds get their own adapter producing the same `market_snapshots` columns.
 
 No change to crafting, the Action Board or the views should be needed. If one is, treat it as a design defect.
@@ -117,7 +126,7 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 ## Known design debt
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (90% overall as of 2026-10-04): `views/market.py` 74% (Opportunities with data, which only Retail can supply), `app.py` 85% (configuration and upgrade errors). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Coverage gaps** (93% overall as of 2026-10-04): `views/market.py` 75% (Opportunities with data, which only Retail can supply), `app.py` 88% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.

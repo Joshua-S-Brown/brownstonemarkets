@@ -1,0 +1,311 @@
+# Which recipes `python -m brownstone recipes` puts in config/classic-era-alchemy.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/classic/spells/professions/alchemy, saved in a browser. Added in the app.
+game_version = "classic"
+rules_version = "classic-era"
+profession = "alchemy"
+status = "reference-observed"
+catalog_version = "0.1"
+
+[[recipes]]
+recipe_id = 2329  # Elixir of Lion's Strength
+
+[[recipes]]
+recipe_id = 2330  # Minor Healing Potion
+
+[[recipes]]
+recipe_id = 2331  # Minor Mana Potion
+
+[[recipes]]
+recipe_id = 2332  # Minor Rejuvenation Potion
+
+[[recipes]]
+recipe_id = 2333  # Elixir of Lesser Agility
+
+[[recipes]]
+recipe_id = 2334  # Elixir of Minor Fortitude
+
+[[recipes]]
+recipe_id = 2335  # Swiftness Potion
+
+[[recipes]]
+recipe_id = 2337  # Lesser Healing Potion
+
+[[recipes]]
+recipe_id = 3170  # Weak Troll's Blood Potion
+
+[[recipes]]
+recipe_id = 3171  # Elixir of Wisdom
+
+[[recipes]]
+recipe_id = 3172  # Minor Magic Resistance Potion
+
+[[recipes]]
+recipe_id = 3173  # Lesser Mana Potion
+
+[[recipes]]
+recipe_id = 3174  # Elixir of Poison Resistance
+
+[[recipes]]
+recipe_id = 3175  # Limited Invulnerability Potion
+
+[[recipes]]
+recipe_id = 3176  # Strong Troll's Blood Potion
+
+[[recipes]]
+recipe_id = 3177  # Elixir of Defense
+
+[[recipes]]
+recipe_id = 3188  # Elixir of Ogre's Strength
+
+[[recipes]]
+recipe_id = 3230  # Elixir of Minor Agility
+
+[[recipes]]
+recipe_id = 3447  # Healing Potion
+
+[[recipes]]
+recipe_id = 3448  # Lesser Invisibility Potion
+
+[[recipes]]
+recipe_id = 3449  # Shadow Oil
+
+[[recipes]]
+recipe_id = 3450  # Elixir of Fortitude
+
+[[recipes]]
+recipe_id = 3451  # Mighty Troll's Blood Potion
+
+[[recipes]]
+recipe_id = 3452  # Mana Potion
+
+[[recipes]]
+recipe_id = 3453  # Elixir of Detect Lesser Invisibility
+
+[[recipes]]
+recipe_id = 3454  # Frost Oil
+
+[[recipes]]
+recipe_id = 4508  # Discolored Healing Potion
+
+[[recipes]]
+recipe_id = 4942  # Lesser Stoneshield Potion
+
+[[recipes]]
+recipe_id = 6617  # Rage Potion
+
+[[recipes]]
+recipe_id = 6618  # Great Rage Potion
+
+[[recipes]]
+recipe_id = 6624  # Free Action Potion
+
+[[recipes]]
+recipe_id = 7179  # Elixir of Water Breathing
+
+[[recipes]]
+recipe_id = 7181  # Greater Healing Potion
+
+[[recipes]]
+recipe_id = 7183  # Elixir of Minor Defense
+
+[[recipes]]
+recipe_id = 7255  # Holy Protection Potion
+
+[[recipes]]
+recipe_id = 7256  # Shadow Protection Potion
+
+[[recipes]]
+recipe_id = 7257  # Fire Protection Potion
+
+[[recipes]]
+recipe_id = 7258  # Frost Protection Potion
+
+[[recipes]]
+recipe_id = 7259  # Nature Protection Potion
+
+[[recipes]]
+recipe_id = 7836  # Blackmouth Oil
+
+[[recipes]]
+recipe_id = 7837  # Fire Oil
+
+[[recipes]]
+recipe_id = 7841  # Swim Speed Potion
+
+[[recipes]]
+recipe_id = 7845  # Elixir of Firepower
+
+[[recipes]]
+recipe_id = 8240  # Elixir of Giant Growth
+
+[[recipes]]
+recipe_id = 11448  # Greater Mana Potion
+
+[[recipes]]
+recipe_id = 11449  # Elixir of Agility
+
+[[recipes]]
+recipe_id = 11450  # Elixir of Greater Defense
+
+[[recipes]]
+recipe_id = 11451  # Oil of Immolation
+
+[[recipes]]
+recipe_id = 11452  # Restorative Potion
+
+[[recipes]]
+recipe_id = 11453  # Magic Resistance Potion
+
+[[recipes]]
+recipe_id = 11456  # Goblin Rocket Fuel
+
+[[recipes]]
+recipe_id = 11457  # Superior Healing Potion
+
+[[recipes]]
+recipe_id = 11458  # Wildvine Potion
+
+[[recipes]]
+recipe_id = 11459  # Philosophers' Stone
+
+[[recipes]]
+recipe_id = 11460  # Elixir of Detect Undead
+
+[[recipes]]
+recipe_id = 11461  # Arcane Elixir
+
+[[recipes]]
+recipe_id = 11464  # Invisibility Potion
+
+[[recipes]]
+recipe_id = 11465  # Elixir of Greater Intellect
+
+[[recipes]]
+recipe_id = 11466  # Gift of Arthas
+
+[[recipes]]
+recipe_id = 11467  # Elixir of Greater Agility
+
+[[recipes]]
+recipe_id = 11468  # Elixir of Dream Vision
+
+[[recipes]]
+recipe_id = 11472  # Elixir of Giants
+
+[[recipes]]
+recipe_id = 11473  # Ghost Dye
+
+[[recipes]]
+recipe_id = 11476  # Elixir of Shadow Power
+
+[[recipes]]
+recipe_id = 11477  # Elixir of Demonslaying
+
+[[recipes]]
+recipe_id = 11478  # Elixir of Detect Demon
+
+[[recipes]]
+recipe_id = 12609  # Catseye Elixir
+
+[[recipes]]
+recipe_id = 15833  # Dreamless Sleep Potion
+
+[[recipes]]
+recipe_id = 17551  # Stonescale Oil
+
+[[recipes]]
+recipe_id = 17552  # Mighty Rage Potion
+
+[[recipes]]
+recipe_id = 17553  # Superior Mana Potion
+
+[[recipes]]
+recipe_id = 17554  # Elixir of Superior Defense
+
+[[recipes]]
+recipe_id = 17555  # Elixir of the Sages
+
+[[recipes]]
+recipe_id = 17556  # Major Healing Potion
+
+[[recipes]]
+recipe_id = 17557  # Elixir of Brute Force
+
+[[recipes]]
+recipe_id = 17570  # Greater Stoneshield Potion
+
+[[recipes]]
+recipe_id = 17571  # Elixir of the Mongoose
+
+[[recipes]]
+recipe_id = 17572  # Purification Potion
+
+[[recipes]]
+recipe_id = 17573  # Greater Arcane Elixir
+
+[[recipes]]
+recipe_id = 17574  # Greater Fire Protection Potion
+
+[[recipes]]
+recipe_id = 17575  # Greater Frost Protection Potion
+
+[[recipes]]
+recipe_id = 17576  # Greater Nature Protection Potion
+
+[[recipes]]
+recipe_id = 17577  # Greater Arcane Protection Potion
+
+[[recipes]]
+recipe_id = 17578  # Greater Shadow Protection Potion
+
+[[recipes]]
+recipe_id = 17580  # Major Mana Potion
+
+[[recipes]]
+recipe_id = 17632  # Alchemist's Stone
+
+[[recipes]]
+recipe_id = 17634  # Flask of Petrification
+
+[[recipes]]
+recipe_id = 17635  # Flask of the Titans
+
+[[recipes]]
+recipe_id = 17636  # Flask of Distilled Wisdom
+
+[[recipes]]
+recipe_id = 17637  # Flask of Supreme Power
+
+[[recipes]]
+recipe_id = 17638  # Flask of Chromatic Resistance
+
+[[recipes]]
+recipe_id = 21923  # Elixir of Frost Power
+
+[[recipes]]
+recipe_id = 22732  # Major Rejuvenation Potion
+
+[[recipes]]
+recipe_id = 22808  # Elixir of Greater Water Breathing
+
+[[recipes]]
+recipe_id = 24266  # Gurubashi Mojo Madness
+
+[[recipes]]
+recipe_id = 24365  # Mageblood Potion
+
+[[recipes]]
+recipe_id = 24366  # Greater Dreamless Sleep Potion
+
+[[recipes]]
+recipe_id = 24367  # Living Action Potion
+
+[[recipes]]
+recipe_id = 24368  # Major Troll's Blood Potion
+
+[[recipes]]
+recipe_id = 25146  # Transmute: Elemental Fire
+
+[[recipes]]
+recipe_id = 26277  # Elixir of Greater Firepower

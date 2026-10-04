@@ -1,11 +1,11 @@
 import argparse
 import sys
-import tomllib
 from pathlib import Path
 
 from .config import ADDON_PROVIDER, LOCAL_OVERRIDES, Source, read_sources
 from .pipeline import import_guidance, import_scans, run
-from .recipe_import import archive_page, build_catalog, catalog_changes, dumps_catalog, extract_page, load_selection
+from .recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR
+from .recipe_import import archive_page, load_selection, prepare_catalog
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,19 +19,15 @@ def recipes_main(argv: list[str]) -> None:
     parser.add_argument("--output", type=Path, help="Catalog to write (default: config/<selection name>.toml)")
     parser.add_argument("--saved-at", help="Date the page was saved, YYYY-MM-DD (default: earlier archive, then "
                                            "the file's date)")
-    parser.add_argument("--archive-dir", type=Path, default=ROOT / "data/recipe-sources")
+    parser.add_argument("--archive-dir", type=Path, default=ARCHIVE_DIR)
     args = parser.parse_args(argv)
-    output = args.output or ROOT / "config" / args.selection.name
+    output = args.output or CONFIG_DIR / args.selection.name
     try:
         copy, manifest = archive_page(args.page, args.archive_dir, args.saved_at)
-        extract = extract_page(copy.read_text(encoding="utf-8", errors="replace"), manifest["sha256"],
-                               manifest["saved_at"])
-        catalog = build_catalog(extract, load_selection(args.selection))
-        text = dumps_catalog(catalog)
-        changes = None
-        if output.exists():
-            changes = catalog_changes(tomllib.loads(output.read_text(encoding="utf-8")), tomllib.loads(text))
-        output.write_text(text, encoding="utf-8")
+        current = output.read_text(encoding="utf-8") if output.exists() else None
+        prepared = prepare_catalog(copy.read_bytes(), load_selection(args.selection), manifest["saved_at"], current)
+        catalog, changes = prepared["catalog"], prepared["changes"]
+        output.write_text(prepared["text"], encoding="utf-8")
     except Exception as error:
         print(f"Recipe import failed: {error}", file=sys.stderr)
         sys.exit(1)

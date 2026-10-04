@@ -16,10 +16,18 @@ _Last updated 2026-10-04._
   - Source `forever-us-normal-alliance-addon` is disabled in the tracked `config/market.toml`. On the user's machine, the untracked `config/market.local.toml` enables it and points it at the game's SavedVariables file, to archive beta scans before the beta closes. Classic Mankrik stays the default development source.
 - **Recipe import (STORY-004):** `python -m brownstone recipes --page <saved page> --selection config/recipe-selections/<catalog>.toml` generates a catalog from a Wowhead profession page saved in a browser (CRAFT-08). It never downloads. The page is archived under `data/recipe-sources/`, and the command lists recipe and vendor price changes.
   - Pages saved 2026-10-04: Classic Tailoring (287 recipes, SHA-256 `aab9c70c…`) and Forever Tailoring (471 recipes, `9ab28c15…`). Copies are in `data/recipe-sources/wowhead/`, ignored by Git like all of `data/`.
+- **Recipe catalogs page (STORY-014 Slice 2):** the app's **Recipe catalogs** view shows one game version at a time (WoW Forever or Classic Era, switched at the top). It lists that version's catalogs, found by their selection files whatever the profession (the Crafting view loads them the same way), and the professions with none yet. Each row shows catalog version, recipe count, the page's save date, game build and SHA-256, the count of unconfirmed values (listed in an expander), and **Refresh due** (CRAFT-08).
+  - **Update a profession:** start from the catalog's archived page (when it is on this machine) or upload a newly saved one. Add or remove recipes, change vendor marks and the rules version. **Preview changes** shows the recipe and vendor price diff, any selection notes that would be removed, the edited selection file and the new version, and writes nothing; **Regenerate** archives the page, writes the selection file (edited line by line, comments kept) and the catalog. Choices that reproduce the catalog exactly offer nothing to write.
+  - **Add a profession:** pick the profession, follow the Wowhead link to save the page in your browser, upload it, choose recipes and optional vendor items (marked unconfirmed), then **Preview catalog** and **Create catalog**.
+  - **Choosing recipes:** a searchable list of every recipe the page offers, plus **Add all matching** and **Remove all matching** for a name and skill range (intermediates are added automatically). Choosing all of Classic or Forever Tailoring is possible this way.
+  - **Items several recipes make** (Alchemy's transmuted essences) are always bought, and their recipes aren't offered; recipes Wowhead lists as making 0 are never used either (CRAFT-08). The Add tab's count says how many recipes each reason leaves out. Tested on a miniature Alchemy page; no real Alchemy page has been archived yet.
+  - A page from another game version or profession is refused. After a write the page lists the changed tracked files and never commits. Generation goes through the same `prepare_catalog` as `python -m brownstone recipes`.
+  - The Add tab says how many of the page's recipes can be chosen and why the rest can't: no item made (enchants on gear), no fixed yield on Wowhead (Classic Enchanting's 7 oils list 0), or seasonal. The 2026-10-04 pages offer 226 of 287 Classic Tailoring, 413 of 471 Forever Tailoring and 12 of 204 Classic Enchanting recipes. The Tailoring catalogs are deliberately small subsets of those (6 and 7 recipes, chosen in their selection files).
+  - Checked on copies of the real config and archive: both Tailoring catalogs regenerate from their archived pages unchanged (no bump, no tracked file written) and show builds 1.15.8 (67156) and 1.60.1 (70205); a preview takes about 0.01 s. Classic Enchanting's page is archived (2026-10-04); its first catalog was removed because it included Season of Discovery recipes, and is to be recreated.
 - **Crafting:** two generated Tailoring catalogs. Route costing, cautious and listed price bases, and an Action Board under policy 0.2 with five labels and per-recipe error isolation.
 - **Interface:**
   - Crafting opens by default for markets with a compatible catalog. It shows the board, a recipe summary in g/s/c and expandable evidence.
-  - Browse market and Opportunities are also available. Opportunities explains when a source can't support it.
+  - Browse market, Opportunities and Recipe catalogs are also available. Opportunities explains when a source can't support it.
   - All money is displayed in gold.
 - **Launcher:** `launch.py` (via `Start Brownstone.command` / `.cmd`) restarts its own server when the code has changed.
 - **Catalogs:**
@@ -45,6 +53,8 @@ _Last updated 2026-10-04._
 - **No addon 0.2.0 scan has been imported yet.** It loaded and wrote its (empty) file on the beta on 2026-10-04, but the first scan was cleared before `/reload` wrote it. Brownstone's side is tested; the Lua was changed without a client to run it. Take one scan with it, `/reload`, and import: it should succeed, and `BrownstoneScan.lua` should be about a tenth of the old size (around 3 MB per full scan). 0.1.0 is in Git if it misbehaves.
 - The addon was measured on one beta house only: not the Roleplaying or a neutral house, and `/bscan start` without the button is untested. Beta region and realm values are generic, so scans are identified by auctioneer, zone and label. The `.toc` interface number 16001 may change with beta builds.
 - Required skill levels are display-only.
+- The Recipe catalogs page shows a catalog's game build only when its archived page is on this machine (`data/` isn't in Git). Regenerating records the uploaded file's name as the manifest's `original_name`, as the CLI does.
+- The Crafting view still shows one catalog at a time; using several professions together is STORY-015.
 - **Forever values still to confirm in game** (shown on the recipe view):
   - **Output counts:** every recipe keeps Wowhead's list value of 1, marked `output_quantity_verified = false`, because its spell tooltips show "(2)". Craft one Bolt of Linen Cloth on the beta and count.
   - **Vendor items:** Coarse Thread, Fine Thread, Red Dye and Rune Thread are assumed sold by vendors (`vendor_verified = false`); check a Forever trade supplies vendor.
@@ -67,7 +77,7 @@ _Last updated 2026-10-04._
 .venv/bin/python -m mypy
 ```
 
-Expected: 157 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 191 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Last live check (2026-10-04, Mankrik, 5,868 rows), cautious basis:
 

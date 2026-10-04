@@ -19,12 +19,14 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from .crafting import AVAILABILITY
+from .crafting import AVAILABILITY, parse_recipe_catalog
 
 GAME_PATHS = {"classic": "classic", "forever": "forever"}  # Catalog game_version -> Wowhead path segment.
 _CANONICAL = re.compile(
     r'<link rel="canonical" href="https://www\.wowhead\.com/([a-z-]+)/spells/professions/([a-z-]+)">')
 _UNQUOTED_KEY = re.compile(r'([{,])([A-Za-z_]\w*):')
+_PATCH = re.compile(r'latest patch \((\d+(?:\.\d+)+)\)')
+_BUILD_FILTER = '"name":"Added in build"'
 
 
 def _balanced(text: str, start: int, opening: str, closing: str) -> str:
@@ -72,6 +74,8 @@ def extract_page(html: str, sha256: str, saved_at: str) -> dict:
                   "creates": row.get("creates"), "reagents": row.get("reagents") or []}
         if "envChange" in row:  # Forever pages flag new or changed spells relative to Classic.
             recipe["env_status"] = row["envChange"].get("status")
+        if row.get("seasonId"):  # Classic pages include seasonal realms' spells (2 = Season of Discovery).
+            recipe["season"] = row["seasonId"]
         recipes[str(row["id"])] = recipe
     items = {}
     for item_id, row in _literal(html, "WH.Gatherer.addData(3,", "{", "}").items():
@@ -86,39 +90,101 @@ def extract_page(html: str, sha256: str, saved_at: str) -> dict:
             "recipes": recipes, "items": items}
 
 
-def archive_page(page: Path, archive_dir: Path, saved_at: str | None = None) -> tuple[Path, dict]:
-    """Keep the page's exact bytes once per SHA-256 with a provenance manifest; return (copy, manifest).
+def page_build(html: str) -> dict:
+    """The game patch Wowhead says the page reflects, and the newest build it lists for that patch.
 
-    ``saved_at`` (YYYY-MM-DD) is when the page was saved in the browser. It defaults to an earlier
-    manifest for the same bytes, then to the file's modification date, so rebuilding from the archive
-    reproduces the same catalog.
+    Both come from the page itself: the description's "latest patch (1.60.1)" and the "Added in build"
+    filter options, for example ``[70205,"70205 (1.60.1)"]``. Either is None when the page lacks it.
     """
-    raw = page.read_bytes()
+    match = _PATCH.search(html)
+    patch = match.group(1) if match else None
+    end = html.find(_BUILD_FILTER)
+    start = html.rfind('"options":', 0, end) if end >= 0 else -1
+    builds = [(int(build), version) for build, version in
+              re.findall(r'\[(\d+),"\d+ \((\d+(?:\.\d+)+)', html[start:end])] if start >= 0 else []
+    matching = [build for build, version in builds if version == patch] if patch else []
+    return {"patch": patch, "build": max(matching) if matching else None}
+
+
+def archive_location(archive_dir: Path, game_path: str, profession: str, sha256: str) -> Path:
+    """Where a page's archived copy lives; its manifest is the same path with ``.json``."""
+    return archive_dir / "wowhead" / game_path / profession / f"{sha256[:16]}.html"
+
+
+def _archive_paths(raw: bytes, archive_dir: Path) -> tuple[str, str, Path, Path]:
+    """(SHA-256, decoded page, archived copy, manifest) for a saved page's bytes."""
     sha256 = hashlib.sha256(raw).hexdigest()
     html = raw.decode("utf-8", errors="replace")
     match = _CANONICAL.search(html)
     if not match:
         raise ValueError("Not a Wowhead profession spell list page (no canonical .../spells/professions/... link)")
-    folder = archive_dir / "wowhead" / match.group(1) / match.group(2)
-    copy, manifest_path = folder / f"{sha256[:16]}.html", folder / f"{sha256[:16]}.json"
+    copy = archive_location(archive_dir, match.group(1), match.group(2), sha256)
+    return sha256, html, copy, copy.with_suffix(".json")
+
+
+def archived_saved_at(raw: bytes, archive_dir: Path) -> str | None:
+    """The save date recorded when these exact bytes were archived before, if they were (reads only)."""
+    manifest_path = _archive_paths(raw, archive_dir)[3]
+    if not manifest_path.exists():
+        return None
+    return json.loads(manifest_path.read_text(encoding="utf-8")).get("saved_at")
+
+
+def archive_bytes(raw: bytes, original_name: str, archive_dir: Path, saved_at: str | None = None,
+                  fallback_date: str | None = None) -> tuple[Path, dict]:
+    """Keep the page's exact bytes once per SHA-256 with a provenance manifest; return (copy, manifest).
+
+    ``saved_at`` (YYYY-MM-DD) is when the page was saved in the browser. It defaults to an earlier
+    manifest for the same bytes, then to ``fallback_date``, so rebuilding from the archive reproduces
+    the same catalog.
+    """
+    sha256, html, copy, manifest_path = _archive_paths(raw, archive_dir)
     previous = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
-    saved_at = (saved_at or previous.get("saved_at")
-                or datetime.fromtimestamp(page.stat().st_mtime, UTC).date().isoformat())
+    saved_at = saved_at or previous.get("saved_at") or fallback_date
+    if not saved_at:
+        raise ValueError("Give the date the page was saved (YYYY-MM-DD)")
     date.fromisoformat(saved_at)
-    folder.mkdir(parents=True, exist_ok=True)
+    copy.parent.mkdir(parents=True, exist_ok=True)
     if not copy.exists():
         copy.write_bytes(raw)
     manifest = {"source_url": extract_page(html, sha256, saved_at)["source_url"], "sha256": sha256,
-                "saved_at": saved_at, "original_name": page.name,
+                "saved_at": saved_at, "original_name": original_name,
                 "archived_at": previous.get("archived_at") or datetime.now(UTC).isoformat(timespec="seconds"),
                 "bronze_file": copy.name, "capture": "saved by the user in a web browser"}
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return copy, manifest
 
 
+def archive_page(page: Path, archive_dir: Path, saved_at: str | None = None) -> tuple[Path, dict]:
+    """``archive_bytes`` for a file on disk; the file's modification date is the last fallback for ``saved_at``."""
+    modified = datetime.fromtimestamp(page.stat().st_mtime, UTC).date().isoformat()
+    return archive_bytes(page.read_bytes(), page.name, archive_dir, saved_at, modified)
+
+
+def prepare_catalog(raw: bytes, selection: dict, saved_at: str, current: str | None) -> dict:
+    """Everything a write would produce, without writing: the catalog, its TOML and the changes from ``current``.
+
+    The CLI and the app both generate through this, after archiving the same bytes.
+    """
+    sha256 = hashlib.sha256(raw).hexdigest()
+    html = raw.decode("utf-8", errors="replace")
+    extract = extract_page(html, sha256, saved_at)
+    catalog = build_catalog(extract, selection)
+    text = dumps_catalog(catalog)
+    parsed = tomllib.loads(text)
+    parse_recipe_catalog(parsed)  # Refuse anything the board could not load.
+    changes = None if current is None else catalog_changes(tomllib.loads(current), parsed)
+    return {"extract": extract, "catalog": catalog, "text": text, "changes": changes, "sha256": sha256,
+            "saved_at": saved_at, **page_build(html)}
+
+
 def load_selection(path: Path) -> dict:
     with path.open("rb") as file:
-        selection = tomllib.load(file)
+        return parse_selection(tomllib.load(file))
+
+
+def parse_selection(selection: dict) -> dict:
+    """Validate a selection file's TOML data."""
     for key in ("game_version", "rules_version", "profession", "status", "catalog_version"):
         if not selection.get(key):
             raise ValueError(f"Selection requires {key}")
@@ -129,27 +195,43 @@ def load_selection(path: Path) -> dict:
     return selection
 
 
+def check_same_version(extract: dict, game: str, profession: str) -> None:
+    """Refuse a page from another game version or profession (CRAFT-08)."""
+    if extract["game_path"] != GAME_PATHS.get(game) or extract["profession"] != profession:
+        raise ValueError(f"The page is {extract['game_path']} {extract['profession']}, but the catalog is "
+                         f"{game} {profession}; catalogs never borrow another version's data")
+
+
 def build_catalog(extract: dict, selection: dict) -> dict:
     """Catalog for the selected recipes plus every intermediate they need, in the loader's shape.
 
-    A reagent created by exactly one recipe on the page is crafted (an intermediate); a reagent created
-    by several must have its recipe selected explicitly. Vendor materials are the items the selection marks
-    ``vendor = true`` with evidence; their price is the page's buy price. Nothing is inferred from names,
-    and values never come from another game version's page.
+    A reagent made by exactly one usable recipe on the page is crafted (an intermediate). An item several
+    recipes make is always bought, so a catalog never chooses between recipes, and recipes making such
+    items can't be selected. Vendor materials are the items the selection marks ``vendor = true`` with
+    evidence; their price is the page's buy price. Nothing is inferred from names, and values never come
+    from another game version's page, or from a seasonal realm's spells on it.
     """
-    game = selection["game_version"]
-    if extract["game_path"] != GAME_PATHS[game] or extract["profession"] != selection["profession"]:
-        raise ValueError(f"The page is {extract['game_path']} {extract['profession']}, but the selection is "
-                         f"{game} {selection['profession']}; catalogs never borrow another version's data")
-    recipes = extract["recipes"]
+    check_same_version(extract, selection["game_version"], selection["profession"])
+    recipes = {rid: recipe for rid, recipe in extract["recipes"].items() if not recipe.get("season")}
     picks = {str(pick["recipe_id"]): pick for pick in selection["recipes"]}
+    seasonal = sorted(set(picks) & (set(extract["recipes"]) - set(recipes)), key=int)
+    if seasonal:
+        raise ValueError(f"Selected recipes belong to a seasonal realm such as Season of Discovery: {seasonal}")
     unknown = sorted(set(picks) - set(recipes), key=int)
     if unknown:
         raise ValueError(f"Selected recipes are not on the page: {unknown}")
-    included = _included_recipes(recipes, picks)
+    makers = single_makers(recipes)
+    shared = sorted((rid for rid in picks
+                     if makes_fixed_quantity(recipes[rid]) and makers.get(recipes[rid]["creates"][0]) != rid), key=int)
+    if shared:
+        raise ValueError(f"Selected recipes {recipe_label(recipes, shared)} make items other recipes also make; "
+                         "such items are always bought, so remove them")
+    included: dict[str, dict] = {}
+    for recipe_id in picks:
+        _include(recipe_id, (), recipes, picks, makers, included)
+    item_notes = {str(entry["item_id"]): entry for entry in selection.get("items", [])}
 
     defaults = selection.get("recipe_defaults", {})
-    item_notes = {str(entry["item_id"]): entry for entry in selection.get("items", [])}
     consumed = {reagent for rid in included for reagent, _ in recipes[rid]["reagents"]}
     outputs = {recipes[rid]["creates"][0] for rid in included}
     catalog_recipes = [_catalog_recipe(extract, selection["profession"], recipe_id, defaults, included[recipe_id])
@@ -175,22 +257,37 @@ def build_catalog(extract: dict, selection: dict) -> dict:
     }
 
 
-def _included_recipes(recipes: dict, picks: dict) -> dict[str, dict]:
-    """Recipe ID -> its selection entry, or {} for an intermediate added because a selected recipe needs it."""
-    creators: dict[int, list[str]] = {}
+def makes_fixed_quantity(recipe: dict) -> bool:
+    """Whether a recipe can be in a catalog: it makes one known, fixed quantity of an item.
+
+    Wowhead lists some (Alchemy transmutes and oils, for example) as making 0, meaning unknown. Those never
+    make anything in a catalog, so their item is bought instead; a yield is never guessed.
+    """
+    creates = recipe["creates"]
+    return bool(creates) and creates[1] == creates[2] and creates[1] > 0
+
+
+def single_makers(recipes: dict) -> dict[int, str]:
+    """Item -> the one recipe that makes it in a catalog.
+
+    Only recipes that make a fixed quantity count, and seasonal ones never do. Items several such recipes
+    make are left out: they are always bought (CRAFT-08).
+    """
+    makers: dict[int, list[str]] = {}
     for recipe_id, recipe in recipes.items():
-        if recipe["creates"]:
-            creators.setdefault(recipe["creates"][0], []).append(recipe_id)
-    included: dict[str, dict] = {}
-    for recipe_id in picks:
-        _include(recipe_id, (), recipes, picks, creators, included)
-    return included
+        if not recipe.get("season") and makes_fixed_quantity(recipe):
+            makers.setdefault(recipe["creates"][0], []).append(recipe_id)
+    return {item_id: recipe_ids[0] for item_id, recipe_ids in makers.items() if len(recipe_ids) == 1}
+
+
+def recipe_label(recipes: dict, recipe_ids: list[str]) -> str:
+    return ", ".join(f"{rid} ({recipes[rid]['name']})" for rid in recipe_ids)
 
 
 def _include(recipe_id: str, trail: tuple[str, ...], recipes: dict, picks: dict,
-             creators: dict[int, list[str]], included: dict[str, dict]) -> None:
+             makers: dict[int, str], included: dict[str, dict]) -> None:
     if recipe_id in trail:
-        raise ValueError(f"Recipe cycle through {recipe_id}")
+        raise ValueError(f"Recipe cycle through {recipe_label(recipes, list(trail + (recipe_id,)))}")
     if recipe_id in included:
         return
     recipe = recipes[recipe_id]
@@ -198,12 +295,8 @@ def _include(recipe_id: str, trail: tuple[str, ...], recipes: dict, picks: dict,
         raise ValueError(f"Recipe {recipe_id} ({recipe['name']}) creates no item")
     included[recipe_id] = picks.get(recipe_id, {})
     for reagent_id, _ in recipe["reagents"]:
-        options = creators.get(reagent_id, [])
-        chosen = [option for option in options if option in picks]
-        if len(chosen) > 1 or (len(options) > 1 and not chosen):
-            raise ValueError(f"Item {reagent_id} is made by recipes {options}; select exactly one of them")
-        if chosen or options:
-            _include((chosen or options)[0], trail + (recipe_id,), recipes, picks, creators, included)
+        if reagent_id in makers:
+            _include(makers[reagent_id], trail + (recipe_id,), recipes, picks, makers, included)
 
 
 def _check_availability(record: dict, label: str) -> None:
@@ -254,7 +347,7 @@ def _catalog_item(extract: dict, item_id: int, role: str, note: dict) -> dict:
     return item
 
 
-def _toml_value(value: Any) -> str:
+def toml_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
@@ -268,12 +361,12 @@ def dumps_catalog(catalog: dict) -> str:
     """Deterministic TOML for a generated catalog."""
     lines = ["# Generated by `python -m brownstone recipes`; edit the selection file and regenerate, "
              "not this file."]
-    lines += [f"{key} = {_toml_value(value)}" for key, value in catalog.items() if key not in ("items", "recipes")]
+    lines += [f"{key} = {toml_value(value)}" for key, value in catalog.items() if key not in ("items", "recipes")]
     for item in catalog["items"]:
-        lines += ["", "[[items]]", *(f"{key} = {_toml_value(value)}" for key, value in item.items())]
+        lines += ["", "[[items]]", *(f"{key} = {toml_value(value)}" for key, value in item.items())]
     for recipe in catalog["recipes"]:
         lines += ["", "[[recipes]]",
-                  *(f"{key} = {_toml_value(value)}" for key, value in recipe.items() if key != "inputs")]
+                  *(f"{key} = {toml_value(value)}" for key, value in recipe.items() if key != "inputs")]
         for ingredient in recipe["inputs"]:
             lines += ["", "[[recipes.inputs]]", f"item_id = {ingredient['item_id']}",
                       f"quantity = {ingredient['quantity']}"]
