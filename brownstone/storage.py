@@ -2,6 +2,7 @@
 import json
 import shutil
 from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ import duckdb
 from . import markets
 from .config import MARKET_KEYS, Source
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -56,7 +57,29 @@ def _migrate_to_2(db):
         WHERE game_version IS NOT NULL""")
 
 
-MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2}
+_MARKET_COLUMNS = ("market_id VARCHAR, game_version VARCHAR, region VARCHAR, scope VARCHAR, realm VARCHAR, "
+                   "server_type VARCHAR, faction VARCHAR")
+
+
+def _migrate_to_3(db):
+    """Addon scans (STORY-010): one row per scan, and its listings. Item prices go to market_snapshots."""
+    db.execute(f"""CREATE TABLE IF NOT EXISTS addon_scans (
+        source_id VARCHAR NOT NULL, scan_id VARCHAR NOT NULL, snapshot_id VARCHAR NOT NULL, {_MARKET_COLUMNS},
+        status VARCHAR, stop_reason VARCHAR, partial BOOLEAN, priced BOOLEAN,
+        started_at TIMESTAMPTZ, finished_at TIMESTAMPTZ, listing_count BIGINT, reported_count BIGINT,
+        nonexact_stacks BIGINT, item_count BIGINT, api VARCHAR, client_version VARCHAR, client_build VARCHAR,
+        player_faction VARCHAR, auctioneer VARCHAR, zone VARCHAR, subzone VARCHAR, realm_name VARCHAR,
+        label VARCHAR, scan_sha256 VARCHAR, source_sha256 VARCHAR, collection_id VARCHAR,
+        collected_at TIMESTAMPTZ, PRIMARY KEY (source_id, scan_id))""")
+    db.execute(f"""CREATE TABLE IF NOT EXISTS scan_listings (
+        source_id VARCHAR NOT NULL, scan_id VARCHAR NOT NULL, listing_index BIGINT NOT NULL,
+        snapshot_id VARCHAR, {_MARKET_COLUMNS},
+        item_id BIGINT, item_name VARCHAR, quantity BIGINT, buyout BIGINT, unit_buyout BIGINT,
+        unit_buyout_ceil BIGINT, min_bid BIGINT, bid BIGINT, complete_info BOOLEAN,
+        PRIMARY KEY (source_id, scan_id, listing_index))""")
+
+
+MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3}
 
 
 def _has_table(db, name: str) -> bool:
@@ -126,8 +149,35 @@ def load_snapshot(db, silver: Path, frame, config: Source) -> tuple[str, bool]:
     return frame["snapshot_id"][0], True
 
 
+def known_scan(db, source_id: str, scan_id: str) -> dict | None:
+    """The stored record of a scan from this source, if it was imported before."""
+    row = db.execute("""SELECT snapshot_id, scan_sha256, priced, item_count FROM addon_scans
+        WHERE source_id=? AND scan_id=?""", [source_id, scan_id]).fetchone()
+    if row is None:
+        return None
+    return dict(zip(("snapshot_id", "scan_sha256", "priced", "item_count"), row, strict=True))
+
+
+def load_scan(db, scan: Path, listings: Path, prices: Path | None) -> None:
+    """Insert one new addon scan from its silver files: the scan row, its listings and, when the scan
+    is complete, its item prices. Callers check ``known_scan`` first; a repeat insert fails on the key."""
+    if schema_version(db) != SCHEMA_VERSION:
+        raise RuntimeError("Database schema is out of date; call upgrade_database first")
+    db.execute("INSERT INTO addon_scans BY NAME SELECT * FROM read_parquet(?)", [str(scan)])
+    db.execute("INSERT INTO scan_listings BY NAME SELECT * FROM read_parquet(?)", [str(listings)])
+    if prices is not None:
+        db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(prices)])
+
+
+def _observed(record: dict) -> datetime:
+    return datetime.fromisoformat(record.get("updated_at") or record["collected_at"])
+
+
 def completed_snapshots(config: Source) -> list[dict]:
-    """A source's completed manifests, newest first, in the current shape.
+    """A source's completed manifests, newest observation first, in the current shape.
+
+    Ordered by upstream scan time when known, else collection time, so importing an older scan
+    after a newer one never replaces newer prices.
 
     Manifests written before the market/source split are upgraded in memory; files are never edited.
     """
@@ -140,7 +190,7 @@ def completed_snapshots(config: Source) -> list[dict]:
                 records.append(markets.upgrade_legacy(record))
         except (OSError, ValueError):
             continue
-    return sorted(records, key=lambda r: r["collected_at"], reverse=True)
+    return sorted(records, key=lambda r: (_observed(r), datetime.fromisoformat(r["collected_at"])), reverse=True)
 
 
 def latest_snapshot(config: Source) -> tuple[dict | None, str | None, int]:

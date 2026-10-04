@@ -5,7 +5,7 @@ import streamlit as st
 from brownstone.analysis import browse, rank, screenable_count
 from views.common import gold_columns, load_latest, read_db, show_freshness
 
-EMPTY = "No completed snapshot yet. Click Refresh from TSM to collect this market."
+EMPTY = "No completed snapshot yet. Click Refresh from TSM or Import addon scan to collect this market."
 
 
 def _header(config, manifest, count):
@@ -72,7 +72,8 @@ def render_opportunities(config):
     st.caption("Ranked by discount against the lowest of market, recent and historical values.")
     if not eligible:
         st.info("This source has no items with market, recent and historical prices all available "
-                "(Classic feeds report historical values as zero), so the discount screen cannot run. "
+                "(Classic feeds report historical values as zero, and a single addon scan has no history), "
+                "so the discount screen cannot run. "
                 "Use Crafting or Browse market instead.")
         return
     if results.is_empty():

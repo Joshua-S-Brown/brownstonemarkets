@@ -5,7 +5,7 @@ auction_cut = 0.05  # Neutral auction houses default to 0.15 unless a source set
 min_discount = 0.20
 top_n = 20
 
-# Each [[sources]] entry is one feed (source_id, provider, URL) observing one market.
+# Each [[sources]] entry is one feed (source_id, provider, and a URL or scan file) observing one market.
 # The market is the auction house: game_version + region + scope + realm/server_type + faction.
 # market_id is derived from those fields, so several sources can observe the same market.
 # source_id also names the source's data folder; the IDs below predate the split and match
@@ -46,3 +46,30 @@ source_url = "https://public-data.tradeskillmaster.com/retail/us/commodities.csv
 game_version = "retail"
 region = "us"
 scope = "region"
+
+# Our own BrownstoneScan addon (provider "addon"): imports a SavedVariables file only when you click
+# Import addon scan or run `python -m brownstone --source <id>`. It reads the file and never writes it.
+# The market fields define the house; scan_evidence values are checked against every scan, and a
+# mismatch fails the import. Beta region and realm are generic, so they are not evidence here.
+[[sources]]
+source_id = "forever-us-normal-alliance-addon"
+provider = "addon"
+enabled = false  # Enable it, and set scan_path, in config/market.local.toml (untracked).
+label = "Forever US Normal Alliance — my scans (addon)"
+# Placeholder. The game's own file contains your account folder name, so keep the real path in
+# config/market.local.toml, which Git ignores:
+#   [sources.forever-us-normal-alliance-addon]
+#   enabled = true
+#   scan_path = "/Applications/World of Warcraft/_classic_beta_/WTF/Account/<ACCOUNT>/SavedVariables/BrownstoneScan.lua"
+scan_path = "data/inbox/addon-scans/BrownstoneScan.lua"
+game_version = "forever"
+region = "us"
+scope = "house"
+server_type = "normal"
+faction = "alliance"
+rules_version = "forever-beta-1.60"
+
+[sources.scan_evidence]
+faction = "Alliance"
+zone = "Stormwind City"
+auctioneer = "Auctioneer Fitch"

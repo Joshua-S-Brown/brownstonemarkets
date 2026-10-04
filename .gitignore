@@ -13,3 +13,4 @@ data/**
 !data/silver/.gitkeep
 !data/gold/.gitkeep
 .DS_Store
+config/*.local.toml

@@ -1,6 +1,6 @@
 # Brownstone Scan (SPIKE-008 prototype)
 
-A minimal, **read-only** auction house scanner. It answers one question: can an addon capture every listing on a WoW Forever auction house? It is a prototype, not the production importer (STORY-010).
+A minimal, **read-only** auction house scanner. It answers one question: can an addon capture every listing on a WoW Forever auction house? Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
 ## What it does and doesn't do
 
@@ -58,7 +58,7 @@ It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list
 
 Listing fields: `item_id`, `name` (empty until the client has loaded the item), `link` (missing until loaded), `quantity`, `buyout` (copper, as the client reported it), `unit_buyout` (copper per unit, or missing), `min_bid`, `bid` (only when someone has bid), `commodity` (only when the client says; absent on the beta) and `complete_info` (false when the client hadn't yet loaded the item's details).
 
-Prices are integer copper. A missing `buyout` means the listing has no buyout; it is never zero or free. On the Forever beta (first scan, 2026-10-04) `buyout` is the price of the **whole stack**, not per unit, and `commodity` is never reported. `unit_buyout` is therefore `buyout / quantity` only when that divides exactly, otherwise missing (about a quarter of stacked listings). Raw `buyout` and `quantity` are always kept so STORY-010 can decide how to handle the rest. A listing the client hasn't fully loaded has an empty `name`, no `link` and `complete_info = false`; its item ID, quantity and buyout are still valid.
+Prices are integer copper. A missing `buyout` means the listing has no buyout; it is never zero or free. On the Forever beta (first scan, 2026-10-04) `buyout` is the price of the **whole stack**, not per unit, and `commodity` is never reported. `unit_buyout` is meant to be `buyout / quantity` when that divides exactly, otherwise missing. In the 2026-10-04 scan it is missing on every stacked listing, although all of them divide exactly (an open follow-up). Brownstone divides `buyout` by `quantity` itself, rounding up when inexact, and only cross-checks `unit_buyout`. A listing the client hasn't fully loaded has an empty `name`, no `link` and `complete_info = false`; its item ID, quantity and buyout are still valid.
 
 A hand-written example is in `tests/fixtures/brownstone_scan_sample.lua`.
 

@@ -1,15 +1,15 @@
 """Streamlit entry point: market selection, user-triggered refresh and view dispatch.
 
-Ingestion only runs when the user clicks Refresh. Views live in ``views/``.
+Ingestion only runs when the user clicks Refresh (TSM) or Import addon scan. Views live in ``views/``.
 """
 from pathlib import Path
 
 import streamlit as st
 
 from brownstone.action_board import compatible
-from brownstone.config import read_sources
+from brownstone.config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
 from brownstone.crafting import load_recipe_catalog
-from brownstone.pipeline import run
+from brownstone.pipeline import import_scans, run
 from brownstone.storage import upgrade_database
 from views import crafting, market
 
@@ -19,7 +19,8 @@ st.title("Brownstone Markets")
 st.caption("Your local WoW market research desk · prices in gold")
 
 try:
-    sources = read_sources(ROOT / "config/market.toml")
+    sources = [source for source in read_sources(ROOT / "config/market.toml", ROOT / "config" / LOCAL_OVERRIDES)
+               if source["enabled"]]
     catalogs = [load_recipe_catalog(path) for path in sorted((ROOT / "config").glob("*-tailoring.toml"))]
 except Exception as error:
     st.error(f"Could not read configuration: {error}")
@@ -41,13 +42,26 @@ with st.sidebar:
     st.caption(f"Market {config['market_id']} · {config['provider'].upper()} feed"
                + (" · region-wide commodities" if config["scope"] == "region" else "")
                + " · edit config/market.toml to change sources")
-    refresh = st.button("Refresh from TSM", type="primary", width="stretch")
+    addon = config["provider"] == ADDON_PROVIDER
+    refresh = st.button("Import addon scan" if addon else "Refresh from TSM", type="primary", width="stretch",
+                        help=f"Reads {config['scan_path']}" if addon else None)
     views = ["Crafting", "Browse market", "Opportunities"]
     craftable = any(compatible(catalog, config) for catalog in catalogs)
     # Keyed per source so each market remembers its own view.
     view = st.radio("View", views, index=0 if craftable else 1, key=f"view-{config['source_id']}")
 
-if refresh:
+if refresh and addon:
+    with st.spinner("Preserving and importing the addon scan file…"):
+        try:
+            manifest = import_scans(config)
+            outcomes = "; ".join(f"{s['scan_id']} {s['status']}: {s['outcome']}" for s in manifest["scans"])
+            if manifest["status"] == "complete":
+                st.success(f"Imported. Prices now come from scan {manifest['scan_id']}. {outcomes}.")
+            else:
+                st.warning(f"No complete scan in the file, so prices are unchanged. {outcomes}.")
+        except Exception as error:
+            st.error(f"Import failed: {error}. Your previous successful snapshot remains available.")
+elif refresh:
     with st.spinner("Downloading and preserving the latest market snapshot…"):
         try:
             run(config)

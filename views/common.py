@@ -34,6 +34,9 @@ def show_freshness(config, manifest):
         st.caption(f"Price age unknown: this source gives no scan time. Downloaded "
                    f"{freshness['age_hours']:.1f} hours ago; prices may be older. Stale after "
                    f"{config['max_age_hours']} hours since download.")
+    if manifest.get("scan_id"):
+        st.caption(f"Addon scan {manifest['scan_id']} · complete scans only feed prices; "
+                   "stacks are priced per unit, rounded up when the buyout does not divide evenly")
     if freshness["stale"]:
         st.warning("Saved prices are stale or future-dated. Refresh before acting on them.")
     return freshness

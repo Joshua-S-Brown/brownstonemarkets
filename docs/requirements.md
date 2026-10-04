@@ -5,11 +5,12 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 ## Product direction
 
 - **Purpose:** a local WoW market research tool that traces materials through intermediate crafts to finished goods and explains which crafts are worth investigating.
-- **Target game:** WoW Forever (beta since 17 September 2026; launches 4 November 2026). It has no public price feed, so the planned source is our own read-only scanning addon (SPIKE-008, STORY-010).
+- **Target game:** WoW Forever (beta since 17 September 2026; launches 4 November 2026). It has no public price feed, so the baseline source is our own read-only scanning addon, imported as described under *Addon scans* below.
 - **Known Forever market facts** (checked 2026-10-04, mostly third-party; re-verify at launch):
   - Forever has no realms. Each region (US, EU and so on) has one auction house per server type (Normal, PvP, RP, later Hardcore) and faction, plus a neutral house with a 15% cut instead of 5%.
   - Blizzard's API publishes no Forever auction data, and TSM has no Forever data.
   - Existing Forever price sites are fed by players' addon scans. Forever addons reportedly use the modern `C_AuctionHouse` API, which has Retail-style commodities.
+  - Forever reuses Classic item IDs: 2,323 of the 2,927 items priced in the 2026-10-04 beta scan are also priced on Classic Era Mankrik under the same IDs. Prices differ (see STORY-012), so this allows explicit comparison, never joining (DATA-03).
   - Sources: [Wikipedia](https://en.wikipedia.org/wiki/World_of_Warcraft:_Forever), [AHledger](https://ahledger.com/wow-forever/auction-house), [WowGuide realms](https://wowguide.net/en/guides/wow-forever-realms-rulesets), [Blizzard API forum: Classic Era auction 404s](https://us.forums.blizzard.com/en/blizzard/t/404-for-all-classic-era-namespace-auction-house-endpoints/54307), [WOW4E_AH_Trader](https://github.com/1nd1v1d/WOW4E_AH_Trader).
 - **Development stand-in:** Mankrik Alliance, Classic Era (TSM public realm CSV). Classic is used to build and prove the product, not as the end market. Switching to Forever must be a configuration and catalog change: add a source whose market fields describe the Forever house and whose `rules_version` matches a Forever catalog. It must not require code changes.
 - **Retail:** not a product requirement (decided 2026-10-04). Retail sources remain configured only as an ingestion regression check, because they exercise regional scope and upstream timestamps that Classic lacks. No feature work targets Retail. They may be removed when they stop earning their keep.
@@ -22,15 +23,15 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 - **Addon (decided 2026-10-04, SPIKE-008): build it.** A read-only addon, `addon/BrownstoneScan/`, scans only after a click or slash command at the auction house and never buys, posts, cancels or scans unattended.
   - **Evidence:** on the Forever beta (client 1.60.1, build 70205), one scan of the Alliance Normal-server house in Stormwind used `C_AuctionHouse.ReplicateItems` and saved 101,485 listings in about 10.6 s, in a 24 MB SavedVariables file. A second scan three minutes later got no reply, as the documented 15-minute account-wide throttle predicts. The client has no legacy auction event.
   - **Not measured:** the Roleplaying house (not yet available in the beta), a neutral house (out of reach for now), and whether a slash command alone is accepted without the button click. The button worked.
-  - **Scan format STORY-010 ingests:** `BrownstoneScanDB` with `schema_version` 1 and a list of scans; fields are documented in `addon/README.md`, with a sample at `tests/fixtures/brownstone_scan_sample.lua`. Each scan has a `scan_id`, UTC start and finish, `status` (`completed` or `stopped`), `listing_count` against `reported_count`, client build, region, realm, player faction, auctioneer and zone, and a free-text `label`. Importing must treat `label`, auctioneer and zone as evidence of which house it is, never as a configured `market_id`.
-  - **Listing semantics:** Forever's `buyout` is the price of the whole stack (Classic-style), with `quantity` the stack size, and no commodity status is reported. `unit_buyout` is present only when `buyout / quantity` is an exact copper amount, about three in four stacked listings. A missing `buyout` means no buyout, never free. Listings the client hadn't fully loaded have an empty `name` and no `link`, but valid item ID, quantity and buyout. STORY-010 must decide how to price stacks with no exact unit price.
+  - **Scan format STORY-010 ingests:** `BrownstoneScanDB` with `schema_version` 1 and a list of scans; fields are documented in `addon/README.md`, with a sample at `tests/fixtures/brownstone_scan_sample.lua`. Each scan has a `scan_id`, UTC start and finish, `status` (`completed` or `stopped`), `listing_count` against `reported_count`, client build, region, realm, player faction, auctioneer and zone, and a free-text `label`. Import treats these as evidence of which house it is, never as a market (ADDON-01).
+  - **Listing semantics:** Forever's `buyout` is the price of the whole stack (Classic-style), with `quantity` the stack size, and no commodity status is reported. The addon is meant to write `unit_buyout` when `buyout / quantity` is an exact copper amount, but the 2026-10-04 scan has it on none of its 28,105 stacked listings, although all of them divide exactly. Import therefore divides `buyout` by `quantity` itself and uses `unit_buyout` only as a cross-check (ADDON-02). A missing `buyout` means no buyout, never free. Listings the client hadn't fully loaded (4,690 in that scan) have an empty `name` and no `link`, but valid item ID, quantity and buyout.
   - **Known costs:** about 240 bytes per listing, so a full scan is large and loads slowly if several accumulate. Region and realm are generic on the beta and do not identify the house.
 - **Out of scope:** automated buying, selling or posting, unattended in-game scanning, cloud deployment and AI-generated recommendations without explainable features.
 
 ## Rules
 
 ### Data integrity
-- **DATA-01 Raw preservation:** every download is saved byte-for-byte before validation. Each has a manifest with source, SHA-256, UTC collection time and status, including failures. Raw files are never overwritten.
+- **DATA-01 Raw preservation:** every download is saved byte-for-byte before validation. Each has a manifest with source, SHA-256, UTC collection time and status, including failures. Raw files are never overwritten. An addon scan file whose bytes (SHA-256) are already in that source's bronze folder is not copied again; the new manifest names the existing file in `bronze_file` (decided 2026-10-04, because scan files are about 24 MB).
 - **DATA-02 Validation:** required columns, integer copper prices, unique positive item IDs and timestamps that are either all present or all absent. A missing name becomes `Item <ID>`. Zero means unavailable or no listing.
 - **DATA-03 Market identity:** a market is one auction house: `game_version + region + scope + realm + server_type + faction`. Item IDs never join across any of these.
   - **Fields:**
@@ -40,8 +41,21 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - **`market_id` is derived, never configured** (for example `classic-us-mankrik-alliance`, `forever-us-roleplaying-alliance`), so two sources for one house always agree.
   - **Auction cut:** set per source. Neutral houses default to 15%.
 - **DATA-08 Source independence:** a market's identity says *which auction house*. A source's identity (`source_id`, `provider`) says *who observed it*: your addon, TSM or a third-party site. The same market can have several sources. Every manifest and price observation records its source, deduplication is per source, and each source keeps its own data folder. Combining sources follows an explicit, versioned policy, never silent mixing. Until that policy exists (STORY-011), each view reads one selected source.
-- **DATA-04 Deduplication:** identical market, scan time and content hash reuse one analytical snapshot. Every raw collection is still archived.
-- **DATA-05 Freshness:** age comes from upstream scan time when the source provides it. Otherwise it comes from collection time, explicitly labeled as "price age unknown". Stale means older than `max_age_hours` (default 24) or more than 15 minutes in the future. A source may opt out of upstream time only when the entire column is blank (`allow_missing_updated_at`).
+- **DATA-04 Deduplication:** identical market, scan time and content hash reuse one analytical snapshot. Every raw collection is still recorded with its own manifest. Addon scans deduplicate by `scan_id` per source instead (ADDON-04).
+- **DATA-05 Freshness:** age comes from upstream scan time when the source provides it (for addon scans, the scan's finish time). Otherwise it comes from collection time, explicitly labeled as "price age unknown". Stale means older than `max_age_hours` (default 24) or more than 15 minutes in the future. A source may opt out of upstream time only when the entire column is blank (`allow_missing_updated_at`).
+
+### Addon scans (decided 2026-10-04, STORY-010)
+- **ADDON-01 House identity:** the configured source defines the market; nothing is derived from a scan. Each scan's player faction must match the market's alliance or horde faction, and must not be from a neutral house. A neutral market needs the client's `neutral = true` or a configured auctioneer. Optional `scan_evidence` (`faction`, `auctioneer`, `zone`, `realm`, `label`) must match exactly. Any mismatch in any selected scan fails the whole import, naming the scan, field, observed and configured values, before anything reaches DuckDB. Beta region and realm are generic and aren't evidence by default.
+- **ADDON-02 Stack pricing:** a listing's unit price is `buyout / quantity` in integer copper. When that isn't exact, `unit_buyout` stays empty and `unit_buyout_ceil` rounds up, so a unit's cost is never understated; derived prices use `unit_buyout_ceil`. On the sale side this can overstate a unit by under 1c; the manifest counts such stacks (`nonexact_stacks`). A reported `unit_buyout` that disagrees with the division rejects the scan. A missing or zero `buyout` has no unit price and is never free.
+- **ADDON-03 Item prices:** each complete scan writes one `market_snapshots` row per item:
+  - `min_buyout`: the cheapest unit price.
+  - `market_value`: the quantity-weighted 25th percentile of unit prices (nearest rank, each listed unit counted once). It is the price that buys a quarter of listed supply. It ignores one stray cheap stack, which `min_buyout` already shows, and high listings that never sell, which can dominate a median on thin markets. It is close in spirit to TSM's average of the cheapest 15–30% of units.
+  - `recent_value` and `historical_value`: 0 (unavailable), so the discount screen explains it can't run.
+  - Items listed only without a buyout get 0/0, so Browse still finds them.
+  - Cautious and listed bases (CRAFT-04) use these unchanged.
+- **ADDON-04 Deduplication and partial scans:** a scan is identified by `scan_id` per source. Re-importing it is a no-op; the same `scan_id` with different content fails. A scan is partial when `status` isn't `completed` or `listing_count` differs from `reported_count`. Partial scans are stored and labeled, listings included, but never feed prices, because they can miss the cheapest listing. A file with no complete scan leaves prices unchanged. The newest complete scan in a file becomes its snapshot, and the views use the newest observation across imports, so an older file can't replace newer prices.
+- **ADDON-05 Time:** a scan's finish time is its observation time. Old scans import, and the board labels them stale. A scan finished more than 15 minutes in the future is rejected as a clock error.
+- **ADDON-06 Import is read-only and on demand:** only the **Import addon scan** button or the CLI imports, from the configured `scan_path` (or `--input`). The file is read, never written, watched or polled.
 
 ### Money
 - **MONEY-01:** store and calculate integer copper only. 1g = 100s = 10,000c.
@@ -74,7 +88,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 - **CRAFT-07 Rounding:** net revenue rounds down to the copper; break-even rounds up. Quantities are per recipe execution.
 
 ### Interface
-- **UI-01:** browsing saved data never triggers a download. Only **Refresh from TSM** collects, and only for the selected source.
+- **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** (addon sources) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden.
 - **UI-02:** Browse market finds items regardless of price or discount. Categories are not inferred from names or commodity status.
 - **UI-03:** the discount screen (Opportunities) explains when a source cannot support it, for example Classic historical values being zero.
 - **UI-04:** an incompatible catalog can be inspected, but is never priced.
@@ -90,7 +104,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 
 ## Not modeled (do not imply otherwise)
 
-Demand, sale likelihood, listing depth, deposits, recommended quantities, vendor stock, reputation discounts, recipe quality/rank and reagent alternatives.
+Demand, sale likelihood, listing depth (addon listings are stored but no calculation uses them yet), deposits, recommended quantities, vendor stock, reputation discounts, recipe quality/rank and reagent alternatives.
 
 ## Open decisions
 

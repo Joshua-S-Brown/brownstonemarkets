@@ -22,7 +22,7 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
                   {2592: 10, 4240: 1000, 4338: 100, 10050: 10000,
                    14047: 1000, 8170: 500, 14046: 20000}.items()) + "\n")
     run(sources[0], source)
-    monkeypatch.setattr("brownstone.config.read_sources", lambda path: sources)
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert any(m.value == "#### Tailoring Action Board" for m in at.markdown)
@@ -43,3 +43,21 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     assert not at.exception
     assert not any(m.value == "#### Tailoring Action Board" for m in at.markdown)
     assert any(h.value == "Browse market" for h in at.subheader)
+
+
+def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, monkeypatch):
+    from test_scans import finished_now, forever_scan_file
+    sources = read_sources(ROOT / "config/market.toml")
+    addon = next(source for source in sources if source["provider"] == "addon")
+    assert not addon["enabled"]  # Disabled in the tracked config; enabled per machine in market.local.toml.
+    addon.update(enabled=True, data_dir=tmp_path / "data", scan_path=forever_scan_file(tmp_path, finished_now()),
+                 scan_evidence={"faction": "Alliance"})
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [addon])
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert not at.exception
+    assert any("Refresh or import" in i.value for i in at.info)  # Nothing imported until clicked.
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert not at.exception
+    assert any("Imported" in s.value for s in at.success)
+    table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert list(table["Item"]) == ["Runecloth Bag"] and table.iloc[0]["Action"] == "potential craft"

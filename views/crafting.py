@@ -31,7 +31,7 @@ def render(config, catalogs):
         _materials(catalog, recipe_id)
         return
 
-    manifest, sid, _ = load_latest(config, "Refresh this market to price the catalog.")
+    manifest, sid, _ = load_latest(config, "Refresh or import a scan for this market to price the catalog.")
     if manifest is None:
         return
     left, right = st.columns(2)

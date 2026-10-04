@@ -46,7 +46,7 @@ def test_market_scopes_and_dedup(tmp_path):
 def test_two_sources_share_a_market_but_keep_separate_data(tmp_path):
     source = ore_csv(tmp_path)
     tsm = make_source(tmp_path / "data", source_id="tsm-feed")
-    mine = make_source(tmp_path / "data", source_id="my-scans", provider="addon")
+    mine = make_source(tmp_path / "data", source_id="my-scans", provider="third-party")
     assert tsm["market_id"] == mine["market_id"] == "retail-us-area-52"
     run(tsm, source)
     run(mine, source)  # Identical bytes from a different observer are a separate observation.
@@ -55,17 +55,21 @@ def test_two_sources_share_a_market_but_keep_separate_data(tmp_path):
     assert rows == [("my-scans", "retail-us-area-52"), ("tsm-feed", "retail-us-area-52")]
     assert {p.name for p in (tmp_path / "data/bronze").iterdir()} == {"tsm-feed", "my-scans"}
     [manifest] = completed_snapshots(mine)
-    assert (manifest["source_id"], manifest["provider"]) == ("my-scans", "addon")
+    assert (manifest["source_id"], manifest["provider"]) == ("my-scans", "third-party")
 
 
 def test_source_config():
     sources = read_sources(Path(__file__).resolve().parents[1] / "config/market.toml")
     assert [s["source_id"] for s in sources] == [
         "classic-us-mankrik-alliance", "retail-us-area-52", "retail-us-commodities",
+        "forever-us-normal-alliance-addon",
     ]
     # Pre-split source IDs equal their derived market IDs, so existing data folders stay put.
-    assert [s["market_id"] for s in sources] == [s["source_id"] for s in sources]
-    assert [s["scope"] for s in sources] == ["house", "house", "region"]
+    assert [s["market_id"] for s in sources[:3]] == [s["source_id"] for s in sources[:3]]
+    addon = sources[3]
+    assert (addon["market_id"], addon["provider"], addon["enabled"]) == ("forever-us-normal-alliance", "addon", False)
+    assert addon["scan_path"].is_absolute() and "source_url" not in addon
+    assert [s["scope"] for s in sources] == ["house", "house", "region", "house"]
     mankrik = sources[0]
     assert (mankrik["realm"], mankrik["faction"], mankrik["server_type"]) == ("mankrik", "alliance", "")
     assert mankrik["allow_missing_updated_at"] is True
@@ -74,7 +78,7 @@ def test_source_config():
 
 def test_forever_market_needs_no_realm_and_neutral_houses_cost_more():
     shared = dict(data_dir=Path("data"), max_age_hours=24, auction_cut=.05, min_discount=.2, top_n=20)
-    forever = dict(source_id="my-forever-scans", provider="addon", source_url="https://example.com/x",
+    forever = dict(source_id="my-forever-scans", provider="addon", scan_path="BrownstoneScan.lua",
                    game_version="forever", region="us", scope="house", server_type="roleplaying")
     alliance = build_source(shared, {**forever, "faction": "alliance"})
     assert alliance["market_id"] == "forever-us-roleplaying-alliance"
