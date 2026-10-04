@@ -42,7 +42,7 @@ def recipes_main(argv: list[str]) -> None:
         print(f"  {line}")
 
 
-def main() -> None:
+def main() -> None:  # noqa: C901
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     if sys.argv[1:2] == ["recipes"]:

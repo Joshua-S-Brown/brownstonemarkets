@@ -129,7 +129,7 @@ def load_selection(path: Path) -> dict:
     return selection
 
 
-def build_catalog(extract: dict, selection: dict) -> dict:
+def build_catalog(extract: dict, selection: dict) -> dict:  # noqa: C901
     """Catalog for the selected recipes plus every intermediate they need, in the loader's shape.
 
     A reagent created by exactly one recipe on the page is crafted (an intermediate); a reagent created

@@ -46,18 +46,39 @@ As a gold maker, I want every routine Brownstone action available as a button in
 - **Preview.** Before importing, show new, already-imported and partial scans, with times and listing counts. Optionally pick which scans to import, matching `--scan`. If nothing is new, say so and write nothing.
 - **Safe reads.** A file being rewritten by the game (`/reload` or logout) fails cleanly and can be retried. The game folder is never written, watched or polled.
 
-**Slice 2 — Recipe catalogs page:**
-- **Status per selection file:** catalog version, the archived Wowhead page's save date and SHA-256, and the outstanding unconfirmed values (yield, vendor status and price, post-launch flags).
-- **Upload a newly saved Wowhead page.** The page is archived byte-for-byte as the CLI does. Brownstone still never downloads from Wowhead. Then **Preview changes**, which shows the recipe and vendor-price diff and writes nothing, and **Regenerate**, which writes the catalog.
+**Slice 2 — Recipe catalogs page, for every profession and game version:**
+- **One catalog per game version and profession**, for example Forever Tailoring, Classic Tailoring and Forever Leatherworking. The page lists every catalog that exists, plus which professions don't have one yet.
+- **Status for each catalog:**
+  - catalog version and recipe count
+  - the archived Wowhead page's save date, game build and SHA-256
+  - the outstanding unconfirmed values (yield, vendor status and price, post-launch flags)
+  - a **refresh due** flag when the page predates the market's current `rules_version` or a configurable age
+- **Add a profession.** Pick the game version and profession. The app shows the exact Wowhead page to save (for example `wowhead.com/forever/spells/professions/leatherworking`) as a link for you to save in your browser; Brownstone still never downloads from Wowhead. Upload the saved page, choose the recipes (all of them, or filtered by name and skill range, with intermediates added automatically as today), then preview and create the selection file and catalog.
+- **Update a profession.** Upload a newly saved page for an existing catalog. It's archived byte-for-byte as the CLI does. **Preview changes** shows the recipe and vendor-price diff and writes nothing; **Regenerate** writes the catalog and bumps its version.
+- **Never across versions.** Uploading a page whose game version or profession doesn't match the chosen catalog is refused. A Classic page never fills a Forever catalog.
+- **Any profession counts.** Catalogs are found by their selection files, not by a `*-tailoring` file name (today `app.py` only loads Tailoring).
 
 **Slice 3 — In-game confirmations:**
 - Tick off values checked on the beta (the yield you saw, a vendor confirmed with its price, a post-launch decision), each with a date. This writes to the selection file and offers Regenerate. It replaces hand-editing for the *Also on the beta, once* list under Now.
 
 Acceptance:
-- **No CLI or hand-editing** is needed for routine scan import, recipe regeneration or in-game confirmations.
+- **No CLI or hand-editing** is needed for routine scan import, adding or refreshing any profession's catalog for either game version, or in-game confirmations.
 - **Every write is previewed first** and happens only on an explicit click. Afterwards the app lists changed tracked files and never commits.
 - **Personal paths stay out of Git.** They live only in `market.local.toml`.
 - **Tests cover the logic** behind each button offline: discovery, preview and dry run, and the selection-file writes. Streamlit tests cover the preview → confirm flow.
+
+### STORY-015 — Crafting across professions
+
+Follows STORY-014. More catalogs only help if the board uses them together.
+
+As a gold maker, I want the board to cost recipes using every profession I have a catalog for, so that a Tailoring recipe can use Leatherworking's Rugged Leather or a smelted bar at its real crafted cost instead of only the auction price.
+
+Acceptance:
+- **Combine catalogs per market.** For a market, use every catalog with the same `game_version` and `rules_version` together. Never mix game versions.
+- **One recipe graph.** Intermediates from other professions resolve across catalogs, with the cheapest valid buy, craft or vendor route still per CRAFT-03. Today a catalog allows one recipe per output item; define what happens when two professions make the same item, such as choosing the cheapest valid route and showing which profession it came from.
+- **Your professions.** An optional list of the professions you actually have restricts craft routes to those. Anything else is bought or flagged, never assumed craftable.
+- **Board filters** by profession, tier or skill range, and name, so large catalogs stay usable.
+- **Same rules.** Missing prices are never free, unsupported recipes are isolated per row, and the policy version is shown. Tests cover a cross-profession chain.
 
 ### STORY-011 — Optional third-party scan sources
 
@@ -123,7 +144,7 @@ These are grouped by what unblocks them.
 - Item names: 4,690 listings arrived before the client loaded the item, and some items (Runecloth, 14047) appear only that way, so Browse shows `Item <ID>`. Crafting uses catalog names, so it's unaffected.
 
 **Recipe coverage** (unblocked by STORY-004):
-- **More recipes and professions:** add recipes to a selection file, or save another profession's page and add a selection, then regenerate. A filter by tier or name on the board will matter once catalogs grow past a few dozen recipes.
+- **More recipes and professions:** handled in the app by STORY-014 (add or refresh any profession for either game version) and combined on the board by STORY-015.
 - **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*).
 - **In-game recipe reader (optional):** the addon could read the Tailoring window (reagents, `GetTradeSkillNumMade`) and the trainer list (required skill) to confirm Wowhead values automatically. This widens the read-only addon and needs its own decision.
 

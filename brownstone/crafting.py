@@ -7,7 +7,7 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from pathlib import Path
 
 
-def load_recipe_catalog(path: Path) -> dict:
+def load_recipe_catalog(path: Path) -> dict:  # noqa: C901
     with path.open("rb") as file:
         raw = tomllib.load(file)
     if raw.get("schema_version") != 1:
@@ -129,7 +129,7 @@ def _to_copper(amount: Decimal, rounding: str) -> int:
     return int(amount.to_integral_value(rounding=rounding))
 
 
-def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05,
+def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05,  # noqa: C901
                     sale_prices: dict[int, int] | None = None) -> dict:
     """Cost a recipe, choosing the cheaper valid buy or craft path for intermediates.
 
@@ -140,7 +140,7 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     choices = []
     shopping: defaultdict[int, int] = defaultdict(int)
 
-    def unit_cost(item_id: int, trail: tuple[int, ...]) -> tuple[int | None, str, dict[int, int]]:
+    def unit_cost(item_id: int, trail: tuple[int, ...]) -> tuple[int | None, str, dict[int, int]]:  # noqa: C901
         item = catalog["items_by_id"][item_id]
         candidates = []
         if _positive(prices.get(item_id)):

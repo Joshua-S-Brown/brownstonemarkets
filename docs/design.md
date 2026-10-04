@@ -111,10 +111,20 @@ No change to crafting, the Action Board or the views should be needed. If one is
 
 ## Quality gates
 
-Ruff (lint and import order) and mypy (on `brownstone/` and `launch.py`) run locally and in CI; configuration is in `pyproject.toml`. `Source` is a `TypedDict`, so mypy checks config key names wherever a function is annotated with it.
+Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `brownstone/` and `launch.py`) and pytest with a branch-coverage floor run locally and in CI; configuration is in `pyproject.toml`. `Source` is a `TypedDict`, so mypy checks config key names wherever a function is annotated with it.
 
 ## Known design debt
 
+- **Complexity debt:** these functions exceed Ruff's limit of 10 and carry `# noqa: C901`. Refactor them when touched, and remove the noqa when one is fixed. Scores are as of 2026-10-04.
+  - `recipe_import.build_catalog` (22)
+  - `crafting.load_recipe_catalog` (19)
+  - `crafting.evaluate_recipe` (18)
+  - `scans.parse_lua` (13)
+  - `normalization.normalize` (13)
+  - `cli.main` (12)
+  - `crafting.unit_cost` (11)
+  - `pipeline.import_scans` (11)
+- **Coverage gaps** (85% overall as of 2026-10-04): `cli.py` 51% (the `recipes` command), `views/market.py` 53% (Browse market), `launch.py` 77%, `app.py` 72%. `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.

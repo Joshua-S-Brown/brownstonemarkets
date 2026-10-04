@@ -108,7 +108,7 @@ def _bronze_copy(folder: Path, sid: str, raw: bytes, sha256: str) -> str:
     return name
 
 
-def import_scans(config: Source, input_path: Path | None = None, scan_ids: Iterable[str] | None = None,
+def import_scans(config: Source, input_path: Path | None = None, scan_ids: Iterable[str] | None = None,  # noqa: C901
                  now: datetime | None = None) -> dict:
     """Import BrownstoneScan SavedVariables for an addon source; returns the collection manifest.
 

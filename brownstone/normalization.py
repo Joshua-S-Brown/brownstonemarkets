@@ -12,7 +12,7 @@ PRICE_COLUMNS = {
 REQUIRED = {"itemId", "name", "updatedAt", *PRICE_COLUMNS}
 
 
-def normalize(raw: bytes, market_id: str, snapshot_id: str, collected_at: datetime,
+def normalize(raw: bytes, market_id: str, snapshot_id: str, collected_at: datetime,  # noqa: C901
               max_age_hours: float, allow_missing_updated_at: bool = False) -> pl.DataFrame:
     frame = pl.read_csv(io.BytesIO(raw), infer_schema=False)
     missing = REQUIRED - set(frame.columns)

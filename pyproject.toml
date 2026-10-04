@@ -12,7 +12,7 @@ dependencies = ["duckdb>=1.2,<2", "polars>=1.20,<2", "pyarrow>=19,<26", "request
                 "pytz>=2024.1"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10", "ruff>=0.6,<1", "mypy>=1.10,<2"]
+dev = ["pytest>=8,<10", "pytest-cov>=5,<8", "ruff>=0.6,<1", "mypy>=1.10,<2"]
 dashboard = ["streamlit>=1.40,<2"]
 
 [project.scripts]
@@ -31,8 +31,23 @@ target-version = "py311"
 extend-exclude = ["work", "data"]
 
 [tool.ruff.lint]
-# Errors, pyflakes, import order, bugbear, pyupgrade, simplify.
-select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+# Errors, pyflakes, import order, bugbear, pyupgrade, simplify, complexity.
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C90"]
+
+[tool.ruff.lint.mccabe]
+# New code stays at or under 10. Older functions over it carry `# noqa: C901` and are listed
+# as complexity debt in docs/design.md; remove the noqa when one is refactored.
+max-complexity = 10
+
+[tool.coverage.run]
+source = ["brownstone", "views", "app", "launch"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# Floor, not target: CI fails if coverage drops below it. Raise it as coverage improves.
+fail_under = 83
 
 [tool.mypy]
 python_version = "3.12"  # The tested version; installed stubs (numpy) need 3.12 syntax.

@@ -71,7 +71,7 @@ def _finish(table: dict) -> Any:
     return table
 
 
-def parse_lua(text: str) -> dict[str, Any]:
+def parse_lua(text: str) -> dict[str, Any]:  # noqa: C901
     """Parse SavedVariables text into {global name: value}. Raises ValueError on anything else."""
     result: dict[str, Any] = {}
     frames: list[list] = []  # [table, key in parent, next positional index]

@@ -14,3 +14,5 @@ data/**
 !data/gold/.gitkeep
 .DS_Store
 config/*.local.toml
+.coverage
+htmlcov/
