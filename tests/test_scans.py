@@ -1,4 +1,6 @@
 """Addon scan import (STORY-010): parsing, stack pricing, dedup, partial scans, house checks, migration."""
+import gzip
+import hashlib
 import json
 import sys
 from datetime import UTC, datetime
@@ -12,7 +14,7 @@ from brownstone import cli, scans
 from brownstone.action_board import rank_recipes
 from brownstone.config import build_source
 from brownstone.crafting import load_recipe_catalog
-from brownstone.pipeline import import_scans
+from brownstone.pipeline import clear_reminder, import_scans
 from brownstone.storage import MIGRATIONS, latest_snapshot, price_observations, schema_version
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -91,7 +93,7 @@ def test_parser_subset_escapes_and_errors():
     with pytest.raises(ValueError, match="BrownstoneScanDB"):
         scans.read_saved_variables(b"OtherDB = {\n}\n")
     with pytest.raises(ValueError, match="schema_version"):
-        scans.read_saved_variables(b'BrownstoneScanDB = {\n["schema_version"] = 2,\n}\n')
+        scans.read_saved_variables(b'BrownstoneScanDB = {\n["schema_version"] = 3,\n}\n')
 
 
 def test_stack_pricing_rounds_up_and_never_prices_missing_buyouts():
@@ -143,7 +145,10 @@ def test_import_preserves_bytes_dedupes_and_labels_partial_scans(tmp_path):
     config = addon_source(tmp_path / "data")
     manifest = import_scans(config, now=NOW)
     bronze = tmp_path / "data/bronze/my-scans"
-    assert (bronze / manifest["bronze_file"]).read_bytes() == FIXTURE.read_bytes()
+    # Stored compressed (DATA-01): decompressing gives back the exact bytes.
+    assert manifest["bronze_file"].endswith(".lua.gz")
+    assert gzip.decompress((bronze / manifest["bronze_file"]).read_bytes()) == FIXTURE.read_bytes()
+    assert manifest["already_imported"] == 0 and clear_reminder(manifest) is None
     assert manifest["status"] == "complete" and manifest["scan_id"] == COMPLETE
     assert manifest["analytical_snapshot_id"] == f"my-scans:{COMPLETE}" and manifest["rows"] == 4
     assert manifest["updated_at"] == "2026-11-04T18:01:02+00:00" and manifest["freshness_basis"] == "upstream"
@@ -162,10 +167,22 @@ def test_import_preserves_bytes_dedupes_and_labels_partial_scans(tmp_path):
     assert {s["outcome"] for s in again["scans"]} == {"duplicate"}
     assert again["analytical_snapshot_id"] == manifest["analytical_snapshot_id"] and not again["new_observation"]
     assert again["bronze_file"] == manifest["bronze_file"]  # Identical bytes are stored once.
-    assert len(list(bronze.glob("*.lua"))) == 1 and len(list(bronze.glob("*.json"))) == 2
+    assert len(list(bronze.glob("*.lua.gz"))) == 1 and len(list(bronze.glob("*.json"))) == 2
+    assert again["already_imported"] == 2 and "/bscan clear" in clear_reminder(again)
     with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
         assert db.execute("SELECT count(*) FROM scan_listings").fetchone()[0] == 6
         assert db.execute("SELECT count(*) FROM market_snapshots").fetchone()[0] == 4
+
+
+def test_an_uncompressed_copy_from_before_compression_is_still_reused(tmp_path):
+    config = addon_source(tmp_path / "data")
+    bronze = tmp_path / "data/bronze/my-scans"
+    bronze.mkdir(parents=True)
+    (bronze / "old.lua").write_bytes(FIXTURE.read_bytes())
+    (bronze / "old.json").write_text(json.dumps({"bronze_file": "old.lua", "sha256": hashlib.sha256(
+        FIXTURE.read_bytes()).hexdigest(), "status": "complete"}), encoding="utf-8")
+    assert import_scans(config, now=NOW)["bronze_file"] == "old.lua"
+    assert not list(bronze.glob("*.gz"))
 
 
 def test_a_file_without_a_complete_scan_leaves_prices_unchanged(tmp_path):
@@ -349,3 +366,71 @@ def test_local_overrides_keep_personal_settings_out_of_the_tracked_config(tmp_pa
     local.write_text('[sources.mine]\nsource_id = "other"\n')
     with pytest.raises(ValueError, match="cannot change"):
         read_sources(tracked, local)
+
+
+def packed(record):
+    """The same scan as addon 0.2.0 writes it (schema 2): packed listings and the scan's distinct names."""
+    names, packed_listings = [], []
+    for item in record["listings"]:
+        index = 0
+        if item.get("name"):
+            if item["name"] not in names:
+                names.append(item["name"])
+            index = names.index(item["name"]) + 1
+        flags = 1 if item.get("complete_info") else 0
+        packed_listings.append(":".join(str(value) for value in (
+            item["item_id"], item["quantity"], item.get("buyout") or 0, item.get("min_bid") or 0,
+            item.get("bid") or 0, flags, index)))
+    return {**record, "schema_version": 2, "listing_format": scans.PACKED_FORMAT, "names": names,
+            "listings": packed_listings}
+
+
+SUFFIXED = [listing(15210, 1, 50000, "Raider Shortsword of the Monkey"),
+            listing(15210, 1, 41000, "Raider Shortsword of the Eagle"),
+            listing(2589, 20, 700, "Linen Cloth", bid=500), listing(2589, 3, 0, ""),
+            {"item_id": 14047, "name": "", "quantity": 2, "min_bid": 9, "complete_info": False}]
+
+
+def test_packed_listings_import_exactly_like_keyed_ones():
+    keyed = scan("v1", FINISHED, SUFFIXED)
+    compact = packed(keyed)
+    frame = scans.listing_frame(compact)
+    assert frame.equals(scans.listing_frame(keyed))
+    assert frame["item_name"].to_list()[:2] == ["Raider Shortsword of the Monkey", "Raider Shortsword of the Eagle"]
+    assert frame["buyout"].to_list()[3:] == [None, None] and frame["bid"].to_list()[2:4] == [500, None]
+    assert scans.item_prices(frame).equals(scans.item_prices(scans.listing_frame(keyed)))
+    assert scans.summarize(compact)["partial"] is False
+
+
+@pytest.mark.parametrize("change, match", [
+    ({"listing_format": "item_id:quantity:buyout"}, "listing_format"),
+    ({"listings": ["2589:20:700:0:0:1"]}, "7 fields"),
+    ({"listings": ["2589:20:7.5:0:0:1:0"]}, "integer copper"),
+    ({"listings": ["2589:20:700:0:0:1:9"]}, "name_index"),
+    ({"listings": ["2589:20:700:0:0:3:0"]}, "commodity"),
+    ({"listings": ["2589:20:700:0:0:8:0"]}, "flags"),
+    ({"listings": [{"item_id": 1}]}, "packed string"),
+])
+def test_malformed_packed_listings_are_rejected(change, match):
+    record = {**packed(scan("v2", FINISHED, [listing(2589, 20, 700, "Linen Cloth")])), **change}
+    record["listing_count"] = len(record["listings"])
+    with pytest.raises(ValueError, match=match):
+        scans.listing_frame(record)
+
+
+def test_parser_skips_index_comments_classic_clients_write():
+    assert scans.parse_lua('A = {\n"x", -- [1]\n{\n2, -- [1]\n}, -- [2]\n}\n') == {"A": ["x", [2]]}
+
+
+def test_a_packed_scan_file_imports_and_prices(tmp_path):
+    path = write_scans(tmp_path / "scan.lua", packed(scan("compact", FINISHED, SUFFIXED)))
+    path.write_text(path.read_text(encoding="utf-8").replace('["schema_version"] = 1,\n\t["scans"]',
+                                                              '["schema_version"] = 2,\n\t["scans"]', 1),
+                    encoding="utf-8")
+    manifest = import_scans(addon_source(tmp_path / "data", path), now=NOW)
+    assert manifest["status"] == "complete" and manifest["rows"] == 3
+    with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
+        assert db.execute("SELECT min_buyout, market_value FROM market_snapshots WHERE item_id = 2589"
+                          ).fetchone() == (35, 35)
+        assert db.execute("SELECT count(*) FROM scan_listings WHERE item_name LIKE 'Raider Shortsword of%'"
+                          ).fetchone()[0] == 2

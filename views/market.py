@@ -56,20 +56,14 @@ def render_opportunities(config):
     if manifest is None:
         return
     _header(config, manifest, count)
-    # Search before limiting so lower-ranked matches remain discoverable.
-    settings = {**config, "min_discount": discount / 100, "top_n": manifest["rows"] if search else limit}
+    settings = {**config, "min_discount": discount / 100, "top_n": limit}
     try:
         with read_db(config) as db:
-            results = rank(db, sid, settings)
+            results = rank(db, sid, settings, search)
             eligible = screenable_count(db, sid)
     except Exception as error:
         st.error(f"Unable to read saved opportunities: {error}")
         return
-    if search:
-        results = results.filter(
-            pl.col("item_name").str.to_lowercase().str.contains(search.lower(), literal=True)
-            | pl.col("item_id").cast(pl.String).str.contains(search, literal=True)
-        ).head(limit)
     st.caption("Ranked by discount against the lowest of market, recent and historical values.")
     if not eligible:
         st.info("This source has no items with market, recent and historical prices all available "

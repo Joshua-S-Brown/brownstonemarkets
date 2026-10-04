@@ -123,3 +123,10 @@ def test_import_of_a_file_without_a_complete_scan_says_prices_are_unchanged(tmp_
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     assert any("No complete scan in the file, so prices are unchanged" in w.value for w in at.warning)
+
+
+def test_no_enabled_source_explains_how_to_enable_one(monkeypatch):
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [])
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert not at.exception
+    assert any("No enabled data source" in e.value for e in at.error)

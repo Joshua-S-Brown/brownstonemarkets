@@ -4,7 +4,7 @@ import tomllib
 from pathlib import Path
 
 from .config import ADDON_PROVIDER, LOCAL_OVERRIDES, Source, read_sources
-from .pipeline import import_scans, run
+from .pipeline import clear_reminder, import_scans, run
 from .recipe_import import archive_page, build_catalog, catalog_changes, dumps_catalog, extract_page, load_selection
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,7 +79,10 @@ def _select_source(args: argparse.Namespace) -> Source:
     """The source named by --source (which must be enabled), else the first enabled source."""
     sources = read_sources(args.config, args.config.with_name(LOCAL_OVERRIDES))
     if not args.source:
-        return next(source for source in sources if source["enabled"])
+        enabled = [source for source in sources if source["enabled"]]
+        if not enabled:
+            raise ValueError(f"No enabled source; set enabled = true for one in {args.config} or {LOCAL_OVERRIDES}")
+        return enabled[0]
     matches = [source for source in sources if source["source_id"] == args.source]
     if not matches:
         raise ValueError(f"Unknown source: {args.source}")
@@ -97,3 +100,5 @@ def _report_scans(config: Source, manifest: dict) -> None:
               f"(finished {manifest['updated_at']}) are now current for {config['market_id']}")
     else:
         print("No complete scan in this file; prices are unchanged")
+    if reminder := clear_reminder(manifest):
+        print(reminder)

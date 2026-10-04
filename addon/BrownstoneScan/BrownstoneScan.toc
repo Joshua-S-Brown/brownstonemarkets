@@ -2,7 +2,7 @@
 ## Title: Brownstone Scan
 ## Notes: Read-only auction house scan saved to SavedVariables for Brownstone Markets (SPIKE-008 prototype).
 ## Author: Brownstone Markets
-## Version: 0.1.0
+## Version: 0.2.0
 ## SavedVariables: BrownstoneScanDB
 ## DefaultState: enabled
 

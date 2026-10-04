@@ -53,6 +53,9 @@ def build_source(shared: dict, entry: dict) -> Source:
     """Merge one [[sources]] entry over the shared settings, validate it and derive market_id."""
     if "market_id" in entry:
         raise ValueError(f"{entry.get('source_id', '?')}: market_id is derived from the market fields; remove it")
+    if "data_dir" in entry:
+        # Every source shares one folder and one database; the app upgrades and reads that one.
+        raise ValueError(f"{entry.get('source_id', '?')}: data_dir is shared; set it once at the top of market.toml")
     # Precedence: blank market fields < shared settings < neutral-house cut < the entry itself.
     source: dict[str, Any] = {"realm": "", "server_type": "", "faction": "", "enabled": True, **shared}
     if {**source, **entry}.get("faction") == "neutral" and "auction_cut" not in entry:

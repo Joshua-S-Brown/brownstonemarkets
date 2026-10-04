@@ -91,6 +91,21 @@ def test_round_trip_and_ranking(tmp_path):
     assert len(list((tmp_path / "data/silver/test").glob("*.parquet"))) == 2
 
 
+def test_spread_is_whole_copper_and_search_keeps_the_overall_rank(tmp_path):
+    from brownstone.analysis import rank
+    source = tmp_path / "input.csv"
+    source.write_bytes(csv([(1, 8333, 4000, 9000, 9000, NOW.isoformat()),
+                            (2, 10000, 7000, 10000, 10000, NOW.isoformat())]))
+    config = make_source(tmp_path / "data")
+    result, _ = run(config, source)
+    # 8333 after a 5% cut is 7916.35c; revenue rounds down to 7916c, as in crafting (CRAFT-07).
+    assert result["net_spread_copper"].to_list() == [3916, 2500]
+    assert result["net_spread_copper"].dtype == pl.Int64
+    with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
+        found = rank(db, result["snapshot_id"][0], config, search="item 2")
+    assert found.select("rank", "item_id").rows() == [(2, 2)]
+
+
 def test_failed_source_preserved(tmp_path):
     source = tmp_path / "bad.csv"
     source.write_bytes(b"html instead of CSV")

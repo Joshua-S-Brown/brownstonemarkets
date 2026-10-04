@@ -9,7 +9,7 @@ import streamlit as st
 from brownstone.action_board import compatible
 from brownstone.config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
 from brownstone.crafting import load_recipe_catalog
-from brownstone.pipeline import import_scans, run
+from brownstone.pipeline import clear_reminder, import_scans, run
 from brownstone.storage import upgrade_database
 from views import crafting, market
 
@@ -24,6 +24,10 @@ try:
     catalogs = [load_recipe_catalog(path) for path in sorted((ROOT / "config").glob("*-tailoring.toml"))]
 except Exception as error:
     st.error(f"Could not read configuration: {error}")
+    st.stop()
+if not sources:
+    st.error("No enabled data source. Set enabled = true for a source in config/market.toml or "
+             "config/market.local.toml, then reload.")
     st.stop()
 
 # Views open the database read-only, so bring an older database up to date first.
@@ -59,6 +63,8 @@ if refresh and addon:
                 st.success(f"Imported. Prices now come from scan {manifest['scan_id']}. {outcomes}.")
             else:
                 st.warning(f"No complete scan in the file, so prices are unchanged. {outcomes}.")
+            if reminder := clear_reminder(manifest):
+                st.info(reminder)
         except Exception as error:
             st.error(f"Import failed: {error}. Your previous successful snapshot remains available.")
 elif refresh:

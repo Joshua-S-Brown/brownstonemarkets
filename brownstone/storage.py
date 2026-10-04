@@ -206,15 +206,16 @@ def latest_snapshot(config: Source) -> tuple[dict | None, str | None, int]:
 
 
 def price_observations(db, config: Mapping[str, Any], snapshot_id: str, item_ids) -> dict[int, dict]:
-    """Read unit copper prices with the entire market identity, never item ID alone."""
+    """Read unit copper prices with the source and entire market identity, never item ID alone."""
     if not item_ids:
         return {}
-    predicates = " AND ".join(f"{key}=?" for key in MARKET_KEYS)
+    keys = ("source_id", *MARKET_KEYS)
+    predicates = " AND ".join(f"{key}=?" for key in keys)
     placeholders = ", ".join("?" for _ in item_ids)
     rows = db.execute(
         f"SELECT item_id, min_buyout, market_value FROM market_snapshots WHERE snapshot_id=? "
         f"AND {predicates} AND item_id IN ({placeholders})",
-        [snapshot_id, *[config[key] for key in MARKET_KEYS], *item_ids],
+        [snapshot_id, *[config[key] for key in keys], *item_ids],
     ).fetchall()
     return {item_id: {"min_buyout": listed, "market_value": market}
             for item_id, listed, market in rows}

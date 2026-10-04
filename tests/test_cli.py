@@ -84,12 +84,13 @@ def test_tsm_collection_uses_the_first_enabled_source_by_default(tmp_path, monke
     assert list((tmp_path / "data/bronze/on").glob("*.csv")) and not (tmp_path / "data/bronze/off").exists()
 
 
-@pytest.mark.parametrize("args, message", [
-    (["--source", "missing"], "Unknown source: missing"),
-    (["--source", "on", "--scan", "x"], "--scan applies only to addon sources"),
+@pytest.mark.parametrize("enabled, args, message", [
+    ("true", ["--source", "missing"], "Unknown source: missing"),
+    ("true", ["--source", "on", "--scan", "x"], "--scan applies only to addon sources"),
+    ("false", [], "No enabled source"),
 ])
-def test_cli_rejects_unknown_sources_and_misplaced_scan_flags(tmp_path, monkeypatch, capsys, args, message):
-    config = tsm_config(tmp_path, ("on", "true"))
+def test_cli_rejects_unknown_sources_and_misplaced_scan_flags(tmp_path, monkeypatch, capsys, enabled, args, message):
+    config = tsm_config(tmp_path, ("on", enabled))
     with pytest.raises(SystemExit):
         run_cli(monkeypatch, "--config", config, *args)
     assert message in capsys.readouterr().err

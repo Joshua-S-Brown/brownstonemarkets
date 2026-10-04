@@ -21,6 +21,8 @@ Nothing active. Brownstone can now run on our own addon scans alone (STORY-010).
 
 Recently completed: STORY-004, recipe import from saved Wowhead pages, 2026-10-04; STORY-010, addon scan import, 2026-10-04; SPIKE-008, addon scan prototype, 2026-10-04 (see `status.md`).
 
+**First, once:** install addon 0.2.0 (copy `addon/BrownstoneScan` over the old folder), take one scan, `/reload`, import it and check it succeeds; see `status.md` → *Limitations*. Then `/bscan clear` and `/reload` after each successful import.
+
 **Time-sensitive, before the beta closes:** take several more scans, at least 15 minutes apart and ideally a few hours apart, and import each copy of the file. Bronze keeps them after the beta ends. Repeated scans are the only data for *Demand from your own scans*, and a Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit at the auction house, not automation.
 
 **Also on the beta, once:** confirm the Forever catalog's unconfirmed values (`status.md` → *Limitations*). Craft one Bolt of Linen Cloth and count the bolts made. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result in the selection file (`config/recipe-selections/forever-tailoring.toml`) with the date, then regenerate. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
@@ -139,8 +141,6 @@ These are grouped by what unblocks them.
 **Addon follow-ups** (any time, none urgent):
 - Scan the Roleplaying house once the beta offers it, and a neutral house when reachable, to confirm house identification and the 15% cut market.
 - Check whether `/bscan start` works without the button click.
-- Reduce file size (shorter field names or keeping fewer scans). The addon keeps every scan until `/bscan clear`, and each import parses the whole file (about 0.9 s and 220 MB of memory per 24 MB scan) and, when its bytes are new, keeps a full bronze copy. Ten scans left in the file mean about 9 s per import and roughly 1.3 GB of bronze across the ten imports. `/bscan clear` after a successful import avoids this today.
-- Find out why the 2026-10-04 scan has no `unit_buyout` on any of its 28,105 stacked listings, although every one divides exactly. The importer doesn't depend on it (it divides `buyout` by `quantity` itself), but the addon's documented behaviour and the file disagree.
 - Item names: 4,690 listings arrived before the client loaded the item, and some items (Runecloth, 14047) appear only that way, so Browse shows `Item <ID>`. Crafting uses catalog names, so it's unaffected.
 
 **Recipe coverage** (unblocked by STORY-004):

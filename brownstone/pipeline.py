@@ -1,4 +1,5 @@
 """Orchestrate one source; reusable operations live in focused modules."""
+import gzip
 import hashlib
 import io
 import json
@@ -97,7 +98,11 @@ def run(config: Source, input_path: Path | None = None) -> tuple[pl.DataFrame, P
 
 
 def _bronze_copy(folder: Path, sid: str, raw: bytes, sha256: str) -> str:
-    """Store the file's exact bytes once per source; a repeat import of identical bytes reuses that file."""
+    """Store the file's bytes once per source, gzip-compressed; a repeat import of identical bytes reuses that file.
+
+    Compression is lossless: the copy is checked to decompress to bytes with the original SHA-256 before it is kept
+    (DATA-01). Files stored before compression stay as plain ``.lua``.
+    """
     for path in sorted(folder.glob("*.json")):
         try:
             earlier = json.loads(path.read_text(encoding="utf-8"))
@@ -106,9 +111,12 @@ def _bronze_copy(folder: Path, sid: str, raw: bytes, sha256: str) -> str:
         name = earlier.get("bronze_file")
         if earlier.get("sha256") == sha256 and name and (folder / name).is_file():
             return name
-    name = f"{sid}.lua"
+    packed = gzip.compress(raw, compresslevel=6, mtime=0)
+    if hashlib.sha256(gzip.decompress(packed)).hexdigest() != sha256:
+        raise RuntimeError("The compressed copy of the scan file did not round-trip; nothing was stored")
+    name = f"{sid}.lua.gz"
     with (folder / name).open("xb") as file:
-        file.write(raw)
+        file.write(packed)
     return name
 
 
@@ -147,6 +155,8 @@ def import_scans(config: Source, input_path: Path | None = None, scan_ids: Itera
                 results.append(_import_scan(db, config, folders["silver"], sid, now, sha256, record, summary))
             db.commit()
         manifest["scans"] = results
+        # Scans the addon still holds from earlier imports; /bscan clear in game keeps the next file small.
+        manifest["already_imported"] = sum(result["outcome"] == "duplicate" for result in results)
         priced = [result for result in results if result["priced"]]
         if priced:
             latest = max(priced, key=lambda result: result["finished_at"])
@@ -162,6 +172,19 @@ def import_scans(config: Source, input_path: Path | None = None, scan_ids: Itera
     finally:
         (folders["bronze"] / f"{sid}.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
+
+
+def clear_reminder(manifest: dict) -> str | None:
+    """After an import, suggest clearing the addon's file when it still holds scans imported before.
+
+    The addon keeps every scan until /bscan clear, and each import reads the whole file, so old scans
+    only cost time and disk. Everything in the file is stored once an import succeeds.
+    """
+    count = manifest.get("already_imported", 0)
+    if not count:
+        return None
+    return (f"{count} scan(s) in this file were already imported before. Everything in it is now saved, so you can "
+            "type /bscan clear in game, then /reload, to keep the next file small.")
 
 
 def _select_scans(records: list[dict], scan_ids: Iterable[str] | None) -> list[dict]:

@@ -205,3 +205,12 @@ def test_interrupted_migration_reruns_cleanly(tmp_path):
             MIGRATIONS[version](db)
         assert db.execute("SELECT market_id, realm, faction FROM market_snapshots").fetchall() == [
             ("classic-us-mankrik-alliance", "mankrik", "alliance")]
+
+
+def test_data_dir_is_shared_never_per_source(tmp_path):
+    from brownstone.config import build_source
+    shared = dict(data_dir=tmp_path, max_age_hours=24, auction_cut=.05, min_discount=.2, top_n=20)
+    entry = dict(source_id="x", provider="tsm", source_url="https://example.com/items.csv", game_version="retail",
+                 region="us", scope="house", realm="area-52", data_dir="elsewhere")
+    with pytest.raises(ValueError, match="data_dir is shared"):
+        build_source(shared, entry)

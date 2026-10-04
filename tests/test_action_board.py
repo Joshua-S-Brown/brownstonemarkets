@@ -116,18 +116,23 @@ def test_multi_output_units_and_vendor_vs_market():
     assert result["choices"][1]["method"] == "buy"
 
 
-def test_price_read_enforces_full_market_identity():
+def test_price_read_enforces_source_and_full_market_identity():
+    source = {**MARKET, "source_id": "mine"}
     with duckdb.connect(":memory:") as db:
         db.execute("CREATE TABLE market_snapshots (snapshot_id VARCHAR, item_id INTEGER, min_buyout INTEGER, "
-                   "market_value INTEGER, market_id VARCHAR, game_version VARCHAR, region VARCHAR, "
+                   "market_value INTEGER, source_id VARCHAR, market_id VARCHAR, game_version VARCHAR, region VARCHAR, "
                    "scope VARCHAR, realm VARCHAR, server_type VARCHAR, faction VARCHAR)")
         identity = [MARKET[key] for key in MARKET_KEYS]
-        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 400, 450, ?, ?, ?, ?, ?, ?, ?)", identity)
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 400, 450, 'mine', ?, ?, ?, ?, ?, ?, ?)",
+                   identity)
         # Same snapshot and item, but the Horde house: must never leak into Alliance prices.
-        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 999, 999, ?, ?, ?, ?, ?, ?, 'horde')",
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 999, 999, 'mine', ?, ?, ?, ?, ?, ?, 'horde')",
                    identity[:-1])
-        assert price_observations(db, MARKET, "same", [4240]) == {4240: {"min_buyout": 400, "market_value": 450}}
-        assert price_observations(db, {**MARKET, "realm": "wrong"}, "same", [4240]) == {}
+        # Same snapshot, item and house, but another source: never mixed silently (DATA-08).
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 1, 1, 'theirs', ?, ?, ?, ?, ?, ?, ?)", identity)
+        assert price_observations(db, source, "same", [4240]) == {4240: {"min_buyout": 400, "market_value": 450}}
+        assert price_observations(db, {**source, "realm": "wrong"}, "same", [4240]) == {}
+        assert price_observations(db, {**source, "source_id": "other"}, "same", [4240]) == {}
 
 
 def test_future_snapshot_is_non_actionable_and_ties_are_stable():

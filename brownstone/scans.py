@@ -15,7 +15,12 @@ from typing import Any
 
 import polars as pl
 
-SCAN_SCHEMA_VERSION = 1
+# 1: one keyed table per listing (SPIKE-008). 2: one packed string per listing plus the scan's distinct names,
+# about a tenth of the size. Both import identically; the addon writes 2 from version 0.2.0.
+SCAN_SCHEMA_VERSIONS = (1, 2)
+PACKED_FIELDS = ("item_id", "quantity", "buyout", "min_bid", "bid", "flags", "name_index")
+PACKED_FORMAT = ":".join(PACKED_FIELDS)
+FLAG_COMPLETE_INFO, FLAG_COMMODITY = 1, 2
 # market_value is the price of the unit at this quantity-weighted percentile (nearest rank).
 MARKET_VALUE_PERCENTILE = 25
 # Configurable house evidence and where each value lives in a scan.
@@ -25,8 +30,9 @@ EVIDENCE_FIELDS = {
 }
 
 # The SavedVariables subset WoW writes: one top-level assignment per table, string or integer keys,
-# strings, numbers, booleans and nil. A keyed scalar (`["quantity"] = 20,`) is one token, which keeps
-# a 100,000-listing file fast to parse in pure Python.
+# strings, numbers, booleans and nil, and `-- [1]` index comments (Classic clients write them after array
+# entries). A keyed scalar (`["quantity"] = 20,`) is one token, which keeps a 100,000-listing file fast
+# to parse in pure Python.
 _SCALAR = r'"(?:[^"\\]|\\.)*"|true|false|nil|-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?'
 _TOKEN = re.compile(rf"""\s*(?:
     \[\s*(?:"(?P<skey>(?:[^"\\]|\\.)*)"|(?P<ikey>-?\d+))\s*\]\s*=\s*(?:(?P<keyed>{_SCALAR})|(?P<keyed_table>\{{))
@@ -34,7 +40,7 @@ _TOKEN = re.compile(rf"""\s*(?:
   | (?P<value>{_SCALAR})
   | (?P<table>\{{)
   | (?P<close>\}})
-)\s*[,;]?\s*""", re.X | re.S)
+)\s*[,;]?(?:\s*--[^\n]*)*\s*""", re.X | re.S)
 _ESCAPE = re.compile(r"\\(\d{1,3}|\n|.)", re.S)
 _ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "a": "\a", "b": "\b", "f": "\f", "v": "\v",
             "\\": "\\", '"': '"', "'": "'", "\n": "\n"}
@@ -136,7 +142,7 @@ def read_saved_variables(raw: bytes) -> list[dict]:
     database = parse_lua(text).get("BrownstoneScanDB")
     if not isinstance(database, dict):
         raise ValueError("No BrownstoneScanDB table in this file")
-    if database.get("schema_version") != SCAN_SCHEMA_VERSION:
+    if database.get("schema_version") not in SCAN_SCHEMA_VERSIONS:
         raise ValueError(f"Unsupported BrownstoneScanDB schema_version {database.get('schema_version')!r}")
     scans = _list(database.get("scans"), "scans")
     ids = [scan.get("scan_id") if isinstance(scan, dict) else None for scan in scans]
@@ -166,7 +172,7 @@ def summarize(scan: dict) -> dict:
     scan_id = scan.get("scan_id")
     if not isinstance(scan_id, str) or not scan_id:
         raise ValueError("Every scan needs a scan_id")
-    if scan.get("schema_version") != SCAN_SCHEMA_VERSION:
+    if scan.get("schema_version") not in SCAN_SCHEMA_VERSIONS:
         raise ValueError(f"Scan {scan_id}: unsupported schema_version {scan.get('schema_version')!r}")
     status = scan.get("status")
     if status not in ("completed", "stopped"):
@@ -236,13 +242,12 @@ def listing_frame(scan: dict) -> pl.DataFrame:
     """
     scan_id = scan["scan_id"]
     listings = _list(scan.get("listings"), f"Scan {scan_id} listings")
-    if any(not isinstance(listing, dict) for listing in listings):
-        raise ValueError(f"Scan {scan_id}: every listing must be a table")
     try:
-        frame = pl.DataFrame({key: [listing.get(key) for listing in listings] for key in LISTING_SCHEMA},
-                             schema=LISTING_SCHEMA, strict=True)
+        frame = _packed_listings(scan, listings) if scan.get("schema_version") == 2 else _keyed_listings(listings)
     except (TypeError, pl.exceptions.PolarsError) as error:
         raise ValueError(f"Scan {scan_id}: listing fields must be integer copper and counts: {error}") from error
+    except ValueError as error:
+        raise ValueError(f"Scan {scan_id}: {error}") from error
     bad = frame.filter(pl.col("item_id").is_null() | (pl.col("item_id") <= 0)
                        | pl.col("quantity").is_null() | (pl.col("quantity") <= 0)
                        | (pl.col("buyout") < 0) | (pl.col("min_bid") < 0) | (pl.col("bid") < 0))
@@ -266,6 +271,53 @@ def listing_frame(scan: dict) -> pl.DataFrame:
                          "buyout / quantity")
     return frame.select("listing_index", "item_id", "item_name", "quantity", "buyout", "unit_buyout",
                         "unit_buyout_ceil", "min_bid", "bid", "complete_info")
+
+
+def _keyed_listings(listings: list) -> pl.DataFrame:
+    """Schema 1: one table per listing with named fields."""
+    if any(not isinstance(listing, dict) for listing in listings):
+        raise ValueError("every listing must be a table")
+    return pl.DataFrame({key: [listing.get(key) for listing in listings] for key in LISTING_SCHEMA},
+                        schema=LISTING_SCHEMA, strict=True)
+
+
+def _packed_listings(scan: dict, listings: list) -> pl.DataFrame:
+    """Schema 2: one ``PACKED_FORMAT`` string per listing; ``name_index`` points into the scan's ``names``.
+
+    Names are kept per listing (one item ID can carry several random-suffix names); index 0 means the client
+    hadn't loaded the name. Zero buyout or bid means none, as in schema 1. A commodity flag means the client
+    priced per unit, which the stack pricing rules don't cover, so the scan is rejected rather than priced wrongly.
+    """
+    if scan.get("listing_format") != PACKED_FORMAT:
+        raise ValueError(f"listing_format {scan.get('listing_format')!r} is not {PACKED_FORMAT!r}")
+    if any(not isinstance(listing, str) for listing in listings):
+        raise ValueError("every listing must be a packed string")
+    names = _list(scan.get("names"), "names")
+    if not all(isinstance(name, str) for name in names):
+        raise ValueError("names must be a list of text")
+    parts = pl.Series("listing", listings, dtype=pl.String).str.split(":")
+    if listings and (parts.list.len() != len(PACKED_FIELDS)).any():
+        raise ValueError(f"every listing needs {len(PACKED_FIELDS)} fields: {PACKED_FORMAT}")
+    fields = pl.DataFrame({field: parts.list.get(i, null_on_oob=True).cast(pl.Int64, strict=True)
+                           for i, field in enumerate(PACKED_FIELDS)}, schema=dict.fromkeys(PACKED_FIELDS, pl.Int64))
+    flags = fields["flags"]
+    if (flags < 0).any() or (flags > FLAG_COMPLETE_INFO | FLAG_COMMODITY).any():
+        raise ValueError("unknown listing flags")
+    if ((flags & FLAG_COMMODITY) > 0).any():
+        raise ValueError("the client reported commodity (per-unit) listings; only stack prices are supported")
+    if ((fields["name_index"] < 0) | (fields["name_index"] > len(names))).any():
+        raise ValueError(f"a listing's name_index is outside the scan's {len(names)} names")
+    return fields.select(
+        "item_id",
+        pl.col("name_index").replace_strict(dict(enumerate(names, 1)), default=None, return_dtype=pl.String)
+        .alias("name"),
+        "quantity",
+        pl.when(pl.col("buyout") > 0).then(pl.col("buyout")).alias("buyout"),
+        pl.lit(None, pl.Int64).alias("unit_buyout"),
+        "min_bid",
+        pl.when(pl.col("bid") > 0).then(pl.col("bid")).alias("bid"),
+        ((pl.col("flags") & FLAG_COMPLETE_INFO) > 0).alias("complete_info"),
+    )
 
 
 def nonexact_stacks(listings: pl.DataFrame) -> int:

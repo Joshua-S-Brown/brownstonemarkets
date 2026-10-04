@@ -8,8 +8,12 @@
 -- logout. See addon/README.md for the format and the measurement checklist.
 
 local ADDON = "BrownstoneScan"
-local SCHEMA_VERSION = 1
-local ADDON_VERSION = "0.1.0"
+local SCHEMA_VERSION = 2
+local ADDON_VERSION = "0.2.0"
+-- Each listing is saved as one short string in this field order (schema 2), with names stored
+-- once per scan. Brownstone does all pricing; the addon only records what the client reports.
+local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index"
+local FLAG_COMPLETE_INFO, FLAG_COMMODITY = 1, 2
 
 local CHUNK = 2000            -- listings read per frame, to avoid freezing the client
 local START_TIMEOUT = 30      -- seconds to wait for the server to answer the request
@@ -118,19 +122,26 @@ end
 -- Reading one listing
 ---------------------------------------------------------------------------
 
+-- Commodity status per item ID for the scan in progress, so the client is asked once per item, not
+-- once per listing. Enum.ItemCommodityStatus: 0 unknown, 1 item, 2 commodity. The Forever beta reports none.
+local commodityCache = {}
+
+local function isCommodity(itemID)
+    if not C_AuctionHouse.GetItemCommodityStatus then return false end
+    local cached = commodityCache[itemID]
+    if cached == nil then
+        cached = safe(C_AuctionHouse.GetItemCommodityStatus, itemID) == 2
+        commodityCache[itemID] = cached
+    end
+    return cached
+end
+
 -- Fills one listing from the modern replicate list (index is 0-based).
 local function readModern(index)
     local name, _, count, _, _, _, _, minBid, _, buyout, bidAmount, _, _, _, _, _, itemID, hasAllInfo =
         C_AuctionHouse.GetReplicateItemInfo(index)
     if not itemID then return nil end
-    local link = C_AuctionHouse.GetReplicateItemLink and C_AuctionHouse.GetReplicateItemLink(index) or nil
-    local commodity
-    if C_AuctionHouse.GetItemCommodityStatus then
-        local status = safe(C_AuctionHouse.GetItemCommodityStatus, itemID)
-        -- Enum.ItemCommodityStatus: 0 unknown, 1 item, 2 commodity.
-        if status == 2 then commodity = true elseif status == 1 then commodity = false end
-    end
-    return name, link, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo
+    return name, itemID, count, minBid, buyout, bidAmount, isCommodity(itemID), hasAllInfo
 end
 
 -- Legacy list (index is 1-based).
@@ -138,38 +149,27 @@ local function readLegacy(index)
     local name, _, count, _, _, _, _, minBid, _, buyout, bidAmount, _, _, _, _, _, itemID, hasAllInfo =
         GetAuctionItemInfo("list", index)
     if not itemID then return nil end
-    local link = GetAuctionItemLink and GetAuctionItemLink("list", index) or nil
-    return name, link, itemID, count, minBid, buyout, bidAmount, false, hasAllInfo
+    return name, itemID, count, minBid, buyout, bidAmount, false, hasAllInfo
 end
 
--- Unit buyout in integer copper, or nil when it is not known.
--- Zero buyout means "no buyout", never free.
--- Measured on the Forever beta (2026-10-04): the client reports the buyout for
--- the whole stack, even through C_AuctionHouse, and gives no commodity status.
---   commodity == true : the client says the price is per unit; use it as is.
---   otherwise         : stack price; divide by quantity only when exact.
-local function unitBuyout(buyout, count, commodity)
-    if not buyout or buyout <= 0 then return nil end
-    if commodity then return buyout end
-    if not count or count <= 0 then return nil end
-    if buyout % count == 0 then return math.floor(buyout / count) end
-    return nil
+-- Index of a name in the scan's name list, adding it the first time; 0 when the client hasn't loaded it.
+local function nameIndex(s, name)
+    if not name or name == "" then return 0 end
+    local index = s.nameIndex[name]
+    if not index then
+        index = #s.names + 1
+        s.names[index] = name
+        s.nameIndex[name] = index
+    end
+    return index
 end
 
-local function addListing(s, name, link, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo)
-    local n = #s.listings + 1
-    s.listings[n] = {
-        item_id = itemID,
-        name = name,
-        link = link,
-        quantity = count,
-        buyout = (buyout and buyout > 0) and buyout or nil,
-        unit_buyout = unitBuyout(buyout, count, commodity),
-        min_bid = minBid,
-        bid = (bidAmount and bidAmount > 0) and bidAmount or nil,
-        commodity = commodity,
-        complete_info = hasAllInfo and true or false,
-    }
+-- One listing as "item_id:quantity:buyout:min_bid:bid:flags:name_index" (LISTING_FORMAT). Prices are
+-- integer copper as the client reports them (buyout is the whole stack); 0 means none, never free.
+local function addListing(s, name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo)
+    local flags = (hasAllInfo and FLAG_COMPLETE_INFO or 0) + (commodity and FLAG_COMMODITY or 0)
+    s.listings[#s.listings + 1] = ("%s:%s:%s:%s:%s:%s:%s"):format(itemID, count or 0, buyout or 0,
+        minBid or 0, bidAmount or 0, flags, nameIndex(s, name))
 end
 
 ---------------------------------------------------------------------------
@@ -185,7 +185,8 @@ local function finish(status, reason)
     s.finished_at_utc = utc(s.finished_at)
     s.duration_seconds = GetTime() - s.clock_start
     s.clock_start = nil
-    s.phase, s.waited, s.cursor, s.total, s.skipped = nil, nil, nil, nil, nil
+    s.phase, s.waited, s.cursor, s.total, s.skipped, s.nameIndex = nil, nil, nil, nil, nil, nil
+    commodityCache = {}
     s.status = status
     s.stop_reason = reason
     s.listing_count = #s.listings
@@ -207,14 +208,14 @@ local function readChunks()
     local read, limit = 0, CHUNK
     while s.cursor < s.total and read < limit do
         local index = s.cursor
-        local name, link, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo
+        local name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo
         if s.api == "modern" then
-            name, link, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo = readModern(index)
+            name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo = readModern(index)
         else
-            name, link, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo = readLegacy(index + 1)
+            name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo = readLegacy(index + 1)
         end
         if itemID then
-            addListing(s, name, link, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo)
+            addListing(s, name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo)
         else
             s.skipped = (s.skipped or 0) + 1
         end
@@ -236,6 +237,9 @@ local function beginReading()
     s.phase = "reading"
     s.cursor = 0
     s.listings = {}
+    s.names = {}
+    s.nameIndex = {}
+    commodityCache = {}
     if s.api == "modern" then
         s.total = C_AuctionHouse.GetNumReplicateItems() or 0
     else
@@ -291,6 +295,8 @@ local function startScan()
         realm = ctx.realm,
         faction = ctx.faction,
         house = ctx.house,
+        listing_format = LISTING_FORMAT,
+        names = {},
         listings = {},
         errors = {},
         phase = "waiting",

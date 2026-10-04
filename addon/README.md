@@ -7,6 +7,7 @@ A minimal, **read-only** auction house scanner. It answers one question: can an 
 - A scan starts only when you click **Brownstone Scan** on the auction house window, or type `/bscan start` while it is open.
 - It never bids, buys, posts or cancels, and never scans on a timer or unattended. Closing the window stops a running scan, keeping the listings read so far and marking the scan `stopped`.
 - It issues one request, `C_AuctionHouse.ReplicateItems()`, which is Blizzard's own full-snapshot call, then reads the result. If the client has only the older Classic API, it falls back to the `QueryAuctionItems` "get all" scan. Each scan records which one it used (`api`).
+- It only records what the client reports. Brownstone does all pricing (per-unit division, rounding, market value) after import, so the addon stays small and does as little as possible in game.
 - The server allows one full scan per 15 minutes per account. If nothing comes back within 30 seconds the attempt stops with a throttling message. Attempts that read zero listings are not saved; partial scans with some listings are, marked `stopped`.
 
 I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C_AuctionHouse.ReplicateItems) (Retail documentation; Forever's client isn't documented yet, which is why the scan records `api` and falls back). Not yet confirmed on Forever: whether `ReplicateItems` needs a hardware click, and whether commodity and house-faction calls exist. The scan records what it finds; see the checklist.
@@ -31,6 +32,10 @@ I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C
 
 Commands: `/bscan start | stop | status | label <text> | clear`.
 
+**Keep the file small:** the addon keeps every scan until you clear it, and each import reads the whole file. After Brownstone imports a scan, type `/bscan clear`, then `/reload`. Brownstone reminds you when a file still holds scans it imported before.
+
+**Updating the addon:** copy the new `BrownstoneScan` folder over the old one and `/reload`. Scans saved by an older version stay in their format and still import.
+
 ## Where the data goes
 
 After `/reload` or logout:
@@ -39,11 +44,11 @@ After `/reload` or logout:
 <Forever folder>/WTF/Account/<ACCOUNT NAME>/SavedVariables/BrownstoneScan.lua
 ```
 
-It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list. Each scan has:
+It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list. Addon 0.2.0 writes format 2; scans written by 0.1.0 keep format 1 and still import. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
-| `schema_version`, `scan_id` | Format version and a unique ID (UTC start time plus random suffix). |
+| `schema_version`, `scan_id` | Format version (1 or 2) and a unique ID (UTC start time plus random suffix). |
 | `started_at`, `finished_at` (+ `_utc`) | Unix seconds and ISO UTC text. `duration_seconds` is the elapsed game time. |
 | `status`, `stop_reason` | `completed`, or `stopped` with a reason (window closed, timeout, user stop, error). A stopped scan is partial. |
 | `listing_count`, `reported_count` | Listings saved vs the count the server reported. Equal means complete. |
@@ -54,11 +59,14 @@ It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list
 | `house` | Auctioneer NPC name and GUID, zone and subzone. Use these to tell houses apart when `neutral` is undetermined. |
 | `label` | Your `/bscan label` text. It is a note, not a market ID. |
 | `errors` | Messages about anything that went wrong. |
+| `listing_format`, `names` | Format 2 only: the field order of each listing, and the scan's distinct item names. |
 | `listings` | One entry per auction, below. |
 
-Listing fields: `item_id`, `name` (empty until the client has loaded the item), `link` (missing until loaded), `quantity`, `buyout` (copper, as the client reported it), `unit_buyout` (copper per unit, or missing), `min_bid`, `bid` (only when someone has bid), `commodity` (only when the client says; absent on the beta) and `complete_info` (false when the client hadn't yet loaded the item's details).
+**Format 2 listings** are one string each, `item_id:quantity:buyout:min_bid:bid:flags:name_index`, for example `"2589:20:700:0:0:1:3"`. Prices are integer copper as the client reported them, and `0` means none (no buyout or no bid). `flags` adds 1 when the client had loaded the item's details (`complete_info`) and 2 when it reports a commodity (Brownstone rejects those scans, since only stack prices are modeled). `name_index` points into the scan's `names` list (1 is the first name), or is `0` when the client hadn't loaded the name. Names are kept per listing because one item ID can carry several random-suffix names ("of the Monkey", "of the Eagle"). About 28 bytes per listing.
 
-Prices are integer copper. A missing `buyout` means the listing has no buyout; it is never zero or free. On the Forever beta (first scan, 2026-10-04) `buyout` is the price of the **whole stack**, not per unit, and `commodity` is never reported. `unit_buyout` is meant to be `buyout / quantity` when that divides exactly, otherwise missing. In the 2026-10-04 scan it is missing on every stacked listing, although all of them divide exactly (an open follow-up). Brownstone divides `buyout` by `quantity` itself, rounding up when inexact, and only cross-checks `unit_buyout`. A listing the client hasn't fully loaded has an empty `name`, no `link` and `complete_info = false`; its item ID, quantity and buyout are still valid.
+**Format 1 listings** (addon 0.1.0) are tables with `item_id`, `name` (empty until the client has loaded the item), `link` (missing until loaded), `quantity`, `buyout`, `unit_buyout` (copper per unit, or missing), `min_bid`, `bid` (only when someone has bid), `commodity` (only when the client says) and `complete_info`. About 240 bytes per listing.
+
+Prices are integer copper. A missing `buyout` means the listing has no buyout; it is never zero or free. On the Forever beta (first scan, 2026-10-04) `buyout` is the price of the **whole stack**, not per unit, and `commodity` is never reported. Brownstone divides `buyout` by `quantity` itself, rounding up when inexact; format 1's `unit_buyout` is only a cross-check, and format 2 doesn't write it. A listing the client hasn't fully loaded has no name and `complete_info` false; its item ID, quantity and buyout are still valid.
 
 A hand-written example is in `tests/fixtures/brownstone_scan_sample.lua`.
 

@@ -61,13 +61,19 @@ enabled = true
 scan_path = "/Applications/World of Warcraft/_classic_beta_/WTF/Account/<ACCOUNT>/SavedVariables/BrownstoneScan.lua"
 ```
 
+On Windows the file is under the game folder, for example (single quotes keep the backslashes literal in TOML):
+
+```toml
+scan_path = 'C:\Program Files (x86)\World of Warcraft\_classic_beta_\WTF\Account\<ACCOUNT>\SavedVariables\BrownstoneScan.lua'
+```
+
 After each scan and `/reload`, click **Import addon scan** or run:
 
 ```bash
 .venv/bin/python -m brownstone --source forever-us-normal-alliance-addon
 ```
 
-`--input <file>` imports a different file, and `--scan <scan_id>` imports one scan from it.
+`--input <file>` imports a different file, and `--scan <scan_id>` imports one scan from it. Once a scan is imported, type `/bscan clear` and `/reload` in game so the file only holds new scans; Brownstone reminds you when it finds old ones.
 
 ## Markets and catalogs
 
@@ -78,11 +84,11 @@ After each scan and `/reload`, click **Import addon scan** or run:
 ## Data on disk
 
 ```text
-data/bronze/<source>/   exact downloaded or imported bytes + manifest JSON (hash, source, times, status)
+data/bronze/<source>/   exact downloaded or imported bytes (addon scan files gzip-compressed) + manifest JSON (hash, source, times, status)
 data/silver/<source>/   validated Parquet per collection (addon: per scan, listings and prices)
 data/gold/<source>/     discount-screen output per collection
 data/brownstone.duckdb  market_snapshots, addon_scans and scan_listings tables (schema upgrades keep a brownstone.v<N>.backup.duckdb copy)
 data/inbox/addon-scans/ addon SavedVariables files copied out of the game, waiting to be imported
 ```
 
-Data is excluded from Git, so back up `data/` separately. Run one writer at a time. Validation and freshness rules are in [requirements](docs/requirements.md).
+Data is excluded from Git, so back up `data/` separately. Each computer (Mac or Windows) keeps its own `data/`; to carry on from another one, copy the whole folder across while Brownstone is closed on both. Run one writer at a time. Validation and freshness rules are in [requirements](docs/requirements.md).

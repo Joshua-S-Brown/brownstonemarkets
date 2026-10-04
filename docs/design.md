@@ -10,7 +10,7 @@ TSM CSV ──download──▶ bronze (exact bytes + manifest JSON)
         ──load──────▶ DuckDB market_snapshots (deduplicated analytical snapshots)
         ──rank──────▶ gold (discount-screen CSV/Parquet per collection)
 
-SavedVariables .lua ──copy──▶ bronze (exact bytes, stored once per SHA-256, + manifest JSON)
+SavedVariables .lua ──copy──▶ bronze (gzip of the exact bytes, stored once per SHA-256, + manifest JSON)
         ──parse/check─▶ scans (Lua subset parser, house evidence, stack unit prices)
         ──silver──────▶ per scan: _scan, _listings and, if complete, _prices Parquet
         ──load────────▶ DuckDB addon_scans + scan_listings + market_snapshots (complete scans only)
@@ -60,7 +60,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 | Collection | `snapshot_id` (UTC time + random suffix) | Bronze CSV + manifest with source and market identity; manifest records `analytical_snapshot_id` |
 | Analytical snapshot | source + upstream scan time + SHA-256 | Repeated identical content from the same source reuses the earlier ID |
 | Price observation | analytical snapshot + source + market identity + item ID | Integer copper: `min_buyout, market_value, recent_value, historical_value` |
-| Addon scan | `source_id, scan_id` → `snapshot_id = <source_id>:<scan_id>` | `addon_scans`: status, `partial`, `priced`, times, counts, `nonexact_stacks`, client, house evidence, scan and file SHA-256. Its import manifest lists every scan with an outcome (`imported`, `duplicate`, `partial (not priced)`, `empty`); `scan_id`, `updated_at` and `analytical_snapshot_id` name the newest complete scan, and status is `no_complete_scan` when there is none |
+| Addon scan | `source_id, scan_id` → `snapshot_id = <source_id>:<scan_id>` | `addon_scans`: status, `partial`, `priced`, times, counts, `nonexact_stacks`, client, house evidence, scan and file SHA-256. Its import manifest lists every scan with an outcome (`imported`, `duplicate`, `partial (not priced)`, `empty`) and counts `already_imported`; `scan_id`, `updated_at` and `analytical_snapshot_id` name the newest complete scan, and status is `no_complete_scan` when there is none |
 | Listing | `source_id, scan_id, listing_index` + market identity | `scan_listings`: `item_id, item_name, quantity, buyout` (whole stack), `unit_buyout` (exact only), `unit_buyout_ceil`, `min_bid, bid, complete_info` |
 | Catalog | `game_version, rules_version, catalog_version` | TOML generated from a selection file and one saved page (CRAFT-08). Header: `source_url`, `source_sha256`, `verified_at`. Items: role, Wowhead URL, optional `vendor_price_copper` with `vendor_price_source_url`, `vendor_verified`, `availability`. Recipes: inputs, `output_quantity`, `required_skill`, Wowhead spell URL, `verification_url`, `evidence_sha256`, optional `output_quantity_verified`, `availability` |
 | Recipe selection | file name = catalog name | `config/recipe-selections/<catalog>.toml`: catalog header fields, finished `[[recipes]]` (with optional overrides), `[recipe_defaults]`, `[[items]]` vendor evidence and notes |
@@ -121,5 +121,6 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.
-- Re-importing an addon file parses it in full (about 0.9 s per 24 MB scan) before deduplication can skip its scans. The addon keeps every scan until `/bscan clear`, so this grows with each scan left in the file, and bronze keeps a full copy of each distinct file.
+- Re-importing an addon file parses it in full before deduplication can skip its scans: about 0.1 s per schema-2 scan, 0.9 s per schema-1 scan. Scans left in the file add up until `/bscan clear`, and bronze keeps a compressed copy of each distinct file (about 0.5 MB per schema-2 scan).
+- Each imported scan adds about 4.7 MB to DuckDB (`scan_listings`, 101,485 rows) and 1 MB of silver. That is now the largest per-scan cost; keeping listings only in silver Parquet and querying them from there would remove it if disk becomes a problem.
 - Addon silver, DuckDB and the manifest are not one atomic write, like TSM collections.
