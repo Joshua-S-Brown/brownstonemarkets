@@ -69,7 +69,7 @@ def test_round_trip_and_ranking(tmp_path):
     result2, gold2 = run(config, source)
     assert gold2 != gold  # Repeated pulls preserve distinct collection observations.
     with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
-        assert db.execute("SELECT count(*) FROM market_snapshots").fetchone()[0] == 8
+        assert db.execute("SELECT count(*) FROM market_snapshots").fetchone()[0] == 4
     assert len(list((tmp_path / "data/silver/test").glob("*.parquet"))) == 2
 
 

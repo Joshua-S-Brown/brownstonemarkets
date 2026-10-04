@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "brownstone-markets"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local TSM market snapshots and opportunity screening"
 requires-python = ">=3.11"
 dependencies = ["duckdb>=1.2,<2", "polars>=1.20,<2", "pyarrow>=19,<26", "requests>=2.32,<3", "tzdata>=2025.1"]

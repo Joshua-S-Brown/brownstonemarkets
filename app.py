@@ -1,5 +1,4 @@
 """Local market review; ingestion only runs when the user clicks Refresh."""
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -7,7 +6,10 @@ import duckdb
 import polars as pl
 import streamlit as st
 
-from brownstone.pipeline import rank, read_config, run
+from brownstone.pipeline import run
+from brownstone.config import read_config
+from brownstone.analysis import rank, browse
+from brownstone.storage import completed_snapshots
 
 ROOT = Path(__file__).resolve().parent
 st.set_page_config(page_title="Brownstone Markets", page_icon="📊", layout="wide")
@@ -15,16 +17,20 @@ st.title("Brownstone Markets")
 st.caption("Your local WoW market research desk")
 
 try:
-    config = read_config(ROOT / "config/market.toml")
+    all_config = read_config(ROOT / "config/market.toml")
 except Exception as error:
     st.error(f"Could not read market configuration: {error}")
     st.stop()
 
 with st.sidebar:
     st.header("Market")
-    st.write(config["market_id"])
+    sources = all_config.get("sources", [all_config])
+    selected = st.selectbox("Data source", range(len(sources)), format_func=lambda index: sources[index].get("label", sources[index]["market_id"]))
+    config = sources[selected]
+    st.caption("Regional commodity prices" if config.get("scope") == "region" else "Realm-specific item prices")
     st.caption("Change your market in config/market.toml.")
     refresh = st.button("Refresh from TSM", type="primary", width="stretch")
+    view = st.radio("View", ["Opportunities", "Browse market"])
     st.divider()
     st.header("Screening filters")
     discount = st.slider("Minimum discount (%)", 0, 90, int(config["min_discount"] * 100), 5)
@@ -40,14 +46,7 @@ if refresh:
         except Exception as error:
             st.error(f"Refresh failed: {error}. Your previous successful snapshot remains available.")
 
-manifests = []
-for path in (config["data_dir"] / "bronze" / config["market_id"]).glob("*.json"):
-    try:
-        metadata = json.loads(path.read_text(encoding="utf-8"))
-        if metadata.get("status") == "complete":
-            manifests.append(metadata)
-    except (OSError, ValueError):
-        continue
+manifests = completed_snapshots(config)
 if not manifests:
     st.info("No completed snapshot yet. Click Refresh from TSM to collect your first market.")
     st.stop()
@@ -68,14 +67,33 @@ try:
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb"), read_only=True) as db:
         # Search before LIMIT so lower-ranked matches remain discoverable.
         settings["top_n"] = latest["rows"] if search else limit
-        results = rank(db, latest["snapshot_id"], settings)
-    if search:
+        sid = latest.get("analytical_snapshot_id", latest["snapshot_id"])
+        results = (browse(db, sid, search, limit) if view == "Browse market" else rank(db, sid, settings))
+    if search and view == "Opportunities":
         results = results.filter(
             pl.col("item_name").str.to_lowercase().str.contains(search.lower(), literal=True)
             | pl.col("item_id").cast(pl.String).str.contains(search, literal=True)
         ).head(limit)
 except Exception as error:
     st.error(f"Unable to read saved opportunities: {error}")
+    st.stop()
+
+if view == "Browse market":
+    st.subheader("Browse market")
+    st.caption("All observed items, independent of discount. Commodities include both materials and finished goods; categories are not assigned yet.")
+    display = results.select(
+        pl.col("item_name").alias("Item"), pl.col("item_id").alias("Item ID"),
+        (pl.col("min_buyout") / 10000).alias("Minimum buyout (g)"),
+        (pl.col("market_value") / 10000).alias("Market value (g)"),
+        (pl.col("recent_value") / 10000).alias("Recent (g)"),
+        (pl.col("historical_value") / 10000).alias("Historical (g)"),
+    )
+    st.caption("Zero means unavailable/no listing, not a free purchase.")
+    if display.is_empty():
+        st.info("No items match this search.")
+    else:
+        st.dataframe(display, hide_index=True, width="stretch", height=600)
+        st.download_button("Download this table", display.write_csv(), "brownstone-market.csv", "text/csv")
     st.stop()
 
 st.subheader("Price opportunities")

@@ -1,6 +1,10 @@
-# Brownstone Markets — v0.1
+# Brownstone Markets — market coverage milestone
 
 A small local proof: **TSM public CSV → untouched bronze snapshot → validated silver Parquet → DuckDB → ranked gold CSV/Parquet**.
+
+Current coverage: **Area 52 realm items** and **US regional commodities**. Select a source in the sidebar, then use **Browse market** for all observed items or **Opportunities** for discount screening. Refresh affects only the selected source. Categories are not yet assigned.
+
+Future sessions should start with `docs/requirements.md`, `docs/design.md` and `docs/status.md`. GitHub origin is https://github.com/Joshua-S-Brown/brownstonemarkets; the user handles commits/pushes in VS Code.
 
 ## Browser interface
 
@@ -9,6 +13,21 @@ The permanent project is now at `C:\Users\brown\Documents\Codex\Projects\brownst
 The browser shows the latest completed snapshot, scan age, sortable opportunities, a name/ID search, discount filters and CSV download. **Refresh from TSM** collects and archives a new snapshot. Opening the page or changing filters does not trigger ingestion. The local server must remain running; this is not yet automatic collection. The old copy remains in the original chat output folder because Windows reported that folder was in use. Continue work in this permanent copy.
 
 ## Setup
+
+### Clone and run on a Mac
+
+Install Python 3.11+ and Git, then run in Terminal:
+
+```bash
+git clone https://github.com/Joshua-S-Brown/brownstonemarkets.git
+cd brownstonemarkets
+python3 -m venv .venv
+.venv/bin/python -m pip install -e '.[dev,dashboard]'
+.venv/bin/python -m pytest -p no:cacheprovider
+.venv/bin/python launch.py
+```
+
+After setup, you can also double-click `Start Brownstone.command`. The launch script works on both Windows and macOS. Data and Python environments are deliberately excluded from Git: the Mac starts with no saved snapshots. Choose a market in the browser and click **Refresh from TSM** to collect data locally. Python 3.12 is the version tested for this project.
 
 Install Python 3.11+ and Git. In PowerShell, from this project folder:
 
@@ -29,7 +48,7 @@ Edit `config/market.toml`: set both `market_id` and `source_url`. The default is
 https://public-data.tradeskillmaster.com/{gameType}/{regionSlug}/realm/{realmSlug}/items.csv
 ```
 
-Find supported game/region/realm slugs on [TSM Public Pricing Data](https://tradeskillmaster.com/public-data). CSV access requires no key. Retail commodities use a separate regional file; v0.1 processes one realm item file only. The first attempted Classic Whitemane URL returned HTTP 403 during setup; use a verified supported Classic realm URL when switching. No regional sale-rate dataset is joined yet.
+Find supported game/region/realm slugs on [TSM Public Pricing Data](https://tradeskillmaster.com/public-data). CSV access requires no key. Retail commodities use a separate regional file; both feeds are now supported with separate market identities. The first attempted Classic Whitemane URL returned HTTP 403 during setup; use a verified supported Classic realm URL when switching. No regional sale-rate dataset is joined yet.
 
 Run a saved TSM CSV without a download:
 
@@ -51,7 +70,7 @@ data/gold/          one ranked CSV and Parquet per snapshot
 data/brownstone.duckdb   persistent market_snapshots table
 ```
 
-Each run uses a unique UTC collection ID. Repeated pulls retain separate observations even if TSM hasn't changed its file; don't treat them as distinct upstream scans in later historical analysis. Raw bytes are saved before normalization, including failed validation, and never overwritten. Data and the virtual environment are excluded from Git. Back up `data/` separately.
+Each run uses a unique UTC collection ID. Repeated identical market/scan/hash observations reuse their earlier analytical snapshot ID; each raw collection is still preserved. Repeated pulls retain separate observations even if TSM hasn't changed its file; don't treat them as distinct upstream scans in later historical analysis. Raw bytes are saved before normalization, including failed validation, and never overwritten. Data and the virtual environment are excluded from Git. Back up `data/` separately.
 
 Required source columns: `itemId,name,marketValue,minBuyout,recent,historical,updatedAt`. Extra columns are accepted but the untouched source retains them. Silver uses `item_id,item_name,market_value,min_buyout,recent_value,historical_value,updated_at,market_id,snapshot_id,collected_at`. Prices remain integer **copper** (10,000 copper = 1 gold). `updated_at` is the upstream scan time; `collected_at` is our UTC retrieval time. Missing names receive an `Item <ID>` label and are counted in the manifest. Other required nulls, duplicate/nonpositive item IDs, negative/noninteger prices, malformed/mixed timestamps, empty files, stale scans and scans over 15 minutes in the future fail validation. Zero prices are preserved as unavailable/no listing and excluded from ranking. A failed manifest records the error; inspect it before retrying. Network failures before a response create no snapshot.
 
@@ -64,7 +83,7 @@ For rows with all four prices positive:
 - Net spread = `reference_price × (1 - auction_cut) - min_buyout`.
 - Keep discounts ≥20% with positive net spread; sort by discount, then spread, then item ID; output the top 20.
 
-The assumed auction cut defaults to 5% and is configurable for the target market. Gold output includes names, item IDs, upstream timestamp, copper values and readable gold amounts. These are screening candidates based on aggregate pricing: no listing quantity, liquidity, sale rate, deposit cost, actual purchase availability or realized profit is inferred. An empty ranking is a valid result. No crafting, addon, dashboard, scheduler or cloud deployment is included. Streamlit is only an optional future dependency.
+The assumed auction cut defaults to 5% and is configurable for the target market. Gold output includes names, item IDs, upstream timestamp, copper values and readable gold amounts. These are screening candidates based on aggregate pricing: no listing quantity, liquidity, sale rate, deposit cost, actual purchase availability or realized profit is inferred. An empty ranking is a valid result. No crafting, addon, scheduler or cloud deployment is included. Streamlit is the optional browser-interface dependency and is installed locally.
 
 ## Query DuckDB
 

@@ -62,4 +62,4 @@ Dependencies flow from interface to orchestration to domain functions and storag
 
 ## Open decisions
 
-GitHub owner and visibility; first profession/expansion to model; catalog/recipe data source and access; ongoing snapshot storage. Default proposal: private repository named brownstone-markets, Retail development data, and one profession before expanding recipe coverage.
+Repository confirmed: Joshua-S-Brown/brownstonemarkets; user handles commits and pushes. Retail development data approved. Still open: first profession/expansion, catalog/recipe source and access, ongoing snapshot storage. Implemented coverage status is in status.md; recipe acceptance belongs to the next milestone.
