@@ -1,0 +1,71 @@
+schema_version = 1
+game_version = "forever"
+ruleset = "forever-beta-1.60"
+profession = "tailoring"
+status = "beta-observed"
+notes = "Forever is still in beta. Revalidate recipe and vendor data after material game builds."
+
+[[items]]
+item_id = 14046
+name = "Runecloth Bag"
+role = "finished"
+source_url = "https://www.wowhead.com/forever/spell=18405/runecloth-bag"
+
+[[items]]
+item_id = 14048
+name = "Bolt of Runecloth"
+role = "intermediate"
+source_url = "https://foreverdb.net/item/14048"
+
+[[items]]
+item_id = 14047
+name = "Runecloth"
+role = "material"
+source_url = "https://warcraft.wiki.gg/wiki/Runecloth"
+
+[[items]]
+item_id = 8170
+name = "Rugged Leather"
+role = "material"
+source_url = "https://warcraft.wiki.gg/wiki/Rugged_Leather"
+
+[[items]]
+item_id = 14341
+name = "Rune Thread"
+role = "vendor_material"
+vendor_price_copper = 5000
+source_url = "https://warcraft.wiki.gg/wiki/Rune_Thread"
+
+[[recipes]]
+recipe_id = 18401
+name = "Bolt of Runecloth"
+profession = "tailoring"
+required_skill = 250
+output_item_id = 14048
+output_quantity = 1
+source_url = "https://www.wowhead.com/forever/spell=18401/bolt-of-runecloth"
+
+[[recipes.inputs]]
+item_id = 14047
+quantity = 4
+
+[[recipes]]
+recipe_id = 18405
+name = "Runecloth Bag"
+profession = "tailoring"
+required_skill = 260
+output_item_id = 14046
+output_quantity = 1
+source_url = "https://www.wowhead.com/forever/spell=18405/runecloth-bag"
+
+[[recipes.inputs]]
+item_id = 14048
+quantity = 5
+
+[[recipes.inputs]]
+item_id = 8170
+quantity = 2
+
+[[recipes.inputs]]
+item_id = 14341
+quantity = 1

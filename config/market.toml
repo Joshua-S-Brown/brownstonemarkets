@@ -6,6 +6,16 @@ min_discount = 0.20
 top_n = 20
 
 [[sources]]
+label = "Mankrik Alliance — Classic Era"
+market_id = "classic-us-mankrik-alliance"
+game_version = "classic"
+region = "us"
+scope = "realm"
+realm = "mankrik-alliance"
+source_url = "https://public-data.tradeskillmaster.com/classic/us/realm/mankrik-alliance/items.csv"
+allow_missing_updated_at = true
+
+[[sources]]
 label = "Area 52 realm items"
 market_id = "retail-us-area-52"
 game_version = "retail"

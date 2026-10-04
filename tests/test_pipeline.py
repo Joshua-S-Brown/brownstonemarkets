@@ -34,6 +34,21 @@ def test_missing_name_fallback():
     assert norm(raw)["item_name"][0] == "Item 1"
 
 
+def test_explicit_source_policy_allows_entirely_missing_upstream_time():
+    raw = csv([(1, 100, 50, 100, 100, "")])
+    frame = normalize(raw, "classic-test", "snapshot", NOW, 24, allow_missing_updated_at=True)
+    assert frame["updated_at"][0] is None
+
+
+def test_source_policy_rejects_partially_missing_upstream_time():
+    raw = csv([
+        (1, 100, 50, 100, 100, ""),
+        (2, 100, 50, 100, 100, NOW.isoformat()),
+    ])
+    with pytest.raises(ValueError, match="complete or entirely unavailable"):
+        normalize(raw, "classic-test", "snapshot", NOW, 24, allow_missing_updated_at=True)
+
+
 @pytest.mark.parametrize("raw,match", [
     (b"wrong,column\n1,2", "Missing"),
     (HEADER.encode(), "no rows"),

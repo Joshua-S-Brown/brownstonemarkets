@@ -33,7 +33,10 @@ def run(config: dict, input_path: Path | None = None) -> tuple[pl.DataFrame, Pat
     }
     metadata = bronze.with_suffix(".json")
     try:
-        frame = normalize(raw, config["market_id"], sid, now, config["max_age_hours"])
+        frame = normalize(
+            raw, config["market_id"], sid, now, config["max_age_hours"],
+            config.get("allow_missing_updated_at", False),
+        )
         frame = frame.with_columns(
             *[pl.lit(config.get(key), dtype=pl.String).alias(key)
               for key in ["game_version", "region", "scope", "realm"]],
@@ -49,10 +52,12 @@ def run(config: dict, input_path: Path | None = None) -> tuple[pl.DataFrame, Pat
         gold = folders["gold"] / f"{sid}_opportunities.csv"
         result.write_csv(gold)
         pq.write_table(result.to_arrow(), gold.with_suffix(".parquet"), compression="zstd")
+        upstream_time = frame["updated_at"][0]
         manifest.update(status="complete", rows=frame.height, opportunities=result.height,
                         analytical_snapshot_id=analytical_sid, new_observation=inserted,
                         **{key: config.get(key) for key in ["game_version", "region", "scope", "realm"]},
-                        updated_at=frame["updated_at"][0].isoformat(),
+                        updated_at=upstream_time.isoformat() if upstream_time else None,
+                        freshness_basis="upstream" if upstream_time else "collected_at",
                         zero_price_rows=frame.filter(pl.any_horizontal([pl.col(c) == 0 for c in PRICE_COLUMNS.values()])).height,
                         missing_name_rows=pl.read_csv(io.BytesIO(raw), infer_schema=False).filter(
                             pl.col("name").is_null() | (pl.col("name") == "")).height)

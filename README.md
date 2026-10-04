@@ -1,10 +1,12 @@
-# Brownstone Markets — market coverage milestone
+# Brownstone Markets — Classic crafting research
 
 A small local proof: **TSM public CSV → untouched bronze snapshot → validated silver Parquet → DuckDB → ranked gold CSV/Parquet**.
 
-Current coverage: **Area 52 realm items** and **US regional commodities**. Select a source in the sidebar, then use **Browse market** for all observed items or **Opportunities** for discount screening. Refresh affects only the selected source. Categories are not yet assigned.
+The active development market is **Mankrik Alliance — Classic Era**. Retail Area 52 and US regional commodity feeds remain supported regression sources, but near-term product work is focused on Classic crafting until reliable WoW Forever pricing exists. Select a source in the sidebar, then use **Browse market**, **Opportunities** or **Crafting**. Refresh affects only the selected source.
 
-Future sessions should start with `docs/requirements.md`, `docs/design.md` and `docs/status.md`. GitHub origin is https://github.com/Joshua-S-Brown/brownstonemarkets; the user handles commits/pushes in VS Code.
+The first crafting proof targets **Tailoring**, beginning with Runecloth Bag. Separate Classic Era and WoW Forever catalogs record their ruleset, item and recipe IDs, quantities and provenance. `brownstone/crafting.py` expands Bolt of Runecloth, compares valid buy-versus-craft paths, applies the Rune Thread vendor fallback and rejects missing prices or recipe cycles. Choose **Mankrik Alliance — Classic Era** and **Crafting** in the sidebar to inspect the recipe and, after collecting a snapshot, its live cost estimate. The interface refuses to join catalogs and markets from different game versions.
+
+Track active and planned work in `docs/backlog.md`. Use `docs/requirements.md` for accepted product behavior, `docs/design.md` for architecture and `docs/status.md` for implemented state and handoff. GitHub origin is https://github.com/Joshua-S-Brown/brownstonemarkets.
 
 ## Browser interface
 
@@ -42,13 +44,13 @@ On macOS/Linux use `python3 -m venv .venv`, then `.venv/bin/python` in place of 
 
 ## Pick a market
 
-Edit `config/market.toml`: set both `market_id` and `source_url`. The default is **US Retail Area 52 non-commodity items**, a verified development source, not a chosen playing realm. TSM's official URL pattern is:
+Edit `config/market.toml` to add or change a source. The default is **Mankrik Alliance — Classic Era**. TSM's official URL pattern is:
 
 ```text
 https://public-data.tradeskillmaster.com/{gameType}/{regionSlug}/realm/{realmSlug}/items.csv
 ```
 
-Find supported game/region/realm slugs on [TSM Public Pricing Data](https://tradeskillmaster.com/public-data). CSV access requires no key. Retail commodities use a separate regional file; both feeds are now supported with separate market identities. The first attempted Classic Whitemane URL returned HTTP 403 during setup; use a verified supported Classic realm URL when switching. No regional sale-rate dataset is joined yet.
+Find supported game/region/realm slugs on [TSM Public Pricing Data](https://tradeskillmaster.com/public-data). CSV access requires no key. Retail commodities use a separate regional file. Classic Era uses faction-specific realm feeds; Mankrik Alliance is configured as the Alliance development market. No regional sale-rate dataset is joined yet.
 
 Run a saved TSM CSV without a download:
 
@@ -72,7 +74,7 @@ data/brownstone.duckdb   persistent market_snapshots table
 
 Each run uses a unique UTC collection ID. Repeated identical market/scan/hash observations reuse their earlier analytical snapshot ID; each raw collection is still preserved. Repeated pulls retain separate observations even if TSM hasn't changed its file; don't treat them as distinct upstream scans in later historical analysis. Raw bytes are saved before normalization, including failed validation, and never overwritten. Data and the virtual environment are excluded from Git. Back up `data/` separately.
 
-Required source columns: `itemId,name,marketValue,minBuyout,recent,historical,updatedAt`. Extra columns are accepted but the untouched source retains them. Silver uses `item_id,item_name,market_value,min_buyout,recent_value,historical_value,updated_at,market_id,snapshot_id,collected_at`. Prices remain integer **copper** (10,000 copper = 1 gold). `updated_at` is the upstream scan time; `collected_at` is our UTC retrieval time. Missing names receive an `Item <ID>` label and are counted in the manifest. Other required nulls, duplicate/nonpositive item IDs, negative/noninteger prices, malformed/mixed timestamps, empty files, stale scans and scans over 15 minutes in the future fail validation. Zero prices are preserved as unavailable/no listing and excluded from ranking. A failed manifest records the error; inspect it before retrying. Network failures before a response create no snapshot.
+Required source columns: `itemId,name,marketValue,minBuyout,recent,historical,updatedAt`. Extra columns are accepted but the untouched source retains them. Silver uses `item_id,item_name,market_value,min_buyout,recent_value,historical_value,updated_at,market_id,snapshot_id,collected_at`. Prices remain integer **copper** (10,000 copper = 1 gold). `updated_at` is the upstream scan time; `collected_at` is our UTC retrieval time. The configured Mankrik Classic feed currently supplies a blank `updatedAt` column, so its wholly absent upstream time is preserved as null and freshness is explicitly retrieval-based. Other sources still require upstream time. Missing names receive an `Item <ID>` label and are counted in the manifest. Other required nulls, duplicate/nonpositive item IDs, negative/noninteger prices, malformed/mixed timestamps, empty files, stale scans and scans over 15 minutes in the future fail validation. Zero prices are preserved as unavailable/no listing and excluded from ranking. A failed manifest records the error; inspect it before retrying. Network failures before a response create no snapshot.
 
 ## First opportunity ranking
 
@@ -83,7 +85,7 @@ For rows with all four prices positive:
 - Net spread = `reference_price × (1 - auction_cut) - min_buyout`.
 - Keep discounts ≥20% with positive net spread; sort by discount, then spread, then item ID; output the top 20.
 
-The assumed auction cut defaults to 5% and is configurable for the target market. Gold output includes names, item IDs, upstream timestamp, copper values and readable gold amounts. These are screening candidates based on aggregate pricing: no listing quantity, liquidity, sale rate, deposit cost, actual purchase availability or realized profit is inferred. An empty ranking is a valid result. No crafting, addon, scheduler or cloud deployment is included. Streamlit is the optional browser-interface dependency and is installed locally.
+The assumed auction cut defaults to 5% and is configurable for the target market. Gold output includes names, item IDs, upstream timestamp, copper values and readable gold amounts. These are screening candidates based on aggregate pricing: no listing quantity, liquidity, sale rate, deposit cost, actual purchase availability or realized profit is inferred. An empty ranking is a valid result. Classic feeds currently report zero historical values, so this older discount screen may legitimately be empty; crafting economics use compatible positive minimum buyouts instead. No addon, scheduler or cloud deployment is included.
 
 ## Query DuckDB
 
@@ -103,4 +105,4 @@ Keep one writer running at a time. Bronze/silver files are the recovery source i
 
 ## Git
 
-The delivery is initialized as a local Git repository on branch `main`; no remote or publication is configured. Review changes and create your initial commit with `git add .` and `git commit -m "Initial Brownstone Markets v0.1"` after configuring your Git name/email if needed.
+The repository is on branch `main` with GitHub origin `Joshua-S-Brown/brownstonemarkets`. Local data, environments and credentials remain excluded. Review each milestone before committing and push through the user's normal VS Code workflow unless explicitly requested otherwise.

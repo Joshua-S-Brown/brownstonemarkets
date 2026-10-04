@@ -2,11 +2,13 @@
 
 ## Objective
 
-Follow materials from their market prices through intermediate crafts to saleable products. Explain purchasing and crafting opportunities using observed prices, historical behavior and liquidity. Retail is an acceptable development market; Classic remains a target. Do not assume prices, recipe rules or item identifiers are interchangeable across game versions.
+Follow materials from their market prices through intermediate crafts to saleable products. Explain purchasing and crafting opportunities using observed prices, historical behavior and liquidity. Mankrik Alliance Classic Era is the active development market; Retail remains supported but is not the current product focus, and Forever waits for reliable pricing. Do not assume prices, recipe rules or item identifiers are interchangeable across game versions.
 
 ## Immediate findings
 
 The current Area 52 source is a Retail non-commodity realm feed. Retail commodities have a separate regional feed. The missing materials are a coverage gap, not an intentional category filter. The first score is a discount screen, not a profit or liquidity model. Extreme discounts can favor illiquid finished goods. Categories cannot be inferred reliably from names or from commodity status: a commodity can be a finished consumable, and a material can also be a crafted intermediate.
+
+The Mankrik Classic feed provides useful minimum buyouts but leaves `updatedAt` blank and currently reports historical values as zero. Collection time is therefore an explicitly labeled freshness fallback, and the old discount screen is not the Classic decision surface. Crafting estimates use compatible positive minimum buyouts; demand and listing depth remain unknown.
 
 ## Delivery order
 
@@ -52,14 +54,12 @@ Dependencies flow from interface to orchestration to domain functions and storag
 
 ## Next milestone acceptance
 
-- Both Retail feeds appear with their correct market scope and independently reported freshness.
-- A material can be searched and its market observed, even if it does not meet the discount threshold.
-- Materials and finished commodities are not mislabeled merely because they share a feed.
-- Existing price history remains queryable; schema changes use an explicit migration/rebuild path.
-- Repeating a scan does not inflate historical feature sample counts.
-- The UI can browse market inventory separately from ranked opportunities.
-- A few real, sourced recipes show end-to-end quantities and missing-data behavior before broader imports.
+- A sourced subset of Classic Tailoring bags appears in a sortable crafting opportunity table.
+- Complete estimates show cost, net revenue, profit and margin; incomplete or stale estimates are clearly labeled.
+- Recipe detail explains direct and expanded inputs plus buy, craft or vendor choices.
+- Calculations remain outside Streamlit and have offline tests.
+- No action label implies liquidity, guaranteed sale or recommended quantity.
 
 ## Open decisions
 
-Repository confirmed: Joshua-S-Brown/brownstonemarkets; user handles commits and pushes. Retail development data approved. Still open: first profession/expansion, catalog/recipe source and access, ongoing snapshot storage. Implemented coverage status is in status.md; recipe acceptance belongs to the next milestone.
+Repository confirmed: Joshua-S-Brown/brownstonemarkets. Mankrik Alliance Classic Era is the active market for the Tailoring proof, while Retail remains a regression surface and the separate Forever catalog is retained for later compatibility. Work priority and user stories live in `backlog.md`; implemented state lives in `status.md`.

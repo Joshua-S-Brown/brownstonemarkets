@@ -30,8 +30,14 @@ def test_market_scopes_and_dedup(tmp_path):
 
 def test_source_config():
     config = read_config(Path(__file__).resolve().parents[1] / "config/market.toml")
-    assert [s["scope"] for s in config["sources"]] == ["realm", "region"]
-    assert config["sources"][1]["realm"] == ""
+    assert [s["market_id"] for s in config["sources"]] == [
+        "classic-us-mankrik-alliance", "retail-us-area-52", "retail-us-commodities",
+    ]
+    assert [s["scope"] for s in config["sources"]] == ["realm", "realm", "region"]
+    assert config["sources"][2]["realm"] == ""
+    assert config["sources"][0]["game_version"] == "classic"
+    assert config["sources"][0]["realm"] == "mankrik-alliance"
+    assert config["sources"][0]["allow_missing_updated_at"] is True
 
 
 def test_legacy_database_migration(tmp_path):
