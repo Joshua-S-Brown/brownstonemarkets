@@ -17,5 +17,6 @@ Explicit user instructions take precedence. When a decision or implementation ch
 - Never infer categories from names or commodity status. Never treat missing or zero prices as free.
 - Tests stay offline. Cover scope, units, freshness, deduplication and recipe quantities. Finish with pytest, `ruff check .` and `mypy` passing.
 - Schema changes go through a new numbered migration in `storage.py`. Catalog value changes need source evidence.
+- Never `pip install` a package ad hoc. Declare it in `pyproject.toml` and pin it in `requirements.lock.txt`: CI installs only from the lock file, so an undeclared package passes locally and fails in CI.
 - The user commits and pushes manually. Leave changes uncommitted unless asked.
 - The read-only scanning addon (`addon/BrownstoneScan/`, decided in SPIKE-008) only reads. Never add buying, posting, unattended scanning, cloud deployment or scheduled collection without an explicit decision.

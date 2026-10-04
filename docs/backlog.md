@@ -44,6 +44,10 @@ Acceptance:
 - **Same catalog shape.** The importer writes a catalog with the current structure and per-recipe provenance. Its output matches the hand-verified Classic catalog exactly (a test enforces this) and fills in the three unconfirmed skill levels.
 - **Forever beta Tailoring.** The importer produces a Forever beta Tailoring catalog for review, from the first tier up. Beta listings are concentrated in low-level goods: the 2026-10-04 scan had 1,378 Linen Bag and 301 Woolen Bag listings but no Runecloth Bag. Low-tier bags are what the board can exercise before launch. Profession, category and name filters keep large catalogs usable.
 - **Rebuildable.** Imports are cached and reproducible; no live network access in tests.
+- **Forever recipes differ from Classic; never copy across.** Wowhead's Forever data (checked 2026-10-04) differs in two ways:
+  - Real reagent changes: Forever Runecloth Bag adds 4 Magenta Dye and 2 Cerulean Dye. The current hand-typed `config/forever-tailoring.toml` misses them, so it's wrong and must be replaced.
+  - An output of "(2)" on nearly every Forever recipe, including bolts, bags, a vest and Smelt Copper, where Classic shows none. This may be a real double-yield rule or a Forever formatting quirk: Linen Bandage shows no output at all and Anti-Venom drops its "(3)". **Confirm the yield in-game before trusting it:** craft one Bolt of Linen Cloth or Linen Bag on the beta and count what's created. Record the evidence per recipe.
+- **Multi-yield intermediates must work.** If bolts yield 2, the calculator currently rejects any odd cost as "Fractional unit costs" and marks the bag unsupported. Design conservative handling: buy whole crafts, round unit costs up to the copper, and show leftovers rather than counting them as free. Keep the shopping list and all-craft totals consistent.
 
 ### STORY-003 — Classic demand context
 
