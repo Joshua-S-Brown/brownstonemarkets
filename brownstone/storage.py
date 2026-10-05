@@ -205,17 +205,22 @@ def latest_snapshot(config: Source) -> tuple[dict | None, str | None, int]:
     return latest, latest.get("analytical_snapshot_id", latest["snapshot_id"]), len(manifests)
 
 
+def scope_predicate(config: Mapping[str, Any]) -> tuple[str, list[Any]]:
+    """SQL predicate and parameters for one source and the entire market identity."""
+    keys = ("source_id", *MARKET_KEYS)
+    return " AND ".join(f"{key}=?" for key in keys), [config[key] for key in keys]
+
+
 def price_observations(db, config: Mapping[str, Any], snapshot_id: str, item_ids) -> dict[int, dict]:
     """Read unit copper prices with the source and entire market identity, never item ID alone."""
     if not item_ids:
         return {}
-    keys = ("source_id", *MARKET_KEYS)
-    predicates = " AND ".join(f"{key}=?" for key in keys)
+    predicates, scope = scope_predicate(config)
     placeholders = ", ".join("?" for _ in item_ids)
     rows = db.execute(
         f"SELECT item_id, min_buyout, market_value FROM market_snapshots WHERE snapshot_id=? "
         f"AND {predicates} AND item_id IN ({placeholders})",
-        [snapshot_id, *[config[key] for key in keys], *item_ids],
+        [snapshot_id, *scope, *item_ids],
     ).fetchall()
     return {item_id: {"min_buyout": listed, "market_value": market}
             for item_id, listed, market in rows}
@@ -231,9 +236,8 @@ def listing_depth(db, config: Mapping[str, Any], snapshot_id: str,
     """
     if config["provider"] != ADDON_PROVIDER:
         return None
-    keys = ("source_id", *MARKET_KEYS)
-    predicates = " AND ".join(f"{key}=?" for key in keys)
-    parameters = [snapshot_id, *[config[key] for key in keys]]
+    predicates, scope = scope_predicate(config)
+    parameters = [snapshot_id, *scope]
     scan = db.execute(
         f"SELECT scan_id FROM addon_scans WHERE snapshot_id=? AND {predicates} "
         "AND status='completed' AND NOT partial AND priced", parameters,

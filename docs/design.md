@@ -32,6 +32,7 @@ views/                  Streamlit only; display, no calculations
   crafting.py           Action Board and recipe explanation
   catalogs.py           Recipe catalogs page: status, add and update a profession (preview, then write)
   market.py             Browse market and Opportunities
+  scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
 brownstone/             importable without Streamlit
   config.py             market.toml (+ untracked market.local.toml overrides) → list[Source] (typed, validated)
   markets.py            market identity: MARKET_KEYS, derived market_id, validation, legacy upgrade
@@ -39,6 +40,7 @@ brownstone/             importable without Streamlit
   scans.py              BrownstoneScan SavedVariables: parse, validate, house check, unit and item prices
   normalization.py      CSV → validated frame
   pipeline.py           orchestration of one collection: run (TSM CSV) or import_scans (addon)
+  scan_changes.py       Eligible scan IDs and scoped SQL per-item historical comparisons
   storage.py            DuckDB schema and migrations, load/dedup, manifests, scoped price and depth reads
   analysis.py           browse and discount screen queries
   freshness.py          the one staleness policy
@@ -81,6 +83,14 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 - **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
 - **Nullable columns,** so v0.1 databases match fresh ones; validation happens in normalization.
 - **Manifests are never rewritten.** `markets.upgrade_legacy` reads pre-split manifests in the current shape.
+
+## Scan comparison
+
+- `storage.scope_predicate` supplies the source and full `MARKET_KEYS` predicate to price, depth and comparison reads.
+- `scan_changes.eligible_scans(db, config)` reads the selected source's completed, non-partial, priced `addon_scans` rows, ordered by finish time and scan ID descending. Finish times are normalized to UTC independently of DuckDB's session timezone.
+- `compare_scans(db, config, first_id, second_id, item_ids=None)` validates distinct eligible IDs and orders them chronologically. DuckDB aggregates `scan_listings` per item, scoped by source, market, scan ID and snapshot ID; stored `market_snapshots` prices are joined with the same source, market and snapshot scope. A full outer join returns only item aggregates to Python, never raw listings.
+- The result carries earlier/later scan metadata, their time gap, shared `items`, `new` and `vanished`. Each row has item ID/name, earlier/later metric dictionaries (minimum buyout, market value, listings, units), later-minus-earlier changes and a changed flag. A missing side is `None`; unavailable prices and changes are `None`, with integer copper for all valid prices. Optional item IDs filter every list; an empty list matches nothing.
+- `views/scan_changes.py` renders UI-06, using `compatible_catalogs` for the item-ID filter, shared context/freshness display and money helpers. The sidebar registers it as **Scan changes**. Existing calculation pages keep their contracts.
 
 ## Crafting calculation
 
@@ -129,7 +139,7 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 ## Known design debt
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (92% overall as of 2026-10-04): `views/market.py` 75% (Opportunities with data, which only Retail can supply), `app.py` 89% (configuration and upgrade errors), `views/catalogs.py` 90% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Coverage gaps** (93% overall as of 2026-10-04): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.

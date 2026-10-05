@@ -28,24 +28,13 @@ Recently completed: STORY-019, market depth on the board, 2026-10-04; STORY-014 
 
 ## Next
 
-**Agreed order (reviewed 2026-10-04):** improve the current workflow first: STORY-018 → STORY-014 (STORY-015a is implemented; see `status.md`). Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
+**Agreed order (reviewed 2026-10-04):** improve the current workflow first: STORY-014 (STORY-018 and STORY-015a are implemented; see `status.md`). Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
 
 **Launch preparation:** STORY-016 → STORY-017 → STORY-020, completed before the first live import. Use the gap after beta testing for cleanup, verified backup/restore and beta/live separation; aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
 
 **Archive care meanwhile:** keep a second copy of the raw beta archive as scans accumulate; the full tested procedure is STORY-016. Its destination is still an open decision. Beta comparisons stay within one source and market until STORY-017 is complete.
 
 **After launch:** the remaining stories below. STORY-011a can be a bounded research task when convenient, but must not delay the baseline workflow or launch preparation. Reassess STORY-006 before expanding history features.
-
-### STORY-018 — What changed between scans
-
-As a gold maker, I want to see what moved between two scans of a market, so that I can tell what changed since I last looked without comparing tables by hand.
-
-Acceptance:
-- **Prices for any snapshot,** not only the newest, for one source and market at a time (DATA-08).
-- **Diff view.** Pick two distinct complete scans (default: the newest two distinct scan IDs, not import manifests). Re-imports never create another comparison choice. For each item, show minimum buyout, market value, listings and units in each scan, and the change. Items new and vanished since the earlier scan are listed separately. A filter limits the list to catalog items.
-- **Honest labels.** An item absent from a scan is "not listed", never zero. Both scan times and the gap between them are shown.
-- **Tests** with fixture scans cover new, vanished, unchanged and changed items, and show that partial scans can't be chosen and duplicate imports don't duplicate choices.
-- Unblocks *Removed listings*, *Did the board hold up?* and *Market timing* (Later).
 
 ### STORY-014 — Scan import preview
 

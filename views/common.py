@@ -32,8 +32,11 @@ def read_db(config):
         yield db
 
 
-def show_freshness(config, manifest):
-    """Caption the price age honestly and warn when the policy calls it stale."""
+def show_freshness(config, manifest, warn=True):
+    """Caption the price age honestly and warn when the policy calls it stale.
+
+    Pass warn=False for a deliberately historical scan, where "refresh" is not the remedy.
+    """
     freshness = assess(manifest, datetime.now(UTC), config["max_age_hours"])
     if freshness["upstream_known"]:
         st.caption(f"Prices scanned {freshness['age_hours']:.1f} hours ago "
@@ -45,7 +48,7 @@ def show_freshness(config, manifest):
     if manifest.get("scan_id"):
         st.caption(f"Addon scan {manifest['scan_id']} · complete scans only feed prices; "
                    "stacks are priced per unit, rounded up when the buyout does not divide evenly")
-    if freshness["stale"]:
+    if warn and freshness["stale"]:
         st.warning("Saved prices are stale or future-dated. Refresh before acting on them.")
     return freshness
 

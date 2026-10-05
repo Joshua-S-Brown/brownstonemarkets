@@ -13,7 +13,7 @@ from brownstone.pipeline import import_guidance, import_scans, new_scans, run
 from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
 from brownstone.storage import upgrade_database
 from views import catalogs as catalogs_view
-from views import crafting, market
+from views import crafting, market, scan_changes
 from views.common import EXPERIENCES
 
 ROOT = Path(__file__).resolve().parent
@@ -66,7 +66,7 @@ with st.sidebar:
     addon = config["provider"] == ADDON_PROVIDER
     refresh = st.button("Import addon scan" if addon else "Refresh from TSM", type="primary", width="stretch",
                         help=f"Reads {config['scan_path']}" if addon else None)
-    views = ["Crafting", "Browse market", "Opportunities", "Recipe catalogs"]
+    views = ["Crafting", "Browse market", "Opportunities", "Recipe catalogs", "Scan changes"]
     craftable = any(compatible(catalog, config) for catalog in catalogs)
     # Keyed per source so each market remembers its own view. Once Crafting's link has set the view,
     # the default index must not compete with it (Streamlit warns about both).
@@ -108,6 +108,8 @@ if view == "Crafting":
     crafting.render(config, catalogs)
 elif view == "Browse market":
     market.render_browse(config)
+elif view == "Scan changes":
+    scan_changes.render(config, catalogs)
 elif view == "Recipe catalogs":
     catalogs_view.render(config, sources, CONFIG_DIR, ARCHIVE_DIR)
 else:
