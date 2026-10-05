@@ -9,11 +9,11 @@ import streamlit as st
 from brownstone.action_board import compatible
 from brownstone.config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
 from brownstone.crafting import parse_recipe_catalog
-from brownstone.pipeline import import_guidance, import_scans, new_scans, run
+from brownstone.pipeline import run
 from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
 from brownstone.storage import upgrade_database
 from views import catalogs as catalogs_view
-from views import crafting, market, scan_changes
+from views import crafting, market, scan_changes, scan_import
 from views.common import EXPERIENCES
 
 ROOT = Path(__file__).resolve().parent
@@ -56,6 +56,7 @@ with st.sidebar:
                                 format_func=lambda i: experience_sources[i].get("label",
                                                                             experience_sources[i]["source_id"]))
     if selected is None:
+        st.session_state.pop("scan_import_identity", None)
         st.info("This experience has several enabled sources. Choose one above.")
         st.stop()
     config = experience_sources[selected]
@@ -64,8 +65,12 @@ with st.sidebar:
                + (" · region-wide commodities" if config["scope"] == "region" else "")
                + " · edit config/market.toml to change sources")
     addon = config["provider"] == ADDON_PROVIDER
-    refresh = st.button("Import addon scan" if addon else "Refresh from TSM", type="primary", width="stretch",
-                        help=f"Reads {config['scan_path']}" if addon else None)
+    refresh = False
+    if addon:
+        scan_import.render(config)
+    else:
+        st.session_state.pop("scan_import_identity", None)
+        refresh = st.button("Refresh from TSM", type="primary", width="stretch")
     views = ["Crafting", "Browse market", "Opportunities", "Recipe catalogs", "Scan changes"]
     craftable = any(compatible(catalog, config) for catalog in catalogs)
     # Keyed per source so each market remembers its own view. Once Crafting's link has set the view,
@@ -73,7 +78,8 @@ with st.sidebar:
     view_key = f"view-{config['source_id']}"
     view = st.radio("View", views, index=0 if craftable or view_key in st.session_state else 1, key=view_key)
 
-# Views open the database read-only, so bring an older database up to date first.
+# Views open the database read-only, so bring an existing older database up to date first. This never
+# creates one, and Preview itself never migrates (ADDON-06).
 try:
     if upgrade_database(config["data_dir"]):
         st.toast("Database upgraded to the current schema.")
@@ -81,22 +87,7 @@ except Exception as error:
     st.error(f"Could not upgrade the database: {error}. Close other Brownstone windows or terminals and reload.")
     st.stop()
 
-if refresh and addon:
-    with st.spinner("Preserving and importing the addon scan file…"):
-        try:
-            manifest = import_scans(config)
-            outcomes = "; ".join(f"{s['scan_id']} {s['status']}: {s['outcome']}" for s in manifest["scans"])
-            if not new_scans(manifest):
-                st.warning(f"{import_guidance(manifest)} ({outcomes})")
-            else:
-                if manifest["status"] == "complete":
-                    st.success(f"Imported. Prices now come from scan {manifest['scan_id']}. {outcomes}.")
-                else:
-                    st.warning(f"No complete scan in the file, so prices are unchanged. {outcomes}.")
-                st.info(import_guidance(manifest))
-        except Exception as error:
-            st.error(f"Import failed: {error}. Your previous successful snapshot remains available.")
-elif refresh:
+if refresh:
     with st.spinner("Downloading and preserving the latest market snapshot…"):
         try:
             run(config)

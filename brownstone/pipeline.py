@@ -3,8 +3,10 @@ import gzip
 import hashlib
 import io
 import json
+import os
 import uuid
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -120,8 +122,115 @@ def _bronze_copy(folder: Path, sid: str, raw: bytes, sha256: str) -> str:
     return name
 
 
+# A hard cap bounds memory and makes an unexpectedly large/repeated scan file retryable.
+MAX_SCAN_BYTES = 256 * 1024 * 1024
+
+
+class StalePreviewError(ValueError):
+    """The reviewed preparation no longer describes this import."""
+
+
+@dataclass
+class ScanPreview:
+    """Read-only preparation; retain exact bytes and configuration, not a path to reread later."""
+    raw: bytes
+    configuration: str
+    records: list[dict]
+    summaries: list[dict]
+    known: list[dict | None]
+    # Per scan: why it is from another auction house than this source's market; empty when it matches.
+    mismatches: list[list[str]]
+
+    @property
+    def new_ids(self) -> list[str]:
+        return [s["scan_id"] for s, existing, mismatch in zip(self.summaries, self.known, self.mismatches,
+                                                              strict=True) if existing is None and not mismatch]
+
+
+def preview_configuration(config: Source, path: Path | None = None) -> str:
+    """Session identity includes source, market, evidence, input and destination configuration."""
+    return json.dumps({**config, "input_path": str(Path(path or config["scan_path"]).resolve())},
+                      sort_keys=True, default=str)
+
+
+def _file_signature(stat: os.stat_result) -> tuple[int, ...]:
+    return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+
+
+def _read_scan_bytes(path: Path) -> bytes:
+    """Bounded read with best-effort detection of replacement or writes; not an atomic snapshot."""
+    with path.open("rb") as file:
+        before = _file_signature(os.fstat(file.fileno()))
+        raw = file.read(MAX_SCAN_BYTES + 1)
+        after = _file_signature(os.fstat(file.fileno()))
+    if len(raw) > MAX_SCAN_BYTES:
+        raise ValueError("Scan file exceeds the 256 MiB read limit; retry with a smaller saved file")
+    if before != after or after != _file_signature(path.stat()) or len(raw) != after[2]:
+        raise ValueError("Scan file changed while reading; wait for /reload or logout to finish and Preview again")
+    return raw
+
+
+def _known_scans(db, config: Source, summaries: list[dict]) -> list[dict | None]:
+    # Older schemas may lack addon_scans. Preview never migrates them.
+    if not db.execute("SELECT count(*) FROM information_schema.tables WHERE table_name='addon_scans'").fetchone()[0]:
+        return [None] * len(summaries)
+    return [known_scan(db, config["source_id"], summary["scan_id"]) for summary in summaries]
+
+
+def _read_known(config: Source, summaries: list[dict]) -> list[dict | None]:
+    path = Path(config["data_dir"]) / "brownstone.duckdb"
+    if not path.exists():
+        return [None] * len(summaries)
+    with duckdb.connect(str(path), read_only=True) as db:
+        return _known_scans(db, config, summaries)
+
+
+def _check_conflicts(summaries: list[dict], known: list[dict | None]) -> None:
+    for summary, existing in zip(summaries, known, strict=True):
+        if existing and existing["scan_sha256"] != summary["scan_sha256"]:
+            raise ValueError(f"Scan {summary['scan_id']} conflict: was imported before with different content")
+
+
+def preview_scans(config: Source, input_path: Path | None = None, now: datetime | None = None) -> ScanPreview:
+    """Validate and classify without creating files, directories, manifests or a database.
+
+    Preview validates every file scan's header, time and listings. A scan from another auction house
+    (account-wide SavedVariables hold every character's scans) is listed as not importable instead of
+    failing the file; explicit CLI imports validate only their selected scans.
+    """
+    if config["provider"] != ADDON_PROVIDER:
+        raise ValueError(f"{config['source_id']} is not an addon source")
+    raw = _read_scan_bytes(Path(input_path or config["scan_path"]))
+    records = _select_scans(scans.read_saved_variables(raw), None)
+    summaries = _validate_scans(records, now or datetime.now(UTC))
+    known = _read_known(config, summaries)
+    _check_conflicts(summaries, known)
+    mismatches = [scans.check_house(record, config) for record in records]
+    return ScanPreview(raw, preview_configuration(config, input_path), records, summaries, known, mismatches)
+
+
+def _prepare_scans(records: list[dict], config: Source, now: datetime,
+                   scan_ids: Iterable[str] | None) -> tuple[list[dict], list[dict]]:
+    """Shared UI/CLI selection, then header, house, time and listing validation of the selection."""
+    records = _select_scans(records, scan_ids)
+    summaries = _check_scans(records, config, now)
+    return records, summaries
+
+
+def _reviewed_preparation(config: Source, path: Path, scan_ids: Iterable[str] | None,
+                          now: datetime, reviewed: ScanPreview) -> ScanPreview:
+    current = preview_scans(config, path, now)
+    if (current.configuration, current.raw, current.known) != (reviewed.configuration, reviewed.raw, reviewed.known):
+        raise StalePreviewError("Preview is stale: file, source/configuration or imported scans changed. Preview again")
+    records = _select_scans(current.records, scan_ids)
+    ids = {r["scan_id"] for r in records}
+    if not ids <= set(current.new_ids):
+        raise StalePreviewError("Select only new scans from this preview. Preview again")
+    return current
+
+
 def import_scans(config: Source, input_path: Path | None = None, scan_ids: Iterable[str] | None = None,
-                 now: datetime | None = None) -> dict:
+                 now: datetime | None = None, reviewed: ScanPreview | None = None) -> dict:
     """Import BrownstoneScan SavedVariables for an addon source; returns the collection manifest.
 
     Reads ``input_path`` or the configured ``scan_path`` and never writes to it. Every scan must match
@@ -132,46 +241,96 @@ def import_scans(config: Source, input_path: Path | None = None, scan_ids: Itera
     if config["provider"] != ADDON_PROVIDER:
         raise ValueError(f"{config['source_id']} is not an addon source")
     path = Path(input_path or config["scan_path"])
-    raw = path.read_bytes()
+    scan_ids = tuple(scan_ids) if scan_ids is not None else None
     now = now or datetime.now(UTC)
+    if reviewed:
+        # A stale review fails before even an archive directory or failure manifest is created.
+        preparation = _reviewed_preparation(config, path, scan_ids, now, reviewed)
+        return _import_reviewed(config, path, now, preparation, reviewed, scan_ids)
+    return _save_collection(config, path, now, _read_scan_bytes(path), scan_ids)
+
+
+def _import_reviewed(config: Source, path: Path, now: datetime, preparation: ScanPreview,
+                     reviewed: ScanPreview, scan_ids: Iterable[str] | None) -> dict:
+    """Hold the database writer connection through the final duplicate check and import."""
+    database = Path(config["data_dir"]) / "brownstone.duckdb"
+    if not database.exists():
+        Path(config["data_dir"]).mkdir(parents=True, exist_ok=True)
+    upgrade_database(Path(config["data_dir"]), create=True)
+    with duckdb.connect(str(database)) as db:
+        db.begin()
+        if _known_scans(db, config, reviewed.summaries) != reviewed.known:
+            raise StalePreviewError("Imported scans changed. Preview again")
+        return _save_collection(config, path, now, preparation.raw, scan_ids, preparation, db)
+
+
+def _save_collection(config: Source, path: Path, now: datetime, raw: bytes,
+                     scan_ids: Iterable[str] | None, preparation: ScanPreview | None = None, db=None) -> dict:
     sid = _collection_id(now)
-    base = Path(config["data_dir"])
     folders = _folders(config, ("bronze", "silver"))
     sha256 = hashlib.sha256(raw).hexdigest()
     bronze_file = _bronze_copy(folders["bronze"], sid, raw, sha256)
-    identity = _identity(config)
     manifest: dict = {
-        "snapshot_id": sid, **identity, "collected_at": now.isoformat(), "source": str(path.resolve()),
+        "snapshot_id": sid, **_identity(config), "collected_at": now.isoformat(), "source": str(path.resolve()),
         "bronze_file": bronze_file, "sha256": sha256, "bytes": len(raw), "status": "received",
     }
     try:
-        records = _select_scans(scans.read_saved_variables(raw), scan_ids)
-        summaries = _check_scans(records, config, now)
-        upgrade_database(base, create=True)
-        results = []
-        with duckdb.connect(str(base / "brownstone.duckdb")) as db:
-            db.begin()
-            for record, summary in zip(records, summaries, strict=True):
-                results.append(_import_scan(db, config, folders["silver"], sid, now, sha256, record, summary))
-            db.commit()
-        manifest["scans"] = results
-        # Scans the addon still holds from earlier imports; /bscan clear in game keeps the next file small.
-        manifest["already_imported"] = sum(result["outcome"] == "duplicate" for result in results)
-        priced = [result for result in results if result["priced"]]
-        if priced:
-            latest = max(priced, key=lambda result: result["finished_at"])
-            manifest.update(status="complete", analytical_snapshot_id=latest["snapshot_id"],
-                            scan_id=latest["scan_id"], rows=latest["items"], updated_at=latest["finished_at"],
-                            freshness_basis="upstream", new_observation=latest["outcome"] == "imported")
+        all_records = preparation.records if preparation else scans.read_saved_variables(raw)
+        records, summaries = _prepare_scans(all_records, config, now, scan_ids)
+        if db is None:
+            upgrade_database(Path(config["data_dir"]), create=True)
+            with duckdb.connect(str(Path(config["data_dir"]) / "brownstone.duckdb")) as connection:
+                connection.begin()
+                _load_collection(connection, config, folders, sid, now, sha256,
+                                 records, summaries, all_records, manifest)
+                connection.commit()
         else:
-            # Nothing priceable (only partial or empty scans): not offered to the views as a snapshot.
-            manifest.update(status="no_complete_scan")
+            _load_collection(db, config, folders, sid, now, sha256, records, summaries, all_records, manifest)
+            db.commit()
     except Exception as error:
         manifest.update(status="failed", error=str(error))
         raise
     finally:
         (folders["bronze"] / f"{sid}.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
+
+
+def _load_collection(db, config: Source, folders: dict[str, Path], sid: str, now: datetime, sha256: str,
+                     records: list[dict], summaries: list[dict], all_records: list[dict], manifest: dict) -> None:
+    _check_conflicts(summaries, _known_scans(db, config, summaries))
+    results = [_import_scan(db, config, folders["silver"], sid, now, sha256, record, summary)
+               for record, summary in zip(records, summaries, strict=True)]
+    manifest["scans"] = results
+    states = [_file_scan_state(db, config, record) for record in all_records]
+    manifest["remaining_unimported"] = states.count("remaining")
+    manifest["other_house"] = states.count("other_house")
+    manifest["already_imported"] = sum(result["outcome"] == "duplicate" for result in results)
+    priced = [result for result in results if result["priced"]]
+    if priced:
+        latest = max(priced, key=lambda result: result["finished_at"])
+        manifest.update(status="complete", analytical_snapshot_id=latest["snapshot_id"],
+                        scan_id=latest["scan_id"], rows=latest["items"], updated_at=latest["finished_at"],
+                        freshness_basis="upstream", new_observation=latest["outcome"] == "imported")
+    else:
+        manifest.update(status="no_complete_scan")
+
+
+def _file_scan_state(db, config: Source, record) -> str:
+    """Whether a file scan is saved for this source, from another auction house, or still remaining.
+
+    Unselected scans were never validated, so an unusable entry counts as remaining instead of
+    failing an import that did not select it.
+    """
+    if not isinstance(record, dict) or not isinstance(record.get("scan_id"), str):
+        return "remaining"
+    try:
+        content = scans.scan_content_hash(record)
+    except (TypeError, ValueError):
+        return "remaining"
+    existing = known_scan(db, config["source_id"], record["scan_id"])
+    if existing and existing["scan_sha256"] == content:
+        return "saved"
+    return "other_house" if scans.check_house(record, config) else "remaining"
 
 
 def new_scans(manifest: dict) -> int:
@@ -184,12 +343,21 @@ def import_guidance(manifest: dict) -> str:
 
     The game writes scans to the file only on /reload or logout, so a file with nothing new usually means
     the latest scan is still in game memory: clearing then would lose it. Clearing is suggested only after
-    an import stored something new (the addon also refuses to clear scans it hasn't written yet).
+    an import stored something new and no file scans remain unimported. Scans from another auction
+    house can't be imported into this source, so they don't block guidance, but clearing would delete
+    them too. The addon also refuses to clear scans it hasn't written yet.
     """
+    if manifest.get("remaining_unimported", 0):
+        return (f"{manifest['remaining_unimported']} scan(s) in this file remain unimported. "
+                "Import the remaining scans before clearing in game. Don't /bscan clear yet.")
     if not new_scans(manifest):
         return (f"Nothing new: all {len(manifest['scans'])} scan(s) in this file were imported before. If you "
                 "scanned since, type /reload in game so the game writes the scan to the file, then import again. "
                 "Don't /bscan clear until it's imported.")
+    if manifest.get("other_house", 0):
+        return (f"Everything for this market is saved, but {manifest['other_house']} scan(s) in this file are from "
+                "another auction house and can't be imported into this source. Import them with their own source "
+                "before you /bscan clear, because clearing deletes them too.")
     return ("Everything in this file is now saved. To keep the next file small, type /bscan clear, then /reload, "
             "in game.")
 
@@ -209,16 +377,24 @@ def _select_scans(records: list[dict], scan_ids: Iterable[str] | None) -> list[d
 
 
 def _check_scans(records: list[dict], config: Source, now: datetime) -> list[dict]:
-    """Validate every scan before anything is stored: header, house evidence and clock (ADDON-01, ADDON-05)."""
+    """Validate every scan before anything is stored: header, house, clock and listings (ADDON-01, ADDON-05)."""
     summaries = [scans.summarize(record) for record in records]
     problems = [problem for record in records for problem in scans.check_house(record, config)]
     if problems:
         raise ValueError("Scan does not match the configured market " + config["market_id"] + ": "
                          + "; ".join(problems))
+    return _validate_scans(records, now, summaries)
+
+
+def _validate_scans(records: list[dict], now: datetime, summaries: list[dict] | None = None) -> list[dict]:
+    """Header, clock and listing validation shared by preview and import (house evidence is checked by callers)."""
+    summaries = summaries if summaries is not None else [scans.summarize(record) for record in records]
     for summary in summaries:
         if summary["finished_at"] > now + timedelta(hours=FUTURE_TOLERANCE_HOURS):
             raise ValueError(f"Scan {summary['scan_id']} finished in the future ({summary['finished_at']}); "
                              "check the computer's clock")
+    for record in records:
+        scans.listing_frame(record)
     return summaries
 
 

@@ -198,9 +198,13 @@ def summarize(scan: dict) -> dict:
         "auctioneer": house.get("npc_name"), "zone": house.get("zone"), "subzone": house.get("subzone"),
         "realm_name": _dict(scan.get("realm")).get("name"), "label": scan.get("label"),
         "errors": [str(e) for e in _list(scan.get("errors"), f"Scan {scan_id} errors")],
-        "scan_sha256": hashlib.sha256(json.dumps(scan, sort_keys=True, separators=(",", ":"))
-                                      .encode()).hexdigest(),
+        "scan_sha256": scan_content_hash(scan),
     }
+
+
+def scan_content_hash(scan: dict) -> str:
+    """Canonical per-scan content identity, independent of file formatting and other scans."""
+    return hashlib.sha256(json.dumps(scan, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 def check_house(scan: dict, market: Mapping[str, Any]) -> list[str]:

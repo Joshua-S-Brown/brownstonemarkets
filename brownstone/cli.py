@@ -95,5 +95,5 @@ def _report_scans(config: Source, manifest: dict) -> None:
         print(f"Prices for {manifest['rows']:,} items from scan {manifest['scan_id']} "
               f"(finished {manifest['updated_at']}) are now current for {config['market_id']}")
     else:
-        print("No complete scan in this file; prices are unchanged")
+        print("No complete scan among the imported scans; prices are unchanged")
     print(import_guidance(manifest))

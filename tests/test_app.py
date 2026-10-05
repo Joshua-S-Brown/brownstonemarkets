@@ -68,6 +68,7 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert any("Refresh or import" in i.value for i in at.info)  # Nothing imported until clicked.
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     assert any("Imported" in s.value for s in at.success)
@@ -103,6 +104,7 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
                  house={"zone": "Stormwind City", "npc_name": "Auctioneer Fitch"})
     addon["scan_path"] = write_scans(tmp_path / "older.lua", older)
     at.run()  # Without a plain rerun, AppTest does not register a second click on the same button.
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     assert any("older completed: imported" in s.value for s in at.success)
@@ -166,9 +168,10 @@ def test_import_of_a_file_without_a_complete_scan_says_prices_are_unchanged(tmp_
     addon.update(enabled=True, data_dir=tmp_path / "data", scan_path=scan_file)
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [addon])
     at = AppTest.from_file(str(ROOT / "app.py")).run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
-    assert any("No complete scan in the file, so prices are unchanged" in w.value for w in at.warning)
+    assert any("No complete scan among the imported scans, so prices are unchanged" in w.value for w in at.warning)
 
 
 def test_no_enabled_source_explains_how_to_enable_one(monkeypatch):
@@ -185,9 +188,11 @@ def test_importing_nothing_new_warns_to_reload_instead_of_claiming_success(tmp_p
                  scan_evidence={"faction": "Alliance"})
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [addon])
     at = AppTest.from_file(str(ROOT / "app.py")).run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert any("/bscan clear" in i.value for i in at.info)  # Something new was saved: clearing is safe.
-    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert not any(b.label == "Import addon scan" for b in at.button)
     assert not at.success
     assert any(w.value.startswith("Nothing new") and "/reload" in w.value for w in at.warning)
 
@@ -313,6 +318,7 @@ def test_sidebar_experience_resolves_source_and_market_on_every_market_page(tmp_
     assert not any(w.label == "Data source" for w in at.selectbox)
     assert any(f"Source {addon['source_id']}" in c.value for c in at.caption)
     assert any(f"Market {addon['market_id']}" in c.value for c in at.caption)
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
@@ -357,3 +363,116 @@ def test_multiple_sources_for_one_experience_require_explicit_sidebar_selection(
     assert not at.exception
     assert not at.dataframe  # The same house and database, but another observer has no snapshot.
     assert any("Source other-observer" in c.value for c in at.caption)
+
+
+def preview_addon(tmp_path, monkeypatch, records=None, sources_count=1):
+    from test_scans import finished_now, listing, scan, write_scans
+    addon = next(s for s in read_sources(ROOT / "config/market.toml") if s["provider"] == "addon")
+    records = records if records is not None else [scan("one", finished_now(), [listing(1, 1, 50)]),
+                                                   scan("two", finished_now(), [], status="stopped")]
+    path = write_scans(tmp_path / "preview.lua", *records)
+    addon.update(enabled=True, data_dir=tmp_path / "data", scan_path=path, scan_evidence={"faction": "Alliance"})
+    sources = [addon]
+    if sources_count == 2:
+        sources.append({**addon, "source_id": "other", "label": "Other observer"})
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    if sources_count == 2:
+        next(w for w in at.selectbox if w.label == "Data source").set_value(0).run()
+    return at, addon
+
+
+def test_preview_subset_empty_selection_and_remaining_guidance(tmp_path, monkeypatch):
+    at, addon = preview_addon(tmp_path, monkeypatch)
+    assert not any(b.label == "Import addon scan" for b in at.button)
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert not addon["data_dir"].exists()
+    table = next(t.value for t in at.dataframe if "Scan ID" in t.value.columns)
+    assert list(table["Import state"]) == ["New", "New"]
+    assert list(table["Partial"]) == [False, True]
+    assert all(t.endswith(" UTC") for t in table["Finished (UTC)"])
+    at.multiselect[0].set_value([]).run()
+    assert not any(b.label == "Import addon scan" for b in at.button)
+    at.multiselect[0].set_value(["one"]).run()
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert any("remain unimported" in i.value for i in at.info)
+    assert not any("Everything" in i.value for i in at.info)
+    # The result replaces the reviewed table, which would otherwise still show the imported scan as New.
+    assert not any("Scan ID" in t.value.columns for t in at.dataframe)
+    assert not any(b.label == "Import addon scan" for b in at.button)
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert at.multiselect[0].value == ["two"]
+    table = next(t.value for t in at.dataframe if "Scan ID" in t.value.columns)
+    assert list(table["Import state"]) == ["Already imported", "New"]
+    assert not at.exception
+
+
+def test_preview_retryable_error_then_stale_file_invalidates_without_writes(tmp_path, monkeypatch):
+    at, addon = preview_addon(tmp_path, monkeypatch)
+    original = addon["scan_path"].read_bytes()
+    addon["scan_path"].write_text("BrownstoneScanDB = {")
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert any("Preview failed" in e.value and "Preview again" in e.value for e in at.error)
+    assert not any(b.label == "Import addon scan" for b in at.button)
+    addon["scan_path"].write_bytes(original)
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    addon["scan_path"].write_bytes(original + b"\n")
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert any("Preview is stale" in e.value for e in at.error)
+    assert not addon["data_dir"].exists()
+    at.run()
+    assert not any(b.label == "Import addon scan" for b in at.button)
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert at.success and not at.exception
+
+
+def test_source_and_configuration_switch_discard_review_and_selection(tmp_path, monkeypatch):
+    at, addon = preview_addon(tmp_path, monkeypatch, sources_count=2)
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    at.multiselect[0].set_value(["one"]).run()
+    next(w for w in at.selectbox if w.label == "Data source").set_value(1).run()
+    assert not at.multiselect and not any(b.label == "Import addon scan" for b in at.button)
+    next(w for w in at.selectbox if w.label == "Data source").set_value(0).run()
+    assert not at.multiselect
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert at.multiselect[0].value == ["one", "two"]
+    addon["max_age_hours"] += 1
+    at.run()
+    assert not at.multiselect and not any(b.label == "Import addon scan" for b in at.button)
+    assert not addon["data_dir"].exists() and not at.exception
+
+
+def test_preview_marks_other_house_scans_and_imports_the_rest(tmp_path, monkeypatch):
+    from test_scans import finished_now, listing, scan
+    at, addon = preview_addon(tmp_path, monkeypatch, records=[
+        scan("ours", finished_now(), [listing(1, 1, 50)]),
+        scan("horde", finished_now(), [listing(2, 1, 50)], faction={"player": "Horde"})])
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert not at.error
+    table = next(t.value for t in at.dataframe if "Scan ID" in t.value.columns)
+    assert list(table["Import state"]) == ["New", "Other house"]
+    assert any("another auction house" in c.value and "horde" in c.value for c in at.caption)
+    assert at.multiselect[0].options == ["ours"]
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert at.success and any("another auction house" in i.value for i in at.info)
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert any(w.value.startswith("Nothing new") for w in at.warning)
+    assert not at.exception
+
+
+def test_addon_source_upgrades_an_existing_older_database_on_load(tmp_path, monkeypatch):
+    import duckdb
+
+    from brownstone.storage import MIGRATIONS, SCHEMA_VERSION, schema_version
+    data = tmp_path / "data"
+    data.mkdir()
+    with duckdb.connect(str(data / "brownstone.duckdb")) as db:
+        db.execute("CREATE TABLE schema_info (key VARCHAR PRIMARY KEY, value VARCHAR NOT NULL)")
+        MIGRATIONS[1](db)
+        MIGRATIONS[2](db)
+        db.execute("INSERT INTO schema_info VALUES ('schema_version', '2')")
+    at, _ = preview_addon(tmp_path, monkeypatch)
+    assert not at.exception and any("upgraded" in t.value for t in at.toast)
+    with duckdb.connect(str(data / "brownstone.duckdb"), read_only=True) as db:
+        assert schema_version(db) == SCHEMA_VERSION

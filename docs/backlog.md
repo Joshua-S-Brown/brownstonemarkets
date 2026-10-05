@@ -28,25 +28,13 @@ Recently completed: STORY-019, market depth on the board, 2026-10-04; STORY-014 
 
 ## Next
 
-**Agreed order (reviewed 2026-10-04):** improve the current workflow first: STORY-014 (STORY-018 and STORY-015a are implemented; see `status.md`). Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
+**Agreed order (reviewed 2026-10-05):** current workflow stories STORY-014, STORY-018 and STORY-015a are implemented (see `status.md`); launch preparation is next. Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
 
 **Launch preparation:** STORY-016 → STORY-017 → STORY-020, completed before the first live import. Use the gap after beta testing for cleanup, verified backup/restore and beta/live separation; aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
 
 **Archive care meanwhile:** keep a second copy of the raw beta archive as scans accumulate; the full tested procedure is STORY-016. Its destination is still an open decision. Beta comparisons stay within one source and market until STORY-017 is complete.
 
 **After launch:** the remaining stories below. STORY-011a can be a bounded research task when convenient, but must not delay the baseline workflow or launch preparation. Reassess STORY-006 before expanding history features.
-
-### STORY-014 — Scan import preview
-
-Shrunk at grooming (2026-10-04). Slice 2, the Recipe catalogs page, is done (`status.md`). Finding the file in the game folder and the in-game confirmation UI moved to Later.
-
-As a gold maker, I want to see what an import will do before it runs, so that I know which scans are new, which are duplicates and which are partial before anything is written.
-
-Acceptance:
-- **Preview.** On a click, read the configured `scan_path` and list each scan: ID, times, status, listing count, and whether it is new, already imported or partial. Nothing is written.
-- **Choose.** Optionally pick which new scans to import, matching `--scan`. If nothing is new, say so with the `/reload` reminder and offer no import.
-- **Safe reads.** A file the game is rewriting (`/reload` or logout) fails cleanly and can be retried. The file is never written, watched or polled (ADDON-06).
-- **Exactly what was shown.** The import recomputes the preview and uses the same code as the CLI. Tests cover the preview offline; a Streamlit test covers preview → import.
 
 ### STORY-016 — Back up local data
 

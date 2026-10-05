@@ -107,4 +107,4 @@ def test_cli_says_when_a_file_has_no_complete_scan(tmp_path, monkeypatch, capsys
     run_cli(monkeypatch, "--config", config, "--source", "mine")
     out = capsys.readouterr().out
     assert "Scan cut-short: stopped, 0 listings, empty" in out
-    assert "No complete scan in this file; prices are unchanged" in out
+    assert "No complete scan among the imported scans; prices are unchanged" in out

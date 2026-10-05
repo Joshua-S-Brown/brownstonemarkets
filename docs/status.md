@@ -2,15 +2,16 @@
 
 Current implemented state, limitations and how to verify. History lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-04._
+_Last updated 2026-10-05._
 
 ## Implemented
 
 - **Ingestion:** TSM CSV → bronze/silver/DuckDB/gold with manifests, validation and analytical deduplication. Sources: Mankrik Alliance Classic Era (development stand-in), plus Retail Area 52 and US commodities (regression only).
-- **Addon scan import (STORY-010):** a `provider = "addon"` source imports BrownstoneScan SavedVariables through **Import addon scan** or `python -m brownstone --source <id> [--input file] [--scan ID]`. Rules ADDON-01 to ADDON-06 in `requirements.md`.
-  - House evidence is checked against the configured market, and the whole file fails on a mismatch.
+- **Addon scan import (STORY-010):** a `provider = "addon"` source imports BrownstoneScan SavedVariables through **Preview addon scans** → select new scans → **Import addon scan** (STORY-014), or `python -m brownstone --source <id> [--input file] [--scan ID]`. Rules ADDON-01 to ADDON-06 in `requirements.md`.
+  - House evidence is checked against the configured market. Preview lists scans from another house as not importable, with the reasons; importing one (including a CLI import of the whole file) fails. CLI `--scan` validates only selected scans.
   - Stacks are priced per unit, rounded up when inexact. `market_value` is the quantity-weighted 25th percentile.
-  - Deduplication is by `scan_id`, and identical file bytes are stored once, gzip-compressed. Partial scans are stored and labeled but not priced. After an import that saved something new, the app and CLI say `/bscan clear` is safe; an import with nothing new warns to `/reload` first instead. The addon refuses to clear scans it hasn't written to the file yet.
+  - Deduplication is by `scan_id`, and identical file bytes are stored once, gzip-compressed. Partial scans are stored and labeled but not priced. After an import that saved something new and left no file scans unimported, the app and CLI say `/bscan clear` is safe; subsets warn to import the remainder first; scans from another house warn that clearing deletes them; an import with nothing new warns to `/reload` first instead. The addon refuses to clear scans it hasn't written to the file yet.
+  - Preview displays IDs, UTC start/finish, status, listing count, import state and partial status. It writes nothing and uses only read-only database queries. Empty selections and duplicates-only previews offer no import. File/configuration/duplicate-state changes invalidate a review before import; reads use the bounds and best-effort detection in ADDON-06. A missing database is created only by an explicit import.
   - Reads scan format 1 (addon 0.1.0) and 2 (addon 0.2.0, compact). Converting the real scan to format 2 gives identical listings and item prices, at 2.8 MB instead of 24.8 MB.
   - The Forever Action Board works from imported scans with no calculation changes.
   - Source `forever-us-normal-alliance-addon` is disabled in the tracked `config/market.toml`. On the user's machine, the untracked `config/market.local.toml` enables it and points it at the game's SavedVariables file, to archive beta scans before the beta closes. Classic Mankrik stays the default development source.
@@ -28,7 +29,7 @@ _Last updated 2026-10-04._
 - **Scan changes (STORY-018):** compare any two distinct eligible addon scans of the selected source and market; defaults to the newest two scan IDs. Displays per-unit prices, listing/unit counts, changes, separate new/vanished lists, compatible-catalog item filtering, UTC finish times, gap and freshness. Missing listings, no buyout and no market value have distinct labels. Eligibility and display rules are in UI-06 (`requirements.md`); no schema change or beta/live separation.
 - **Market depth (STORY-019):** Crafting shows output listing/unit counts and a direct-input depth summary on each board row, and the same counts in recipe inputs and shopping lists. Counts come from the exact priced scan. Missing listings and unavailable depth have distinct labels; depth is display-only (CRAFT-09 in `requirements.md`).
 - **Interface:**
-  - The sidebar Classic/Forever experience choice resolves the source and market together; every view follows them, including Recipe catalogs, and each page names the experience, source and market under its title. If an experience has several enabled sources, the sidebar asks for a source and shows nothing until one is chosen (today only Retail, with Area 52 and region commodities). The database upgrade runs for the selected source.
+  - The sidebar Classic/Forever experience choice resolves the source and market together; every view follows them, including Recipe catalogs, and each page names the experience, source and market under its title. If an experience has several enabled sources, the sidebar asks for a source and shows nothing until one is chosen (today only Retail, with Area 52 and region commodities). The database upgrade runs on browsing for the selected source when a database exists; Preview never migrates.
   - Crafting opens by default for markets with a compatible catalog. It shows the board, a recipe summary in g/s/c and expandable evidence.
   - Browse market, Opportunities, Recipe catalogs and Scan changes are also available. Opportunities explains when a source can't support it.
   - All money is displayed in gold.
@@ -46,7 +47,7 @@ _Last updated 2026-10-04._
   - A dry run on a copy kept all 24,020 rows and split Mankrik's realm and faction correctly. The board gave identical results.
   - Re-importing an old raw file was recognised as a duplicate.
   - Old manifests are read through an adapter and never edited.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (93.13% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (93.48% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon (SPIKE-008, done):** `addon/BrownstoneScan/` is a read-only addon that scans on a click or `/bscan start` and saves listings to SavedVariables (`schema_version` 1; sample at `tests/fixtures/brownstone_scan_sample.lua`; install and measurements in `addon/README.md`). Verified on the Forever beta, build 70205, interface 16001: one full scan of the Stormwind Alliance Normal house, 101,485 listings in about 10.6 s, 24 MB file, written correctly. Decision and format are in `requirements.md`. Scans are imported as described above.
   - **Real scan kept** at `data/inbox/addon-scans/BrownstoneScan-forever-beta-2026-10-04.lua`. That's a byte-for-byte copy (SHA-256 `207a2b95…`) of the game's SavedVariables file: scan `20261004T164730Z-c651bd`, Alliance Normal house. It's ignored by Git like all of `data/`, so back it up with `data/`.
@@ -80,7 +81,11 @@ _Last updated 2026-10-04._
 .venv/bin/python -m mypy
 ```
 
-Expected: 233 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 260 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+
+Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
+
+Real-data preview/import was checked on 2026-10-05 against temporary copies of the database and a 51 MB schema-1 scan file (about 2–3 s per preview or import; originals unchanged).
 
 Scan comparison verification: `tests/test_scan_changes.py` covers price and supply changes, unchanged/new/vanished items, absent versus no-buyout prices, weighted historical prices, exact scan/snapshot IDs, every source/market field, partial/incomplete/unpriced exclusions, duplicate imports, newest-two defaults and item-ID filters. AppTest covers scan selection, compatible catalog filtering (including name collisions and incompatible item IDs), UTC times/gap, context, absent/no-buyout labels and unavailable comparisons.
 

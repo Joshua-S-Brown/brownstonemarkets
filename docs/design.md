@@ -21,7 +21,7 @@ saved Wowhead page ──archive─▶ data/recipe-sources (exact bytes once per
 catalog TOML ──load──▶ crafting / action_board ◀── price_observations (DuckDB)
 ```
 
-Raw bytes are written before validation, so failures stay inspectable. DuckDB writes are transactional, but silver, DuckDB and gold together are not one atomic operation (see `status.md` for recovery).
+CLI collection bytes are written before validation, so failures stay inspectable; addon previews and stale reviewed imports write nothing (DATA-01/ADDON-06). DuckDB writes are transactional, but silver, DuckDB and gold together are not one atomic operation (see `status.md` for recovery).
 
 ## Modules
 
@@ -33,13 +33,14 @@ views/                  Streamlit only; display, no calculations
   catalogs.py           Recipe catalogs page: status, add and update a profession (preview, then write)
   market.py             Browse market and Opportunities
   scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
+  scan_import.py        Sidebar addon preview, new-scan selection and explicit reviewed import
 brownstone/             importable without Streamlit
   config.py             market.toml (+ untracked market.local.toml overrides) → list[Source] (typed, validated)
   markets.py            market identity: MARKET_KEYS, derived market_id, validation, legacy upgrade
   sources.py            HTTP download
   scans.py              BrownstoneScan SavedVariables: parse, validate, house check, unit and item prices
   normalization.py      CSV → validated frame
-  pipeline.py           orchestration of one collection: run (TSM CSV) or import_scans (addon)
+  pipeline.py           run (TSM CSV), read-only preview_scans and shared reviewed/CLI import_scans
   scan_changes.py       Eligible scan IDs and scoped SQL per-item historical comparisons
   storage.py            DuckDB schema and migrations, load/dedup, manifests, scoped price and depth reads
   analysis.py           browse and discount screen queries
@@ -65,7 +66,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 | Collection | `snapshot_id` (UTC time + random suffix) | Bronze CSV + manifest with source and market identity; manifest records `analytical_snapshot_id` |
 | Analytical snapshot | source + upstream scan time + SHA-256 | Repeated identical content from the same source reuses the earlier ID |
 | Price observation | analytical snapshot + source + market identity + item ID | Integer copper: `min_buyout, market_value, recent_value, historical_value` |
-| Addon scan | `source_id, scan_id` → `snapshot_id = <source_id>:<scan_id>` | `addon_scans`: status, `partial`, `priced`, times, counts, `nonexact_stacks`, client, house evidence, scan and file SHA-256. Its import manifest lists every scan with an outcome (`imported`, `duplicate`, `partial (not priced)`, `empty`) and counts `already_imported`; `scan_id`, `updated_at` and `analytical_snapshot_id` name the newest complete scan, and status is `no_complete_scan` when there is none |
+| Addon scan | `source_id, scan_id` → `snapshot_id = <source_id>:<scan_id>` | `addon_scans`: status, `partial`, `priced`, times, counts, `nonexact_stacks`, client, house evidence, scan and file SHA-256. Its import manifest lists every scan with an outcome (`imported`, `duplicate`, `partial (not priced)`, `empty`) and counts `already_imported`, `remaining_unimported` (including unselected scans) and `other_house` (file scans from another auction house); `scan_id`, `updated_at` and `analytical_snapshot_id` name the newest complete scan, and status is `no_complete_scan` when there is none |
 | Listing | `source_id, scan_id, listing_index` + market identity | `scan_listings`: `item_id, item_name, quantity, buyout` (whole stack), `unit_buyout` (exact only), `unit_buyout_ceil`, `min_bid, bid, complete_info` |
 | Catalog | `game_version, rules_version, catalog_version` | TOML generated from a selection file and one saved page (CRAFT-08). Header: `source_url`, `source_sha256`, `verified_at`. Items: role, Wowhead URL, optional `vendor_price_copper` with `vendor_price_source_url`, `vendor_verified`, `availability`. Recipes: inputs, `output_quantity`, `required_skill`, Wowhead spell URL, `verification_url`, `evidence_sha256`, optional `output_quantity_verified`, `availability` |
 | Recipe selection | file name = catalog name | `config/recipe-selections/<catalog>.toml`: catalog header fields, finished `[[recipes]]` (with optional overrides), `[recipe_defaults]`, `[[items]]` vendor evidence and notes |
@@ -79,10 +80,19 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
   - Version 2: market/source split. Adds `source_id`, `server_type` and `faction`, moves Classic faction out of the realm slug, renames scope `realm` to `house`, and re-derives `market_id`.
   - Version 3: addon scans. Adds `addon_scans` and `scan_listings`; `market_snapshots` is unchanged.
 - **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
-- **Callers.** The app calls it at startup and the pipeline before its write transaction. `load_snapshot` refuses an outdated schema.
+- **Callers.** The app calls it at startup for every source (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
 - **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
 - **Nullable columns,** so v0.1 databases match fresh ones; validation happens in normalization.
 - **Manifests are never rewritten.** `markets.upgrade_legacy` reads pre-split manifests in the current shape.
+
+## Scan import preview
+
+- `pipeline.preview_scans` returns a `ScanPreview` containing exact file bytes, a serialized resolved configuration, parsed records, validated summaries and the relevant existing `known_scan` records. `new_ids` is derived from those records. Missing databases and older schemas without `addon_scans` mean no known scans; preview never upgrades.
+- `_read_scan_bytes` implements the bounded descriptor/path read described by ADDON-06. `_prepare_scans`, `_select_scans`, `_check_scans`, `scans.listing_frame` and `scans.scan_content_hash` are shared with CLI import; there is one parser and one per-scan hash format. CLI validation stays limited to selected scans. UI previews validate every scan's header, times and listings (`_validate_scans`), but record house mismatches per scan in `ScanPreview.mismatches`; `new_ids` excludes them.
+- `import_scans(..., reviewed=preview, scan_ids=...)` recomputes and compares bytes/configuration/known records before any archive write. It rejects unknown, empty or already-imported selections. A final duplicate check under the writer transaction precedes `_save_collection`; the writer consumes the recomputed in-memory bytes. Fresh databases and migrations are created only during explicit import. No new schema migration is required.
+- `_save_collection` preserves raw bytes and manifests, and `_load_collection` shares transactional deduplication and per-scan import with the CLI. `_file_scan_state` classifies every file scan after loading as saved (same ID and hash), `other_house` or remaining, without validating unselected scans; an unusable entry counts as remaining. `import_guidance` uses those counts to protect subsets and warn about other-house scans.
+- `views/scan_import.render` owns one active review and selection in Streamlit session state. Configuration/source switches discard both; changing to a TSM source also invalidates the active addon identity. Each Preview click clears prior state before reading. Import runs in the button's `on_click` callback and stores its messages for the rerun, so the result replaces the reviewed table. Errors discard the review and require another click. `app.py` orchestrates these controls and keeps TSM refresh unchanged.
+- Bronze/silver/database together are still not atomic; normal import-write failures retain a failed manifest for diagnosis. Best-effort file-read detection cannot prevent every concurrent game write (ADDON-06).
 
 ## Scan comparison
 
@@ -139,7 +149,7 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 ## Known design debt
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (93% overall as of 2026-10-04): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Coverage gaps** (93.48% overall as of 2026-10-05): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 94% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.
