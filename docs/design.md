@@ -39,7 +39,7 @@ brownstone/             importable without Streamlit
   scans.py              BrownstoneScan SavedVariables: parse, validate, house check, unit and item prices
   normalization.py      CSV → validated frame
   pipeline.py           orchestration of one collection: run (TSM CSV) or import_scans (addon)
-  storage.py            DuckDB schema and migrations, load/dedup, manifests, scoped price reads
+  storage.py            DuckDB schema and migrations, load/dedup, manifests, scoped price and depth reads
   analysis.py           browse and discount screen queries
   freshness.py          the one staleness policy
   money.py              copper ↔ gold display helpers
@@ -91,6 +91,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
   - the all-craft expansion
   - cost, net revenue, profit, margin and break-even
 - `Decimal` handles the auction-cut rounding.
+- `storage.listing_depth` returns listing and unit counts by item for the same analytical snapshot used by `price_observations`. It first checks the scoped `addon_scans` record is complete and priced, then aggregates `scan_listings` with the source, full market identity, snapshot ID and scan ID. It returns `None` when unavailable, or zero counts for absent requested items. The Crafting view renders these separately from `rank_recipes`; depth never enters calculation or policy inputs (CRAFT-09).
 - `rank_recipes` checks that the catalog, market and snapshot are compatible, then:
   - evaluates every finished output under both bases
   - labels and sorts the rows (CRAFT-05)
@@ -126,7 +127,7 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 ## Known design debt
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (93% overall as of 2026-10-04): `views/market.py` 75% (Opportunities with data, which only Retail can supply), `app.py` 88% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Coverage gaps** (92% overall as of 2026-10-04): `views/market.py` 75% (Opportunities with data, which only Retail can supply), `app.py` 89% (configuration and upgrade errors), `views/catalogs.py` 90% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.

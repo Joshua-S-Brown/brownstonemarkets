@@ -105,6 +105,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - **Refresh due:** the app flags a catalog when an enabled market of the same game version uses another `rules_version`, or when its page is older than the selection's `refresh_after_days` (default 30).
   - **Edited, never re-dumped:** the app edits an existing selection file line by line, keeping its comments, and refuses any edit that doesn't read back as chosen. Removing recipes drops notes on items nothing uses any more; the preview lists each one.
   - **Must load:** a catalog the board's loader would reject (for example two recipes making one item) is refused before anything is written.
+- **CRAFT-09 Market depth (STORY-019):** the board shows auction listing and unit counts for each output and direct input; the recipe input table shows the same counts. Counts include listings without a buyout and describe the exact complete, priced scan used for the prices, scoped by source and full market identity. An absent item is labeled **Not listed** with zero observed listings and units. TSM or a snapshot without a matching priced addon scan shows **Unavailable**, with no counts. Depth is display-only: it changes no cost, action label, ranking or policy version, and is not vendor stock or a claim about demand.
 
 ### Interface
 - **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** (addon sources) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden.
@@ -123,7 +124,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 
 ## Not modeled (do not imply otherwise)
 
-Demand, sale likelihood, listing depth (addon listings are stored but no calculation uses them yet), deposits, recommended quantities, vendor stock, reputation discounts, recipe quality/rank, reagent alternatives and multi-yield recipes. The importer rejects variable yields, and an intermediate yielding more than 1 can fail with "Fractional unit costs". Every current catalog recipe yields 1.
+Demand, sale likelihood, depth-adjusted costs and quantities (listing depth is displayed under CRAFT-09, but no calculation uses it), deposits, recommended quantities, vendor stock, reputation discounts, recipe quality/rank, reagent alternatives and multi-yield recipes. The importer rejects variable yields, and an intermediate yielding more than 1 can fail with "Fractional unit costs". Every current catalog recipe yields 1.
 
 ## Open decisions
 

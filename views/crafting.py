@@ -6,7 +6,7 @@ import streamlit as st
 from brownstone.action_board import compatible, rank_recipes
 from brownstone.crafting import PRICE_BASES, basis_prices, evaluate_recipe, material_plan
 from brownstone.money import format_money, to_gold
-from brownstone.storage import price_observations
+from brownstone.storage import listing_depth, price_observations
 from views.common import gold_columns, load_latest, read_db, show_freshness
 
 BASIS_LABELS = {"cautious": "Cautious (recommended)", "listed": "Cheapest listing"}
@@ -44,13 +44,14 @@ def render(config, catalogs):
     try:
         with read_db(config) as db:
             observations = price_observations(db, config, sid, sorted(catalog["items_by_id"]))
+            depth = listing_depth(db, config, sid, sorted(catalog["items_by_id"]))
         board = rank_recipes(catalog, observations, config, manifest, now=datetime.now(UTC),
                              sort_by=sort_by, basis=basis, max_age_hours=config["max_age_hours"],
                              auction_cut=config["auction_cut"])
     except Exception as error:
         st.error(f"Unable to build the Action Board: {error}")
         return
-    _board(catalog, config, manifest, sid, board, basis)
+    _board(catalog, config, manifest, sid, board, basis, depth)
 
     recipe_id = _pick_recipe(catalog, [row["recipe_id"] for row in board["rows"]])
     _recipe_heading(catalog, recipe_id)
@@ -62,10 +63,10 @@ def render(config, catalogs):
         return
     _summary(catalog, evaluation, basis)
     with st.expander("Inputs and buy / craft / vendor choices", expanded=True):
-        _choices(catalog, evaluation["choices"], observations, "Input")
+        _choices(catalog, evaluation["choices"], observations, "Input", depth)
     with st.expander("Shopping list for the chosen routes"):
         st.caption("Bought intermediates stay on this list. All-craft materials are listed separately.")
-        _choices(catalog, evaluation["shopping_choices"], observations, "Item")
+        _choices(catalog, evaluation["shopping_choices"], observations, "Item", depth)
     _materials(catalog, recipe_id)
     with st.expander("Assumptions and provenance"):
         st.markdown(
@@ -73,21 +74,31 @@ def render(config, catalogs):
             f"- **Routes:** cheapest valid buy, craft or vendor route per input. Vendor prices are undiscounted "
             f"catalog values; vendor stock and reputation discounts are not modeled.\n"
             f"- **Revenue:** {config['auction_cut']:.0%} auction cut; revenue rounds down to the copper and "
-            f"break-even rounds up. Deposits, listing depth and sale speed are not modeled.\n"
+            f"break-even rounds up. Deposits and sale speed are not modeled.\n"
+            f"- **Depth:** auction listings and units in the priced scan, including listings without a buyout. "
+            f"Display only: depth does not affect costs, labels or ranking, and is not vendor stock.\n"
             f"- **Quantities:** one recipe execution.\n"
             f"- **Recipe source:** [{catalog['recipes_by_id'][recipe_id]['name']}]"
             f"({catalog['recipes_by_id'][recipe_id]['source_url']})")
 
 
-def _board(catalog, config, manifest, sid, board, basis):
+def _board(catalog, config, manifest, sid, board, basis, depth):
     st.markdown(f"#### {catalog['profession'].title()} Action Board")
     st.caption("Representative subset, not the complete profession. Potential craft means positive estimated "
                "profit; demand and sale likelihood are unknown. Post-launch recipes can't be crafted yet.")
     show_freshness(config, manifest)
+    st.caption("Depth counts all listings and units in the same scan as prices, including listings without a "
+               "buyout. Not listed means zero observed supply; unavailable means this snapshot has no listing "
+               "depth. Direct inputs are shown even when the chosen route crafts them or buys from a vendor. "
+               "Depth does not change costs, labels or ranking.")
     other = next(name for name in PRICE_BASES if name != basis)
     rows = [{
         "Rank": row["rank"], "Item": _labeled(catalog["recipes_by_id"][row["recipe_id"]], row["output_name"]),
         "Action": row["action"],
+        **_depth_columns(depth, row["output_item_id"], "Output "),
+        "Direct input depth": "; ".join(
+            f"{catalog['items_by_id'][ingredient['item_id']]['name']}: {_depth_text(depth, ingredient['item_id'])}"
+            for ingredient in catalog["recipes_by_id"][row["recipe_id"]]["inputs"]),
         "Craft cost (g)": to_gold(row["craft_cost_copper"]),
         "Sale price (g)": to_gold(row["sale_price_copper"]),
         "Net revenue (g)": to_gold(row["net_revenue_copper"]),
@@ -146,13 +157,32 @@ def _summary(catalog, evaluation, basis):
     st.caption(f"{BASIS_LABELS[basis]} prices, after the auction cut, for one recipe execution.")
 
 
-def _choices(catalog, choices, observations, label):
+def _depth_columns(depth, item_id, prefix=""):
+    counts = depth.get(item_id) if depth is not None else None
+    return {
+        f"{prefix}listings": counts["listings"] if counts is not None else None,
+        f"{prefix}units": counts["units"] if counts is not None else None,
+        f"{prefix}depth": "Unavailable" if counts is None else "Not listed" if not counts["listings"] else "Listed",
+    }
+
+
+def _depth_text(depth, item_id):
+    counts = depth.get(item_id) if depth is not None else None
+    if counts is None:
+        return "Unavailable"
+    if not counts["listings"]:
+        return "Not listed"
+    return f"{counts['listings']:,} listings / {counts['units']:,} units"
+
+
+def _choices(catalog, choices, observations, label, depth):
     rows = []
     for choice in choices:
         item = catalog["items_by_id"][choice["item_id"]]
         observed = observations.get(choice["item_id"], {})
         rows.append({
             label: item["name"], "Quantity": choice["quantity"], "Choice": choice["method"],
+            **_depth_columns(depth, choice["item_id"], "Market "),
             "Unit cost (g)": to_gold(choice["unit_cost_copper"]),
             "Total cost (g)": to_gold(choice["total_cost_copper"]),
             "Min buyout (g)": to_gold(observed.get("min_buyout") or None),

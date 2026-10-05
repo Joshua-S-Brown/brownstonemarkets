@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 Nothing active in code. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
-Recently completed: STORY-014 Slice 2, the Recipe catalogs page, 2026-10-04; STORY-004, recipe import from saved Wowhead pages, 2026-10-04; STORY-010, addon scan import, 2026-10-04; SPIKE-008, addon scan prototype, 2026-10-04 (see `status.md`).
+Recently completed: STORY-019, market depth on the board, 2026-10-04; STORY-014 Slice 2, the Recipe catalogs page, 2026-10-04; STORY-004, recipe import from saved Wowhead pages, 2026-10-04; STORY-010, addon scan import, 2026-10-04; SPIKE-008, addon scan prototype, 2026-10-04 (see `status.md`).
 
 **Through the last full beta testing day, 21 October** (manual, in game):
 - **Keep scanning.** Three complete scans of the Normal Alliance house are imported (16:47Z, 17:46Z and 22:54Z on 2026-10-04; the last is addon 0.2.0). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
@@ -28,7 +28,7 @@ Recently completed: STORY-014 Slice 2, the Recipe catalogs page, 2026-10-04; STO
 
 ## Next
 
-**Agreed order (reviewed 2026-10-04):** improve the current workflow first: STORY-015a → STORY-019 → STORY-018 → STORY-014. Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
+**Agreed order (reviewed 2026-10-04):** improve the current workflow first: STORY-015a → STORY-018 → STORY-014. Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
 
 **Launch preparation:** STORY-016 → STORY-017 → STORY-020, completed before the first live import. Use the gap after beta testing for cleanup, verified backup/restore and beta/live separation; aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
 
@@ -47,16 +47,6 @@ Acceptance:
 - **Each recipe is costed within its own catalog**, as today. If two catalogs make the same item, both rows are shown with their profession, and nothing chooses between them (that rule is STORY-015b's).
 - **Nothing compatible:** the view names the catalogs that exist for that game version and why they don't match (`rules_version`), and points to the Recipe catalogs page. Incompatible catalogs stay inspectable, never priced (UI-04).
 - **Same rules:** missing prices are never free, errors are isolated per row, and the policy version is shown. A Streamlit test covers a market with two compatible catalogs.
-
-### STORY-019 — Market depth on the board
-
-As a gold maker, I want the Action Board to show how deep the market is for each output and input, so that a profit on one listing doesn't look as solid as a profit on a thousand.
-
-Acceptance:
-- **Display only:** listings and units in the priced scan for each output and each direct input, from `scan_listings`. Calculations, labels and ranking don't change (`requirements.md` → *Not modeled*).
-- **The recipe view** shows the same for each input row.
-- **Sources without listings** (TSM) show depth as unavailable, never zero.
-- **Tests** cover an addon market with and without listings for an output.
 
 ### STORY-018 — What changed between scans
 
@@ -174,7 +164,7 @@ Acceptance:
 
 These are grouped by what unblocks them.
 
-**Inventory-aware economics** (unblocked: `scan_listings` holds every listing; STORY-019 shows depth first):
+**Inventory-aware economics** (unblocked: `scan_listings` holds every listing; depth is now displayed, see `status.md`):
 - **Cost from the listing ladder:** what N units actually cost when bought listing by listing, and the most you can buy below a price.
 - **Undercut-aware sale price.**
 - **A suggested craft quantity limited by input depth.**

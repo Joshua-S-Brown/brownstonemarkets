@@ -33,6 +33,12 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     assert len(table) == 3
     assert table.iloc[0]["Item"] == "Mageweave Bag"
     assert table.iloc[2]["Action"] == "negative margin"
+    assert set(table["Output depth"]) == {"Unavailable"}
+    assert table["Output listings"].isna().all() and table["Output units"].isna().all()
+    assert all("Unavailable" in text for text in table["Direct input depth"])
+    inputs = next(t.value for t in at.dataframe if "Input" in t.value.columns)
+    assert set(inputs["Market depth"]) == {"Unavailable"}
+    assert inputs["Market listings"].isna().all() and inputs["Market units"].isna().all()
     next(w for w in at.selectbox if w.label == "Rank by").set_value("margin").run()
     assert not at.exception
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
@@ -49,7 +55,7 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
 
 
 def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, monkeypatch):
-    from test_scans import finished_now, forever_scan_file
+    from test_scans import finished_now, forever_scan_file, listing, scan, write_scans
     sources = read_sources(ROOT / "config/market.toml")
     addon = next(source for source in sources if source["provider"] == "addon")
     assert not addon["enabled"]  # Disabled in the tracked config; enabled per machine in market.local.toml.
@@ -68,6 +74,29 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert table.iloc[0]["Item"].startswith("Runecloth Bag") and table.iloc[0]["Action"] == "potential craft"
     assert set(table["Action"][1:]) == {"missing prices"}  # Bags without listings in the fixture scan.
+    bag = table.iloc[0]
+    assert (bag["Output listings"], bag["Output units"], bag["Output depth"]) == (2, 2, "Listed")
+    assert bag["Craft cost (g)"] == 3.35 and bag["Profit (g)"] == 2.35
+    assert "Bolt of Runecloth: 1 listings / 2 units" in bag["Direct input depth"]
+    assert "Rune Thread: Not listed" in bag["Direct input depth"]
+    assert set(table["Output depth"][1:]) == {"Not listed"}
+    assert (table["Output listings"][1:] == 0).all() and (table["Output units"][1:] == 0).all()
+    inputs = next(t.value for t in at.dataframe if "Input" in t.value.columns).set_index("Input")
+    assert inputs.loc["Bolt of Runecloth", "Choice"] == "craft"
+    assert (inputs.loc["Bolt of Runecloth", "Market listings"],
+            inputs.loc["Bolt of Runecloth", "Market units"]) == (1, 2)
+    assert inputs.loc["Rune Thread", "Choice"] == "vendor"
+    assert inputs.loc["Rune Thread", "Market depth"] == "Not listed"
+    # An older import cannot replace either the displayed prices or their depth.
+    older = scan("older", finished_now() - 3600, [listing(14046, 99, 9900)],
+                 house={"zone": "Stormwind City", "npc_name": "Auctioneer Fitch"})
+    addon["scan_path"] = write_scans(tmp_path / "older.lua", older)
+    at.run()  # Without a plain rerun, AppTest does not register a second click on the same button.
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert not at.exception
+    assert any("older completed: imported" in s.value for s in at.success)
+    after = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert after.equals(table)
 
 
 def classic_sources(tmp_path):

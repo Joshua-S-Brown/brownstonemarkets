@@ -25,6 +25,7 @@ _Last updated 2026-10-04._
   - The Add tab says how many of the page's recipes can be chosen and why the rest can't: no item made (enchants on gear), no fixed yield on Wowhead (Classic Enchanting's 7 oils list 0), or seasonal. The 2026-10-04 pages offer 226 of 287 Classic Tailoring, 413 of 471 Forever Tailoring, 101 of 132 Classic Alchemy, 167 of 202 Forever Alchemy and 12 of 204 Classic Enchanting recipes. The Alchemy and Enchanting catalogs, added in the app, hold every offered recipe; the Tailoring catalogs are deliberately small subsets (6 and 7 recipes, chosen in their selection files).
   - Checked on the real config and archive: all five catalogs regenerate from their archived pages unchanged (no bump, no tracked file written) and show builds 1.15.8 (67156) and 1.60.1 (70205); a preview takes 8–31 ms. Classic Enchanting holds no Season of Discovery recipes.
 - **Crafting:** five generated catalogs: Classic and Forever Tailoring and Alchemy, and Classic Enchanting. Route costing, cautious and listed price bases, and an Action Board under policy 0.2 with five labels and per-recipe error isolation.
+- **Market depth (STORY-019):** Crafting shows output listing/unit counts and a direct-input depth summary on each board row, and the same counts in recipe inputs and shopping lists. Counts come from the exact priced scan. Missing listings and unavailable depth have distinct labels; depth is display-only (CRAFT-09 in `requirements.md`).
 - **Interface:**
   - Crafting opens by default for markets with a compatible catalog. It shows the board, a recipe summary in g/s/c and expandable evidence.
   - Browse market, Opportunities and Recipe catalogs are also available. Opportunities explains when a source can't support it.
@@ -43,7 +44,7 @@ _Last updated 2026-10-04._
   - A dry run on a copy kept all 24,020 rows and split Mankrik's realm and faction correctly. The board gave identical results.
   - Re-importing an old raw file was recognised as a duplicate.
   - Old manifests are read through an adapter and never edited.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (91% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (92% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon (SPIKE-008, done):** `addon/BrownstoneScan/` is a read-only addon that scans on a click or `/bscan start` and saves listings to SavedVariables (`schema_version` 1; sample at `tests/fixtures/brownstone_scan_sample.lua`; install and measurements in `addon/README.md`). Verified on the Forever beta, build 70205, interface 16001: one full scan of the Stormwind Alliance Normal house, 101,485 listings in about 10.6 s, 24 MB file, written correctly. Decision and format are in `requirements.md`. Scans are imported as described above.
   - **Real scan kept** at `data/inbox/addon-scans/BrownstoneScan-forever-beta-2026-10-04.lua`. That's a byte-for-byte copy (SHA-256 `207a2b95…`) of the game's SavedVariables file: scan `20261004T164730Z-c651bd`, Alliance Normal house. It's ignored by Git like all of `data/`, so back it up with `data/`.
@@ -60,7 +61,7 @@ _Last updated 2026-10-04._
   - **Vendor items:** Coarse Thread, Fine Thread, Red Dye and Rune Thread are assumed sold by vendors (`vendor_verified = false`); check a Forever trade supplies vendor.
   - **Availability:** Runecloth Bag and its two dyes are marked post-launch, but the 2026-10-04 17:46Z scan has both dyes on the beta auction house (Magenta 44 units, Cerulean 261).
 - Multi-yield recipes aren't supported (see `requirements.md` → *Not modeled*). Every current recipe makes 1.
-- Addon prices come from one scan: no history, so no recent or historical values and no discount screen. Listing depth is stored but not yet used in calculations.
+- Addon prices come from one scan: no history, so no recent or historical values and no discount screen. Listing depth is displayed, but not used in calculations.
 - The real beta scan has thin high-level Tailoring coverage, because most beta characters are low level; low-tier bags and cloth are well listed. Runecloth Bag has no listings, so its board row shows missing prices, and Runecloth has two listings, which carry no loaded name.
 - Mankrik has no upstream scan time, so price age is unknown and "stale" only measures time since download.
 - Classic historical values are zero, so the discount screen cannot run on Classic.
@@ -77,7 +78,9 @@ _Last updated 2026-10-04._
 .venv/bin/python -m mypy
 ```
 
-Expected: 191 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 203 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+
+Depth verification: `tests/test_depth.py` covers source and every market field, exact scan selection, partial scans, duplicate imports, stack units and listings without a buyout. The Crafting UI tests cover addon outputs with and without listings, direct inputs and TSM unavailable depth. On a copy of the real database, scan `20261004T225430Z-31f52b` returns Linen Bag 1,429 listings / 1,429 units and Runecloth Bag 0 / 0 in about 3 ms; all four board rows and policy 0.2 are identical before and after the query.
 
 Last live check (2026-10-04, Mankrik, 5,868 rows), cautious basis:
 

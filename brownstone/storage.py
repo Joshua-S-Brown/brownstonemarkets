@@ -9,7 +9,7 @@ from typing import Any
 import duckdb
 
 from . import markets
-from .config import MARKET_KEYS, Source
+from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 
 SCHEMA_VERSION = 3
@@ -219,3 +219,35 @@ def price_observations(db, config: Mapping[str, Any], snapshot_id: str, item_ids
     ).fetchall()
     return {item_id: {"min_buyout": listed, "market_value": market}
             for item_id, listed, market in rows}
+
+
+def listing_depth(db, config: Mapping[str, Any], snapshot_id: str,
+                  item_ids: list[int]) -> dict[int, dict[str, int]] | None:
+    """Listing counts and units in the exact priced scan, including listings without a buyout.
+
+    None means depth is unavailable (TSM, or no matching complete priced addon scan).
+    In a matching scan, an absent item has zero listings and units: it was not listed.
+    No counts from another source, market or snapshot can fill a missing item.
+    """
+    if config["provider"] != ADDON_PROVIDER:
+        return None
+    keys = ("source_id", *MARKET_KEYS)
+    predicates = " AND ".join(f"{key}=?" for key in keys)
+    parameters = [snapshot_id, *[config[key] for key in keys]]
+    scan = db.execute(
+        f"SELECT scan_id FROM addon_scans WHERE snapshot_id=? AND {predicates} "
+        "AND status='completed' AND NOT partial AND priced", parameters,
+    ).fetchone()
+    if scan is None:
+        return None
+    if not item_ids:
+        return {}
+    placeholders = ", ".join("?" for _ in item_ids)
+    rows = db.execute(
+        f"SELECT item_id, count(*), sum(quantity) FROM scan_listings WHERE snapshot_id=? "
+        f"AND {predicates} AND scan_id=? AND item_id IN ({placeholders}) GROUP BY item_id",
+        [*parameters, scan[0], *item_ids],
+    ).fetchall()
+    depth = {item_id: {"listings": 0, "units": 0} for item_id in item_ids}
+    depth.update({item_id: {"listings": listings, "units": units} for item_id, listings, units in rows})
+    return depth
