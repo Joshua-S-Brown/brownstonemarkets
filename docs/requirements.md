@@ -127,6 +127,9 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - Before migrating, the existing file is copied to `data/brownstone.v<N>.backup.duckdb`.
   - The app upgrades at startup and the pipeline before writing, so read-only views never see an outdated schema.
   - Manifests written before a change are read through an upgrade adapter; they are never edited.
+- **OPS-03 One home machine** (decided 2026-10-05): Brownstone, its `data/` folder and all addon scanning run on the Mac. The Windows desktop doesn't scan for now, which keeps one scan file and one writer; scanning on a second machine needs its own decision first (importing a second file). Windows stays a supported, CI-tested platform (OPS-01).
+  - Local storage is enough: about 5 MB per beta scan all-in (up to about 10 MB expected for a busier live house), so roughly 5–35 GB a year at 3–10 scans a day. Cloud storage and a home server aren't needed. `data/` must not sit in a live-synced folder such as iCloud Drive, because DuckDB has a single writer.
+  - Backups are due before the beta closes, not sooner: STORY-016 is completed by the last full beta testing day (21 October), before beta scans become irreplaceable. Until then, migrations still copy the database first (OPS-02).
 
 ## Not modeled (do not imply otherwise)
 
@@ -138,7 +141,7 @@ Demand, sale likelihood, depth-adjusted costs and quantities (listing depth is d
 - Classic regional demand integration (Classic demand context, under Later in `backlog.md`).
 - Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011a).
 - How a beta house is told apart from the live house of the same server type and faction. Today both would derive the same `market_id` (STORY-017).
-- Historical storage, backup (STORY-016) and scheduling.
+- Where backups go and how often (STORY-016; the timing is decided under OPS-03), historical retention and scheduling.
 - Whether to remove the Retail regression sources. SPIKE-008 found Forever listings are per-stack, not Retail-style per-unit commodities, so the Retail commodity feed is not a close test of Forever's model.
 
 None is approved by default.

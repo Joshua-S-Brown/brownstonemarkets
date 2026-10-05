@@ -19,8 +19,6 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 Nothing active in code. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
-Recently completed: STORY-019, market depth on the board, 2026-10-04; STORY-014 Slice 2, the Recipe catalogs page, 2026-10-04; STORY-004, recipe import from saved Wowhead pages, 2026-10-04; STORY-010, addon scan import, 2026-10-04; SPIKE-008, addon scan prototype, 2026-10-04 (see `status.md`).
-
 **Through the last full beta testing day, 21 October** (manual, in game):
 - **Keep scanning.** Three complete scans of the Normal Alliance house are imported (16:47Z, 17:46Z and 22:54Z on 2026-10-04; the last is addon 0.2.0). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
 - **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result by hand in `config/recipe-selections/forever-tailoring.toml` with the date, then regenerate on the Recipe catalogs page. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
@@ -30,11 +28,23 @@ Recently completed: STORY-019, market depth on the board, 2026-10-04; STORY-014 
 
 **Agreed order (reviewed 2026-10-05):** current workflow stories STORY-014, STORY-018 and STORY-015a are implemented (see `status.md`); launch preparation is next. Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
 
-**Launch preparation:** STORY-016 → STORY-017 → STORY-020, completed before the first live import. Use the gap after beta testing for cleanup, verified backup/restore and beta/live separation; aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
+**Launch preparation:** STORY-017 → STORY-016 → STORY-020, completed before the first live import. STORY-016 is due by the last full beta testing day, 21 October, as the beta closes (OPS-03); it isn't urgent before then. Use the gap after beta testing for cleanup, verified backup/restore and beta/live separation; aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
 
-**Archive care meanwhile:** keep a second copy of the raw beta archive as scans accumulate; the full tested procedure is STORY-016. Its destination is still an open decision. Beta comparisons stay within one source and market until STORY-017 is complete.
+**Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, and its destination is still an open decision. Beta comparisons stay within one source and market until STORY-017 is complete.
 
 **After launch:** the remaining stories below. STORY-011a can be a bounded research task when convenient, but must not delay the baseline workflow or launch preparation. Reassess STORY-006 before expanding history features.
+
+### STORY-017 — Keep beta and live data apart
+
+As a gold maker, I want beta scans never to be treated as the live market, so that launch-day prices, comparisons and history aren't silently mixed with a beta economy that doesn't carry over.
+
+**Why required before live import:** the beta source derives `market_id = forever-us-normal-alliance`, exactly what a live Normal Alliance source would derive. Only `rules_version` differs, and that guards crafting, not market joins. The views take the newest observation, so the first live scan would replace beta prices, but anything that reads several scans (STORY-018, history) could combine them if allowed to read beta and live together. STORY-018 stays within one source and market; this identity change must be complete before any live data is imported.
+
+Acceptance:
+- **Decide and record** in `requirements.md` how a beta house is told apart from the live one (*Open decisions*). Beta and live never join on item ID (DATA-03).
+- **Identity comes from the source, not the scan.** A beta and a live scan of the same house carry the same faction, zone and auctioneer, so the house check (ADDON-01) can't tell them apart. The distinction comes from source configuration (for example its `scan_path` in the beta or live game folder, optionally checked against the client version the addon records); verify it during cutover (STORY-020) and on the first live imports.
+- **Existing beta data keeps its provenance.** Any schema change is a numbered migration with a backup (OPS-02). The 2026-10-04 scans end up identified as beta and can still be imported again as duplicates.
+- **Tests** cover: a beta and a live source for the same house get different market identities, and single-scan and multi-scan reads never combine them.
 
 ### STORY-016 — Back up local data
 
@@ -45,17 +55,6 @@ Acceptance:
 - **One documented procedure** that refuses to run while a writer holds the DuckDB lock, copies `data/` to a dated folder, and verifies the copy: file count, and SHA-256 of every bronze file.
 - **Restore tested once:** restored into a fresh folder, the app opens it and the Forever board matches the original.
 - Bronze is the irreplaceable part. Derived data becomes rebuildable with STORY-006.
-
-### STORY-017 — Keep beta and live data apart
-
-As a gold maker, I want beta scans never to be treated as the live market, so that launch-day prices, comparisons and history aren't silently mixed with a beta economy that doesn't carry over.
-
-**Why required before live import:** the beta source derives `market_id = forever-us-normal-alliance`, exactly what a live Normal Alliance source would derive. Only `rules_version` differs, and that guards crafting, not market joins. The views take the newest observation, so the first live scan would replace beta prices, but anything that reads several scans (STORY-018, history) could combine them if allowed to read beta and live together. STORY-018 stays within one source and market; this identity change must be complete before any live data is imported.
-
-Acceptance:
-- **Decide and record** in `requirements.md` how a beta house is told apart from the live one (*Open decisions*). Beta and live never join on item ID (DATA-03).
-- **Existing beta data keeps its provenance.** Any schema change is a numbered migration with a backup (OPS-02). The 2026-10-04 scans end up identified as beta and can still be imported again as duplicates.
-- **Tests** cover: a beta and a live source for the same house get different market identities, and single-scan and multi-scan reads never combine them.
 
 ### STORY-020 — Launch-day runbook
 
