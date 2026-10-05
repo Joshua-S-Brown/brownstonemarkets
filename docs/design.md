@@ -61,7 +61,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 
 | Entity | Identity | Notes |
 | --- | --- | --- |
-| Market | `game_version, region, scope, realm, server_type, faction` → derived `market_id` | One auction house. Crafting also needs the source's `rules_version` |
+| Market | `game_version, region, scope, realm, server_type, faction, environment` → derived `market_id` | One auction house. Crafting also needs the source's `rules_version` |
 | Source | `source_id` (+ `provider`, `source_url`) | One feed observing one market; a `[[sources]]` entry; names its data folders |
 | Collection | `snapshot_id` (UTC time + random suffix) | Bronze CSV + manifest with source and market identity; manifest records `analytical_snapshot_id` |
 | Analytical snapshot | source + upstream scan time + SHA-256 | Repeated identical content from the same source reuses the earlier ID |
@@ -79,17 +79,19 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
   - Version 1: explicit table, plus the identity columns.
   - Version 2: market/source split. Adds `source_id`, `server_type` and `faction`, moves Classic faction out of the realm slug, renames scope `realm` to `house`, and re-derives `market_id`.
   - Version 3: addon scans. Adds `addon_scans` and `scan_listings`; `market_snapshots` is unchanged.
+  - Version 4: adds `environment` to all three observation tables. Stored Forever rows collected before the frozen 2026-11-04 00:00 UTC boundary become beta; all others become live. Listings lack `collected_at`, so the migration uses the parent `addon_scans` row matched by `source_id, scan_id`; a missing/null timestamp falls into live. Beta IDs are re-derived with the suffix instead of blindly appending, making interruption/replay harmless. Only null environments are classified, so already classified rows stay intact. The frozen date cites the official source under Product direction in `requirements.md`.
 - **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
-- **Callers.** The app calls it at startup for every source (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
+- **Callers.** The app calls it at startup for whichever source is selected (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
 - **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
 - **Nullable columns,** so v0.1 databases match fresh ones; validation happens in normalization.
-- **Manifests are never rewritten.** `markets.upgrade_legacy` reads pre-split manifests in the current shape.
+- **Manifests are never rewritten.** `markets.upgrade_legacy` reads pre-split and pre-environment manifests in the current shape. Missing environments use the same collection-time boundary as migration 4; explicit environments remain authoritative. `completed_snapshots` filters adapted records by source and every `MARKET_KEYS` field before choosing the latest observation.
+- **Shared identity.** `MARKET_KEYS` includes the derived ID and all seven market fields, including `environment` (DATA-03). Browse, Opportunities, crafting prices, depth, Scan changes and analytical deduplication use the entire scope. `known_scan` retrieves the stable source/scan key, adapts schema-3 records for read-only preview and checks every market key before returning deduplication state; a scope mismatch refuses key reuse. Source IDs and `<source_id>:<scan_id>` snapshot IDs are unchanged.
 
 ## Scan import preview
 
 - `pipeline.preview_scans` returns a `ScanPreview` containing exact file bytes, a serialized resolved configuration, parsed records, validated summaries and the relevant existing `known_scan` records. `new_ids` is derived from those records. Missing databases and older schemas without `addon_scans` mean no known scans; preview never upgrades.
 - `_read_scan_bytes` implements the bounded descriptor/path read described by ADDON-06. `_prepare_scans`, `_select_scans`, `_check_scans`, `scans.listing_frame` and `scans.scan_content_hash` are shared with CLI import; there is one parser and one per-scan hash format. CLI validation stays limited to selected scans. UI previews validate every scan's header, times and listings (`_validate_scans`), but record house mismatches per scan in `ScanPreview.mismatches`; `new_ids` excludes them.
-- `import_scans(..., reviewed=preview, scan_ids=...)` recomputes and compares bytes/configuration/known records before any archive write. It rejects unknown, empty or already-imported selections. A final duplicate check under the writer transaction precedes `_save_collection`; the writer consumes the recomputed in-memory bytes. Fresh databases and migrations are created only during explicit import. No new schema migration is required.
+- `import_scans(..., reviewed=preview, scan_ids=...)` recomputes and compares bytes/configuration/known records before any archive write. It rejects unknown, empty or already-imported selections. A final duplicate check under the writer transaction precedes `_save_collection`; the writer consumes the recomputed in-memory bytes. Fresh databases and migrations are created only during explicit import. Preview remains read-only across schema 3 and 4.
 - `_save_collection` preserves raw bytes and manifests, and `_load_collection` shares transactional deduplication and per-scan import with the CLI. `_file_scan_state` classifies every file scan after loading as saved (same ID and hash), `other_house` or remaining, without validating unselected scans; an unusable entry counts as remaining. `import_guidance` uses those counts to protect subsets and warn about other-house scans.
 - `views/scan_import.render` owns one active review and selection in Streamlit session state. Configuration/source switches discard both; changing to a TSM source also invalidates the active addon identity. Each Preview click clears prior state before reading. Import runs in the button's `on_click` callback and stores its messages for the rerun, so the result replaces the reviewed table. Errors discard the review and require another click. `app.py` orchestrates these controls and keeps TSM refresh unchanged.
 - Bronze/silver/database together are still not atomic; normal import-write failures retain a failed manifest for diagnosis. Best-effort file-read detection cannot prevent every concurrent game write (ADDON-06).
@@ -135,7 +137,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 
 ## Switching to WoW Forever
 
-1. **Market identity (done, STORY-009).** Configure `scope = "house"`, `server_type`, `faction` and no realm, for example `forever-us-roleplaying-alliance`. Neutral houses default to a 15% cut.
+1. **Market identity (done, STORY-009).** Configure `scope = "house"`, `server_type`, `faction`, an explicit `environment` (DATA-03) and no realm, for example `forever-us-roleplaying-alliance`. Neutral houses default to a 15% cut.
 2. **Price source (done, STORY-010).** There is no TSM or Blizzard feed. A `provider = "addon"` source imports the addon's SavedVariables file: bronze stays byte-for-byte, listings go to `scan_listings`, and item-level prices are derived in the `market_snapshots` shape (rules ADDON-01 to ADDON-06).
 3. **Catalog (done, STORY-004).** `config/forever-tailoring.toml` is generated from the saved Forever Tailoring page (CRAFT-08). To cover another profession or more recipes, use **Add a profession** or **Update a profession** on the Recipe catalogs page.
 4. **Configuration.** Add the `[[sources]]` entry: market fields, `rules_version`, `provider = "addon"`, `scan_path` and `scan_evidence` (see the disabled example in `config/market.toml`). Other non-TSM feeds get their own adapter producing the same `market_snapshots` columns.
@@ -149,7 +151,7 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 ## Known design debt
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (93.48% overall as of 2026-10-05): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 94% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 94% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.

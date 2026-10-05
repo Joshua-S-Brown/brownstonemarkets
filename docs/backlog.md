@@ -28,23 +28,11 @@ Nothing active in code. Brownstone can now run on our own addon scans alone (STO
 
 **Agreed order (reviewed 2026-10-05):** current workflow stories STORY-014, STORY-018 and STORY-015a are implemented (see `status.md`); launch preparation is next. Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
 
-**Launch preparation:** STORY-017 → STORY-016 → STORY-020, completed before the first live import. STORY-016 is due by the last full beta testing day, 21 October, as the beta closes (OPS-03); it isn't urgent before then. Use the gap after beta testing for cleanup, verified backup/restore and beta/live separation; aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
+**Launch preparation:** STORY-016 → STORY-020, completed before the first live import. STORY-016 is due by the last full beta testing day, 21 October, as the beta closes (OPS-03); it isn't urgent before then. Use the gap after beta testing for cleanup, verified backup/restore and source configuration review (DATA-03); aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
 
-**Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, and its destination is still an open decision. Beta comparisons stay within one source and market until STORY-017 is complete.
+**Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, and its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
 
 **After launch:** the remaining stories below. STORY-011a can be a bounded research task when convenient, but must not delay the baseline workflow or launch preparation. Reassess STORY-006 before expanding history features.
-
-### STORY-017 — Keep beta and live data apart
-
-As a gold maker, I want beta scans never to be treated as the live market, so that launch-day prices, comparisons and history aren't silently mixed with a beta economy that doesn't carry over.
-
-**Why required before live import:** the beta source derives `market_id = forever-us-normal-alliance`, exactly what a live Normal Alliance source would derive. Only `rules_version` differs, and that guards crafting, not market joins. The views take the newest observation, so the first live scan would replace beta prices, but anything that reads several scans (STORY-018, history) could combine them if allowed to read beta and live together. STORY-018 stays within one source and market; this identity change must be complete before any live data is imported.
-
-Acceptance:
-- **Decide and record** in `requirements.md` how a beta house is told apart from the live one (*Open decisions*). Beta and live never join on item ID (DATA-03).
-- **Identity comes from the source, not the scan.** A beta and a live scan of the same house carry the same faction, zone and auctioneer, so the house check (ADDON-01) can't tell them apart. The distinction comes from source configuration (for example its `scan_path` in the beta or live game folder, optionally checked against the client version the addon records); verify it during cutover (STORY-020) and on the first live imports.
-- **Existing beta data keeps its provenance.** Any schema change is a numbered migration with a backup (OPS-02). The 2026-10-04 scans end up identified as beta and can still be imported again as duplicates.
-- **Tests** cover: a beta and a live source for the same house get different market identities, and single-scan and multi-scan reads never combine them.
 
 ### STORY-016 — Back up local data
 
@@ -125,6 +113,8 @@ Acceptance:
 - **Same rules.** Missing prices are never free, unsupported recipes are isolated per row, and the policy version is shown. Tests cover a cross-profession chain.
 
 ## Later
+
+**Optional client-version cutover guard:** investigate whether recorded client versions can flag a misconfigured beta/live source during STORY-020 and first live imports. Source configuration remains authoritative (DATA-03); STORY-017 adds no client-version evidence checks.
 
 These are grouped by what unblocks them.
 

@@ -25,6 +25,7 @@ class Source(TypedDict):
     provider: str  # Who observed the prices, e.g. "tsm" or "addon".
     enabled: bool  # Disabled sources stay configured but are hidden from the app and refused by the CLI.
     market_id: str  # Derived from the market fields; never configured directly.
+    environment: str  # live or beta; required explicitly for Forever.
     game_version: str
     region: str
     scope: str  # "house" or "region"
@@ -66,6 +67,8 @@ def build_source(shared: dict, entry: dict) -> Source:
         raise ValueError(f"Source {source.get('source_id', '?')} is missing {missing}")
     if not _SLUG.fullmatch(source["source_id"]):
         raise ValueError("source_id must contain only lowercase letters, numbers, underscores or hyphens")
+    if source["game_version"] != "forever":
+        source.setdefault("environment", "live")
     markets.validate(source)
     source["market_id"] = markets.market_id(source)
     _validate_feed(source)

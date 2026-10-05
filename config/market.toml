@@ -6,13 +6,13 @@ min_discount = 0.20
 top_n = 20
 
 # Each [[sources]] entry is one feed (source_id, provider, and a URL or scan file) observing one market.
-# The market is the auction house: game_version + region + scope + realm/server_type + faction.
+# The market is the auction house: game_version + region + scope + realm/server_type + faction + environment.
 # market_id is derived from those fields, so several sources can observe the same market.
 # source_id also names the source's data folder; the IDs below predate the split and match
 # their market IDs, which keeps existing data in place.
 #
 # A Forever market has no realm, for example:
-#   game_version = "forever", region = "us", scope = "house",
+#   game_version = "forever", environment = "live", region = "us", scope = "house",
 #   server_type = "roleplaying", faction = "alliance"   # -> forever-us-roleplaying-alliance
 
 [[sources]]
@@ -55,7 +55,7 @@ scope = "region"
 source_id = "forever-us-normal-alliance-addon"
 provider = "addon"
 enabled = false  # Enable it, and set scan_path, in config/market.local.toml (untracked).
-label = "Forever US Normal Alliance — my scans (addon)"
+label = "Forever beta US Normal Alliance — my scans (addon)"
 # Placeholder. The game's own file contains your account folder name, so keep the real path in
 # config/market.local.toml, which Git ignores:
 #   [sources.forever-us-normal-alliance-addon]
@@ -63,6 +63,7 @@ label = "Forever US Normal Alliance — my scans (addon)"
 #   scan_path = "/Applications/World of Warcraft/_classic_beta_/WTF/Account/<ACCOUNT>/SavedVariables/BrownstoneScan.lua"
 scan_path = "data/inbox/addon-scans/BrownstoneScan.lua"
 game_version = "forever"
+environment = "beta"
 region = "us"
 scope = "house"
 server_type = "normal"

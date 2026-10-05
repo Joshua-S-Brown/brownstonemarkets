@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NOW = datetime(2026, 10, 4, tzinfo=UTC)
 MARKET = {"market_id": "classic-us-mankrik-alliance", "game_version": "classic", "region": "us",
           "scope": "house", "realm": "mankrik", "server_type": "", "faction": "alliance",
-          "rules_version": "classic-era"}
+          "rules_version": "classic-era", "environment": "live"}
 
 
 def catalog():
@@ -77,7 +77,7 @@ def test_independent_freshness_basis_and_stale_boundary(basis):
 
 @pytest.mark.parametrize("key,value", [("game_version", "retail"), ("region", "eu"),
     ("realm", "stormrage"), ("faction", "horde"), ("server_type", "roleplaying"), ("scope", "region"),
-    ("market_id", "other")])
+    ("market_id", "other"), ("environment", "beta")])
 def test_rejects_incompatible_snapshot_scope(key, value):
     with pytest.raises(ValueError, match="different market"):
         rank_recipes(catalog(), observed(prices()), MARKET, snapshot(**{key: value}), now=NOW)
@@ -121,15 +121,16 @@ def test_price_read_enforces_source_and_full_market_identity():
     with duckdb.connect(":memory:") as db:
         db.execute("CREATE TABLE market_snapshots (snapshot_id VARCHAR, item_id INTEGER, min_buyout INTEGER, "
                    "market_value INTEGER, source_id VARCHAR, market_id VARCHAR, game_version VARCHAR, region VARCHAR, "
-                   "scope VARCHAR, realm VARCHAR, server_type VARCHAR, faction VARCHAR)")
+                   "scope VARCHAR, realm VARCHAR, server_type VARCHAR, faction VARCHAR, environment VARCHAR)")
         identity = [MARKET[key] for key in MARKET_KEYS]
-        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 400, 450, 'mine', ?, ?, ?, ?, ?, ?, ?)",
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 400, 450, 'mine', ?, ?, ?, ?, ?, ?, ?, ?)",
                    identity)
         # Same snapshot and item, but the Horde house: must never leak into Alliance prices.
-        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 999, 999, 'mine', ?, ?, ?, ?, ?, ?, 'horde')",
-                   identity[:-1])
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 999, 999, 'mine', ?, ?, ?, ?, ?, ?, 'horde', ?)",
+                   [*identity[:-2], identity[-1]])
         # Same snapshot, item and house, but another source: never mixed silently (DATA-08).
-        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 1, 1, 'theirs', ?, ?, ?, ?, ?, ?, ?)", identity)
+        db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 1, 1, 'theirs', ?, ?, ?, ?, ?, ?, ?, ?)",
+                   identity)
         assert price_observations(db, source, "same", [4240]) == {4240: {"min_buyout": 400, "market_value": 450}}
         assert price_observations(db, {**source, "realm": "wrong"}, "same", [4240]) == {}
         assert price_observations(db, {**source, "source_id": "other"}, "same", [4240]) == {}

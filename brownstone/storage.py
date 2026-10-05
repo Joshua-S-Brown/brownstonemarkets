@@ -12,7 +12,7 @@ from . import markets
 from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -80,7 +80,28 @@ def _migrate_to_3(db):
         PRIMARY KEY (source_id, scan_id, listing_index))""")
 
 
-MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3}
+# Frozen official launch boundary: docs/requirements.md, Product direction / Official dates.
+_V4_FOREVER_LAUNCH = "2026-11-04T00:00:00+00:00"
+
+
+def _migrate_to_4(db):
+    """Separate beta/live economies; listings inherit the stored parent scan's collection time."""
+    for table in ("market_snapshots", "addon_scans", "scan_listings"):
+        db.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS environment VARCHAR")
+        collected = ("(SELECT s.collected_at FROM addon_scans s "
+                     "WHERE s.source_id=scan_listings.source_id AND s.scan_id=scan_listings.scan_id)"
+                     if table == "scan_listings" else "collected_at")
+        db.execute(f"""UPDATE {table} SET environment =
+            CASE WHEN game_version='forever' AND {collected} < ?::TIMESTAMPTZ
+                 THEN 'beta' ELSE 'live' END WHERE environment IS NULL""", [_V4_FOREVER_LAUNCH])
+        # Derive instead of appending blindly: a crash after this statement cannot double the suffix.
+        db.execute(f"""UPDATE {table} SET market_id = concat_ws('-', game_version, region,
+            nullif(realm, ''), nullif(server_type, ''), nullif(faction, ''),
+            CASE WHEN scope='region' THEN 'commodities' END, 'beta')
+            WHERE environment='beta'""")
+
+
+MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4}
 
 
 def _has_table(db, name: str) -> bool:
@@ -148,22 +169,30 @@ def load_snapshot(db, silver: Path, frame, config: Source) -> tuple[str, bool]:
     The database must already be at SCHEMA_VERSION (see ``upgrade_database``).
     """
     _require_current(db)
-    existing = db.execute("""SELECT snapshot_id FROM market_snapshots
-        WHERE source_id=? AND updated_at IS NOT DISTINCT FROM ? AND source_sha256=? LIMIT 1""",
-        [config["source_id"], frame["updated_at"][0], frame["source_sha256"][0]]).fetchone()
+    predicate, scope = scope_predicate(config)
+    existing = db.execute(f"""SELECT snapshot_id FROM market_snapshots
+        WHERE {predicate} AND updated_at IS NOT DISTINCT FROM ? AND source_sha256=? LIMIT 1""",
+        [*scope, frame["updated_at"][0], frame["source_sha256"][0]]).fetchone()
     if existing:
         return existing[0], False
     db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(silver)])
     return frame["snapshot_id"][0], True
 
 
-def known_scan(db, source_id: str, scan_id: str) -> dict | None:
-    """The stored record of a scan from this source, if it was imported before."""
-    row = db.execute("""SELECT snapshot_id, scan_sha256, priced, item_count FROM addon_scans
-        WHERE source_id=? AND scan_id=?""", [source_id, scan_id]).fetchone()
+def known_scan(db, config: Mapping[str, Any], scan_id: str) -> dict | None:
+    """Dedup per source/scan, refusing reuse of that stable key for a different market.
+
+    Preview can read schema 3 without migrating: adapt the stored row exactly as a manifest.
+    """
+    cursor = db.execute("SELECT * FROM addon_scans WHERE source_id=? AND scan_id=?",
+                        [config["source_id"], scan_id])
+    row = cursor.fetchone()
     if row is None:
         return None
-    return dict(zip(("snapshot_id", "scan_sha256", "priced", "item_count"), row, strict=True))
+    record = markets.upgrade_legacy(dict(zip([c[0] for c in cursor.description], row, strict=True)))
+    if any(record.get(key) != config[key] for key in MARKET_KEYS):
+        raise ValueError(f"Scan {scan_id} belongs to a different market; use a separate source_id")
+    return {key: record[key] for key in ("snapshot_id", "scan_sha256", "priced", "item_count")}
 
 
 def load_scan(db, scan: Path, listings: Path, prices: Path | None) -> None:
@@ -185,12 +214,15 @@ def completed_snapshots(config: Source) -> list[dict]:
     Manifests written before the market/source split are upgraded in memory; files are never edited.
     """
     records = []
+    identity: Mapping[str, Any] = config
     folder = Path(config["data_dir"]) / "bronze" / config["source_id"]
     for path in folder.glob("*.json"):
         try:
             record = json.loads(path.read_text(encoding="utf-8"))
             if record.get("status") == "complete":
-                records.append(markets.upgrade_legacy(record))
+                upgraded = markets.upgrade_legacy(record)
+                if all(upgraded.get(key) == identity[key] for key in ("source_id", *MARKET_KEYS)):
+                    records.append(upgraded)
         except (OSError, ValueError):
             continue
     return sorted(records, key=lambda r: (observed_at(r), datetime.fromisoformat(r["collected_at"])), reverse=True)

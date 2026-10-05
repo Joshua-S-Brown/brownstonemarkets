@@ -102,7 +102,8 @@ def test_cli_says_when_a_file_has_no_complete_scan(tmp_path, monkeypatch, capsys
     write_scans(tmp_path / "scan.lua", scan("cut-short", int(datetime.now(UTC).timestamp()) - 60, [],
                                             status="stopped", reported=10))
     config.write_text(SHARED + '[[sources]]\nsource_id = "mine"\nprovider = "addon"\nscan_path = "scan.lua"\n'
-                      'game_version = "forever"\nregion = "us"\nscope = "house"\nserver_type = "normal"\n'
+                      'game_version = "forever"\nenvironment = "live"\n'
+                      'region = "us"\nscope = "house"\nserver_type = "normal"\n'
                       'faction = "alliance"\n', encoding="utf-8")
     run_cli(monkeypatch, "--config", config, "--source", "mine")
     out = capsys.readouterr().out

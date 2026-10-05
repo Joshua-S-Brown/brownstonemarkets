@@ -36,9 +36,9 @@ def test_market_scopes_and_dedup(tmp_path):
     with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
         assert db.execute("SELECT count(*) FROM market_snapshots").fetchone()[0] == 2
         sid = db.execute("SELECT snapshot_id FROM market_snapshots WHERE scope='region'").fetchone()[0]
-        assert browse(db, sid, "Ore")["item_id"].to_list() == [1]
-        assert browse(db, sid, "1").height == 1
-        assert browse(db, sid, "missing").is_empty()
+        assert browse(db, sid, config, "Ore")["item_id"].to_list() == [1]
+        assert browse(db, sid, config, "1").height == 1
+        assert browse(db, sid, config, "missing").is_empty()
     manifests = [json.loads(p.read_text()) for p in (tmp_path / "data/bronze").rglob("*.json")]
     assert sum(m["new_observation"] for m in manifests) == 2
 
@@ -67,7 +67,8 @@ def test_source_config():
     # Pre-split source IDs equal their derived market IDs, so existing data folders stay put.
     assert [s["market_id"] for s in sources[:3]] == [s["source_id"] for s in sources[:3]]
     addon = sources[3]
-    assert (addon["market_id"], addon["provider"], addon["enabled"]) == ("forever-us-normal-alliance", "addon", False)
+    assert (addon["market_id"], addon["provider"], addon["enabled"]) == (
+        "forever-us-normal-alliance-beta", "addon", False)
     assert addon["scan_path"].is_absolute() and "source_url" not in addon
     assert [s["scope"] for s in sources] == ["house", "house", "region", "house"]
     mankrik = sources[0]
@@ -79,7 +80,7 @@ def test_source_config():
 def test_forever_market_needs_no_realm_and_neutral_houses_cost_more():
     shared = dict(data_dir=Path("data"), max_age_hours=24, auction_cut=.05, min_discount=.2, top_n=20)
     forever = dict(source_id="my-forever-scans", provider="addon", scan_path="BrownstoneScan.lua",
-                   game_version="forever", region="us", scope="house", server_type="roleplaying")
+                   game_version="forever", environment="live", region="us", scope="house", server_type="roleplaying")
     alliance = build_source(shared, {**forever, "faction": "alliance"})
     assert alliance["market_id"] == "forever-us-roleplaying-alliance"
     assert alliance["realm"] == "" and alliance["auction_cut"] == .05
@@ -175,7 +176,7 @@ def test_fresh_and_migrated_databases_are_identical_and_versioned(tmp_path):
         fresh.execute("UPDATE schema_info SET value='99'")
         with pytest.raises(RuntimeError, match="newer"):
             ensure_schema(fresh)
-        assert [name for name, _ in columns(old)][-3:] == ["source_id", "server_type", "faction"]
+        assert [name for name, _ in columns(old)][-4:] == ["source_id", "server_type", "faction", "environment"]
 
 
 def test_market_id_derivation_matches_pre_split_ids():

@@ -40,7 +40,7 @@ def test_preview_mixed_new_duplicate_partial_empty_and_utc_without_writes(tmp_pa
     assert not preview_scans(config, now=NOW).new_ids
 
 
-@pytest.mark.parametrize("change", ["bytes", "source", "evidence", "destination", "market", "duplicate"])
+@pytest.mark.parametrize("change", ["bytes", "source", "evidence", "destination", "market", "environment", "duplicate"])
 def test_stale_review_fails_before_writes(tmp_path, change):
     config = addon_source(tmp_path / "data")
     path = write_scans(tmp_path / "scan.lua", scan("s", FINISHED, [listing(1, 1, 50)]))
@@ -54,6 +54,9 @@ def test_stale_review_fails_before_writes(tmp_path, change):
         config["scan_evidence"]["label"] = "different"
     elif change == "destination":
         config["data_dir"] = tmp_path / "elsewhere"
+    elif change == "environment":
+        config["environment"] = "beta"
+        config["market_id"] += "-beta"
     elif change == "market":
         config["rules_version"] = "changed"
     else:

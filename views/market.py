@@ -27,7 +27,7 @@ def render_browse(config):
     _header(config, manifest, count)
     try:
         with read_db(config) as db:
-            results = browse(db, sid, search, limit)
+            results = browse(db, sid, config, search, limit)
     except Exception as error:
         st.error(f"Unable to read saved prices: {error}")
         return
@@ -62,7 +62,7 @@ def render_opportunities(config):
     try:
         with read_db(config) as db:
             results = rank(db, sid, settings, search)
-            eligible = screenable_count(db, sid)
+            eligible = screenable_count(db, sid, config)
     except Exception as error:
         st.error(f"Unable to read saved opportunities: {error}")
         return

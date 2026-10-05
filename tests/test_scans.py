@@ -27,6 +27,7 @@ EVIDENCE = {"faction": "Alliance", "zone": "Stormwind City"}
 def addon_source(data_dir, scan_path=FIXTURE, **overrides):
     shared = dict(data_dir=data_dir, max_age_hours=24, auction_cut=.05, min_discount=.2, top_n=20)
     entry = dict(source_id="my-scans", provider="addon", scan_path=scan_path, game_version="forever",
+                 environment="live",
                  region="us", scope="house", server_type="roleplaying", faction="alliance",
                  rules_version="forever-beta-1.60", scan_evidence=dict(EVIDENCE))
     return build_source(shared, {**entry, **overrides})
@@ -155,7 +156,7 @@ def test_import_preserves_bytes_dedupes_and_labels_partial_scans(tmp_path):
     outcomes = {s["scan_id"]: (s["outcome"], s["partial"]) for s in manifest["scans"]}
     assert outcomes == {COMPLETE: ("imported", False), STOPPED: ("partial (not priced)", True)}
     with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
-        assert schema_version(db) == 3
+        assert schema_version(db) == 4
         assert db.execute("SELECT scan_id, partial, priced, nonexact_stacks FROM addon_scans ORDER BY scan_id"
                           ).fetchall() == [(COMPLETE, False, True, 1), (STOPPED, True, False, 0)]
         assert db.execute("SELECT count(*), count(DISTINCT market_id) FROM scan_listings").fetchone() == (6, 1)
@@ -259,7 +260,7 @@ def test_migrates_an_existing_v2_database(tmp_path):
     import_scans(addon_source(data), now=NOW)
     assert (data / "brownstone.v2.backup.duckdb").exists()
     with duckdb.connect(str(data / "brownstone.duckdb")) as db:
-        assert schema_version(db) == 3
+        assert schema_version(db) == 4
         assert db.execute("SELECT item_name, min_buyout FROM market_snapshots WHERE snapshot_id='old'"
                           ).fetchall() == [("Runecloth", 9500)]
         assert db.execute("SELECT count(*) FROM scan_listings").fetchone()[0] == 6
@@ -335,7 +336,8 @@ def test_cli_refuses_disabled_sources_and_imports_enabled_ones(tmp_path, monkeyp
     old = write_scans(tmp_path / "scan.lua", scan("cli", int(datetime.now(UTC).timestamp()) - 60, [listing(1, 1, 50)]))
     body = ('data_dir = "data"\nmax_age_hours = 1000000\nauction_cut = 0.05\nmin_discount = 0.2\ntop_n = 20\n'
             '[[sources]]\nsource_id = "mine"\nprovider = "addon"\nenabled = {enabled}\nscan_path = "scan.lua"\n'
-            'game_version = "forever"\nregion = "us"\nscope = "house"\nserver_type = "normal"\nfaction = "alliance"\n')
+            'game_version = "forever"\nenvironment = "live"\n'
+            'region = "us"\nscope = "house"\nserver_type = "normal"\nfaction = "alliance"\n')
     config.write_text(body.format(enabled="false"))
     monkeypatch.setattr(sys, "argv", ["brownstone", "--config", str(config), "--source", "mine"])
     with pytest.raises(SystemExit):
@@ -354,7 +356,8 @@ def test_local_overrides_keep_personal_settings_out_of_the_tracked_config(tmp_pa
     local = tracked.with_name(LOCAL_OVERRIDES)
     tracked.write_text('data_dir = "data"\nmax_age_hours = 24\nauction_cut = 0.05\nmin_discount = 0.2\ntop_n = 20\n'
                        '[[sources]]\nsource_id = "mine"\nprovider = "addon"\nenabled = false\n'
-                       'scan_path = "data/inbox/BrownstoneScan.lua"\ngame_version = "forever"\nregion = "us"\n'
+                       'scan_path = "data/inbox/BrownstoneScan.lua"\ngame_version = "forever"\nenvironment = "live"\n'
+                       'region = "us"\n'
                        'scope = "house"\nserver_type = "normal"\nfaction = "alliance"\n')
     [default] = read_sources(tracked, local)  # No local file: the tracked settings apply.
     assert not default["enabled"] and default["scan_path"] == (tmp_path / "data/inbox/BrownstoneScan.lua").resolve()

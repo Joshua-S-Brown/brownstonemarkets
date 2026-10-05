@@ -174,7 +174,7 @@ def _known_scans(db, config: Source, summaries: list[dict]) -> list[dict | None]
     # Older schemas may lack addon_scans. Preview never migrates them.
     if not db.execute("SELECT count(*) FROM information_schema.tables WHERE table_name='addon_scans'").fetchone()[0]:
         return [None] * len(summaries)
-    return [known_scan(db, config["source_id"], summary["scan_id"]) for summary in summaries]
+    return [known_scan(db, config, summary["scan_id"]) for summary in summaries]
 
 
 def _read_known(config: Source, summaries: list[dict]) -> list[dict | None]:
@@ -318,8 +318,9 @@ def _load_collection(db, config: Source, folders: dict[str, Path], sid: str, now
 def _file_scan_state(db, config: Source, record) -> str:
     """Whether a file scan is saved for this source, from another auction house, or still remaining.
 
-    Unselected scans were never validated, so an unusable entry counts as remaining instead of
-    failing an import that did not select it.
+    Unselected scans were never validated, so an unusable entry, or one stored under this
+    source_id for a different market, counts as remaining instead of failing an import that did not
+    select it. Selected scans with that mismatch are refused earlier by ``known_scan``.
     """
     if not isinstance(record, dict) or not isinstance(record.get("scan_id"), str):
         return "remaining"
@@ -327,7 +328,10 @@ def _file_scan_state(db, config: Source, record) -> str:
         content = scans.scan_content_hash(record)
     except (TypeError, ValueError):
         return "remaining"
-    existing = known_scan(db, config["source_id"], record["scan_id"])
+    try:
+        existing = known_scan(db, config, record["scan_id"])
+    except ValueError:
+        return "remaining"
     if existing and existing["scan_sha256"] == content:
         return "saved"
     return "other_house" if scans.check_house(record, config) else "remaining"
@@ -404,7 +408,7 @@ def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha2
     result = {key: summary[key] for key in ("scan_id", "status", "stop_reason", "partial",
                                              "listing_count", "reported_count")}
     result["finished_at"] = summary["finished_at"].isoformat()
-    existing = known_scan(db, config["source_id"], summary["scan_id"])
+    existing = known_scan(db, config, summary["scan_id"])
     if existing:
         if existing["scan_sha256"] != summary["scan_sha256"]:
             raise ValueError(f"Scan {summary['scan_id']} was imported before with different content")
