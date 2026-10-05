@@ -57,9 +57,52 @@ def rank_recipes(catalog, observations, market, snapshot, *, now, sort_by="profi
                             "stale data" if freshness["stale"] else
                             "potential craft" if result["profit_copper"] > 0 else "negative margin")
         rows.append(result)
+    return _ranked_board(rows, freshness, basis, sort_by)
+
+
+def _ranked_board(rows, freshness, basis, sort_by):
     primary = "profit_copper" if sort_by == "profit" else "margin"
     secondary = "margin" if sort_by == "profit" else "profit_copper"
     rows.sort(key=lambda row: (not row["valid"], "error" in row, -(row[primary] or 0),
-                               -(row[secondary] or 0), row["recipe_id"]))
+                               -(row[secondary] or 0), row["recipe_id"], row.get("catalog_id", "")))
     return {"rows": [{**row, "rank": rank} for rank, row in enumerate(rows, 1)],
             "freshness": freshness, "basis": basis, "policy_version": POLICY_VERSION}
+
+
+def catalog_identity(catalog: dict) -> str:
+    """Selection-file identity supplied by discovery; header identity for standalone catalogs."""
+    return catalog.get("catalog_id", ":".join(catalog[key] for key in
+                                              ("game_version", "rules_version", "profession", "catalog_version")))
+
+
+def compatible_catalogs(catalogs: list[dict], market: dict) -> list[dict]:
+    return [catalog for catalog in catalogs if compatible(catalog, market)]
+
+
+def catalog_for_row(catalogs: list[dict], row: dict) -> dict:
+    """Resolve details by catalog identity, never by a globally assumed recipe ID."""
+    return next(catalog for catalog in catalogs if catalog_identity(catalog) == row["catalog_id"])
+
+
+def filter_profession(board: dict, profession: str | None) -> dict:
+    """Filter without changing the combined ranking or policy."""
+    return {**board, "rows": [row for row in board["rows"]
+                             if profession is None or row["profession"] == profession]}
+
+
+def rank_catalogs(catalogs, observations, market, snapshot, *, now, sort_by="profit",
+                  basis="cautious", max_age_hours=24, auction_cut=0.05):
+    """One board, with independent recipe graphs and a catalog-qualified row identity."""
+    selected = compatible_catalogs(catalogs, market)
+    if not selected:
+        raise ValueError("No compatible recipe catalogs")
+    identities = [catalog_identity(catalog) for catalog in selected]
+    if len(set(identities)) != len(identities):
+        raise ValueError("Catalog identities must be unique")
+    rows = []
+    for catalog in selected:
+        board = rank_recipes(catalog, observations, market, snapshot, now=now, sort_by=sort_by,
+                             basis=basis, max_age_hours=max_age_hours, auction_cut=auction_cut)
+        rows.extend({**row, "catalog_id": catalog_identity(catalog), "profession": catalog["profession"]}
+                    for row in board["rows"])
+    return _ranked_board(rows, board["freshness"], basis, sort_by)

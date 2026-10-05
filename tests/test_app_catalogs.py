@@ -5,19 +5,29 @@ import pytest
 from test_app import classic_sources
 from test_recipe_catalogs import CHANGED_PAGE, LEATHER_PAGE, make_workspace, tree
 
+from brownstone.config import read_sources
+
 pytest.importorskip("streamlit")
 from streamlit.testing.v1 import AppTest  # noqa: E402  (only after the skip check)
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def open_page(tmp_path, monkeypatch):
+def open_page(tmp_path, monkeypatch, experience="forever", forever_rules=True):
+    """The Recipe catalogs page for the sidebar experience (Classic and an enabled Forever source)."""
     config, archive = make_workspace(tmp_path)
     sources = classic_sources(tmp_path)
+    forever = next(source for source in read_sources(ROOT / "config/market.toml")
+                   if source["game_version"] == "forever")
+    forever = {**forever, "enabled": True, "data_dir": tmp_path / "forever"}
+    if not forever_rules:
+        forever.pop("rules_version", None)
+    sources.append(forever)
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
     monkeypatch.setattr("brownstone.recipe_catalogs.CONFIG_DIR", config)
     monkeypatch.setattr("brownstone.recipe_catalogs.ARCHIVE_DIR", archive)
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=30).run()
+    widget(at.selectbox, "Experience").set_value(experience).run()
     at.radio[0].set_value("Recipe catalogs").run()
     assert not at.exception
     return at, config
@@ -40,20 +50,30 @@ def start_add(at, profession):
     [s for s in at.selectbox if s.label == "Profession"][-1].set_value(profession).run()  # The Add tab's.
 
 
-def test_catalogs_page_shows_one_game_version_at_a_time(tmp_path, monkeypatch):
+def test_catalogs_page_follows_the_sidebar_experience(tmp_path, monkeypatch):
     at, _ = open_page(tmp_path, monkeypatch)
+    assert not any(w.label == "Game version" for w in at.radio)  # No second experience choice on the page.
+    assert any(c.value.startswith("Showing **WoW Forever**") for c in at.caption)
     assert any(m.value == "#### WoW Forever catalogs" for m in at.markdown)
     table = at.dataframe[0].value
     assert list(table["Profession"]) == ["Tailoring"]
     assert table.iloc[0]["Version"] == "0.1" and table.iloc[0]["Recipes"] == 2
     assert any(c.value.startswith("No WoW Forever catalog yet: alchemy") and "tailoring" not in c.value
                for c in at.caption)
-    widget(at.radio, "Game version").set_value("classic").run()
+    widget(at.selectbox, "Experience").set_value("classic").run()
+    at.radio[0].set_value("Recipe catalogs").run()  # Each source remembers its own view.
     assert not at.exception
+    assert any(c.value.startswith("Showing **Classic Era**") for c in at.caption)
     assert any(m.value == "#### Classic Era catalogs" for m in at.markdown)
     assert not at.dataframe  # The Forever catalog isn't shown on the Classic view.
     assert any("tailoring" in c.value for c in at.caption if c.value.startswith("No Classic Era catalog yet"))
     assert any("No Classic Era catalogs yet" in i.value for i in at.info)
+    widget(at.selectbox, "Experience").set_value("retail").run()
+    widget(at.selectbox, "Data source").set_value(0).run()
+    at.radio[0].set_value("Recipe catalogs").run()
+    assert not at.exception
+    assert any("Retail (regression) has no recipe catalogs" in i.value for i in at.info)
+    assert not at.dataframe and not at.tabs
 
 
 def test_update_from_a_new_page_previews_then_regenerates_on_a_separate_click(tmp_path, monkeypatch):
@@ -101,7 +121,7 @@ def test_update_refuses_a_page_from_another_game_version(tmp_path, monkeypatch):
 
 
 def test_add_a_profession_previews_then_creates_its_selection_and_catalog(tmp_path, monkeypatch):
-    at, config = open_page(tmp_path, monkeypatch)
+    at, config = open_page(tmp_path, monkeypatch, forever_rules=False)
     start_add(at, "leatherworking")
     assert any("wowhead.com/forever/spells/professions/leatherworking" in m.value for m in at.markdown)
     at.file_uploader[-1].set_value(("Forever Leatherworking.html", LEATHER_PAGE.encode(), "text/html")).run()

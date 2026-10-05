@@ -25,10 +25,11 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
-    catalog = next(w for w in at.selectbox if w.label == "Recipe catalog")  # Other professions may exist.
-    catalog.set_value(next(i for i, label in enumerate(catalog.options) if label.startswith("Classic Tailoring")))
-    at.run()
-    assert any(m.value == "#### Tailoring Action Board" for m in at.markdown)
+    assert not any(w.label == "Recipe catalog" for w in at.selectbox)
+    assert any(m.value == "#### Action Board" for m in at.markdown)
+    table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert set(table["Profession"]) == {"Alchemy", "Enchanting", "Tailoring"}
+    next(w for w in at.selectbox if w.label == "Profession").set_value("tailoring").run()
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert len(table) == 3
     assert table.iloc[0]["Item"] == "Mageweave Bag"
@@ -47,10 +48,12 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     at.radio[0].set_value("Opportunities").run()
     assert not at.exception
     assert any("cannot run" in i.value for i in at.info)  # Classic historical values are zero.
-    next(w for w in at.selectbox if w.label == "Data source").set_value(1).run()  # Retail still works.
+    next(w for w in at.selectbox if w.label == "Experience").set_value("retail").run()  # Retail still works.
+    assert any("several enabled sources" in i.value for i in at.info)  # Area 52 and region commodities.
+    next(w for w in at.selectbox if w.label == "Data source").set_value(0).run()
     at.radio[0].set_value("Browse market").run()
     assert not at.exception
-    assert not any(m.value == "#### Tailoring Action Board" for m in at.markdown)
+    assert not any(m.value == "#### Action Board" for m in at.markdown)
     assert any(h.value == "Browse market" for h in at.subheader)
 
 
@@ -68,9 +71,17 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     assert any("Imported" in s.value for s in at.success)
-    catalog = next(w for w in at.selectbox if w.label == "Recipe catalog")  # Other professions may exist.
-    catalog.set_value(next(i for i, label in enumerate(catalog.options) if label.startswith("Forever Tailoring")))
-    at.run()
+    assert not any(w.label == "Recipe catalog" for w in at.selectbox)
+    combined = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert set(combined["Profession"]) == {"Alchemy", "Tailoring"}
+    alchemy = combined[combined["Profession"] == "Alchemy"]
+    dyes = alchemy.set_index("Item")
+    assert (dyes.loc["Magenta Dye", "Output listings"], dyes.loc["Magenta Dye", "Output units"]) == (1, 4)
+    assert (dyes.loc["Cerulean Dye", "Output listings"], dyes.loc["Cerulean Dye", "Output units"]) == (1, 2)
+    absent = alchemy[alchemy["Output depth"] == "Not listed"]
+    assert len(absent) == len(alchemy) - 2
+    assert (absent["Output listings"] == 0).all() and (absent["Output units"] == 0).all()
+    next(w for w in at.selectbox if w.label == "Profession").set_value("tailoring").run()
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert table.iloc[0]["Item"].startswith("Runecloth Bag") and table.iloc[0]["Action"] == "potential craft"
     assert set(table["Action"][1:]) == {"missing prices"}  # Bags without listings in the fixture scan.
@@ -179,3 +190,170 @@ def test_importing_nothing_new_warns_to_reload_instead_of_claiming_success(tmp_p
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.success
     assert any(w.value.startswith("Nothing new") and "/reload" in w.value for w in at.warning)
+
+
+def test_combined_board_duplicate_recipe_selection_uses_own_catalog(tmp_path, monkeypatch):
+    from copy import deepcopy
+
+    from test_action_board import catalog
+    sources = classic_sources(tmp_path)[:1]
+    items = tmp_path / "items.csv"
+    items.write_text("itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n"
+                     "2592,Wool Cloth,10,10,0,0,\n4240,Woolen Bag,1000,1000,0,0,\n")
+    run(sources[0], items)
+    first = catalog()
+    second = deepcopy(first)
+    second["profession"] = "alchemy"
+    for recipe in second["recipes"]:
+        recipe["profession"] = "alchemy"
+    next(item for item in second["items"] if item["item_id"] == 2321)["vendor_price_copper"] = 200
+    entries = [{"name": "tailoring", "catalog": first}, {"name": "alchemy", "catalog": second}]
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
+    monkeypatch.setattr("brownstone.recipe_catalogs.find_catalogs", lambda *args: entries)
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert not at.exception
+    assert not any(w.label in {"Recipe catalog", "Data source"} for w in at.selectbox)
+    table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert len(table) == 6 and set(table["Profession"]) == {"Tailoring", "Alchemy"}
+    wool = table[table["Item"] == "Woolen Bag"].set_index("Profession")
+    assert wool.loc["Tailoring", "Craft cost (g)"] == .019
+    assert wool.loc["Alchemy", "Craft cost (g)"] == .029
+    recipe = next(w for w in at.selectbox if w.label == "Recipe")
+    recipe.set_value(("alchemy", 3757)).run()
+    assert not at.exception
+    assert next(m for m in at.metric if m.label == "Craft cost").value == "2s 90c"
+    inputs = next(t.value for t in at.dataframe if "Input" in t.value.columns).set_index("Input")
+    assert inputs.loc["Fine Thread", "Unit cost (g)"] == .02
+    next(w for w in at.selectbox if w.label == "Recipe").set_value(("tailoring", 3757)).run()
+    assert next(m for m in at.metric if m.label == "Craft cost").value == "1s 90c"
+    next(w for w in at.selectbox if w.label == "Profession").set_value("alchemy").run()
+    assert not at.exception
+    filtered = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert list(filtered["Rank"]) == list(table[table["Profession"] == "Alchemy"]["Rank"])
+    # A cycle in one catalog remains one unsupported row and cannot hide the other rows.
+    next(recipe for recipe in second["recipes"] if recipe["recipe_id"] == 18405)["inputs"].append(
+        {"item_id": 14046, "quantity": 1})
+    at.run()
+    table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert len(table) == 3 and table.iloc[-1]["Action"] == "unsupported recipe"
+    assert any(w.value.startswith("Runecloth Bag (Alchemy · alchemy) could not be evaluated") for w in at.warning)
+    next(w for w in at.selectbox if w.label == "Recipe").set_value(("alchemy", 18405)).run()
+    assert not at.exception
+    assert any("This recipe cannot be evaluated: Recipe cycle" in e.value for e in at.error)
+    # A catalog that fails to parse is named, and the other catalog still prices.
+    entries[1] = {"name": "broken", "catalog": {"profession": "alchemy"}}
+    at.run()
+    assert not at.exception
+    assert any(w.value.startswith("Recipe catalog broken unavailable") for w in at.warning)
+    table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert set(table["Profession"]) == {"Tailoring"}
+
+
+def test_selected_experience_upgrades_its_own_database(tmp_path, monkeypatch):
+    import duckdb
+
+    from brownstone.storage import MIGRATIONS, SCHEMA_VERSION, schema_version
+    classic, forever = (classic_sources(tmp_path)[0], {**classic_sources(tmp_path)[0], "game_version": "forever",
+                                                       "source_id": "forever-test", "data_dir": tmp_path / "forever"})
+    forever["data_dir"].mkdir()
+    with duckdb.connect(str(forever["data_dir"] / "brownstone.duckdb")) as db:
+        db.execute("CREATE TABLE schema_info (key VARCHAR PRIMARY KEY, value VARCHAR NOT NULL)")
+        MIGRATIONS[1](db)
+        MIGRATIONS[2](db)
+        db.execute("INSERT INTO schema_info VALUES ('schema_version', '2')")
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [classic, forever])
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert not at.exception
+    assert not (forever["data_dir"] / "brownstone.v2.backup.duckdb").exists()  # Classic is selected first.
+    next(w for w in at.selectbox if w.label == "Experience").set_value("forever").run()
+    assert not at.exception
+    assert any("upgraded" in t.value for t in at.toast)
+    assert (forever["data_dir"] / "brownstone.v2.backup.duckdb").exists()
+    with duckdb.connect(str(forever["data_dir"] / "brownstone.duckdb"), read_only=True) as db:
+        assert schema_version(db) == SCHEMA_VERSION
+
+
+def test_incompatible_catalogs_inspect_without_prices_and_link_to_management(tmp_path, monkeypatch):
+    source = classic_sources(tmp_path)[0]
+    source["rules_version"] = "classic-new-rules"
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [source])
+    monkeypatch.setattr("brownstone.recipe_catalogs.ARCHIVE_DIR", tmp_path / "archive")
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    at.radio[0].set_value("Crafting").run()
+    assert not at.exception
+    assert any("No compatible recipe catalog for classic / classic-new-rules" in i.value for i in at.info)
+    mismatches = [i.value for i in at.info if "Rules mismatch" in i.value]
+    assert len(mismatches) == 3 and all("classic-era" in text and "classic-new-rules" in text
+                                       for text in mismatches)
+    assert len([w for w in at.selectbox if w.label == "Inspect recipe"]) == 3
+    assert not at.metric and not any("Action" in t.value.columns for t in at.dataframe)
+    assert not any(w.label == "Recipe catalog" for w in at.selectbox)
+    next(b for b in at.button if b.label == "Open Recipe catalogs").click().run()
+    assert not at.exception
+    assert any(h.value == "Recipe catalogs" for h in at.subheader)
+    assert any(m.value == "#### Classic Era catalogs" for m in at.markdown)  # Same experience as Crafting.
+    assert next(w for w in at.selectbox if w.label == "Experience").value == "classic"
+    assert any(f"Source {source['source_id']}" in c.value for c in at.caption)
+
+
+def test_sidebar_experience_resolves_source_and_market_on_every_market_page(tmp_path, monkeypatch):
+    from test_scans import finished_now, forever_scan_file
+    sources = read_sources(ROOT / "config/market.toml")
+    classic = sources[0]
+    classic["data_dir"] = tmp_path / "classic"
+    addon = next(source for source in sources if source["provider"] == "addon")
+    addon.update(enabled=True, data_dir=tmp_path / "forever",
+                 scan_path=forever_scan_file(tmp_path, finished_now()), scan_evidence={"faction": "Alliance"})
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [classic, addon])
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    experience = next(w for w in at.selectbox if w.label == "Experience")
+    assert experience.options == ["Classic Era", "WoW Forever"]
+    experience.set_value("forever").run()
+    assert not at.exception
+    assert not any(w.label == "Data source" for w in at.selectbox)
+    assert any(f"Source {addon['source_id']}" in c.value for c in at.caption)
+    assert any(f"Market {addon['market_id']}" in c.value for c in at.caption)
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert not at.exception
+    table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
+    assert set(table["Profession"]) == {"Alchemy", "Tailoring"}
+    forever = f"Showing **WoW Forever** · source {addon.get('label', addon['source_id'])} · market {addon['market_id']}"
+    assert any(c.value == forever for c in at.caption)  # On the page itself, not only the sidebar.
+    at.radio[0].set_value("Browse market").run()
+    assert not at.exception
+    assert any(c.value == forever for c in at.caption)
+    assert any("Runecloth Bag" in list(t.value["Item"]) for t in at.dataframe if "Item" in t.value.columns)
+    at.radio[0].set_value("Opportunities").run()
+    assert any(c.value == forever for c in at.caption)
+    assert any("cannot run" in i.value for i in at.info)
+    next(w for w in at.selectbox if w.label == "Experience").set_value("classic").run()
+    at.radio[0].set_value("Browse market").run()
+    assert not at.exception
+    assert any(c.value.startswith(f"Showing **Classic Era** · source {classic.get('label', classic['source_id'])} · "
+                                  f"market {classic['market_id']}") for c in at.caption)
+    assert not at.dataframe  # Forever's imported data never leaks into Classic's separate source.
+    assert any(f"Source {classic['source_id']}" in c.value for c in at.caption)
+
+
+def test_multiple_sources_for_one_experience_require_explicit_sidebar_selection(tmp_path, monkeypatch):
+    source = classic_sources(tmp_path)[0]
+    other = {**source, "source_id": "other-observer", "label": "Another observer"}
+    items = tmp_path / "items.csv"
+    items.write_text("itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n"
+                     "2592,Wool Cloth,10,10,0,0,\n4240,Woolen Bag,1000,1000,0,0,\n")
+    run(source, items)
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [source, other])
+    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert not at.exception
+    # Nothing is chosen for the user: no source, market, import button or view until one is picked.
+    assert next(w for w in at.selectbox if w.label == "Data source").value is None
+    assert any("several enabled sources" in i.value for i in at.info)
+    assert not at.dataframe and not at.button and not at.radio
+    assert not any(c.value.startswith(("Source ", "Market ")) for c in at.caption)
+    next(w for w in at.selectbox if w.label == "Data source").set_value(0).run()
+    assert not at.exception
+    assert any("Action" in t.value.columns for t in at.dataframe)
+    next(w for w in at.selectbox if w.label == "Data source").set_value(1).run()
+    assert not at.exception
+    assert not at.dataframe  # The same house and database, but another observer has no snapshot.
+    assert any("Source other-observer" in c.value for c in at.caption)

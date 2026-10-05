@@ -92,6 +92,8 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
   - cost, net revenue, profit, margin and break-even
 - `Decimal` handles the auction-cut rounding.
 - `storage.listing_depth` returns listing and unit counts by item for the same analytical snapshot used by `price_observations`. It first checks the scoped `addon_scans` record is complete and priced, then aggregates `scan_listings` with the source, full market identity, snapshot ID and scan ID. It returns `None` when unavailable, or zero counts for absent requested items. The Crafting view renders these separately from `rank_recipes`; depth never enters calculation or policy inputs (CRAFT-09).
+- Catalog discovery supplies `catalog_id` from the selection-file stem. Standalone catalogs default to a header identity (`game_version:rules_version:profession:catalog_version`); combined inputs must have unique identities. Rows carry `catalog_id`, `recipe_id` and `profession`, and `catalog_for_row` resolves details to the original catalog.
+- `rank_catalogs` selects compatible catalogs, calls `rank_recipes` separately for each graph, and applies the same shared ranking helper to all rows. `filter_profession` preserves combined ranks. Prices and depth are read once for the union of compatible catalog item IDs, using the same source, full market scope and analytical snapshot. See CRAFT-05 and UI-01/UI-04 in `requirements.md` for behavior.
 - `rank_recipes` checks that the catalog, market and snapshot are compatible, then:
   - evaluates every finished output under both bases
   - labels and sorts the rows (CRAFT-05)

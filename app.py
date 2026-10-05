@@ -14,6 +14,7 @@ from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
 from brownstone.storage import upgrade_database
 from views import catalogs as catalogs_view
 from views import crafting, market
+from views.common import EXPERIENCES
 
 ROOT = Path(__file__).resolve().parent
 st.set_page_config(page_title="Brownstone Markets", page_icon="📊", layout="wide")
@@ -26,30 +27,39 @@ try:
 except Exception as error:
     st.error(f"Could not read configuration: {error}")
     st.stop()
+catalogs = []
 try:
     # Every profession's catalog, found by its selection file (STORY-014).
-    catalogs = [parse_recipe_catalog(entry["catalog"]) for entry in find_catalogs(CONFIG_DIR) if entry["catalog"]]
-except Exception as error:  # A bad catalog must not hide the other views.
+    entries = [entry for entry in find_catalogs(CONFIG_DIR) if entry["catalog"]]
+except Exception as error:  # Unreadable selection files must not hide the other views.
     st.warning(f"Recipe catalogs unavailable: {error}")
-    catalogs = []
+    entries = []
+for entry in entries:
+    try:  # One bad catalog must not hide the others on the combined board.
+        catalogs.append({**parse_recipe_catalog(entry["catalog"]), "catalog_id": entry["name"]})
+    except Exception as error:
+        st.warning(f"Recipe catalog {entry['name']} unavailable: {error}")
 if not sources:
     st.error("No enabled data source. Set enabled = true for a source in config/market.toml or "
              "config/market.local.toml, then reload.")
     st.stop()
 
-# Views open the database read-only, so bring an older database up to date first.
-try:
-    if upgrade_database(sources[0]["data_dir"]):
-        st.toast("Database upgraded to the current schema.")
-except Exception as error:
-    st.error(f"Could not upgrade the database: {error}. Close other Brownstone windows or terminals and reload.")
-    st.stop()
-
 with st.sidebar:
     st.header("Market")
-    selected = st.selectbox("Data source", range(len(sources)),
-                            format_func=lambda i: sources[i].get("label", sources[i]["source_id"]))
-    config = sources[selected]
+    games = list(dict.fromkeys(source["game_version"] for source in sources))
+    game = st.selectbox("Experience", games, format_func=lambda game: EXPERIENCES.get(game, game))
+    experience_sources = [source for source in sources if source["game_version"] == game]
+    selected: int | None = 0
+    if len(experience_sources) > 1:  # Several observers of one experience: never pick one silently.
+        selected = st.selectbox("Data source", range(len(experience_sources)), index=None, key=f"source-{game}",
+                                placeholder="Choose a source",
+                                format_func=lambda i: experience_sources[i].get("label",
+                                                                            experience_sources[i]["source_id"]))
+    if selected is None:
+        st.info("This experience has several enabled sources. Choose one above.")
+        st.stop()
+    config = experience_sources[selected]
+    st.caption(f"Source {config['source_id']} · {config.get('label', config['source_id'])}")
     st.caption(f"Market {config['market_id']} · {config['provider'].upper()} feed"
                + (" · region-wide commodities" if config["scope"] == "region" else "")
                + " · edit config/market.toml to change sources")
@@ -58,8 +68,18 @@ with st.sidebar:
                         help=f"Reads {config['scan_path']}" if addon else None)
     views = ["Crafting", "Browse market", "Opportunities", "Recipe catalogs"]
     craftable = any(compatible(catalog, config) for catalog in catalogs)
-    # Keyed per source so each market remembers its own view.
-    view = st.radio("View", views, index=0 if craftable else 1, key=f"view-{config['source_id']}")
+    # Keyed per source so each market remembers its own view. Once Crafting's link has set the view,
+    # the default index must not compete with it (Streamlit warns about both).
+    view_key = f"view-{config['source_id']}"
+    view = st.radio("View", views, index=0 if craftable or view_key in st.session_state else 1, key=view_key)
+
+# Views open the database read-only, so bring an older database up to date first.
+try:
+    if upgrade_database(config["data_dir"]):
+        st.toast("Database upgraded to the current schema.")
+except Exception as error:
+    st.error(f"Could not upgrade the database: {error}. Close other Brownstone windows or terminals and reload.")
+    st.stop()
 
 if refresh and addon:
     with st.spinner("Preserving and importing the addon scan file…"):
@@ -89,6 +109,6 @@ if view == "Crafting":
 elif view == "Browse market":
     market.render_browse(config)
 elif view == "Recipe catalogs":
-    catalogs_view.render(sources, CONFIG_DIR, ARCHIVE_DIR)
+    catalogs_view.render(config, sources, CONFIG_DIR, ARCHIVE_DIR)
 else:
     market.render_opportunities(config)

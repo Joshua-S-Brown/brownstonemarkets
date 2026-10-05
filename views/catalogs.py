@@ -1,4 +1,4 @@
-"""Recipe catalogs: one game version at a time, its catalogs' status, then add or update a profession.
+"""Recipe catalogs: the sidebar experience's catalogs, its catalogs' status, then add or update a profession.
 
 Every write follows a preview that writes nothing, on its own button, and then lists the tracked files to
 review and commit. Brownstone never downloads the Wowhead page; the user saves it in a browser.
@@ -12,15 +12,17 @@ import streamlit as st
 
 from brownstone import recipe_catalogs as rc
 from brownstone.recipe_import import archived_saved_at
+from views.common import EXPERIENCES, show_context
 
-GAMES = {"forever": "WoW Forever", "classic": "Classic Era"}
+GAMES = {game: EXPERIENCES[game] for game in rc.CATALOG_PREFIXES}  # Experiences that have catalogs.
 KINDS = {"yield": "yield", "vendor": "vendor status and price", "post-launch": "post-launch"}
 WRITTEN = "catalogs-written"  # Session key: the last write's summary, shown after the page reloads.
 ARCHIVED, UPLOAD = "archived", "upload"
 
 
-def render(sources, config_dir, archive_dir):
+def render(config, sources, config_dir, archive_dir):
     st.subheader("Recipe catalogs")
+    show_context(config)
     st.caption("One catalog per game version and profession, generated from a Wowhead page you save in your "
                "browser. Brownstone never downloads from Wowhead.")
     _written()
@@ -29,7 +31,11 @@ def render(sources, config_dir, archive_dir):
     except Exception as error:
         st.error(f"Could not read the selection files: {error}")
         return
-    game = st.radio("Game version", list(GAMES), format_func=GAMES.get, horizontal=True, key="catalogs-game")
+    game = config["game_version"]  # The sidebar experience, like every other page.
+    if game not in GAMES:
+        st.info(f"{EXPERIENCES.get(game, game)} has no recipe catalogs. Choose Classic Era or WoW Forever "
+                "in the sidebar to manage catalogs.")
+        return
     entries = [entry for entry in entries if entry["selection"]["game_version"] == game]
     st.markdown(f"#### {GAMES[game]} catalogs")
     today = datetime.now(UTC).date()

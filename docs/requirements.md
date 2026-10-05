@@ -74,7 +74,8 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - **Cautious** is the default for ranking and labels. It buys inputs at the higher, and sells output at the lower, of minimum buyout and market value. When only one value is positive, that value is used.
   - **Listed** uses minimum buyout only.
   - Every board row shows profit under both bases.
-- **CRAFT-05 Action Board:** ranks finished outputs of any catalog compatible with the selected market (same game version and `rules_version`).
+- **CRAFT-05 Action Board:** ranks finished outputs of every catalog compatible with the selected source (same game version and `rules_version`) on one board. Each recipe is costed within its own catalog; routes never cross catalogs.
+  - Profession is shown and can be filtered without renumbering the combined ranks. Catalog identity plus recipe ID selects a row and its own recipe details; catalogs making the same item retain separate rows.
   - Shows craft cost, sale price, net revenue after the auction cut, profit and margin, where margin = profit / net revenue.
   - Labels, in precedence order:
     1. **unsupported recipe:** calculation error; the message is shown.
@@ -82,7 +83,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
     3. **stale data**
     4. **potential craft:** profit > 0.
     5. **negative margin:** profit ≤ 0.
-  - Sorts by profit or by margin, descending, then the other metric, then recipe ID. Incomplete rows sort last.
+  - Sorts by profit or by margin, descending, then the other metric, then recipe ID, then catalog identity for duplicate-ID ties. Incomplete rows sort last.
   - Policy version is shown.
 - **CRAFT-06 Explanation:** for a selected recipe, show:
   - direct inputs with route, unit and total cost, observed prices and source
@@ -108,10 +109,10 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 - **CRAFT-09 Market depth (STORY-019):** the board shows auction listing and unit counts for each output and direct input; the recipe input table shows the same counts. Counts include listings without a buyout and describe the exact complete, priced scan used for the prices, scoped by source and full market identity. An absent item is labeled **Not listed** with zero observed listings and units. TSM or a snapshot without a matching priced addon scan shows **Unavailable**, with no counts. Depth is display-only: it changes no cost, action label, ranking or policy version, and is not vendor stock or a claim about demand.
 
 ### Interface
-- **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** (addon sources) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden.
+- **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** (addon sources) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden. The shared sidebar experience choice resolves its source and market together when there is one enabled source for that experience. If there are several, an explicit sidebar source choice is required; sources are never merged. Every view follows the selection, including Recipe catalogs. Each page names the selected experience, source and market under its title, and the sidebar shows them too.
 - **UI-02:** Browse market finds items regardless of price or discount. Categories are not inferred from names or commodity status.
 - **UI-03:** the discount screen (Opportunities) explains when a source cannot support it, for example Classic historical values being zero. Its spread is integer copper: the reference price after the auction cut rounds down, as in CRAFT-07. Search filters the ranked list without renumbering it.
-- **UI-04:** an incompatible catalog can be inspected, but is never priced.
+- **UI-04:** Crafting has no catalog selector. Incompatible catalogs for the selected game version remain inspectable without pricing; their catalog and source `rules_version` mismatch is explained. If none is compatible, the view explains this and offers navigation to Recipe catalogs. Recipe catalogs shows the sidebar experience's catalogs and has no game-version switch of its own (decided 2026-10-04); an experience without catalogs (Retail) says so.
 - **UI-05:** the launcher reuses a running server only if its code is current. It restarts its own outdated server and never stops a server it did not start.
 
 ### Operations

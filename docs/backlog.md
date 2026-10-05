@@ -28,25 +28,13 @@ Recently completed: STORY-019, market depth on the board, 2026-10-04; STORY-014 
 
 ## Next
 
-**Agreed order (reviewed 2026-10-04):** improve the current workflow first: STORY-015a → STORY-018 → STORY-014. Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
+**Agreed order (reviewed 2026-10-04):** improve the current workflow first: STORY-018 → STORY-014 (STORY-015a is implemented; see `status.md`). Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
 
 **Launch preparation:** STORY-016 → STORY-017 → STORY-020, completed before the first live import. Use the gap after beta testing for cleanup, verified backup/restore and beta/live separation; aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
 
 **Archive care meanwhile:** keep a second copy of the raw beta archive as scans accumulate; the full tested procedure is STORY-016. Its destination is still an open decision. Beta comparisons stay within one source and market until STORY-017 is complete.
 
 **After launch:** the remaining stories below. STORY-011a can be a bounded research task when convenient, but must not delay the baseline workflow or launch preparation. Reassess STORY-006 before expanding history features.
-
-### STORY-015a — One sidebar choice, catalogs combined
-
-Split from STORY-015 at grooming (2026-10-04); cross-profession routing is STORY-015b.
-
-As a gold maker, I want to choose Classic or Forever once in the sidebar and have every page follow that choice, with every compatible catalog on one board (clarified 2026-10-04).
-
-Acceptance:
-- **One shared sidebar choice.** With one active source for each experience, choosing Classic or Forever resolves that source and its market together. Every view follows it; there is no second market/source choice on a page, and the Crafting view has no catalog selector. The selected source and market remain visible (DATA-08). The board lists the recipes of every catalog with the same `game_version` and `rules_version`, with a Profession column and a profession filter. Game versions are never mixed.
-- **Each recipe is costed within its own catalog**, as today. If two catalogs make the same item, both rows are shown with their profession, and nothing chooses between them (that rule is STORY-015b's).
-- **Nothing compatible:** the view names the catalogs that exist for that game version and why they don't match (`rules_version`), and points to the Recipe catalogs page. Incompatible catalogs stay inspectable, never priced (UI-04).
-- **Same rules:** missing prices are never free, errors are isolated per row, and the policy version is shown. A Streamlit test covers a market with two compatible catalogs.
 
 ### STORY-018 — What changed between scans
 
@@ -150,7 +138,7 @@ Acceptance:
 
 ### STORY-015b — Crafting across professions
 
-Split from STORY-015 at grooming (2026-10-04). Depends on STORY-015a. It pays off once there are catalogs that feed each other (for example Leatherworking or Mining for Tailoring); today's Tailoring, Alchemy and Enchanting catalogs share few materials.
+Split from STORY-015 at grooming (2026-10-04). Builds on the combined board in `status.md` (STORY-015a, implemented). It pays off once there are catalogs that feed each other (for example Leatherworking or Mining for Tailoring); today's Tailoring, Alchemy and Enchanting catalogs share few materials.
 
 As a gold maker, I want the board to cost recipes using every profession I have a catalog for, so that a Tailoring recipe can use Leatherworking's Rugged Leather or a smelted bar at its real crafted cost instead of only the auction price.
 
@@ -178,7 +166,7 @@ These are grouped by what unblocks them.
 - **Honest limits:** scans happen only when you are at the auction house, so hour-of-day and weekday patterns are sampled at your playtimes. A pattern is shown only with its coverage (scans per hour and weekday), and claimed only where coverage is enough. Weekday effects such as the weekly reset need at least four weeks. Optional sources (STORY-011b) could fill hours you don't scan.
 - **Steps** (each needs the one before):
   1. **Scan coverage:** scans by hour and weekday, and gaps, so you can deliberately fill them in a few sessions a week.
-  2. **Timing profile:** per item, and for groups by catalog role (material, intermediate, finished; never inferred from names), price and supply by hour and weekday, with a confidence label. "Cheapest to buy" and "best to sell" windows only where coverage supports them.
+  2. **Timing profile:** per item, and for groups by catalog role (material, intermediate, finished; never inferred from names), price and supply by hour and weekday, with a confidence label. A weekday chart overlays price against supply (units listed, never called demand or volume sold). "Cheapest to buy" and "best to sell" windows only where coverage supports them.
   3. **Daily brief:** one page of today's priorities, each with its evidence and confidence: profitable crafts with depth, inputs below their own recent median, outputs above it, and what the timing profile says to buy or hold. It can start rule-based on the newest scan and STORY-018, and gain timing as history grows.
 
 **History chain** (each step needs the one before):
@@ -186,6 +174,7 @@ These are grouped by what unblocks them.
 2. A storage decision (backup is STORY-016).
 3. Routine scanning. An addon scan needs you at the auction house, so this is a habit, not a scheduler. *Scan coverage* above helps.
 4. History, volatility and confidence features: per-item trend and spread need about ten or more scans over a week or more, so not before mid-November.
+   - **Stockpile safety** (suggested 2026-10-04): which materials are safe to hold. Plots relative volatility (coefficient of variation, so cheap and expensive items compare) against the *Removed listings* rate. The window is a number of scans, not days, and each point shows its scan count. Items are catalog materials or a chosen list, never picked by name. Unit-count changes between scans aren't turnover, because new postings offset sales.
 5. Backtesting the ranking policies.
 6. Alerts.
 
@@ -204,6 +193,7 @@ These are grouped by what unblocks them.
 - **In-game confirmations:** tick off values checked in game (a yield, a vendor and its price, a post-launch decision) with a date, written to the selection file, then Regenerate. For now there are only a few, edited by hand.
 - **Browse filters:** items used or made by any catalog (membership, not names) and a minimum listing count.
 - **Best use of a material:** for an item such as Linen or Wool Cloth, compare selling it with each craft it feeds, at current prices.
+- **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
 
 **Addon follow-ups** (any time, none urgent):
 - Scan the Roleplaying house once the beta offers it, and a neutral house when reachable, to confirm house identification and the 15% cut market.
@@ -211,7 +201,7 @@ These are grouped by what unblocks them.
 - Item names: 4,690 listings arrived before the client loaded the item, and some items (Runecloth, 14047) appear only that way, so Browse shows `Item <ID>`. Crafting uses catalog names, so it's unaffected. Fix: take an item's name from any scan of the same game version where it loaded.
 
 **Recipe coverage** (unblocked by STORY-004):
-- **More recipes and professions:** added in the app on the Recipe catalogs page, and combined on the board by STORY-015a and STORY-015b.
+- **More recipes and professions:** added in the app on the Recipe catalogs page and shown together on the board (`status.md`); routing across professions is STORY-015b.
 - **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*). **Moves to the top of Next if the Bolt of Linen Cloth check finds a yield above 1.**
 - **Skill-up demand map:** from the catalogs' skill levels and quantities, which materials levelling crafters will need at each skill band. A reasoned expectation for stocking up before launch, not a forecast.
 - **In-game recipe reader (optional):** the addon could read the Tailoring window (reagents, `GetTradeSkillNumMade`) and the trainer list (required skill) to confirm Wowhead values automatically. This widens the read-only addon and needs its own decision.

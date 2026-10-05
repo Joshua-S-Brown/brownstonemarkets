@@ -198,3 +198,76 @@ def test_board_follows_configuration_not_a_hard_coded_realm():
     assert not compatible(forever, MARKET)
     assert compatible(forever, {**MARKET, "game_version": "forever", "rules_version": forever["rules_version"]})
     assert not compatible(catalog(), {k: v for k, v in MARKET.items() if k != "rules_version"})
+
+
+def combined_catalogs():
+    from copy import deepcopy
+    first = {**catalog(), "catalog_id": "tailoring"}
+    second = deepcopy(first)
+    second.update(catalog_id="alchemy", profession="alchemy")
+    # Same recipe IDs and output items, different catalog-local vendor evidence.
+    second["items_by_id"][2321]["vendor_price_copper"] = 200
+    wrong_rules = {**first, "catalog_id": "old-rules", "rules_version": "old"}
+    wrong_game = {**first, "catalog_id": "other-game", "game_version": "forever"}
+    return [first, second, wrong_rules, wrong_game]
+
+
+@pytest.mark.parametrize("sort_by", ["profit", "margin"])
+@pytest.mark.parametrize("basis", ["cautious", "listed"])
+def test_combined_catalogs_rank_independent_graphs_and_resolve_duplicate_ids(sort_by, basis):
+    from brownstone.action_board import catalog_for_row, filter_profession, rank_catalogs
+    catalogs = combined_catalogs()
+    data = observed(prices(), {2592: 20})
+    result = rank_catalogs(catalogs, data, MARKET, snapshot(), now=NOW, sort_by=sort_by, basis=basis)
+    rows = result["rows"]
+    assert len(rows) == 6
+    assert {row["catalog_id"] for row in rows} == {"tailoring", "alchemy"}
+    assert len({(row["catalog_id"], row["recipe_id"]) for row in rows}) == 6
+    assert result["policy_version"] == "0.2"
+    primary, secondary = ("profit_copper", "margin") if sort_by == "profit" else ("margin", "profit_copper")
+    metrics = [(row[primary], row[secondary]) for row in rows]
+    assert metrics == sorted(metrics, reverse=True)
+    for row in rows:
+        own = catalog_for_row(catalogs, row)
+        individual = rank_recipes(own, data, MARKET, snapshot(), now=NOW, sort_by=sort_by, basis=basis)
+        expected = next(r for r in individual["rows"] if r["recipe_id"] == row["recipe_id"])
+        assert row["craft_cost_copper"] == expected["craft_cost_copper"]
+        assert row["profit_by_basis"] == expected["profit_by_basis"]
+    wool = [row for row in rows if row["recipe_id"] == 3757]
+    assert wool[0]["craft_cost_copper"] != wool[1]["craft_cost_copper"]
+    filtered = filter_profession(result, "alchemy")
+    assert filtered["rows"] == [row for row in rows if row["profession"] == "alchemy"]
+    assert filter_profession(result, None) == result
+    assert not filter_profession(result, "mining")["rows"]
+    assert rank_catalogs(list(reversed(catalogs)), data, MARKET, snapshot(), now=NOW,
+                         sort_by=sort_by, basis=basis) == result
+
+
+def test_combined_ties_missing_errors_and_no_cross_catalog_routes():
+    from brownstone.action_board import rank_catalogs
+    catalogs = combined_catalogs()[:2]
+    # Equal all metrics for Mageweave: catalog identity breaks the duplicate-ID tie.
+    rows = rank_catalogs(catalogs, observed(prices()), MARKET, snapshot(), now=NOW)["rows"]
+    assert [row["catalog_id"] for row in rows if row["recipe_id"] == 12065] == ["alchemy", "tailoring"]
+    # Alchemy's expensive bolt cannot use Tailoring's recipe graph.
+    catalogs[1]["recipes_by_id"][2964]["inputs"][0]["quantity"] = 30
+    data = observed({**prices(), 10050: 0})
+    catalogs[1]["recipe_for_output"][14047] = 18405
+    rows = rank_catalogs(catalogs, data, MARKET, snapshot(), now=NOW)["rows"]
+    costs = {row["catalog_id"]: row["craft_cost_copper"] for row in rows if row["recipe_id"] == 3757}
+    assert costs == {"tailoring": 190, "alchemy": 1100}
+    assert rows[-1]["catalog_id"] == "alchemy" and rows[-1]["action"] == "unsupported recipe"
+    assert sum(row["action"] == "missing prices" for row in rows) == 2
+    assert next(row for row in rows if row["catalog_id"] == "tailoring" and
+                row["recipe_id"] == 18405)["action"] == "negative margin"
+
+
+def test_combined_catalogs_require_compatibility_unique_identity_and_snapshot_scope():
+    from brownstone.action_board import rank_catalogs
+    catalogs = combined_catalogs()
+    with pytest.raises(ValueError, match="No compatible"):
+        rank_catalogs(catalogs[2:], {}, MARKET, snapshot(), now=NOW)
+    with pytest.raises(ValueError, match="identities must be unique"):
+        rank_catalogs([catalogs[0], catalogs[0]], {}, MARKET, snapshot(), now=NOW)
+    with pytest.raises(ValueError, match="different market"):
+        rank_catalogs(catalogs, {}, MARKET, snapshot(faction="horde"), now=NOW)

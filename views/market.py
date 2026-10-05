@@ -4,7 +4,7 @@ import streamlit as st
 
 from brownstone.analysis import browse, rank, screenable_count
 from brownstone.money import COPPER_PER_GOLD
-from views.common import gold_columns, load_latest, read_db, show_freshness
+from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
 
 EMPTY = "No completed snapshot yet. Click Refresh from TSM or Import addon scan to collect this market."
 
@@ -18,6 +18,7 @@ def _header(config, manifest, count):
 
 def render_browse(config):
     st.subheader("Browse market")
+    show_context(config)
     search = st.sidebar.text_input("Find an item", placeholder="Name or item ID")
     limit = st.sidebar.selectbox("Show up to", [100, 500, 2000])
     manifest, sid, count = load_latest(config, EMPTY)
@@ -48,6 +49,7 @@ def render_browse(config):
 
 def render_opportunities(config):
     st.subheader("Price opportunities")
+    show_context(config)
     st.sidebar.divider()
     discount = st.sidebar.slider("Minimum discount (%)", 0, 90, int(config["min_discount"] * 100), 5)
     limit = st.sidebar.selectbox("Show up to", [20, 50, 100])

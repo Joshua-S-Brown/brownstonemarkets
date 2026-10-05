@@ -9,6 +9,14 @@ from brownstone.freshness import assess
 from brownstone.money import GOLD_TABLE_FORMAT
 from brownstone.storage import latest_snapshot
 
+EXPERIENCES = {"classic": "Classic Era", "forever": "WoW Forever", "retail": "Retail (regression)"}
+
+
+def show_context(config):
+    """Under every page title: which experience, source and market the page shows (DATA-08, UI-01)."""
+    st.caption(f"Showing **{EXPERIENCES.get(config['game_version'], config['game_version'])}** · "
+               f"source {config.get('label', config['source_id'])} · market {config['market_id']}")
+
 
 def load_latest(config, empty_message):
     """Return (manifest, analytical snapshot ID, manifest count), or show a message and None."""
