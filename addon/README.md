@@ -44,7 +44,7 @@ Version 0.3.1 adds **Clear saved scans** and **Reload** immediately to the left 
 
 **Pending-confirmation decision:** starting a scan or closing the house dismisses the popup with `StaticPopup_Hide`. The callbacks also refuse during a scan and recheck unsaved scans and the confirmed count at acceptance, protecting against state changes after the dialog opened. If the count changed, click Clear again to review it.
 
-**Beta check still required:** load 0.3.1 on Forever, confirm `.toc` interface **16001** matches the client, and check the three-button row fits above the auction window without overlap/clipping. Exercise Reload, Cancel/Escape, confirmed clear, unsaved-scan refusal and scan-time disabling in game. Offline stubs cannot prove actual client layout or SavedVariables disk writes. The standard popup contract is visible in the [Classic client UI source](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_StaticPopup/StaticPopup.lua); actual Forever behaviour remains subject to this check.
+**Beta check passed 2026-10-06** (build 1.60.1.70235): interface **16001** matches the client; the three-button row sits above the auction window without overlap; Reload writes the file, and Clear refused while a just-finished scan was unsaved. Chat confirmations are hard to see at small window sizes. Escape on the popup was not separately exercised in game. The standard popup contract is visible in the [Classic client UI source](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_StaticPopup/StaticPopup.lua).
 
 **Updating the addon:** copy the new `BrownstoneScan` folder over the old one and `/reload`. Scans saved by an older version stay in their format and still import.
 
@@ -122,7 +122,7 @@ If the client prints "No auction API found", run `/dump C_AuctionHouse` and `/du
 
 ## Format-3 beta checklist (STORY-023)
 
-Complete by **21 October**, leaving the acceptance record below pending until measured in game. Every baseline and candidate measurement must name the exact addon version used (including 0.3.1 if these controls are installed). The format-3 capture contract and ADDON-09 limits are unchanged; do not label 0.3.1 measurements as 0.3.0. Record versions alongside the local aggregate report; older scans do not carry a per-scan addon version, so use the installed version and retained file provenance rather than guessing.
+Accepted 2026-10-06 (record below). Repeat it for any later scan-format change. Every baseline and candidate measurement must name the exact addon version used (including 0.3.1 if these controls are installed). The format-3 capture contract and ADDON-09 limits are unchanged; do not label 0.3.1 measurements as 0.3.0. Record versions alongside the local aggregate report; older scans do not carry a per-scan addon version, so use the installed version and retained file provenance rather than guessing.
 
 1. **Baseline:** using 0.2.0, take one complete scan at the same house, `/reload`, retain a local single-scan file, import it, then `/bscan clear` and `/reload`. If an existing 0.2.0 file has exactly one scan, it can be the baseline. Record build, house, listing count, duration and uncompressed file bytes.
 2. **Update and capture:** copy the current addon over the installed addon, `/reload`, confirm it loads and `/bscan status` works. At least 15 minutes after the preceding scan, click the scan button with the house open. Record lag/errors and finished vs reported count. `/reload`, retain the local single-scan file, then Preview/Import in Brownstone. Confirm completed format 3, official reference data and separate variant rows. Try `/bscan start` on another manually initiated scan; closing the house during reading should save only a partial scan and no prices.
@@ -178,10 +178,10 @@ PY
 
 | Acceptance measurement | Result |
 | --- | --- |
-| Beta date/build/house, baseline and candidate addon versions and scan IDs | Pending |
-| Complete format-3 scan imported; duplicate verified | Pending |
-| New-field availability (attach local aggregate report) | Pending |
-| Duration ratio and uncompressed bytes/listing ratio vs ADDON-09 | Pending |
-| Scan/reload lag, errors; button and slash command | Pending |
-| Different suffix tooltips separated; same stats/provenance variants equivalent | Pending |
-| Plain item base; missing/unsupported links unresolved | Pending |
+| Beta date/build/house, baseline and candidate addon versions and scan IDs | 2026-10-06, client 1.60.1 build 70235, Normal Alliance house (Stormwind, Trade District); house check passed. Baseline **0.2.0** `20261006T161637Z-2a4d09`; candidate **0.3.1** `20261006T201752Z-f2a29a`. A second 0.3.1 scan, `20261006T203259Z-ea00ed`, gave consistent results. |
+| Complete format-3 scan imported; duplicate verified | Both 0.3.1 scans completed (88,119/88,119 and 88,329/88,329) and imported without errors. Re-import shows *Nothing new*; preview reports both as already imported with identical content. |
+| New-field availability (attach local aggregate report) | Of 88,119 listings: **seller 0**, time left 88,119, level 88,119, quality/level type/link 82,059, required level 73,749; quality out of range 6,060 (stored missing). Of 3,066 items: class/subclass 3,066, item level/stack/vendor price 1,192. Level types seen: `REQ_LEVEL_ABBR`, `SLOT_ABBR`, `SKILL_ABBR`. **Sellers:** `GetReplicateItemInfo` returns no owner (values 14/15 absent in `/dump`), even for the 82,059 fully loaded listings; see ADDON-07. Report kept locally under `work/story-023/beta/`. |
+| Duration ratio and uncompressed bytes/listing ratio vs ADDON-09 | Duration 6.90 s → 8.49 s, **1.23×** (limit 2×). File 2,178,443 B / 77,731 → 4,729,786 B / 88,119; bytes per listing 28.0 → 53.7, **1.92×** (limit 4×). Pass. |
+| Scan/reload lag, errors; button and slash command | No scan errors and no client error reports. Lag was not timed; none was noticed. Scan, Reload and Clear were used through the buttons. `/bscan start` without the button and closing the house mid-scan were not exercised in game (both are covered offline). |
+| Different suffix tooltips separated; same stats/provenance variants equivalent | Willow Robe (6538): 20 suffixes, each its own key; *of Intellect* and *of Magic* at 12,900 copper versus 500 for the rest, matching the in-game listings. Primal Wraps (15010): 14 suffixes, each its own key. No key holds two names of the same item (3,589 item/key pairs). The same name appears under several keys only for different enchants (for example Battering Hammer of Healing with enchant 723) or bonus IDs (*of the Physician*, 12748/12749; not tooltip-compared). Links differing only in modifier 28 share a key. |
+| Plain item base; missing/unsupported links unresolved | Linen Cloth (2589): 601 listings, all base. 72,259 base, 7,920 variant and 7,940 unresolved listings, including the 6,060 without a loaded link. |

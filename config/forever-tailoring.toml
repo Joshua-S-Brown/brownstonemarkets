@@ -149,7 +149,7 @@ verified_at = "2026-10-04"
 verification_url = "https://www.wowhead.com/forever/spells/professions/tailoring"
 evidence_sha256 = "9ab28c15b769b86e8126d132ed5311451a1580cdcc81d65bad9ea95451511b17"
 output_quantity_verified = false
-output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is its effect number, not a count. Confirm in game by crafting one."
 
 [[recipes.inputs]]
 item_id = 2589
@@ -167,7 +167,7 @@ verified_at = "2026-10-04"
 verification_url = "https://www.wowhead.com/forever/spells/professions/tailoring"
 evidence_sha256 = "9ab28c15b769b86e8126d132ed5311451a1580cdcc81d65bad9ea95451511b17"
 output_quantity_verified = false
-output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is its effect number, not a count. Confirm in game by crafting one."
 
 [[recipes.inputs]]
 item_id = 2996
@@ -189,7 +189,7 @@ verified_at = "2026-10-04"
 verification_url = "https://www.wowhead.com/forever/spells/professions/tailoring"
 evidence_sha256 = "9ab28c15b769b86e8126d132ed5311451a1580cdcc81d65bad9ea95451511b17"
 output_quantity_verified = false
-output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is its effect number, not a count. Confirm in game by crafting one."
 
 [[recipes.inputs]]
 item_id = 2996
@@ -215,7 +215,7 @@ verified_at = "2026-10-04"
 verification_url = "https://www.wowhead.com/forever/spells/professions/tailoring"
 evidence_sha256 = "9ab28c15b769b86e8126d132ed5311451a1580cdcc81d65bad9ea95451511b17"
 output_quantity_verified = false
-output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is its effect number, not a count. Confirm in game by crafting one."
 
 [[recipes.inputs]]
 item_id = 2592
@@ -233,7 +233,7 @@ verified_at = "2026-10-04"
 verification_url = "https://www.wowhead.com/forever/spells/professions/tailoring"
 evidence_sha256 = "9ab28c15b769b86e8126d132ed5311451a1580cdcc81d65bad9ea95451511b17"
 output_quantity_verified = false
-output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is its effect number, not a count. Confirm in game by crafting one."
 
 [[recipes.inputs]]
 item_id = 2997
@@ -255,7 +255,7 @@ verified_at = "2026-10-04"
 verification_url = "https://www.wowhead.com/forever/spells/professions/tailoring"
 evidence_sha256 = "9ab28c15b769b86e8126d132ed5311451a1580cdcc81d65bad9ea95451511b17"
 output_quantity_verified = false
-output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is its effect number, not a count. Confirm in game by crafting one."
 
 [[recipes.inputs]]
 item_id = 14047
@@ -273,7 +273,7 @@ verified_at = "2026-10-04"
 verification_url = "https://www.wowhead.com/forever/spells/professions/tailoring"
 evidence_sha256 = "9ab28c15b769b86e8126d132ed5311451a1580cdcc81d65bad9ea95451511b17"
 output_quantity_verified = false
-output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is its effect number, not a count. Confirm in game by crafting one."
 availability = "post-launch"
 availability_note = "Needs Tailoring 260 and Forever's new dyes; not reachable on the level-capped beta."
 

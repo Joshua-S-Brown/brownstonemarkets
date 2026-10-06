@@ -17,12 +17,12 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-STORY-023 software is implemented (addon 0.3.0, scan format 3, migration 6); beta measurement and a complete format-3 scan import (addon 0.3.0 or later) are pending. Use the checklist in `addon/README.md`; capture/identity rules and limits are ADDON-08/09 in `requirements.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
+Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted on the beta with addon 0.3.1; the measurement record is in `addon/README.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
 **Through the last full beta testing day, 21 October** (manual, in game):
-- **Keep scanning.** Five complete scans of the Normal Alliance house are imported; dates and counts are in `status.md` → *Limitations*. Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
+- **Keep scanning.** Seven complete scans of the Normal Alliance house are imported; dates and counts are in `status.md` → *Limitations*. Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
 - **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result by hand in `config/recipe-selections/forever-tailoring.toml` with the date, then regenerate on the Recipe catalogs page. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
-- **If any yield is more than 1,** *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
+- **If any yield is more than 1** (now unlikely: Wowhead's "(2)" is an effect number, not a count; see `requirements.md` → CRAFT-08), *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
 
 ## Next
 
@@ -32,41 +32,21 @@ STORY-023 software is implemented (addon 0.3.0, scan format 3, migration 6); bet
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-023 addon 0.3.0 (by 21 October)
-2. STORY-020a runbook rehearsal (by 21 October)
-3. STORY-029 addon reload and clear buttons (ideally on the beta before 21 October)
-4. STORY-021 item page and charts
-5. STORY-025 Today
-6. STORY-026 scan coverage and rhythm
-7. STORY-020b runbook completion (finished one or two days before 4 November, whatever else is in progress)
-8. STORY-027 removed listings
-9. STORY-028 sellers and supply chains
-10. STORY-006 replay
-11. STORY-015b crafting across professions
+1. STORY-020a runbook rehearsal (by 21 October)
+2. STORY-021 item page and charts
+3. STORY-025 Today
+4. STORY-026 scan coverage and rhythm
+5. STORY-020b runbook completion (finished one or two days before 4 November, whatever else is in progress)
+6. STORY-027 removed listings
+7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+8. STORY-006 replay
+9. STORY-015b crafting across professions
 
 STORY-016 (backup) is deferred to Later (product owner, 2026-10-06).
 
 STORY-011a is a bounded research task for any convenient gap. Tailoring yield and vendor checks run alongside all of this; a confirmed multi-yield requirement takes priority.
 
-**Why STORY-023 is early:** scans can't be retaken. Anything the addon doesn't capture from launch day is missing for those weeks, so the richer scan format must be tested on the beta before it closes.
-
 **Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, deferred to Later; its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
-
-### STORY-023 — Capture more of each scan (addon 0.3.0)
-
-As a gold maker, I want the addon to record everything the auction house shows that matters for pricing and competition, so that live history has it from launch day, because scans can't be retaken.
-
-Software implemented; keep this story open until the beta measurements, variant tooltip checks and one complete format-3 beta import (addon 0.3.0 or later, version recorded) pass. Current software state is in `status.md`; approved capture/identity/limits are ADDON-08/09 in `requirements.md`.
-
-Acceptance:
-- **Record** in `requirements.md` (ADDON rules) which fields are captured. Seller names are stored, locally only (ADDON-07, decided 2026-10-05).
-- **Per listing,** from the auction APIs the addon already uses: seller, time-left bucket, item quality, required level, and the item link wherever it identifies a variant (for example a random suffix such as "of the Monkey"), so gear variants are priced separately (ADDON-08, decided 2026-10-05). Propose, and record once approved, which item-link fields identify a variant and how it joins (DATA-03 still applies).
-- **Per item, once per scan:** official class and subclass, item level, maximum stack size and vendor sell price. Official classes are game data, so filtering by them isn't inferring categories from names.
-- **Measured on the beta:** for each new field, how often it's available (for example, seller missing when the client hasn't loaded the listing), plus scan duration and file size compared with 0.2.0, kept within a recorded limit.
-- **Still read-only:** no buying, posting, bidding or other auction-house actions, and no unattended scanning (SPIKE-008).
-- **Compatible:** a new scan format version; the importer still reads formats 1 and 2, and older scans simply lack the new fields (null, never guessed). Schema changes go through a numbered migration.
-- **Tested by 21 October:** at least one complete format-3 beta scan (addon 0.3.0 or later) imported.
-- Depends on nothing. Feeds the implemented metrics layer (ADDON-10), STORY-027 and STORY-028.
 
 ### STORY-020a — Rehearse the launch-day in-game steps
 
@@ -78,25 +58,7 @@ Acceptance:
 - **A draft runbook** in `docs/`, linked from `status.md`, with the in-game steps: install or update the addon and check that it loads (the `.toc` interface number may change), first scan, `/reload`, import, clear.
 - **Rehearsed and timed** on the beta by the last full beta testing day (21 October), with each step's time recorded.
 - **Placeholders** for the steps STORY-020b completes.
-- Depends on nothing; uses STORY-023's addon if it's ready.
-
-### STORY-029 — Reload and clear buttons in the addon
-
-Requested 2026-10-06.
-
-Software implemented in addon 0.3.1 and verified offline. Only the in-game beta check remains: `.toc` interface number and button placement. Behaviour, decisions and the check instructions are in `addon/README.md` → *Reload and clear controls*; current verification state is in `status.md`.
-
-As a gold maker, I want buttons for `/reload` and `/bscan clear` next to the scan button, so that the scan, reload, import, clear, reload routine doesn't need typed commands every time.
-
-Acceptance:
-- **Two buttons** beside the existing *Brownstone Scan* button: *Reload* (calls `ReloadUI()`, which writes saved scans to the file) and *Clear saved scans*.
-- **Clear stays protected:** the button behaves like `/bscan clear`, never `/bscan clear all`. It refuses while this session has scans not yet written to the file and says to reload and import first. Otherwise it asks for confirmation, showing how many saved scans will be deleted and reminding you to import into Brownstone first. After clearing, it says a reload is needed to write the change (the *Reload* button is right there).
-- **Disabled while a scan is running**, for both buttons, so a scan is never cut short by a stray click.
-- **Decide** whether the buttons should also be reachable with the auction house closed (for example the reload after an import), or only on the auction house window like the scan button today. Record it in `addon/README.md`.
-- **Still read-only:** the buttons only reload the interface and clear the addon's own saved data; no auction-house actions (SPIKE-008). Slash commands keep working.
-- **Tested offline** in the Lua harness (`tests/test_addon.py`): clear refused with unsaved scans, confirmation required, buttons disabled during a scan, reload called. Checked once in game on the beta (the `.toc` interface number and button placement).
-- Addon version bump. The scan format is unchanged, so no importer change. To avoid confusing STORY-023's beta timing and size measurements, release it after those are taken, or note in the measurement record which version was used.
-- Depends on nothing.
+- Depends on nothing; uses the current addon (0.3.1).
 
 ### STORY-021 — Item page and charts
 
@@ -176,7 +138,7 @@ Acceptance:
 - **Per seller:** what they list, grouped by catalog chain (materials, intermediates and outputs by catalog membership, never names), how much, and how often they repost.
 - **Per chain:** how concentrated supply is (the share held by the top sellers), so crowded and open chains are visible.
 - **Private:** seller names stay on this machine, as recorded in STORY-023's decision.
-- Depends on STORY-023 (seller capture) and the implemented market metrics layer (ADDON-10).
+- Depends on seller capture, which the beta's bulk scan does not provide (*Seller capture* under Later), and the implemented market metrics layer (ADDON-10).
 
 ### STORY-011a — Survey third-party scan sources
 
@@ -214,6 +176,8 @@ Acceptance:
 **Optional client-version cutover guard:** investigate whether recorded client versions can flag a misconfigured beta/live source during STORY-020b and first live imports. Source configuration remains authoritative (DATA-03); STORY-017 adds no client-version evidence checks.
 
 These are grouped by what unblocks them.
+
+**Seller capture** (found 2026-10-06; blocks STORY-028 and seller matching in STORY-027): the Forever beta's bulk scan returns no seller names (ADDON-07). Left blocked until after go-live (product owner, 2026-10-06): check whether live scans return seller names. Only if they don't, decide between another read-only way of getting them (such as per-item searches, at the cost of many more auction-house requests and a longer scan) and dropping or reshaping STORY-028.
 
 **Inventory-aware economics** (unblocked: `scan_listings` holds every listing; depth is now displayed, see `status.md`). The implemented market metrics (ADDON-10) supply the facts; STORY-025 covers action rules and the cost of buying listing by listing; the rest stays here:
 - **Cost from the listing ladder:** what N units actually cost when bought listing by listing, and the most you can buy below a price.

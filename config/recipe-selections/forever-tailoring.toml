@@ -9,11 +9,12 @@ status = "beta-observed"
 catalog_version = "0.1"
 notes = "Forever beta, first tiers: Linen, Red Linen and Woolen bags with their bolts, plus Runecloth Bag for launch. Revalidate after material game builds by re-saving the page and regenerating."
 
-# Output counts: Wowhead's list data gives every recipe exactly 1, but its spell tooltips show "(2)".
-# Until one craft is counted in game, every recipe keeps the list value and says so.
+# Output counts: Wowhead's list data gives every recipe exactly 1. The "(2)" in its spell tooltips is the
+# effect number (effect 1 takes the reagents, effect 2 creates the item), not a quantity (checked 2026-10-06).
+# Until one craft is counted in game, every recipe keeps the list value and stays unconfirmed.
 [recipe_defaults]
 output_quantity_verified = false
-output_quantity_note = "Wowhead list data says 1 per craft; its spell tooltip shows (2). Confirm in game by crafting one."
+output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is its effect number, not a count. Confirm in game by crafting one."
 
 [[recipes]]
 recipe_id = 3755  # Linen Bag
