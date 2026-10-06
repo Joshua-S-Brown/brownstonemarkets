@@ -46,7 +46,9 @@ if not sources:
 
 with st.sidebar:
     st.header("Market")
-    games = list(dict.fromkeys(source["game_version"] for source in sources))
+    order = list(EXPERIENCES)
+    games = sorted(dict.fromkeys(source["game_version"] for source in sources),
+                   key=lambda game: order.index(game) if game in order else len(order))
     game = st.selectbox("Experience", games, format_func=lambda game: EXPERIENCES.get(game, game))
     experience_sources = [source for source in sources if source["game_version"] == game]
     selected: int | None = 0

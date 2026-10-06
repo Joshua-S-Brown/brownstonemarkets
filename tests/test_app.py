@@ -266,8 +266,9 @@ def test_selected_experience_upgrades_its_own_database(tmp_path, monkeypatch):
     from brownstone.storage import MIGRATIONS, SCHEMA_VERSION, schema_version
     classic, forever = (classic_sources(tmp_path)[0], {**classic_sources(tmp_path)[0], "game_version": "forever",
                                                        "source_id": "forever-test", "data_dir": tmp_path / "forever"})
-    forever["data_dir"].mkdir()
-    with duckdb.connect(str(forever["data_dir"] / "brownstone.duckdb")) as db:
+    classic["data_dir"] = tmp_path / "classic-old"
+    classic["data_dir"].mkdir()
+    with duckdb.connect(str(classic["data_dir"] / "brownstone.duckdb")) as db:
         db.execute("CREATE TABLE schema_info (key VARCHAR PRIMARY KEY, value VARCHAR NOT NULL)")
         MIGRATIONS[1](db)
         MIGRATIONS[2](db)
@@ -275,12 +276,14 @@ def test_selected_experience_upgrades_its_own_database(tmp_path, monkeypatch):
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [classic, forever])
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
-    assert not (forever["data_dir"] / "brownstone.v2.backup.duckdb").exists()  # Classic is selected first.
-    next(w for w in at.selectbox if w.label == "Experience").set_value("forever").run()
+    # Forever opens first even though market.toml lists Classic first; Classic's database is untouched.
+    assert next(w for w in at.selectbox if w.label == "Experience").value == "forever"
+    assert not (classic["data_dir"] / "brownstone.v2.backup.duckdb").exists()
+    next(w for w in at.selectbox if w.label == "Experience").set_value("classic").run()
     assert not at.exception
     assert any("upgraded" in t.value for t in at.toast)
-    assert (forever["data_dir"] / "brownstone.v2.backup.duckdb").exists()
-    with duckdb.connect(str(forever["data_dir"] / "brownstone.duckdb"), read_only=True) as db:
+    assert (classic["data_dir"] / "brownstone.v2.backup.duckdb").exists()
+    with duckdb.connect(str(classic["data_dir"] / "brownstone.duckdb"), read_only=True) as db:
         assert schema_version(db) == SCHEMA_VERSION
 
 
@@ -318,7 +321,7 @@ def test_sidebar_experience_resolves_source_and_market_on_every_market_page(tmp_
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [classic, addon])
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     experience = next(w for w in at.selectbox if w.label == "Experience")
-    assert experience.options == ["Classic Era", "WoW Forever"]
+    assert experience.options == ["WoW Forever", "Classic Era"]
     experience.set_value("forever").run()
     assert not at.exception
     assert not any(w.label == "Data source" for w in at.selectbox)

@@ -9,7 +9,8 @@ from brownstone.freshness import assess
 from brownstone.money import GOLD_TABLE_FORMAT
 from brownstone.storage import latest_snapshot
 
-EXPERIENCES = {"classic": "Classic Era", "forever": "WoW Forever", "retail": "Retail (regression)"}
+# Sidebar order: Forever, the target, opens by default whatever order market.toml lists sources in.
+EXPERIENCES = {"forever": "WoW Forever", "classic": "Classic Era", "retail": "Retail (regression)"}
 
 
 def show_context(config):
