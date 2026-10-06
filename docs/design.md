@@ -30,7 +30,7 @@ app.py                  Streamlit entry: sidebar, Refresh, view dispatch
 views/                  Streamlit only; display, no calculations
   common.py             snapshot loading, freshness display, gold columns
   crafting.py           Action Board and recipe explanation
-  catalogs.py           Recipe catalogs page: status, add and update a profession (preview, then write)
+  catalogs.py           Recipe catalogs page: status, one add-or-update flow (live review, then Save)
   market.py             Browse market and Opportunities
   scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
   scan_import.py        Sidebar addon preview, new-scan selection and explicit reviewed import
@@ -154,7 +154,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 
 1. **Market identity (done, STORY-009).** Configure `scope = "house"`, `server_type`, `faction`, an explicit `environment` (DATA-03) and no realm, for example `forever-us-roleplaying-alliance`. Neutral houses default to a 15% cut.
 2. **Price source (done, STORY-010).** There is no TSM or Blizzard feed. A `provider = "addon"` source imports the addon's SavedVariables file: bronze stays byte-for-byte, listings go to `scan_listings`, and item-level prices are derived in the `market_snapshots` shape (rules ADDON-01 to ADDON-06).
-3. **Catalog (done, STORY-004).** `config/forever-tailoring.toml` is generated from the saved Forever Tailoring page (CRAFT-08). To cover another profession or more recipes, use **Add a profession** or **Update a profession** on the Recipe catalogs page.
+3. **Catalog (done, STORY-004).** `config/forever-tailoring.toml` is generated from the saved Forever Tailoring page (CRAFT-08). To cover another profession or more recipes, use **Add or update a profession** on the Recipe catalogs page.
 4. **Configuration.** Add the `[[sources]]` entry: market fields, `rules_version`, `provider = "addon"`, `scan_path` and `scan_evidence` (see the disabled example in `config/market.toml`). Other non-TSM feeds get their own adapter producing the same `market_snapshots` columns.
 
 No change to crafting, the Action Board or the views should be needed. If one is, treat it as a design defect.

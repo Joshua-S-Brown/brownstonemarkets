@@ -1,0 +1,105 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-first-aid.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/secondary-skills/first-aid, saved in a browser. Added in the app.
+game_version = "forever"
+rules_version = "forever-beta-1.60"
+profession = "first-aid"
+status = "beta-observed"
+catalog_version = "0.1"
+
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "From Wowhead's list data; confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 3275  # Linen Bandage
+
+[[recipes]]
+recipe_id = 3276  # Heavy Linen Bandage
+
+[[recipes]]
+recipe_id = 3277  # Wool Bandage
+
+[[recipes]]
+recipe_id = 3278  # Heavy Wool Bandage
+
+[[recipes]]
+recipe_id = 7928  # Silk Bandage
+
+[[recipes]]
+recipe_id = 7929  # Heavy Silk Bandage
+
+[[recipes]]
+recipe_id = 7934  # Anti-Venom
+
+[[recipes]]
+recipe_id = 7935  # Strong Anti-Venom
+
+[[recipes]]
+recipe_id = 10840  # Mageweave Bandage
+
+[[recipes]]
+recipe_id = 10841  # Heavy Mageweave Bandage
+
+[[recipes]]
+recipe_id = 18629  # Runecloth Bandage
+
+[[recipes]]
+recipe_id = 18630  # Heavy Runecloth Bandage
+
+[[recipes]]
+recipe_id = 23787  # Powerful Anti-Venom
+
+[[recipes]]
+recipe_id = 470349  # Dense Runecloth Bandage
+
+[[recipes]]
+recipe_id = 1230117  # First Aid Kit
+
+[[recipes]]
+recipe_id = 1244431  # Minor Healing Potion
+
+[[recipes]]
+recipe_id = 1244432  # Lesser Healing Potion
+
+[[recipes]]
+recipe_id = 1244433  # Healing Potion
+
+[[recipes]]
+recipe_id = 1244434  # Greater Healing Potion
+
+[[recipes]]
+recipe_id = 1244435  # Superior Healing Potion
+
+[[recipes]]
+recipe_id = 1244436  # Major Healing Potion
+
+[[recipes]]
+recipe_id = 1259341  # Potent Anti-Venom
+
+[[recipes]]
+recipe_id = 1259342  # Simple Poultice
+
+[[recipes]]
+recipe_id = 1259343  # Clever Poultice
+
+[[recipes]]
+recipe_id = 1259344  # Superior Poultice
+
+[[recipes]]
+recipe_id = 1259345  # Powerful Poultice
+
+[[recipes]]
+recipe_id = 1259347  # Woolen Tourniquet
+
+[[recipes]]
+recipe_id = 1259348  # Leather Tourniquet
+
+[[recipes]]
+recipe_id = 1259349  # Surgical Tourniquet
+
+[[recipes]]
+recipe_id = 1262996  # Toxin Study
+
+[[recipes]]
+recipe_id = 1263001  # Plague Doctor's Laboratory

@@ -62,7 +62,9 @@ def test_catalogs_are_found_by_selection_file_for_any_profession(tmp_path):
     assert {"classic-era-tailoring", "forever-tailoring"} <= {entry["name"] for entry in entries}
     assert all(entry["catalog"]["recipes"] for entry in entries)
     missing = rc.missing_professions(entries)
-    assert "tailoring" not in missing["classic"] and "leatherworking" in missing["forever"]
+    names = {entry["name"] for entry in entries}
+    assert "tailoring" not in missing["classic"]
+    assert missing["forever"] == [p for p in rc.PROFESSIONS if rc.catalog_name("forever", p) not in names]
 
     (tmp_path / rc.SELECTIONS).mkdir()
     (tmp_path / rc.SELECTIONS / "forever-leatherworking.toml").write_text(
@@ -95,7 +97,8 @@ def test_status_reports_page_evidence_unconfirmed_values_and_refresh_due(workspa
 
     real = next(e for e in rc.find_catalogs(ROOT / "config") if e["name"] == "forever-tailoring")
     kinds = [value["kind"] for value in rc.unconfirmed_values(real["catalog"])]
-    assert kinds.count("yield") == 7 and kinds.count("vendor") == 4 and kinds.count("post-launch") == 3
+    assert kinds.count("yield") == len(real["catalog"]["recipes"])  # Every Forever yield stays unconfirmed.
+    assert kinds.count("vendor") == 4 and kinds.count("post-launch") == 3
 
     moved = rc.catalog_status(entry, [source(rules_version="forever-1.61", label="Forever AH"),
                                       source(game_version="classic", rules_version="classic-era")],

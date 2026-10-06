@@ -1,0 +1,1545 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-leatherworking.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/professions/leatherworking, saved in a browser. Added in the app.
+game_version = "forever"
+rules_version = "forever-beta-1.60"
+profession = "leatherworking"
+status = "beta-observed"
+catalog_version = "0.1"
+
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "From Wowhead's list data; confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 2149  # Handstitched Leather Boots
+
+[[recipes]]
+recipe_id = 2152  # Light Armor Kit
+
+[[recipes]]
+recipe_id = 2153  # Handstitched Leather Pants
+
+[[recipes]]
+recipe_id = 2158  # Fine Leather Boots
+
+[[recipes]]
+recipe_id = 2159  # Fine Leather Cloak
+
+[[recipes]]
+recipe_id = 2160  # Embossed Leather Vest
+
+[[recipes]]
+recipe_id = 2161  # Embossed Leather Boots
+
+[[recipes]]
+recipe_id = 2162  # Embossed Leather Cloak
+
+[[recipes]]
+recipe_id = 2163  # White Leather Jerkin
+
+[[recipes]]
+recipe_id = 2164  # Fine Leather Gloves
+
+[[recipes]]
+recipe_id = 2165  # Medium Armor Kit
+
+[[recipes]]
+recipe_id = 2166  # Toughened Leather Armor
+
+[[recipes]]
+recipe_id = 2167  # Dark Leather Boots
+
+[[recipes]]
+recipe_id = 2168  # Dark Leather Cloak
+
+[[recipes]]
+recipe_id = 2169  # Dark Leather Tunic
+
+[[recipes]]
+recipe_id = 2881  # Light Leather
+
+[[recipes]]
+recipe_id = 3753  # Handstitched Leather Belt
+
+[[recipes]]
+recipe_id = 3756  # Embossed Leather Gloves
+
+[[recipes]]
+recipe_id = 3759  # Embossed Leather Pants
+
+[[recipes]]
+recipe_id = 3760  # Hillman's Cloak
+
+[[recipes]]
+recipe_id = 3761  # Fine Leather Tunic
+
+[[recipes]]
+recipe_id = 3762  # Hillman's Leather Vest
+
+[[recipes]]
+recipe_id = 3763  # Fine Leather Belt
+
+[[recipes]]
+recipe_id = 3764  # Hillman's Leather Gloves
+
+[[recipes]]
+recipe_id = 3765  # Dark Leather Gloves
+
+[[recipes]]
+recipe_id = 3766  # Dark Leather Belt
+
+[[recipes]]
+recipe_id = 3767  # Hillman's Belt
+
+[[recipes]]
+recipe_id = 3768  # Hillman's Shoulders
+
+[[recipes]]
+recipe_id = 3769  # Dark Leather Shoulders
+
+[[recipes]]
+recipe_id = 3770  # Toughened Leather Gloves
+
+[[recipes]]
+recipe_id = 3771  # Barbaric Gloves
+
+[[recipes]]
+recipe_id = 3772  # Green Leather Armor
+
+[[recipes]]
+recipe_id = 3773  # Guardian Armor
+
+[[recipes]]
+recipe_id = 3774  # Green Leather Belt
+
+[[recipes]]
+recipe_id = 3775  # Guardian Belt
+
+[[recipes]]
+recipe_id = 3776  # Green Leather Bracers
+
+[[recipes]]
+recipe_id = 3777  # Guardian Leather Bracers
+
+[[recipes]]
+recipe_id = 3778  # Gem-studded Leather Belt
+
+[[recipes]]
+recipe_id = 3779  # Barbaric Belt
+
+[[recipes]]
+recipe_id = 3780  # Heavy Armor Kit
+
+[[recipes]]
+recipe_id = 3816  # Cured Light Hide
+
+[[recipes]]
+recipe_id = 3817  # Cured Medium Hide
+
+[[recipes]]
+recipe_id = 3818  # Cured Heavy Hide
+
+[[recipes]]
+recipe_id = 4096  # Raptor Hide Harness
+
+[[recipes]]
+recipe_id = 4097  # Raptor Hide Belt
+
+[[recipes]]
+recipe_id = 5244  # Kodo Hide Bag
+
+[[recipes]]
+recipe_id = 6661  # Barbaric Harness
+
+[[recipes]]
+recipe_id = 6702  # Murloc Scale Belt
+
+[[recipes]]
+recipe_id = 6703  # Murloc Scale Breastplate
+
+[[recipes]]
+recipe_id = 6704  # Thick Murloc Armor
+
+[[recipes]]
+recipe_id = 6705  # Murloc Scale Bracers
+
+[[recipes]]
+recipe_id = 7126  # Handstitched Leather Vest
+
+[[recipes]]
+recipe_id = 7133  # Fine Leather Pants
+
+[[recipes]]
+recipe_id = 7135  # Dark Leather Pants
+
+[[recipes]]
+recipe_id = 7147  # Guardian Pants
+
+[[recipes]]
+recipe_id = 7149  # Barbaric Leggings
+
+[[recipes]]
+recipe_id = 7151  # Barbaric Shoulders
+
+[[recipes]]
+recipe_id = 7153  # Guardian Cloak
+
+[[recipes]]
+recipe_id = 7156  # Guardian Gloves
+
+[[recipes]]
+recipe_id = 7953  # Deviate Scale Cloak
+
+[[recipes]]
+recipe_id = 7954  # Deviate Scale Gloves
+
+[[recipes]]
+recipe_id = 7955  # Deviate Scale Belt
+
+[[recipes]]
+recipe_id = 8322  # Moonglow Vest
+
+[[recipes]]
+recipe_id = 9058  # Handstitched Leather Cloak
+
+[[recipes]]
+recipe_id = 9059  # Handstitched Leather Bracers
+
+[[recipes]]
+recipe_id = 9060  # Light Leather Quiver
+
+[[recipes]]
+recipe_id = 9062  # Small Leather Ammo Pouch
+
+[[recipes]]
+recipe_id = 9064  # Rugged Leather Pants
+
+[[recipes]]
+recipe_id = 9065  # Light Leather Bracers
+
+[[recipes]]
+recipe_id = 9068  # Light Leather Pants
+
+[[recipes]]
+recipe_id = 9070  # Black Whelp Cloak
+
+[[recipes]]
+recipe_id = 9072  # Red Whelp Gloves
+
+[[recipes]]
+recipe_id = 9074  # Nimble Leather Gloves
+
+[[recipes]]
+recipe_id = 9145  # Fletcher's Gloves
+
+[[recipes]]
+recipe_id = 9146  # Herbalist's Gloves
+
+[[recipes]]
+recipe_id = 9147  # Earthen Leather Shoulders
+
+[[recipes]]
+recipe_id = 9148  # Pilferer's Gloves
+
+[[recipes]]
+recipe_id = 9149  # Heavy Earthen Gloves
+
+[[recipes]]
+recipe_id = 9193  # Heavy Quiver
+
+[[recipes]]
+recipe_id = 9194  # Heavy Leather Ammo Pouch
+
+[[recipes]]
+recipe_id = 9195  # Dusky Leather Leggings
+
+[[recipes]]
+recipe_id = 9196  # Dusky Leather Armor
+
+[[recipes]]
+recipe_id = 9197  # Green Whelp Armor
+
+[[recipes]]
+recipe_id = 9198  # Frost Leather Cloak
+
+[[recipes]]
+recipe_id = 9201  # Dusky Bracers
+
+[[recipes]]
+recipe_id = 9202  # Green Whelp Bracers
+
+[[recipes]]
+recipe_id = 9206  # Dusky Belt
+
+[[recipes]]
+recipe_id = 9207  # Dusky Boots
+
+[[recipes]]
+recipe_id = 9208  # Swift Boots
+
+[[recipes]]
+recipe_id = 10482  # Cured Thick Hide
+
+[[recipes]]
+recipe_id = 10487  # Thick Armor Kit
+
+[[recipes]]
+recipe_id = 10490  # Comfortable Leather Hat
+
+[[recipes]]
+recipe_id = 10499  # Nightscape Tunic
+
+[[recipes]]
+recipe_id = 10507  # Nightscape Headband
+
+[[recipes]]
+recipe_id = 10509  # Turtle Scale Gloves
+
+[[recipes]]
+recipe_id = 10511  # Turtle Scale Breastplate
+
+[[recipes]]
+recipe_id = 10516  # Nightscape Shoulders
+
+[[recipes]]
+recipe_id = 10518  # Turtle Scale Bracers
+
+[[recipes]]
+recipe_id = 10520  # Big Voodoo Robe
+
+[[recipes]]
+recipe_id = 10525  # Tough Scorpid Breastplate
+
+[[recipes]]
+recipe_id = 10529  # Wild Leather Shoulders
+
+[[recipes]]
+recipe_id = 10531  # Big Voodoo Mask
+
+[[recipes]]
+recipe_id = 10533  # Tough Scorpid Bracers
+
+[[recipes]]
+recipe_id = 10542  # Tough Scorpid Gloves
+
+[[recipes]]
+recipe_id = 10544  # Wild Leather Vest
+
+[[recipes]]
+recipe_id = 10546  # Wild Leather Helmet
+
+[[recipes]]
+recipe_id = 10548  # Nightscape Pants
+
+[[recipes]]
+recipe_id = 10552  # Turtle Scale Helm
+
+[[recipes]]
+recipe_id = 10554  # Tough Scorpid Boots
+
+[[recipes]]
+recipe_id = 10556  # Turtle Scale Leggings
+
+[[recipes]]
+recipe_id = 10558  # Nightscape Boots
+
+[[recipes]]
+recipe_id = 10560  # Big Voodoo Pants
+
+[[recipes]]
+recipe_id = 10562  # Big Voodoo Cloak
+
+[[recipes]]
+recipe_id = 10564  # Tough Scorpid Shoulders
+
+[[recipes]]
+recipe_id = 10566  # Wild Leather Boots
+
+[[recipes]]
+recipe_id = 10568  # Tough Scorpid Leggings
+
+[[recipes]]
+recipe_id = 10570  # Tough Scorpid Helm
+
+[[recipes]]
+recipe_id = 10572  # Wild Leather Leggings
+
+[[recipes]]
+recipe_id = 10574  # Wild Leather Cloak
+
+[[recipes]]
+recipe_id = 10619  # Dragonscale Gauntlets
+
+[[recipes]]
+recipe_id = 10621  # Wolfshead Helm
+
+[[recipes]]
+recipe_id = 10630  # Gauntlets of the Sea
+
+[[recipes]]
+recipe_id = 10632  # Helm of Fire
+
+[[recipes]]
+recipe_id = 10647  # Feathered Breastplate
+
+[[recipes]]
+recipe_id = 10650  # Dragonscale Breastplate
+
+[[recipes]]
+recipe_id = 14930  # Quickdraw Quiver
+
+[[recipes]]
+recipe_id = 14932  # Thick Leather Ammo Pouch
+
+[[recipes]]
+recipe_id = 16650  # Wildthorn Mail
+
+[[recipes]]
+recipe_id = 16661  # Storm Gauntlets
+
+[[recipes]]
+recipe_id = 16728  # Helm of the Great Chief
+
+[[recipes]]
+recipe_id = 16746  # Invulnerable Mail
+
+[[recipes]]
+recipe_id = 19047  # Cured Rugged Hide
+
+[[recipes]]
+recipe_id = 19048  # Heavy Scorpid Bracers
+
+[[recipes]]
+recipe_id = 19049  # Wicked Leather Gauntlets
+
+[[recipes]]
+recipe_id = 19050  # Green Dragonscale Breastplate
+
+[[recipes]]
+recipe_id = 19051  # Heavy Scorpid Vest
+
+[[recipes]]
+recipe_id = 19052  # Wicked Leather Bracers
+
+[[recipes]]
+recipe_id = 19053  # Chimeric Gloves
+
+[[recipes]]
+recipe_id = 19054  # Red Dragonscale Breastplate
+
+[[recipes]]
+recipe_id = 19055  # Runic Leather Gauntlets
+
+[[recipes]]
+recipe_id = 19058  # Rugged Armor Kit
+
+[[recipes]]
+recipe_id = 19059  # Volcanic Leggings
+
+[[recipes]]
+recipe_id = 19060  # Green Dragonscale Leggings
+
+[[recipes]]
+recipe_id = 19061  # Living Shoulders
+
+[[recipes]]
+recipe_id = 19062  # Ironfeather Shoulders
+
+[[recipes]]
+recipe_id = 19063  # Chimeric Boots
+
+[[recipes]]
+recipe_id = 19064  # Heavy Scorpid Gauntlets
+
+[[recipes]]
+recipe_id = 19065  # Runic Leather Bracers
+
+[[recipes]]
+recipe_id = 19066  # Frostsaber Boots
+
+[[recipes]]
+recipe_id = 19067  # Stormshroud Pants
+
+[[recipes]]
+recipe_id = 19068  # Warbear Harness
+
+[[recipes]]
+recipe_id = 19070  # Heavy Scorpid Belt
+
+[[recipes]]
+recipe_id = 19071  # Wicked Leather Headband
+
+[[recipes]]
+recipe_id = 19072  # Runic Leather Belt
+
+[[recipes]]
+recipe_id = 19073  # Chimeric Leggings
+
+[[recipes]]
+recipe_id = 19074  # Frostsaber Leggings
+
+[[recipes]]
+recipe_id = 19075  # Heavy Scorpid Leggings
+
+[[recipes]]
+recipe_id = 19076  # Volcanic Breastplate
+
+[[recipes]]
+recipe_id = 19077  # Blue Dragonscale Breastplate
+
+[[recipes]]
+recipe_id = 19078  # Living Leggings
+
+[[recipes]]
+recipe_id = 19079  # Stormshroud Armor
+
+[[recipes]]
+recipe_id = 19080  # Warbear Woolies
+
+[[recipes]]
+recipe_id = 19081  # Chimeric Vest
+
+[[recipes]]
+recipe_id = 19082  # Runic Leather Headband
+
+[[recipes]]
+recipe_id = 19083  # Wicked Leather Pants
+
+[[recipes]]
+recipe_id = 19084  # Devilsaur Gauntlets
+
+[[recipes]]
+recipe_id = 19085  # Black Dragonscale Breastplate
+
+[[recipes]]
+recipe_id = 19086  # Ironfeather Breastplate
+
+[[recipes]]
+recipe_id = 19087  # Frostsaber Gloves
+
+[[recipes]]
+recipe_id = 19088  # Heavy Scorpid Helm
+
+[[recipes]]
+recipe_id = 19089  # Blue Dragonscale Shoulders
+
+[[recipes]]
+recipe_id = 19090  # Stormshroud Shoulders
+
+[[recipes]]
+recipe_id = 19091  # Runic Leather Pants
+
+[[recipes]]
+recipe_id = 19092  # Wicked Leather Belt
+
+[[recipes]]
+recipe_id = 19093  # Onyxia Scale Cloak
+
+[[recipes]]
+recipe_id = 19094  # Black Dragonscale Shoulders
+
+[[recipes]]
+recipe_id = 19095  # Living Breastplate
+
+[[recipes]]
+recipe_id = 19097  # Devilsaur Leggings
+
+[[recipes]]
+recipe_id = 19098  # Wicked Leather Armor
+
+[[recipes]]
+recipe_id = 19100  # Heavy Scorpid Shoulders
+
+[[recipes]]
+recipe_id = 19101  # Volcanic Shoulders
+
+[[recipes]]
+recipe_id = 19102  # Runic Leather Armor
+
+[[recipes]]
+recipe_id = 19103  # Runic Leather Shoulders
+
+[[recipes]]
+recipe_id = 19104  # Frostsaber Tunic
+
+[[recipes]]
+recipe_id = 19107  # Black Dragonscale Leggings
+
+[[recipes]]
+recipe_id = 20648  # Medium Leather
+
+[[recipes]]
+recipe_id = 20649  # Heavy Leather
+
+[[recipes]]
+recipe_id = 20650  # Thick Leather
+
+[[recipes]]
+recipe_id = 20853  # Corehound Boots
+
+[[recipes]]
+recipe_id = 20854  # Molten Helm
+
+[[recipes]]
+recipe_id = 20855  # Black Dragonscale Boots
+
+[[recipes]]
+recipe_id = 21943  # Gloves of the Greatfather
+
+[[recipes]]
+recipe_id = 22331  # Rugged Leather
+
+[[recipes]]
+recipe_id = 22711  # Shadowskin Gloves
+
+[[recipes]]
+recipe_id = 22727  # Core Armor Kit
+
+[[recipes]]
+recipe_id = 22815  # Gordok Ogre Suit
+
+[[recipes]]
+recipe_id = 22921  # Girdle of Insight
+
+[[recipes]]
+recipe_id = 22922  # Mongoose Boots
+
+[[recipes]]
+recipe_id = 22923  # Swift Flight Bracers
+
+[[recipes]]
+recipe_id = 22926  # Chromatic Cloak
+
+[[recipes]]
+recipe_id = 22927  # Hide of the Wild
+
+[[recipes]]
+recipe_id = 22928  # Shifting Cloak
+
+[[recipes]]
+recipe_id = 23190  # Heavy Leather Ball
+
+[[recipes]]
+recipe_id = 23399  # Barbaric Bracers
+
+[[recipes]]
+recipe_id = 23628  # Heavy Timbermaw Belt
+
+[[recipes]]
+recipe_id = 23629  # Heavy Timbermaw Boots
+
+[[recipes]]
+recipe_id = 23703  # Might of the Timbermaw
+
+[[recipes]]
+recipe_id = 23704  # Timbermaw Brawlers
+
+[[recipes]]
+recipe_id = 23705  # Dawn Treaders
+
+[[recipes]]
+recipe_id = 23706  # Golden Mantle of the Dawn
+
+[[recipes]]
+recipe_id = 23707  # Lava Belt
+
+[[recipes]]
+recipe_id = 23708  # Chromatic Gauntlets
+
+[[recipes]]
+recipe_id = 23709  # Corehound Belt
+
+[[recipes]]
+recipe_id = 23710  # Molten Belt
+
+[[recipes]]
+recipe_id = 24121  # Primal Batskin Jerkin
+
+[[recipes]]
+recipe_id = 24122  # Primal Batskin Gloves
+
+[[recipes]]
+recipe_id = 24123  # Primal Batskin Bracers
+
+[[recipes]]
+recipe_id = 24124  # Blood Tiger Breastplate
+
+[[recipes]]
+recipe_id = 24125  # Blood Tiger Shoulders
+
+[[recipes]]
+recipe_id = 24654  # Blue Dragonscale Leggings
+
+[[recipes]]
+recipe_id = 24655  # Green Dragonscale Gauntlets
+
+[[recipes]]
+recipe_id = 24703  # Dreamscale Breastplate
+
+[[recipes]]
+recipe_id = 24846  # Spitfire Bracers
+
+[[recipes]]
+recipe_id = 24847  # Spitfire Gauntlets
+
+[[recipes]]
+recipe_id = 24848  # Spitfire Breastplate
+
+[[recipes]]
+recipe_id = 24849  # Sandstalker Bracers
+
+[[recipes]]
+recipe_id = 24850  # Sandstalker Gauntlets
+
+[[recipes]]
+recipe_id = 24851  # Sandstalker Breastplate
+
+[[recipes]]
+recipe_id = 24940  # Black Whelp Tunic
+
+[[recipes]]
+recipe_id = 26279  # Stormshroud Gloves
+
+[[recipes]]
+recipe_id = 28219  # Polar Tunic
+
+[[recipes]]
+recipe_id = 28220  # Polar Gloves
+
+[[recipes]]
+recipe_id = 28221  # Polar Bracers
+
+[[recipes]]
+recipe_id = 28222  # Icy Scale Breastplate
+
+[[recipes]]
+recipe_id = 28223  # Icy Scale Gauntlets
+
+[[recipes]]
+recipe_id = 28224  # Icy Scale Bracers
+
+[[recipes]]
+recipe_id = 28472  # Bramblewood Helm
+
+[[recipes]]
+recipe_id = 28473  # Bramblewood Boots
+
+[[recipes]]
+recipe_id = 28474  # Bramblewood Belt
+
+[[recipes]]
+recipe_id = 44953  # Winter Boots
+
+[[recipes]]
+recipe_id = 435819  # Faintly Glowing Leather
+
+[[recipes]]
+recipe_id = 1229432  # Camp Tent
+
+[[recipes]]
+recipe_id = 1254965  # Forceful Rugged Armor Kit
+
+[[recipes]]
+recipe_id = 1254966  # Mystic Rugged Armor Kit
+
+[[recipes]]
+recipe_id = 1254967  # Pristine Scorpid Leggings
+
+[[recipes]]
+recipe_id = 1254968  # Black Dragonscale Helm
+
+[[recipes]]
+recipe_id = 1254969  # Blue Dragonscale Helm
+
+[[recipes]]
+recipe_id = 1254970  # Red Dragonscale Leggings
+
+[[recipes]]
+recipe_id = 1254971  # Charged Scorpid Boots
+
+[[recipes]]
+recipe_id = 1254972  # Supple Scorpid Sabatons
+
+[[recipes]]
+recipe_id = 1254973  # Charged Scorpid Leggings
+
+[[recipes]]
+recipe_id = 1254974  # Supple Scorpid Vest
+
+[[recipes]]
+recipe_id = 1254975  # Charged Scorpid Vest
+
+[[recipes]]
+recipe_id = 1254976  # Supple Scorpid Helm
+
+[[recipes]]
+recipe_id = 1254977  # Charged Scorpid Gauntlets
+
+[[recipes]]
+recipe_id = 1254978  # Supple Scorpid Belt
+
+[[recipes]]
+recipe_id = 1254979  # Heavy Scorpid Boots
+
+[[recipes]]
+recipe_id = 1254980  # Charged Scorpid Bracers
+
+[[recipes]]
+recipe_id = 1254981  # Supple Scorpid Shoulder
+
+[[recipes]]
+recipe_id = 1254982  # Mender's Mail Belt
+
+[[recipes]]
+recipe_id = 1254983  # Skirmisher's Mail Belt
+
+[[recipes]]
+recipe_id = 1254984  # Skycaller's Mail Belt
+
+[[recipes]]
+recipe_id = 1254985  # Stalker's Mail Belt
+
+[[recipes]]
+recipe_id = 1254986  # Mender's Mail Gauntlets
+
+[[recipes]]
+recipe_id = 1254987  # Skirmisher's Mail Gauntlets
+
+[[recipes]]
+recipe_id = 1254988  # Skycaller's Mail Gauntlets
+
+[[recipes]]
+recipe_id = 1254989  # Stalker's Mail Gauntlets
+
+[[recipes]]
+recipe_id = 1254990  # Charged Scorpid Shoulder
+
+[[recipes]]
+recipe_id = 1254991  # Supple Scorpid Bracers
+
+[[recipes]]
+recipe_id = 1254992  # Charged Scorpid Helm
+
+[[recipes]]
+recipe_id = 1254993  # Supple Scorpid Leggings
+
+[[recipes]]
+recipe_id = 1254994  # Mender's Mail Sabatons
+
+[[recipes]]
+recipe_id = 1254995  # Skirmisher's Mail Sabatons
+
+[[recipes]]
+recipe_id = 1254996  # Skycaller's Mail Sabatons
+
+[[recipes]]
+recipe_id = 1254997  # Stalker's Mail Sabatons
+
+[[recipes]]
+recipe_id = 1254998  # Charged Scorpid Belt
+
+[[recipes]]
+recipe_id = 1254999  # Supple Scorpid Boots
+
+[[recipes]]
+recipe_id = 1255000  # Mender's Mail Bracers
+
+[[recipes]]
+recipe_id = 1255001  # Skirmisher's Mail Bracers
+
+[[recipes]]
+recipe_id = 1255002  # Skycaller's Mail Bracers
+
+[[recipes]]
+recipe_id = 1255003  # Stalker's Mail Bracers
+
+[[recipes]]
+recipe_id = 1255004  # Mender's Mail Shoulder
+
+[[recipes]]
+recipe_id = 1255005  # Skirmisher's Mail Shoulder
+
+[[recipes]]
+recipe_id = 1255006  # Skycaller's Mail Shoulder
+
+[[recipes]]
+recipe_id = 1255007  # Stalker's Mail Shoulder
+
+[[recipes]]
+recipe_id = 1255008  # Mender's Mail Boots
+
+[[recipes]]
+recipe_id = 1255009  # Skirmisher's Mail Boots
+
+[[recipes]]
+recipe_id = 1255010  # Skycaller's Mail Boots
+
+[[recipes]]
+recipe_id = 1255011  # Stalker's Mail Boots
+
+[[recipes]]
+recipe_id = 1255012  # Ironfeather Leggings
+
+[[recipes]]
+recipe_id = 1255013  # Warbear Helm
+
+[[recipes]]
+recipe_id = 1255014  # Timbermaw Tunic
+
+[[recipes]]
+recipe_id = 1255015  # Dawn Armor
+
+[[recipes]]
+recipe_id = 1255016  # Living Crown
+
+[[recipes]]
+recipe_id = 1255017  # Blue Suede Hat
+
+[[recipes]]
+recipe_id = 1255018  # Tooled Leather Pants
+
+[[recipes]]
+recipe_id = 1255019  # Blue Suede Bracers
+
+[[recipes]]
+recipe_id = 1255020  # Tooled Leather Epaulets
+
+[[recipes]]
+recipe_id = 1255021  # Blue Suede Belt
+
+[[recipes]]
+recipe_id = 1255022  # Tooled Leather Bracers
+
+[[recipes]]
+recipe_id = 1255023  # Wicked Leather Shoulder
+
+[[recipes]]
+recipe_id = 1255024  # Blue Suede Armor
+
+[[recipes]]
+recipe_id = 1255025  # Tooled Leather Crown
+
+[[recipes]]
+recipe_id = 1255026  # Blue Suede Shoulder
+
+[[recipes]]
+recipe_id = 1255027  # Tooled Leather Gauntlets
+
+[[recipes]]
+recipe_id = 1255028  # Wicked Leather Boots
+
+[[recipes]]
+recipe_id = 1255029  # Blue Suede Pants
+
+[[recipes]]
+recipe_id = 1255030  # Tooled Leather Armor
+
+[[recipes]]
+recipe_id = 1255031  # Mender's Leather Waistguard
+
+[[recipes]]
+recipe_id = 1255032  # Skycaller's Leather Waistguard
+
+[[recipes]]
+recipe_id = 1255033  # Warden's Leather Waistguard
+
+[[recipes]]
+recipe_id = 1255034  # Skulker's Leather Waistguard
+
+[[recipes]]
+recipe_id = 1255035  # Prowler's Leather Waistguard
+
+[[recipes]]
+recipe_id = 1255036  # Mender's Leather Gauntlets
+
+[[recipes]]
+recipe_id = 1255037  # Skycaller's Leather Gauntlets
+
+[[recipes]]
+recipe_id = 1255038  # Warden's Leather Gauntlets
+
+[[recipes]]
+recipe_id = 1255039  # Skulker's Leather Gauntlets
+
+[[recipes]]
+recipe_id = 1255040  # Prowler's Leather Gauntlets
+
+[[recipes]]
+recipe_id = 1255041  # Blue Suede Gloves
+
+[[recipes]]
+recipe_id = 1255042  # Tooled Leather Boots
+
+[[recipes]]
+recipe_id = 1255043  # Mender's Leather Boots
+
+[[recipes]]
+recipe_id = 1255044  # Skycaller's Leather Boots
+
+[[recipes]]
+recipe_id = 1255045  # Warden's Leather Boots
+
+[[recipes]]
+recipe_id = 1255046  # Skulker's Leather Boots
+
+[[recipes]]
+recipe_id = 1255047  # Prowler's Leather Boots
+
+[[recipes]]
+recipe_id = 1255048  # Blue Suede Shoes
+
+[[recipes]]
+recipe_id = 1255049  # Tooled Leather Belt
+
+[[recipes]]
+recipe_id = 1255050  # Mender's Leather Bracers
+
+[[recipes]]
+recipe_id = 1255051  # Skycaller's Leather Bracers
+
+[[recipes]]
+recipe_id = 1255052  # Warden's Leather Bracers
+
+[[recipes]]
+recipe_id = 1255053  # Skulker's Leather Bracers
+
+[[recipes]]
+recipe_id = 1255054  # Prowler's Leather Bracers
+
+[[recipes]]
+recipe_id = 1255055  # Mender's Leather Shoulder
+
+[[recipes]]
+recipe_id = 1255056  # Skycaller's Leather Shoulder
+
+[[recipes]]
+recipe_id = 1255057  # Warden's Leather Shoulder
+
+[[recipes]]
+recipe_id = 1255058  # Skulker's Leather Shoulder
+
+[[recipes]]
+recipe_id = 1255059  # Prowler's Leather Shoulder
+
+[[recipes]]
+recipe_id = 1255060  # Mender's Leather Shoes
+
+[[recipes]]
+recipe_id = 1255061  # Skycaller's Leather Shoes
+
+[[recipes]]
+recipe_id = 1255062  # Warden's Leather Shoes
+
+[[recipes]]
+recipe_id = 1255063  # Skulker's Leather Shoes
+
+[[recipes]]
+recipe_id = 1255064  # Prowler's Leather Shoes
+
+[[recipes]]
+recipe_id = 1255065  # Mender's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255066  # Skycaller's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255067  # Skirmisher's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255068  # Warden's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255069  # Stalker's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255070  # Skulker's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255071  # Prowler's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255073  # Forceful Thick Armor Kit
+
+[[recipes]]
+recipe_id = 1255074  # Mystic Thick Armor Kit
+
+[[recipes]]
+recipe_id = 1255075  # Mender's Leather Belt
+
+[[recipes]]
+recipe_id = 1255076  # Skycaller's Leather Belt
+
+[[recipes]]
+recipe_id = 1255077  # Skirmisher's Leather Belt
+
+[[recipes]]
+recipe_id = 1255078  # Warden's Leather Belt
+
+[[recipes]]
+recipe_id = 1255079  # Stalker's Leather Belt
+
+[[recipes]]
+recipe_id = 1255080  # Skulker's Leather Belt
+
+[[recipes]]
+recipe_id = 1255081  # Prowler's Leather Belt
+
+[[recipes]]
+recipe_id = 1255082  # Wisdom's Leather Leggings
+
+[[recipes]]
+recipe_id = 1255083  # Stormrider's Leather Kilt
+
+[[recipes]]
+recipe_id = 1255084  # Totemic Leather Leggings
+
+[[recipes]]
+recipe_id = 1255085  # Defender's Leather Kilt
+
+[[recipes]]
+recipe_id = 1255086  # Trapper's Leather Legguards
+
+[[recipes]]
+recipe_id = 1255087  # Brawler's Leather Legguards
+
+[[recipes]]
+recipe_id = 1255088  # Wisdom's Leather Helm
+
+[[recipes]]
+recipe_id = 1255089  # Stormrider's Leather Helm
+
+[[recipes]]
+recipe_id = 1255090  # Totemic Leather Helm
+
+[[recipes]]
+recipe_id = 1255091  # Defender's Leather Helm
+
+[[recipes]]
+recipe_id = 1255092  # Trapper's Leather Helm
+
+[[recipes]]
+recipe_id = 1255093  # Brawler's Leather Helm
+
+[[recipes]]
+recipe_id = 1255095  # Forceful Heavy Armor Kit
+
+[[recipes]]
+recipe_id = 1255096  # Mystic Heavy Armor Kit
+
+[[recipes]]
+recipe_id = 1255097  # Wisdom's Leather Tunic
+
+[[recipes]]
+recipe_id = 1255098  # Stormrider's Leather Tunic
+
+[[recipes]]
+recipe_id = 1255099  # Totemic Leather Tunic
+
+[[recipes]]
+recipe_id = 1255100  # Defender's Leather Tunic
+
+[[recipes]]
+recipe_id = 1255101  # Trapper's Leather Tunic
+
+[[recipes]]
+recipe_id = 1255102  # Brawler's Leather Tunic
+
+[[recipes]]
+recipe_id = 1255103  # Hillman's Leather Boots
+
+[[recipes]]
+recipe_id = 1255104  # Wisdom's Leather Hood
+
+[[recipes]]
+recipe_id = 1255105  # Stormrider's Leather Hood
+
+[[recipes]]
+recipe_id = 1255106  # Totemic Leather Hood
+
+[[recipes]]
+recipe_id = 1255107  # Defender's Leather Hood
+
+[[recipes]]
+recipe_id = 1255108  # Trapper's Leather Hood
+
+[[recipes]]
+recipe_id = 1255109  # Brawler's Leather Hood
+
+[[recipes]]
+recipe_id = 1255110  # Wisdom's Leather Pants
+
+[[recipes]]
+recipe_id = 1255111  # Stormrider's Leather Pants
+
+[[recipes]]
+recipe_id = 1255112  # Totemic Leather Pants
+
+[[recipes]]
+recipe_id = 1255113  # Defender's Leather Pants
+
+[[recipes]]
+recipe_id = 1255114  # Trapper's Leather Pants
+
+[[recipes]]
+recipe_id = 1255115  # Brawler's Leather Pants
+
+[[recipes]]
+recipe_id = 1255116  # Wisdom's Leather Boots
+
+[[recipes]]
+recipe_id = 1255117  # Stormrider's Leather Boots
+
+[[recipes]]
+recipe_id = 1255118  # Totemic Leather Boots
+
+[[recipes]]
+recipe_id = 1255119  # Defender's Leather Boots
+
+[[recipes]]
+recipe_id = 1255120  # Trapper's Leather Boots
+
+[[recipes]]
+recipe_id = 1255121  # Brawler's Leather Boots
+
+[[recipes]]
+recipe_id = 1255123  # Forceful Medium Armor Kit
+
+[[recipes]]
+recipe_id = 1255124  # Mystic Medium Armor Kit
+
+[[recipes]]
+recipe_id = 1255125  # Wisdom's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255126  # Stormrider's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255127  # Totemic Leather Gloves
+
+[[recipes]]
+recipe_id = 1255128  # Defender's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255129  # Trapper's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255130  # Brawler's Leather Gloves
+
+[[recipes]]
+recipe_id = 1255131  # Wisdom's Leather Armor
+
+[[recipes]]
+recipe_id = 1255132  # Stormrider's Leather Armor
+
+[[recipes]]
+recipe_id = 1255133  # Totemic Leather Armor
+
+[[recipes]]
+recipe_id = 1255134  # Defender's Leather Armor
+
+[[recipes]]
+recipe_id = 1255135  # Trapper's Leather Armor
+
+[[recipes]]
+recipe_id = 1255136  # Brawler's Leather Armor
+
+[[recipes]]
+recipe_id = 1255137  # Wisdom's Leather Belt
+
+[[recipes]]
+recipe_id = 1255138  # Stormrider's Leather Belt
+
+[[recipes]]
+recipe_id = 1255139  # Totemic Leather Belt
+
+[[recipes]]
+recipe_id = 1255140  # Defender's Leather Belt
+
+[[recipes]]
+recipe_id = 1255141  # Trapper's Leather Belt
+
+[[recipes]]
+recipe_id = 1255142  # Brawler's Leather Belt
+
+[[recipes]]
+recipe_id = 1255143  # Moonglow Boots
+
+[[recipes]]
+recipe_id = 1255144  # Murloc Scale Shoes
+
+[[recipes]]
+recipe_id = 1255145  # Dark Leather Boots
+
+[[recipes]]
+recipe_id = 1255146  # Black Whelp Slippers
+
+[[recipes]]
+recipe_id = 1263031  # Tanning Rack
+
+[[recipes]]
+recipe_id = 1263079  # Sewing Machine
+
+[[recipes]]
+recipe_id = 1292920  # Grovekeeper Trousers
+
+[[recipes]]
+recipe_id = 1292921  # Grovekeeper Grips
+
+[[recipes]]
+recipe_id = 1292923  # Grovekeeper Shoulderpads
+
+[[recipes]]
+recipe_id = 1292924  # Grovekeeper Stompers
+
+[[recipes]]
+recipe_id = 1292925  # Grovekeeper Kilt
+
+[[recipes]]
+recipe_id = 1292926  # Grovekeeper Mitts
+
+[[recipes]]
+recipe_id = 1292927  # Grovekeeper Mantle
+
+[[recipes]]
+recipe_id = 1292928  # Grovekeeper Sandals
+
+[[recipes]]
+recipe_id = 1292929  # Grovekeeper Legguards
+
+[[recipes]]
+recipe_id = 1292930  # Grovekeeper Handguards
+
+[[recipes]]
+recipe_id = 1292931  # Grovekeeper Pauldrons
+
+[[recipes]]
+recipe_id = 1292932  # Grovekeeper Boots
+
+[[recipes]]
+recipe_id = 1292933  # Grovekeeper Leggings
+
+[[recipes]]
+recipe_id = 1292934  # Grovekeeper Gauntlets
+
+[[recipes]]
+recipe_id = 1292935  # Grovekeeper Spaulders
+
+[[recipes]]
+recipe_id = 1292936  # Grovekeeper Treads
+
+[[recipes]]
+recipe_id = 1292937  # Wildstalker's Legguards
+
+[[recipes]]
+recipe_id = 1292938  # Wildstalker's Gauntlets
+
+[[recipes]]
+recipe_id = 1292939  # Wildstalker's Spaulders
+
+[[recipes]]
+recipe_id = 1292940  # Wildstalker's Greaves
+
+[[recipes]]
+recipe_id = 1292965  # Grimstitch Pants
+
+[[recipes]]
+recipe_id = 1292966  # Grimstitch Gloves
+
+[[recipes]]
+recipe_id = 1292967  # Grimstitch Spaulders
+
+[[recipes]]
+recipe_id = 1292968  # Grimstitch Boots
+
+[[recipes]]
+recipe_id = 1292969  # Spiritcaller Leggings
+
+[[recipes]]
+recipe_id = 1292970  # Spiritcaller Grips
+
+[[recipes]]
+recipe_id = 1292971  # Spiritcaller Spaulders
+
+[[recipes]]
+recipe_id = 1292972  # Spiritcaller Treads
+
+[[recipes]]
+recipe_id = 1292973  # Spiritcaller Pants
+
+[[recipes]]
+recipe_id = 1292974  # Spiritcaller Gauntlets
+
+[[recipes]]
+recipe_id = 1292975  # Spiritcaller Epaulets
+
+[[recipes]]
+recipe_id = 1292976  # Spiritcaller Greaves
+
+[[recipes]]
+recipe_id = 1297126  # Bileblister Claws
+
+[[recipes]]
+recipe_id = 1297127  # Bileblister Girdle
+
+[[recipes]]
+recipe_id = 1297128  # Bileblister Boots
+
+[[recipes]]
+recipe_id = 1297129  # Hivethrasher's Claws
+
+[[recipes]]
+recipe_id = 1297130  # Hivethrasher's Girdle
+
+[[recipes]]
+recipe_id = 1297131  # Hivethrasher's Boots
+
+[[recipes]]
+recipe_id = 1297132  # Scalegut Clenchers
+
+[[recipes]]
+recipe_id = 1297133  # Scalegut Belt
+
+[[recipes]]
+recipe_id = 1297134  # Scalegut Treaders
+
+[[recipes]]
+recipe_id = 1297135  # Broodwatcher's Clenchers
+
+[[recipes]]
+recipe_id = 1297136  # Broodwatcher's Belt
+
+[[recipes]]
+recipe_id = 1297137  # Broodwatcher's Treaders
+
+[[recipes]]
+recipe_id = 1299914  # Spiritcaller Kilt
+
+[[recipes]]
+recipe_id = 1299915  # Spiritcaller Gloves
+
+[[recipes]]
+recipe_id = 1299916  # Spiritcaller Mantle
+
+[[recipes]]
+recipe_id = 1299917  # Spiritcaller Boots
+
+[[recipes]]
+recipe_id = 1301427  # Cloudy Gustwoven Harness
+
+[[recipes]]
+recipe_id = 1301428  # Cloudy Gustwoven Bracers
+
+[[recipes]]
+recipe_id = 1301429  # Cloudy Gustwoven Gloves
+
+[[recipes]]
+recipe_id = 1301430  # Cloudy Gustwoven Belt
+
+[[recipes]]
+recipe_id = 1301431  # Cloudy Gustwoven Trousers
+
+[[recipes]]
+recipe_id = 1301432  # Cloudy Gustwoven Boots
+
+[[recipes]]
+recipe_id = 1301433  # Cloudy Windraveled Jerkin
+
+[[recipes]]
+recipe_id = 1301434  # Cloudy Windraveled Armguards
+
+[[recipes]]
+recipe_id = 1301435  # Cloudy Windraveled Mitts
+
+[[recipes]]
+recipe_id = 1301436  # Cloudy Windraveled Strap
+
+[[recipes]]
+recipe_id = 1301437  # Cloudy Windraveled Pants
+
+[[recipes]]
+recipe_id = 1301438  # Cloudy Windraveled Footwraps
+
+[[recipes]]
+recipe_id = 1301451  # Azure Gustwoven Harness
+
+[[recipes]]
+recipe_id = 1301452  # Azure Gustwoven Bracers
+
+[[recipes]]
+recipe_id = 1301453  # Azure Gustwoven Gloves
+
+[[recipes]]
+recipe_id = 1301454  # Azure Gustwoven Belt
+
+[[recipes]]
+recipe_id = 1301455  # Azure Gustwoven Trousers
+
+[[recipes]]
+recipe_id = 1301456  # Azure Gustwoven Boots
+
+[[recipes]]
+recipe_id = 1301457  # Azure Windraveled Jerkin
+
+[[recipes]]
+recipe_id = 1301458  # Azure Windraveled Armguards
+
+[[recipes]]
+recipe_id = 1301459  # Azure Windraveled Mitts
+
+[[recipes]]
+recipe_id = 1301460  # Azure Windraveled Strap
+
+[[recipes]]
+recipe_id = 1301461  # Azure Windraveled Pants
+
+[[recipes]]
+recipe_id = 1301462  # Azure Windraveled Footwraps
+
+[[recipes]]
+recipe_id = 1301528  # Cloudy Gustwoven Hood
+
+[[recipes]]
+recipe_id = 1301529  # Cloudy Gustwoven Spaulders
+
+[[recipes]]
+recipe_id = 1301530  # Cloudy Windraveled Cover
+
+[[recipes]]
+recipe_id = 1301531  # Cloudy Windraveled Drapes
+
+[[recipes]]
+recipe_id = 1301536  # Azure Gustwoven Hood
+
+[[recipes]]
+recipe_id = 1301537  # Azure Gustwoven Spaulders
+
+[[recipes]]
+recipe_id = 1301538  # Azure Windraveled Cover
+
+[[recipes]]
+recipe_id = 1301539  # Azure Windraveled Drapes
+
+[[recipes]]
+recipe_id = 1302604  # Light Leather Reagent Bag
+
+[[recipes]]
+recipe_id = 1306526  # Elderwild Waistcord
+
+[[recipes]]
+recipe_id = 1306527  # Outlaw's Collar
+
+[[recipes]]
+recipe_id = 1306528  # Elderwild Pants
+
+[[recipes]]
+recipe_id = 1306529  # Eternity Pauldrons
+
+[[recipes]]
+recipe_id = 1306530  # Tranquil Wristguards
+
+[[recipes]]
+recipe_id = 1306531  # Mourning Handguards
+
+[[recipes]]
+recipe_id = 1306532  # Wild Leather Armor Kit

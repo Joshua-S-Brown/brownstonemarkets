@@ -1,0 +1,1302 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-blacksmithing.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/professions/blacksmithing, saved in a browser. Added in the app.
+game_version = "forever"
+rules_version = "forever-beta-1.60"
+profession = "blacksmithing"
+status = "beta-observed"
+catalog_version = "0.1"
+
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "From Wowhead's list data; confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 2660  # Rough Sharpening Stone
+
+[[recipes]]
+recipe_id = 2661  # Copper Chain Belt
+
+[[recipes]]
+recipe_id = 2662  # Copper Chain Pants
+
+[[recipes]]
+recipe_id = 2663  # Copper Bracers
+
+[[recipes]]
+recipe_id = 2664  # Runed Copper Bracers
+
+[[recipes]]
+recipe_id = 2665  # Coarse Sharpening Stone
+
+[[recipes]]
+recipe_id = 2666  # Runed Copper Belt
+
+[[recipes]]
+recipe_id = 2667  # Runed Copper Breastplate
+
+[[recipes]]
+recipe_id = 2668  # Rough Bronze Leggings
+
+[[recipes]]
+recipe_id = 2670  # Rough Bronze Cuirass
+
+[[recipes]]
+recipe_id = 2672  # Patterned Bronze Bracers
+
+[[recipes]]
+recipe_id = 2673  # Silvered Bronze Breastplate
+
+[[recipes]]
+recipe_id = 2674  # Heavy Sharpening Stone
+
+[[recipes]]
+recipe_id = 2675  # Shining Silver Breastplate
+
+[[recipes]]
+recipe_id = 2737  # Copper Mace
+
+[[recipes]]
+recipe_id = 2738  # Copper Axe
+
+[[recipes]]
+recipe_id = 2739  # Copper Shortsword
+
+[[recipes]]
+recipe_id = 2740  # Bronze Mace
+
+[[recipes]]
+recipe_id = 2741  # Bronze Axe
+
+[[recipes]]
+recipe_id = 2742  # Bronze Shortsword
+
+[[recipes]]
+recipe_id = 3115  # Rough Weightstone
+
+[[recipes]]
+recipe_id = 3116  # Coarse Weightstone
+
+[[recipes]]
+recipe_id = 3117  # Heavy Weightstone
+
+[[recipes]]
+recipe_id = 3292  # Heavy Copper Broadsword
+
+[[recipes]]
+recipe_id = 3293  # Copper Battle Axe
+
+[[recipes]]
+recipe_id = 3294  # Thick War Axe
+
+[[recipes]]
+recipe_id = 3295  # Deadly Bronze Poniard
+
+[[recipes]]
+recipe_id = 3296  # Heavy Bronze Mace
+
+[[recipes]]
+recipe_id = 3297  # Mighty Iron Hammer
+
+[[recipes]]
+recipe_id = 3319  # Copper Chain Boots
+
+[[recipes]]
+recipe_id = 3320  # Rough Grinding Stone
+
+[[recipes]]
+recipe_id = 3321  # Copper Chain Vest
+
+[[recipes]]
+recipe_id = 3323  # Runed Copper Gauntlets
+
+[[recipes]]
+recipe_id = 3324  # Runed Copper Pants
+
+[[recipes]]
+recipe_id = 3325  # Gemmed Copper Gauntlets
+
+[[recipes]]
+recipe_id = 3326  # Coarse Grinding Stone
+
+[[recipes]]
+recipe_id = 3328  # Rough Bronze Shoulders
+
+[[recipes]]
+recipe_id = 3330  # Silvered Bronze Shoulders
+
+[[recipes]]
+recipe_id = 3331  # Silvered Bronze Boots
+
+[[recipes]]
+recipe_id = 3333  # Silvered Bronze Gauntlets
+
+[[recipes]]
+recipe_id = 3334  # Green Iron Boots
+
+[[recipes]]
+recipe_id = 3336  # Green Iron Gauntlets
+
+[[recipes]]
+recipe_id = 3337  # Heavy Grinding Stone
+
+[[recipes]]
+recipe_id = 3491  # Big Bronze Knife
+
+[[recipes]]
+recipe_id = 3492  # Hardened Iron Shortsword
+
+[[recipes]]
+recipe_id = 3493  # Jade Serpentblade
+
+[[recipes]]
+recipe_id = 3494  # Solid Iron Maul
+
+[[recipes]]
+recipe_id = 3495  # Golden Iron Destroyer
+
+[[recipes]]
+recipe_id = 3496  # Moonsteel Broadsword
+
+[[recipes]]
+recipe_id = 3497  # Frost Tiger Blade
+
+[[recipes]]
+recipe_id = 3498  # Massive Iron Axe
+
+[[recipes]]
+recipe_id = 3500  # Shadow Crescent Axe
+
+[[recipes]]
+recipe_id = 3501  # Green Iron Bracers
+
+[[recipes]]
+recipe_id = 3502  # Green Iron Helm
+
+[[recipes]]
+recipe_id = 3503  # Golden Scale Coif
+
+[[recipes]]
+recipe_id = 3504  # Green Iron Shoulders
+
+[[recipes]]
+recipe_id = 3505  # Golden Scale Shoulders
+
+[[recipes]]
+recipe_id = 3506  # Green Iron Leggings
+
+[[recipes]]
+recipe_id = 3507  # Golden Scale Leggings
+
+[[recipes]]
+recipe_id = 3508  # Green Iron Hauberk
+
+[[recipes]]
+recipe_id = 3511  # Golden Scale Cuirass
+
+[[recipes]]
+recipe_id = 3513  # Polished Steel Boots
+
+[[recipes]]
+recipe_id = 3515  # Golden Scale Boots
+
+[[recipes]]
+recipe_id = 6517  # Pearl-handled Dagger
+
+[[recipes]]
+recipe_id = 6518  # Iridescent Hammer
+
+[[recipes]]
+recipe_id = 7221  # Iron Shield Spike
+
+[[recipes]]
+recipe_id = 7222  # Iron Counterweight
+
+[[recipes]]
+recipe_id = 7223  # Golden Scale Bracers
+
+[[recipes]]
+recipe_id = 7224  # Steel Weapon Chain
+
+[[recipes]]
+recipe_id = 7408  # Heavy Copper Maul
+
+[[recipes]]
+recipe_id = 7817  # Rough Bronze Boots
+
+[[recipes]]
+recipe_id = 7818  # Silver Rod
+
+[[recipes]]
+recipe_id = 8367  # Ironforge Breastplate
+
+[[recipes]]
+recipe_id = 8768  # Iron Buckle
+
+[[recipes]]
+recipe_id = 8880  # Copper Dagger
+
+[[recipes]]
+recipe_id = 9811  # Barbaric Iron Shoulders
+
+[[recipes]]
+recipe_id = 9813  # Barbaric Iron Breastplate
+
+[[recipes]]
+recipe_id = 9814  # Barbaric Iron Helm
+
+[[recipes]]
+recipe_id = 9818  # Barbaric Iron Boots
+
+[[recipes]]
+recipe_id = 9820  # Barbaric Iron Gloves
+
+[[recipes]]
+recipe_id = 9916  # Steel Breastplate
+
+[[recipes]]
+recipe_id = 9918  # Solid Sharpening Stone
+
+[[recipes]]
+recipe_id = 9920  # Solid Grinding Stone
+
+[[recipes]]
+recipe_id = 9921  # Solid Weightstone
+
+[[recipes]]
+recipe_id = 9926  # Heavy Mithril Shoulder
+
+[[recipes]]
+recipe_id = 9928  # Heavy Mithril Gauntlet
+
+[[recipes]]
+recipe_id = 9931  # Mithril Plate Pants
+
+[[recipes]]
+recipe_id = 9933  # Heavy Mithril Pants
+
+[[recipes]]
+recipe_id = 9935  # Steel Plate Helm
+
+[[recipes]]
+recipe_id = 9937  # Mithril Plate Bracers
+
+[[recipes]]
+recipe_id = 9939  # Mithril Shield Spike
+
+[[recipes]]
+recipe_id = 9945  # Ornate Mithril Pants
+
+[[recipes]]
+recipe_id = 9950  # Ornate Mithril Gloves
+
+[[recipes]]
+recipe_id = 9952  # Ornate Mithril Shoulders
+
+[[recipes]]
+recipe_id = 9954  # Truesilver Gauntlets
+
+[[recipes]]
+recipe_id = 9957  # Orcish War Leggings
+
+[[recipes]]
+recipe_id = 9959  # Heavy Mithril Breastplate
+
+[[recipes]]
+recipe_id = 9961  # Mithril Coif
+
+[[recipes]]
+recipe_id = 9964  # Mithril Spurs
+
+[[recipes]]
+recipe_id = 9966  # Mithril Plate Shoulders
+
+[[recipes]]
+recipe_id = 9968  # Heavy Mithril Boots
+
+[[recipes]]
+recipe_id = 9970  # Heavy Mithril Helm
+
+[[recipes]]
+recipe_id = 9972  # Ornate Mithril Breastplate
+
+[[recipes]]
+recipe_id = 9974  # Truesilver Breastplate
+
+[[recipes]]
+recipe_id = 9979  # Ornate Mithril Boots
+
+[[recipes]]
+recipe_id = 9980  # Ornate Mithril Helm
+
+[[recipes]]
+recipe_id = 9983  # Copper Claymore
+
+[[recipes]]
+recipe_id = 9985  # Bronze Warhammer
+
+[[recipes]]
+recipe_id = 9986  # Bronze Greatsword
+
+[[recipes]]
+recipe_id = 9987  # Bronze Battle Axe
+
+[[recipes]]
+recipe_id = 9993  # Heavy Mithril Axe
+
+[[recipes]]
+recipe_id = 9995  # Blue Glittering Axe
+
+[[recipes]]
+recipe_id = 9997  # Wicked Mithril Blade
+
+[[recipes]]
+recipe_id = 10001  # Big Black Mace
+
+[[recipes]]
+recipe_id = 10003  # The Shatterer
+
+[[recipes]]
+recipe_id = 10005  # Dazzling Mithril Rapier
+
+[[recipes]]
+recipe_id = 10007  # Phantom Blade
+
+[[recipes]]
+recipe_id = 10009  # Runed Mithril Hammer
+
+[[recipes]]
+recipe_id = 10011  # Blight
+
+[[recipes]]
+recipe_id = 10013  # Ebon Shiv
+
+[[recipes]]
+recipe_id = 10015  # Truesilver Champion
+
+[[recipes]]
+recipe_id = 11454  # Inlaid Mithril Cylinder
+
+[[recipes]]
+recipe_id = 11643  # Golden Scale Gauntlets
+
+[[recipes]]
+recipe_id = 12259  # Silvered Bronze Leggings
+
+[[recipes]]
+recipe_id = 12260  # Rough Copper Vest
+
+[[recipes]]
+recipe_id = 14379  # Golden Rod
+
+[[recipes]]
+recipe_id = 14380  # Truesilver Rod
+
+[[recipes]]
+recipe_id = 15292  # Dark Iron Pulverizer
+
+[[recipes]]
+recipe_id = 15293  # Dark Iron Mail
+
+[[recipes]]
+recipe_id = 15294  # Dark Iron Sunderer
+
+[[recipes]]
+recipe_id = 15295  # Dark Iron Shoulders
+
+[[recipes]]
+recipe_id = 15296  # Dark Iron Plate
+
+[[recipes]]
+recipe_id = 15972  # Glinting Steel Dagger
+
+[[recipes]]
+recipe_id = 15973  # Searing Golden Blade
+
+[[recipes]]
+recipe_id = 16639  # Dense Grinding Stone
+
+[[recipes]]
+recipe_id = 16640  # Dense Weightstone
+
+[[recipes]]
+recipe_id = 16641  # Dense Sharpening Stone
+
+[[recipes]]
+recipe_id = 16642  # Thorium Armor
+
+[[recipes]]
+recipe_id = 16643  # Thorium Belt
+
+[[recipes]]
+recipe_id = 16644  # Thorium Bracers
+
+[[recipes]]
+recipe_id = 16645  # Radiant Belt
+
+[[recipes]]
+recipe_id = 16646  # Imperial Plate Shoulders
+
+[[recipes]]
+recipe_id = 16647  # Imperial Plate Belt
+
+[[recipes]]
+recipe_id = 16648  # Radiant Breastplate
+
+[[recipes]]
+recipe_id = 16649  # Imperial Plate Bracers
+
+[[recipes]]
+recipe_id = 16651  # Thorium Shield Spike
+
+[[recipes]]
+recipe_id = 16652  # Thorium Boots
+
+[[recipes]]
+recipe_id = 16653  # Thorium Helm
+
+[[recipes]]
+recipe_id = 16654  # Radiant Gloves
+
+[[recipes]]
+recipe_id = 16655  # Fiery Plate Gauntlets
+
+[[recipes]]
+recipe_id = 16656  # Radiant Boots
+
+[[recipes]]
+recipe_id = 16657  # Imperial Plate Boots
+
+[[recipes]]
+recipe_id = 16658  # Imperial Plate Helm
+
+[[recipes]]
+recipe_id = 16659  # Radiant Circlet
+
+[[recipes]]
+recipe_id = 16660  # Dawnbringer Shoulders
+
+[[recipes]]
+recipe_id = 16662  # Thorium Leggings
+
+[[recipes]]
+recipe_id = 16663  # Imperial Plate Chest
+
+[[recipes]]
+recipe_id = 16664  # Runic Plate Shoulders
+
+[[recipes]]
+recipe_id = 16665  # Runic Plate Boots
+
+[[recipes]]
+recipe_id = 16667  # Demon Forged Breastplate
+
+[[recipes]]
+recipe_id = 16724  # Whitesoul Helm
+
+[[recipes]]
+recipe_id = 16725  # Radiant Leggings
+
+[[recipes]]
+recipe_id = 16726  # Runic Plate Helm
+
+[[recipes]]
+recipe_id = 16729  # Lionheart Helm
+
+[[recipes]]
+recipe_id = 16730  # Imperial Plate Leggings
+
+[[recipes]]
+recipe_id = 16731  # Runic Breastplate
+
+[[recipes]]
+recipe_id = 16732  # Runic Plate Leggings
+
+[[recipes]]
+recipe_id = 16741  # Stronghold Gauntlets
+
+[[recipes]]
+recipe_id = 16742  # Enchanted Thorium Helm
+
+[[recipes]]
+recipe_id = 16744  # Enchanted Thorium Leggings
+
+[[recipes]]
+recipe_id = 16745  # Enchanted Thorium Breastplate
+
+[[recipes]]
+recipe_id = 16969  # Ornate Thorium Handaxe
+
+[[recipes]]
+recipe_id = 16970  # Dawn's Edge
+
+[[recipes]]
+recipe_id = 16971  # Huge Thorium Battleaxe
+
+[[recipes]]
+recipe_id = 16973  # Enchanted Battlehammer
+
+[[recipes]]
+recipe_id = 16978  # Blazing Rapier
+
+[[recipes]]
+recipe_id = 16983  # Serenity
+
+[[recipes]]
+recipe_id = 16984  # Volcanic Hammer
+
+[[recipes]]
+recipe_id = 16985  # Corruption
+
+[[recipes]]
+recipe_id = 16988  # Hammer of the Titans
+
+[[recipes]]
+recipe_id = 16990  # Arcanite Champion
+
+[[recipes]]
+recipe_id = 16991  # Annihilator
+
+[[recipes]]
+recipe_id = 16992  # Frostguard
+
+[[recipes]]
+recipe_id = 16993  # Masterwork Stormhammer
+
+[[recipes]]
+recipe_id = 16994  # Arcanite Reaper
+
+[[recipes]]
+recipe_id = 16995  # Heartseeker
+
+[[recipes]]
+recipe_id = 19666  # Silver Skeleton Key
+
+[[recipes]]
+recipe_id = 19667  # Golden Skeleton Key
+
+[[recipes]]
+recipe_id = 19668  # Truesilver Skeleton Key
+
+[[recipes]]
+recipe_id = 19669  # Arcanite Skeleton Key
+
+[[recipes]]
+recipe_id = 20201  # Arcanite Rod
+
+[[recipes]]
+recipe_id = 20872  # Fiery Chain Girdle
+
+[[recipes]]
+recipe_id = 20873  # Fiery Chain Shoulders
+
+[[recipes]]
+recipe_id = 20874  # Dark Iron Bracers
+
+[[recipes]]
+recipe_id = 20876  # Dark Iron Leggings
+
+[[recipes]]
+recipe_id = 20890  # Dark Iron Reaver
+
+[[recipes]]
+recipe_id = 20897  # Dark Iron Destroyer
+
+[[recipes]]
+recipe_id = 21161  # Sulfuron Hammer
+
+[[recipes]]
+recipe_id = 21913  # Edge of Winter
+
+[[recipes]]
+recipe_id = 22757  # Elemental Sharpening Stone
+
+[[recipes]]
+recipe_id = 23632  # Girdle of the Dawn
+
+[[recipes]]
+recipe_id = 23633  # Gloves of the Dawn
+
+[[recipes]]
+recipe_id = 23636  # Dark Iron Helm
+
+[[recipes]]
+recipe_id = 23637  # Dark Iron Gauntlets
+
+[[recipes]]
+recipe_id = 23638  # Black Amnesty
+
+[[recipes]]
+recipe_id = 23639  # Blackfury
+
+[[recipes]]
+recipe_id = 23650  # Ebon Hand
+
+[[recipes]]
+recipe_id = 23652  # Blackguard
+
+[[recipes]]
+recipe_id = 23653  # Nightfall
+
+[[recipes]]
+recipe_id = 24136  # Bloodsoul Breastplate
+
+[[recipes]]
+recipe_id = 24137  # Bloodsoul Shoulders
+
+[[recipes]]
+recipe_id = 24138  # Bloodsoul Gauntlets
+
+[[recipes]]
+recipe_id = 24139  # Darksoul Breastplate
+
+[[recipes]]
+recipe_id = 24140  # Darksoul Leggings
+
+[[recipes]]
+recipe_id = 24141  # Darksoul Shoulders
+
+[[recipes]]
+recipe_id = 24399  # Dark Iron Boots
+
+[[recipes]]
+recipe_id = 24912  # Darkrune Gauntlets
+
+[[recipes]]
+recipe_id = 24913  # Darkrune Helm
+
+[[recipes]]
+recipe_id = 24914  # Darkrune Breastplate
+
+[[recipes]]
+recipe_id = 27585  # Heavy Obsidian Belt
+
+[[recipes]]
+recipe_id = 27586  # Jagged Obsidian Shield
+
+[[recipes]]
+recipe_id = 27587  # Thick Obsidian Breastplate
+
+[[recipes]]
+recipe_id = 27588  # Light Obsidian Belt
+
+[[recipes]]
+recipe_id = 27589  # Black Grasp of the Destroyer
+
+[[recipes]]
+recipe_id = 27590  # Obsidian Mail Tunic
+
+[[recipes]]
+recipe_id = 27829  # Titanic Leggings
+
+[[recipes]]
+recipe_id = 27830  # Persuader
+
+[[recipes]]
+recipe_id = 27832  # Sageblade
+
+[[recipes]]
+recipe_id = 28242  # Icebane Breastplate
+
+[[recipes]]
+recipe_id = 28243  # Icebane Gauntlets
+
+[[recipes]]
+recipe_id = 28244  # Icebane Bracers
+
+[[recipes]]
+recipe_id = 430397  # Blackfathom Sharpening Stone
+
+[[recipes]]
+recipe_id = 435910  # Low-Background Truesilver Plates
+
+[[recipes]]
+recipe_id = 1230171  # Sharpening Wheel
+
+[[recipes]]
+recipe_id = 1245287  # Copper Rod
+
+[[recipes]]
+recipe_id = 1252229  # Gemmed Copper Boots
+
+[[recipes]]
+recipe_id = 1252230  # Strange Copper Boots
+
+[[recipes]]
+recipe_id = 1252231  # Glowing Copper Boots
+
+[[recipes]]
+recipe_id = 1252232  # Sterling Silver Boots
+
+[[recipes]]
+recipe_id = 1252233  # Sterling Silver Leggings
+
+[[recipes]]
+recipe_id = 1252234  # Sterling Silver Gauntlet
+
+[[recipes]]
+recipe_id = 1252235  # Sterling Silver Shoulders
+
+[[recipes]]
+recipe_id = 1252236  # Sterling Silver Breastplate
+
+[[recipes]]
+recipe_id = 1252237  # Veteran's Chain Shirt
+
+[[recipes]]
+recipe_id = 1252238  # Guard's Chain Shirt
+
+[[recipes]]
+recipe_id = 1252239  # Protector's Chain Shirt
+
+[[recipes]]
+recipe_id = 1252240  # Acolyte's Chain Shirt
+
+[[recipes]]
+recipe_id = 1252241  # Crusader's Chain Shirt
+
+[[recipes]]
+recipe_id = 1252242  # Veteran's Chain Leggings
+
+[[recipes]]
+recipe_id = 1252243  # Guard's Chain Leggings
+
+[[recipes]]
+recipe_id = 1252244  # Protector's Chain Leggings
+
+[[recipes]]
+recipe_id = 1252245  # Acolyte's Chain Leggings
+
+[[recipes]]
+recipe_id = 1252246  # Crusader's Chain Leggings
+
+[[recipes]]
+recipe_id = 1252247  # Veteran's Chain Helm
+
+[[recipes]]
+recipe_id = 1252248  # Guard's Chain Helm
+
+[[recipes]]
+recipe_id = 1252249  # Protector's Chain Helm
+
+[[recipes]]
+recipe_id = 1252250  # Acolyte's Chain Helm
+
+[[recipes]]
+recipe_id = 1252251  # Crusader's Chain Helm
+
+[[recipes]]
+recipe_id = 1252252  # Veteran's Boots
+
+[[recipes]]
+recipe_id = 1252253  # Guard's Boots
+
+[[recipes]]
+recipe_id = 1252254  # Protector's Boots
+
+[[recipes]]
+recipe_id = 1252255  # Acolyte's Boots
+
+[[recipes]]
+recipe_id = 1252256  # Crusader's Boots
+
+[[recipes]]
+recipe_id = 1252257  # Veteran's Gloves
+
+[[recipes]]
+recipe_id = 1252258  # Guard's Gloves
+
+[[recipes]]
+recipe_id = 1252259  # Protector's Gloves
+
+[[recipes]]
+recipe_id = 1252260  # Acolyte's Gloves
+
+[[recipes]]
+recipe_id = 1252261  # Crusader's Gloves
+
+[[recipes]]
+recipe_id = 1252262  # Veteran's Chain Belt
+
+[[recipes]]
+recipe_id = 1252263  # Guard's Chain Belt
+
+[[recipes]]
+recipe_id = 1252264  # Protector's Chain Belt
+
+[[recipes]]
+recipe_id = 1252265  # Acolyte's Chain Belt
+
+[[recipes]]
+recipe_id = 1252266  # Crusader's Chain Belt
+
+[[recipes]]
+recipe_id = 1252267  # Veteran's Silvered Chain Shirt
+
+[[recipes]]
+recipe_id = 1252268  # Guard's Silvered Chain Shirt
+
+[[recipes]]
+recipe_id = 1252269  # Protector's Silvered Chain Shirt
+
+[[recipes]]
+recipe_id = 1252270  # Acolyte's Silvered Chain Shirt
+
+[[recipes]]
+recipe_id = 1252271  # Crusader's Silvered Chain Shirt
+
+[[recipes]]
+recipe_id = 1252272  # Veteran's Silvered Chain Leggings
+
+[[recipes]]
+recipe_id = 1252273  # Guard's Silvered Chain Leggings
+
+[[recipes]]
+recipe_id = 1252274  # Protector's Silvered Chain Leggings
+
+[[recipes]]
+recipe_id = 1252275  # Acolyte's Silvered Chain Leggings
+
+[[recipes]]
+recipe_id = 1252276  # Crusader's Silvered Chain Leggings
+
+[[recipes]]
+recipe_id = 1252277  # Veteran's Silvered Chain Helm
+
+[[recipes]]
+recipe_id = 1252278  # Guard's Silvered Chain Helm
+
+[[recipes]]
+recipe_id = 1252279  # Protector's Silvered Chain Helm
+
+[[recipes]]
+recipe_id = 1252280  # Acolyte's Silvered Chain Helm
+
+[[recipes]]
+recipe_id = 1252281  # Crusader's Silvered Chain Helm
+
+[[recipes]]
+recipe_id = 1252282  # Hard Gold Cuirass
+
+[[recipes]]
+recipe_id = 1252283  # Hard Gold Boots
+
+[[recipes]]
+recipe_id = 1252284  # Hard Gold Bracers
+
+[[recipes]]
+recipe_id = 1252285  # Hard Gold Leggings
+
+[[recipes]]
+recipe_id = 1252286  # Hard Gold Coif
+
+[[recipes]]
+recipe_id = 1252287  # Hard Gold Gauntlet
+
+[[recipes]]
+recipe_id = 1252288  # Hard Gold Pauldrons
+
+[[recipes]]
+recipe_id = 1252289  # Shining Mithril Breastplate
+
+[[recipes]]
+recipe_id = 1252290  # Shining Mithril Pauldrons
+
+[[recipes]]
+recipe_id = 1252291  # Shining Mithril Boots
+
+[[recipes]]
+recipe_id = 1252292  # Shining Mithril Helm
+
+[[recipes]]
+recipe_id = 1252293  # Shining Mithril Pants
+
+[[recipes]]
+recipe_id = 1252294  # Shining Mithril Gauntlet
+
+[[recipes]]
+recipe_id = 1252295  # Officer's Boots
+
+[[recipes]]
+recipe_id = 1252296  # Sentinel's Boots
+
+[[recipes]]
+recipe_id = 1252297  # Warder's Boots
+
+[[recipes]]
+recipe_id = 1252298  # Prefect's Boots
+
+[[recipes]]
+recipe_id = 1252299  # Justicar's Boots
+
+[[recipes]]
+recipe_id = 1252300  # Officer's Gloves
+
+[[recipes]]
+recipe_id = 1252301  # Sentinel's Gloves
+
+[[recipes]]
+recipe_id = 1252302  # Warder's Gloves
+
+[[recipes]]
+recipe_id = 1252303  # Prefect's Gloves
+
+[[recipes]]
+recipe_id = 1252304  # Justicar's Gloves
+
+[[recipes]]
+recipe_id = 1252305  # Officer's Belt
+
+[[recipes]]
+recipe_id = 1252306  # Sentinel's Belt
+
+[[recipes]]
+recipe_id = 1252307  # Warder's Belt
+
+[[recipes]]
+recipe_id = 1252308  # Prefect's Belt
+
+[[recipes]]
+recipe_id = 1252309  # Justicar's Belt
+
+[[recipes]]
+recipe_id = 1252310  # Officer's Sabatons
+
+[[recipes]]
+recipe_id = 1252311  # Sentinel's Sabatons
+
+[[recipes]]
+recipe_id = 1252312  # Warder's Sabatons
+
+[[recipes]]
+recipe_id = 1252313  # Prefect's Sabatons
+
+[[recipes]]
+recipe_id = 1252314  # Justicar's Sabatons
+
+[[recipes]]
+recipe_id = 1252315  # Officer's Gauntlet
+
+[[recipes]]
+recipe_id = 1252316  # Sentinel's Gauntlet
+
+[[recipes]]
+recipe_id = 1252317  # Warder's Gauntlet
+
+[[recipes]]
+recipe_id = 1252318  # Prefect's Gauntlet
+
+[[recipes]]
+recipe_id = 1252319  # Justicar's Gauntlet
+
+[[recipes]]
+recipe_id = 1252320  # Officer's Waistguard
+
+[[recipes]]
+recipe_id = 1252321  # Sentinel's Waistguard
+
+[[recipes]]
+recipe_id = 1252322  # Warder's Waistguard
+
+[[recipes]]
+recipe_id = 1252323  # Prefect's Waistguard
+
+[[recipes]]
+recipe_id = 1252324  # Justicar's Waistguard
+
+[[recipes]]
+recipe_id = 1252325  # Officer's Pauldrons
+
+[[recipes]]
+recipe_id = 1252326  # Sentinel's Pauldrons
+
+[[recipes]]
+recipe_id = 1252327  # Warder's Pauldrons
+
+[[recipes]]
+recipe_id = 1252328  # Prefect's Pauldrons
+
+[[recipes]]
+recipe_id = 1252329  # Justicar's Pauldrons
+
+[[recipes]]
+recipe_id = 1252330  # Officer's Wristguards
+
+[[recipes]]
+recipe_id = 1252331  # Sentinel's Wristguards
+
+[[recipes]]
+recipe_id = 1252332  # Warder's Wristguards
+
+[[recipes]]
+recipe_id = 1252333  # Prefect's Wristguards
+
+[[recipes]]
+recipe_id = 1252334  # Justicar's Wristguards
+
+[[recipes]]
+recipe_id = 1252335  # Blessed Plate Pauldrons
+
+[[recipes]]
+recipe_id = 1252336  # Blessed Plate Boots
+
+[[recipes]]
+recipe_id = 1252337  # Blessed Plate Gauntlet
+
+[[recipes]]
+recipe_id = 1252338  # Imperial Plate Gauntlets
+
+[[recipes]]
+recipe_id = 1252339  # Blessed Plate Bracers
+
+[[recipes]]
+recipe_id = 1252340  # Blessed Plate Leggings
+
+[[recipes]]
+recipe_id = 1252341  # Blessed Plate Belt
+
+[[recipes]]
+recipe_id = 1252342  # Blessed Plate Helm
+
+[[recipes]]
+recipe_id = 1252343  # Blessed Plate Chest
+
+[[recipes]]
+recipe_id = 1252344  # Enriched Thorium Breastplate
+
+[[recipes]]
+recipe_id = 1252345  # Enriched Thorium Leggings
+
+[[recipes]]
+recipe_id = 1252346  # Enriched Thorium Helm
+
+[[recipes]]
+recipe_id = 1252347  # Champion's Legplates
+
+[[recipes]]
+recipe_id = 1252348  # Stalwart Helm
+
+[[recipes]]
+recipe_id = 1252349  # Martyr's Legplates
+
+[[recipes]]
+recipe_id = 1252350  # Breastplate of Salvation
+
+[[recipes]]
+recipe_id = 1252351  # Brass Knuckles
+
+[[recipes]]
+recipe_id = 1252352  # Bronze Dory
+
+[[recipes]]
+recipe_id = 1252353  # Iron Fists
+
+[[recipes]]
+recipe_id = 1252354  # Steel Spear
+
+[[recipes]]
+recipe_id = 1252355  # Iron Morningstar
+
+[[recipes]]
+recipe_id = 1252356  # Mithril Shortsword
+
+[[recipes]]
+recipe_id = 1252357  # Mithril Warhammer
+
+[[recipes]]
+recipe_id = 1252358  # Mithril Claws
+
+[[recipes]]
+recipe_id = 1252359  # Mithril Claymore
+
+[[recipes]]
+recipe_id = 1252360  # Mithril Stiletto
+
+[[recipes]]
+recipe_id = 1252361  # Charged Mithril Battleaxe
+
+[[recipes]]
+recipe_id = 1252362  # Thorium Greatmace
+
+[[recipes]]
+recipe_id = 1252363  # Thorium Cestus
+
+[[recipes]]
+recipe_id = 1252364  # Thorium Poleaxe
+
+[[recipes]]
+recipe_id = 1252365  # Bold Dirk
+
+[[recipes]]
+recipe_id = 1252366  # Stormcarver
+
+[[recipes]]
+recipe_id = 1252367  # Bagh Nakh
+
+[[recipes]]
+recipe_id = 1252368  # Legionite Glaive
+
+[[recipes]]
+recipe_id = 1263041  # Anvil
+
+[[recipes]]
+recipe_id = 1263073  # Master Forge
+
+[[recipes]]
+recipe_id = 1292945  # Justice Leggings
+
+[[recipes]]
+recipe_id = 1292946  # Justice Gauntlets
+
+[[recipes]]
+recipe_id = 1292947  # Justice Spaulders
+
+[[recipes]]
+recipe_id = 1292948  # Justice Greaves
+
+[[recipes]]
+recipe_id = 1292949  # Justice Legplates
+
+[[recipes]]
+recipe_id = 1292950  # Justice Gloves
+
+[[recipes]]
+recipe_id = 1292951  # Justice Epaulets
+
+[[recipes]]
+recipe_id = 1292952  # Justice Treads
+
+[[recipes]]
+recipe_id = 1292953  # Justice Legguards
+
+[[recipes]]
+recipe_id = 1292954  # Justice Handguards
+
+[[recipes]]
+recipe_id = 1292955  # Justice Pauldrons
+
+[[recipes]]
+recipe_id = 1292956  # Justice Sabatons
+
+[[recipes]]
+recipe_id = 1292981  # Legplates of Glory
+
+[[recipes]]
+recipe_id = 1292982  # Gauntlets of Glory
+
+[[recipes]]
+recipe_id = 1292983  # Shoulders of Glory
+
+[[recipes]]
+recipe_id = 1292984  # Greaves of Glory
+
+[[recipes]]
+recipe_id = 1292985  # Legguards of Glory
+
+[[recipes]]
+recipe_id = 1292986  # Handguards of Glory
+
+[[recipes]]
+recipe_id = 1292987  # Pauldrons of Glory
+
+[[recipes]]
+recipe_id = 1292988  # Sabatons of Glory
+
+[[recipes]]
+recipe_id = 1297138  # Goregasher Grips
+
+[[recipes]]
+recipe_id = 1297139  # Goregasher Support
+
+[[recipes]]
+recipe_id = 1297140  # Goregasher Stompers
+
+[[recipes]]
+recipe_id = 1297141  # Clutchlord's Grips
+
+[[recipes]]
+recipe_id = 1297142  # Clutchlord's Support
+
+[[recipes]]
+recipe_id = 1297143  # Clutchlord's Stompers
+
+[[recipes]]
+recipe_id = 1301421  # Cloudy Skyforged Chainmail
+
+[[recipes]]
+recipe_id = 1301422  # Cloudy Skyforged Wristguards
+
+[[recipes]]
+recipe_id = 1301423  # Cloudy Skyforged Gauntlets
+
+[[recipes]]
+recipe_id = 1301424  # Cloudy Skyforged Chain
+
+[[recipes]]
+recipe_id = 1301425  # Cloudy Skyforged Legguards
+
+[[recipes]]
+recipe_id = 1301426  # Cloudy Skyforged Greaves
+
+[[recipes]]
+recipe_id = 1301445  # Azure Skyforged Chainmail
+
+[[recipes]]
+recipe_id = 1301446  # Azure Skyforged Wristguards
+
+[[recipes]]
+recipe_id = 1301447  # Azure Skyforged Gauntlets
+
+[[recipes]]
+recipe_id = 1301448  # Azure Skyforged Chain
+
+[[recipes]]
+recipe_id = 1301449  # Azure Skyforged Legguards
+
+[[recipes]]
+recipe_id = 1301450  # Azure Skyforged Greaves
+
+[[recipes]]
+recipe_id = 1301526  # Cloudy Skyforged Helm
+
+[[recipes]]
+recipe_id = 1301527  # Cloudy Skyforged Pauldrons
+
+[[recipes]]
+recipe_id = 1301534  # Azure Skyforged Helm
+
+[[recipes]]
+recipe_id = 1301535  # Azure Skyforged Pauldrons
+
+[[recipes]]
+recipe_id = 1302598  # Rough Copper Chain Boots
+
+[[recipes]]
+recipe_id = 1306533  # Ironwood Blade
+
+[[recipes]]
+recipe_id = 1306534  # Forest Defender's Axe
+
+[[recipes]]
+recipe_id = 1306535  # Greenhammer
+
+[[recipes]]
+recipe_id = 1306536  # Evergreen Shield
+
+[[recipes]]
+recipe_id = 1306537  # Depleted Thorium Sabatons
+
+[[recipes]]
+recipe_id = 1306538  # Heavy Thorium Gauntlets
+
+[[recipes]]
+recipe_id = 1306539  # Azerothium Legplates
+
+[[recipes]]
+recipe_id = 1317962  # Cracked Blacksmith Hammer
+
+[[recipes]]
+recipe_id = 1317963  # Mithril Blacksmith Hammer
+
+[[recipes]]
+recipe_id = 1317964  # Arcanite Blacksmith Hammer

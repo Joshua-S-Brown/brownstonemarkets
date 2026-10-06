@@ -74,7 +74,7 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     assert any("Imported" in s.value for s in at.success)
     assert not any(w.label == "Recipe catalog" for w in at.selectbox)
     combined = next(t.value for t in at.dataframe if "Action" in t.value.columns)
-    assert set(combined["Profession"]) == {"Alchemy", "Tailoring"}
+    assert {"Alchemy", "Tailoring"} <= set(combined["Profession"])  # Plus any professions added in the app.
     alchemy = combined[combined["Profession"] == "Alchemy"]
     dyes = alchemy.set_index("Item")
     assert (dyes.loc["Magenta Dye", "Output listings"], dyes.loc["Magenta Dye", "Output units"]) == (1, 4)
@@ -322,7 +322,7 @@ def test_sidebar_experience_resolves_source_and_market_on_every_market_page(tmp_
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
-    assert set(table["Profession"]) == {"Alchemy", "Tailoring"}
+    assert {"Alchemy", "Tailoring"} <= set(table["Profession"])
     forever = f"Showing **WoW Forever** · source {addon.get('label', addon['source_id'])} · market {addon['market_id']}"
     assert any(c.value == forever for c in at.caption)  # On the page itself, not only the sidebar.
     at.radio[0].set_value("Browse market").run()

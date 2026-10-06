@@ -1,0 +1,627 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-engineering.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/professions/engineering, saved in a browser. Added in the app.
+game_version = "forever"
+rules_version = "forever-beta-1.60"
+profession = "engineering"
+status = "beta-observed"
+catalog_version = "0.1"
+
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "From Wowhead's list data; confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 3918  # Rough Blasting Powder
+
+[[recipes]]
+recipe_id = 3919  # Rough Dynamite
+
+[[recipes]]
+recipe_id = 3920  # Crafted Light Shot
+
+[[recipes]]
+recipe_id = 3922  # Handful of Copper Bolts
+
+[[recipes]]
+recipe_id = 3923  # Rough Copper Bomb
+
+[[recipes]]
+recipe_id = 3924  # Copper Tube
+
+[[recipes]]
+recipe_id = 3925  # Rough Boomstick
+
+[[recipes]]
+recipe_id = 3926  # Copper Modulator
+
+[[recipes]]
+recipe_id = 3928  # Mechanical Squirrel
+
+[[recipes]]
+recipe_id = 3929  # Coarse Blasting Powder
+
+[[recipes]]
+recipe_id = 3930  # Crafted Heavy Shot
+
+[[recipes]]
+recipe_id = 3931  # Coarse Dynamite
+
+[[recipes]]
+recipe_id = 3932  # Target Dummy
+
+[[recipes]]
+recipe_id = 3933  # Small Seaforium Charge
+
+[[recipes]]
+recipe_id = 3934  # Flying Tiger Goggles
+
+[[recipes]]
+recipe_id = 3936  # Deadly Blunderbuss
+
+[[recipes]]
+recipe_id = 3937  # Large Copper Bomb
+
+[[recipes]]
+recipe_id = 3938  # Bronze Tube
+
+[[recipes]]
+recipe_id = 3939  # Lovingly Crafted Boomstick
+
+[[recipes]]
+recipe_id = 3940  # Shadow Goggles
+
+[[recipes]]
+recipe_id = 3941  # Small Bronze Bomb
+
+[[recipes]]
+recipe_id = 3942  # Whirring Bronze Gizmo
+
+[[recipes]]
+recipe_id = 3944  # Flame Deflector
+
+[[recipes]]
+recipe_id = 3945  # Heavy Blasting Powder
+
+[[recipes]]
+recipe_id = 3946  # Heavy Dynamite
+
+[[recipes]]
+recipe_id = 3947  # Crafted Solid Shot
+
+[[recipes]]
+recipe_id = 3949  # Silver-plated Shotgun
+
+[[recipes]]
+recipe_id = 3950  # Big Bronze Bomb
+
+[[recipes]]
+recipe_id = 3952  # Minor Recombobulator
+
+[[recipes]]
+recipe_id = 3953  # Bronze Framework
+
+[[recipes]]
+recipe_id = 3954  # Moonsight Rifle
+
+[[recipes]]
+recipe_id = 3955  # Explosive Sheep
+
+[[recipes]]
+recipe_id = 3956  # Green Tinted Goggles
+
+[[recipes]]
+recipe_id = 3957  # Ice Deflector
+
+[[recipes]]
+recipe_id = 3958  # Iron Strut
+
+[[recipes]]
+recipe_id = 3959  # Discombobulator Ray
+
+[[recipes]]
+recipe_id = 3960  # Portable Bronze Mortar
+
+[[recipes]]
+recipe_id = 3961  # Gyrochronatom
+
+[[recipes]]
+recipe_id = 3962  # Iron Grenade
+
+[[recipes]]
+recipe_id = 3963  # Compact Harvest Reaper Kit
+
+[[recipes]]
+recipe_id = 3965  # Advanced Target Dummy
+
+[[recipes]]
+recipe_id = 3966  # Craftsman's Monocle
+
+[[recipes]]
+recipe_id = 3967  # Big Iron Bomb
+
+[[recipes]]
+recipe_id = 3968  # Goblin Land Mine
+
+[[recipes]]
+recipe_id = 3969  # Mechanical Dragonling
+
+[[recipes]]
+recipe_id = 3971  # Gnomish Cloaking Device
+
+[[recipes]]
+recipe_id = 3972  # Large Seaforium Charge
+
+[[recipes]]
+recipe_id = 3973  # Silver Contact
+
+[[recipes]]
+recipe_id = 3977  # Crude Scope
+
+[[recipes]]
+recipe_id = 3978  # Standard Scope
+
+[[recipes]]
+recipe_id = 3979  # Accurate Scope
+
+[[recipes]]
+recipe_id = 6458  # Ornate Spyglass
+
+[[recipes]]
+recipe_id = 7430  # Arclight Spanner
+
+[[recipes]]
+recipe_id = 8243  # Flash Bomb
+
+[[recipes]]
+recipe_id = 8334  # Practice Lock
+
+[[recipes]]
+recipe_id = 8339  # EZ-Thro Dynamite
+
+[[recipes]]
+recipe_id = 8895  # Goblin Rocket Boots
+
+[[recipes]]
+recipe_id = 9269  # Gnomish Universal Remote
+
+[[recipes]]
+recipe_id = 9271  # Aquadynamic Fish Attractor
+
+[[recipes]]
+recipe_id = 9273  # Goblin Jumper Cables
+
+[[recipes]]
+recipe_id = 12584  # Gold Power Core
+
+[[recipes]]
+recipe_id = 12585  # Solid Blasting Powder
+
+[[recipes]]
+recipe_id = 12586  # Solid Dynamite
+
+[[recipes]]
+recipe_id = 12587  # Bright-Eye Goggles
+
+[[recipes]]
+recipe_id = 12589  # Mithril Tube
+
+[[recipes]]
+recipe_id = 12590  # Gyromatic Micro-Adjustor
+
+[[recipes]]
+recipe_id = 12591  # Unstable Trigger
+
+[[recipes]]
+recipe_id = 12594  # Fire Goggles
+
+[[recipes]]
+recipe_id = 12595  # Mithril Blunderbuss
+
+[[recipes]]
+recipe_id = 12596  # Hi-Impact Mithril Slugs
+
+[[recipes]]
+recipe_id = 12597  # Deadly Scope
+
+[[recipes]]
+recipe_id = 12599  # Mithril Casing
+
+[[recipes]]
+recipe_id = 12603  # Mithril Frag Bomb
+
+[[recipes]]
+recipe_id = 12607  # Catseye Ultra Goggles
+
+[[recipes]]
+recipe_id = 12614  # Mithril Heavy-bore Rifle
+
+[[recipes]]
+recipe_id = 12615  # Spellpower Goggles Xtreme
+
+[[recipes]]
+recipe_id = 12616  # Parachute Cloak
+
+[[recipes]]
+recipe_id = 12617  # Deepdive Helmet
+
+[[recipes]]
+recipe_id = 12618  # Rose Colored Goggles
+
+[[recipes]]
+recipe_id = 12619  # Hi-Explosive Bomb
+
+[[recipes]]
+recipe_id = 12620  # Sniper Scope
+
+[[recipes]]
+recipe_id = 12621  # Mithril Gyro-Shot
+
+[[recipes]]
+recipe_id = 12622  # Green Lens
+
+[[recipes]]
+recipe_id = 12624  # Mithril Mechanical Dragonling
+
+[[recipes]]
+recipe_id = 12715  # Goblin Rocket Fuel Recipe
+
+[[recipes]]
+recipe_id = 12717  # Goblin Mining Helmet
+
+[[recipes]]
+recipe_id = 12718  # Goblin Construction Helmet
+
+[[recipes]]
+recipe_id = 12754  # The Big One
+
+[[recipes]]
+recipe_id = 12755  # Goblin Bomb Dispenser
+
+[[recipes]]
+recipe_id = 12758  # Goblin Rocket Helmet
+
+[[recipes]]
+recipe_id = 12759  # Gnomish Death Ray
+
+[[recipes]]
+recipe_id = 12760  # Goblin Sapper Charge
+
+[[recipes]]
+recipe_id = 12895  # Inlaid Mithril Cylinder Plans
+
+[[recipes]]
+recipe_id = 12897  # Gnomish Goggles
+
+[[recipes]]
+recipe_id = 12899  # Gnomish Shrink Ray
+
+[[recipes]]
+recipe_id = 12902  # Gnomish Net-o-Matic Projector
+
+[[recipes]]
+recipe_id = 12903  # Gnomish Harm Prevention Belt
+
+[[recipes]]
+recipe_id = 12905  # Gnomish Rocket Boots
+
+[[recipes]]
+recipe_id = 12906  # Gnomish Battle Chicken
+
+[[recipes]]
+recipe_id = 12907  # Gnomish Mind Control Cap
+
+[[recipes]]
+recipe_id = 12908  # Goblin Dragon Gun
+
+[[recipes]]
+recipe_id = 15255  # Mechanical Repair Kit
+
+[[recipes]]
+recipe_id = 15628  # Pet Bombling
+
+[[recipes]]
+recipe_id = 15633  # Lil' Smoky
+
+[[recipes]]
+recipe_id = 19567  # Salt Shaker
+
+[[recipes]]
+recipe_id = 19788  # Dense Blasting Powder
+
+[[recipes]]
+recipe_id = 19790  # Thorium Grenade
+
+[[recipes]]
+recipe_id = 19791  # Thorium Widget
+
+[[recipes]]
+recipe_id = 19792  # Thorium Rifle
+
+[[recipes]]
+recipe_id = 19793  # Lifelike Mechanical Toad
+
+[[recipes]]
+recipe_id = 19794  # Spellpower Goggles Xtreme Plus
+
+[[recipes]]
+recipe_id = 19795  # Thorium Tube
+
+[[recipes]]
+recipe_id = 19796  # Dark Iron Rifle
+
+[[recipes]]
+recipe_id = 19799  # Dark Iron Bomb
+
+[[recipes]]
+recipe_id = 19800  # Thorium Shells
+
+[[recipes]]
+recipe_id = 19814  # Masterwork Target Dummy
+
+[[recipes]]
+recipe_id = 19815  # Delicate Arcanite Converter
+
+[[recipes]]
+recipe_id = 19819  # Voice Amplification Modulator
+
+[[recipes]]
+recipe_id = 19825  # Master Engineer's Goggles
+
+[[recipes]]
+recipe_id = 19830  # Arcanite Dragonling
+
+[[recipes]]
+recipe_id = 19831  # Arcane Bomb
+
+[[recipes]]
+recipe_id = 19833  # Flawless Arcanite Rifle
+
+[[recipes]]
+recipe_id = 21940  # Snowmaster 9000
+
+[[recipes]]
+recipe_id = 22704  # Field Repair Bot 74A
+
+[[recipes]]
+recipe_id = 22793  # Biznicks 247x128 Accurascope
+
+[[recipes]]
+recipe_id = 22795  # Core Marksman Rifle
+
+[[recipes]]
+recipe_id = 22797  # Force Reactive Disk
+
+[[recipes]]
+recipe_id = 23066  # Red Firework
+
+[[recipes]]
+recipe_id = 23067  # Blue Firework
+
+[[recipes]]
+recipe_id = 23068  # Green Firework
+
+[[recipes]]
+recipe_id = 23069  # EZ-Thro Dynamite II
+
+[[recipes]]
+recipe_id = 23070  # Dense Dynamite
+
+[[recipes]]
+recipe_id = 23071  # Truesilver Transformer
+
+[[recipes]]
+recipe_id = 23077  # Gyrofreeze Ice Reflector
+
+[[recipes]]
+recipe_id = 23078  # Goblin Jumper Cables XL
+
+[[recipes]]
+recipe_id = 23079  # Major Recombobulator
+
+[[recipes]]
+recipe_id = 23080  # Powerful Seaforium Charge
+
+[[recipes]]
+recipe_id = 23081  # Hyper-Radiant Flame Reflector
+
+[[recipes]]
+recipe_id = 23082  # Ultra-Flash Shadow Reflector
+
+[[recipes]]
+recipe_id = 23096  # Alarm-O-Bot
+
+[[recipes]]
+recipe_id = 23129  # World Enlarger
+
+[[recipes]]
+recipe_id = 23486  # Dimensional Ripper - Everlook
+
+[[recipes]]
+recipe_id = 23489  # Ultrasafe Transporter - Gadgetzan
+
+[[recipes]]
+recipe_id = 23507  # Snake Burst Firework
+
+[[recipes]]
+recipe_id = 24356  # Bloodvine Goggles
+
+[[recipes]]
+recipe_id = 24357  # Bloodvine Lens
+
+[[recipes]]
+recipe_id = 26011  # Tranquil Mechanical Yeti
+
+[[recipes]]
+recipe_id = 26416  # Small Blue Rocket
+
+[[recipes]]
+recipe_id = 26417  # Small Green Rocket
+
+[[recipes]]
+recipe_id = 26418  # Small Red Rocket
+
+[[recipes]]
+recipe_id = 26420  # Large Blue Rocket
+
+[[recipes]]
+recipe_id = 26421  # Large Green Rocket
+
+[[recipes]]
+recipe_id = 26422  # Large Red Rocket
+
+[[recipes]]
+recipe_id = 26423  # Blue Rocket Cluster
+
+[[recipes]]
+recipe_id = 26424  # Green Rocket Cluster
+
+[[recipes]]
+recipe_id = 26425  # Red Rocket Cluster
+
+[[recipes]]
+recipe_id = 26426  # Large Blue Rocket Cluster
+
+[[recipes]]
+recipe_id = 26427  # Large Green Rocket Cluster
+
+[[recipes]]
+recipe_id = 26428  # Large Red Rocket Cluster
+
+[[recipes]]
+recipe_id = 26442  # Firework Launcher
+
+[[recipes]]
+recipe_id = 26443  # Firework Cluster Launcher
+
+[[recipes]]
+recipe_id = 28327  # Steam Tonk Controller
+
+[[recipes]]
+recipe_id = 424641  # Shredder Autosalvage Unit
+
+[[recipes]]
+recipe_id = 431362  # Soul Vessel
+
+[[recipes]]
+recipe_id = 435956  # Polished Truesilver Gears
+
+[[recipes]]
+recipe_id = 435964  # High-Yield Radiation Bomb
+
+[[recipes]]
+recipe_id = 435966  # Ez-Thro Radiation Bomb
+
+[[recipes]]
+recipe_id = 1226206  # Tinkerbox
+
+[[recipes]]
+recipe_id = 1226207  # Tinkerbox: Teleport
+
+[[recipes]]
+recipe_id = 1226208  # Tinkerbox: Nitro Boosts
+
+[[recipes]]
+recipe_id = 1226209  # Tinkerbox: Magnetic Displacement
+
+[[recipes]]
+recipe_id = 1228088  # Pop-Up Shrub
+
+[[recipes]]
+recipe_id = 1230656  # Reagent Bot
+
+[[recipes]]
+recipe_id = 1249634  # Sandpaper
+
+[[recipes]]
+recipe_id = 1263034  # Repair Bot
+
+[[recipes]]
+recipe_id = 1263083  # Anarchist's Workbench
+
+[[recipes]]
+recipe_id = 1293849  # Swiftfeather Arrow
+
+[[recipes]]
+recipe_id = 1293850  # Swiftstrike Shot
+
+[[recipes]]
+recipe_id = 1302161  # Harvester Override Signalcaster
+
+[[recipes]]
+recipe_id = 1306546  # SAF-T Ultra Precision Scope
+
+[[recipes]]
+recipe_id = 1306547  # Hyper Deluxe Sniper Rifle Mk XVII
+
+[[recipes]]
+recipe_id = 1308178  # Whimsical Waistwrap
+
+[[recipes]]
+recipe_id = 1308179  # Gizmo Girdle
+
+[[recipes]]
+recipe_id = 1308180  # Clanking Cord
+
+[[recipes]]
+recipe_id = 1308183  # Floppy Goggles
+
+[[recipes]]
+recipe_id = 1308184  # Bent Goggles
+
+[[recipes]]
+recipe_id = 1308185  # Stuckbutton Goggles
+
+[[recipes]]
+recipe_id = 1308186  # Dented Goggles
+
+[[recipes]]
+recipe_id = 1317270  # Unsanctified Grenade
+
+[[recipes]]
+recipe_id = 1317958  # Satchel of Copper Bombs
+
+[[recipes]]
+recipe_id = 1317959  # Satchel of Bronze Bombs
+
+[[recipes]]
+recipe_id = 1317960  # Satchel of Iron Bombs
+
+[[recipes]]
+recipe_id = 1317961  # Satchel of Dark Iron Bombs
+
+[[recipes]]
+recipe_id = 1319154  # Small Purple Rocket
+
+[[recipes]]
+recipe_id = 1319155  # Small White Rocket
+
+[[recipes]]
+recipe_id = 1319156  # Small Yellow Rocket
+
+[[recipes]]
+recipe_id = 1319157  # Large Purple Rocket
+
+[[recipes]]
+recipe_id = 1319158  # Large White Rocket
+
+[[recipes]]
+recipe_id = 1319159  # Large Yellow Rocket
+
+[[recipes]]
+recipe_id = 1319160  # Purple Rocket Cluster
+
+[[recipes]]
+recipe_id = 1319161  # White Rocket Cluster
+
+[[recipes]]
+recipe_id = 1319162  # Yellow Rocket Cluster
+
+[[recipes]]
+recipe_id = 1319163  # Large Purple Rocket Cluster
+
+[[recipes]]
+recipe_id = 1319164  # Large White Rocket Cluster
+
+[[recipes]]
+recipe_id = 1319165  # Large Yellow Rocket Cluster

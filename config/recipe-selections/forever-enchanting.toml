@@ -1,0 +1,96 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-enchanting.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/professions/enchanting, saved in a browser. Added in the app.
+game_version = "forever"
+rules_version = "forever-beta-1.60"
+profession = "enchanting"
+status = "beta-observed"
+catalog_version = "0.1"
+
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "From Wowhead's list data; confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 7421  # Runed Copper Rod
+
+[[recipes]]
+recipe_id = 7795  # Runed Silver Rod
+
+[[recipes]]
+recipe_id = 13628  # Runed Golden Rod
+
+[[recipes]]
+recipe_id = 13702  # Runed Truesilver Rod
+
+[[recipes]]
+recipe_id = 14293  # Lesser Magic Wand
+
+[[recipes]]
+recipe_id = 14807  # Greater Magic Wand
+
+[[recipes]]
+recipe_id = 14809  # Lesser Mystic Wand
+
+[[recipes]]
+recipe_id = 15596  # Smoking Heart of the Mountain
+
+[[recipes]]
+recipe_id = 17180  # Enchanted Thorium
+
+[[recipes]]
+recipe_id = 17181  # Enchanted Leather
+
+[[recipes]]
+recipe_id = 20051  # Runed Arcanite Rod
+
+[[recipes]]
+recipe_id = 439156  # Sigil of Innovation
+
+[[recipes]]
+recipe_id = 448624  # Scroll of Spatial Mending
+
+[[recipes]]
+recipe_id = 463866  # Sigil of Flowing Waters
+
+[[recipes]]
+recipe_id = 1230643  # Enchanted Lute
+
+[[recipes]]
+recipe_id = 1245320  # Dust to Motes
+
+[[recipes]]
+recipe_id = 1245321  # Novice's Practice Wand
+
+[[recipes]]
+recipe_id = 1249107  # Frozen Heart of the Mountain
+
+[[recipes]]
+recipe_id = 1249112  # Molten Heart of the Mountain
+
+[[recipes]]
+recipe_id = 1249114  # Dormant Heart of the Mountain
+
+[[recipes]]
+recipe_id = 1263056  # Arcane Salvager
+
+[[recipes]]
+recipe_id = 1263082  # Arcane Forge
+
+[[recipes]]
+recipe_id = 1306520  # Torch of Light
+
+[[recipes]]
+recipe_id = 1306521  # Steadfast Libram
+
+[[recipes]]
+recipe_id = 1306522  # Libram of Infusion
+
+[[recipes]]
+recipe_id = 1306523  # Totem of Urgency
+
+[[recipes]]
+recipe_id = 1306524  # Idol of Swiftness
+
+[[recipes]]
+recipe_id = 1306525  # Idol of the Ursine Twins

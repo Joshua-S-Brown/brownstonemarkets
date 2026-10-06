@@ -1,0 +1,399 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-cooking.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/secondary-skills/cooking, saved in a browser. Added in the app.
+game_version = "forever"
+rules_version = "forever-beta-1.60"
+profession = "cooking"
+status = "beta-observed"
+catalog_version = "0.1"
+
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "From Wowhead's list data; confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 2538  # Charred Wolf Meat
+
+[[recipes]]
+recipe_id = 2539  # Spiced Wolf Meat
+
+[[recipes]]
+recipe_id = 2540  # Roasted Boar Meat
+
+[[recipes]]
+recipe_id = 2541  # Coyote Steak
+
+[[recipes]]
+recipe_id = 2542  # Goretusk Liver Pie
+
+[[recipes]]
+recipe_id = 2543  # Westfall Stew
+
+[[recipes]]
+recipe_id = 2544  # Crab Cake
+
+[[recipes]]
+recipe_id = 2545  # Cooked Crab Claw
+
+[[recipes]]
+recipe_id = 2546  # Dry Pork Ribs
+
+[[recipes]]
+recipe_id = 2547  # Redridge Goulash
+
+[[recipes]]
+recipe_id = 2548  # Succulent Pork Ribs
+
+[[recipes]]
+recipe_id = 2549  # Seasoned Wolf Kabob
+
+[[recipes]]
+recipe_id = 2795  # Beer Basted Boar Ribs
+
+[[recipes]]
+recipe_id = 3370  # Crocolisk Steak
+
+[[recipes]]
+recipe_id = 3371  # Blood Sausage
+
+[[recipes]]
+recipe_id = 3372  # Murloc Fin Soup
+
+[[recipes]]
+recipe_id = 3373  # Crocolisk Gumbo
+
+[[recipes]]
+recipe_id = 3376  # Curiously Tasty Omelet
+
+[[recipes]]
+recipe_id = 3377  # Gooey Spider Cake
+
+[[recipes]]
+recipe_id = 3397  # Big Bear Steak
+
+[[recipes]]
+recipe_id = 3398  # Hot Lion Chops
+
+[[recipes]]
+recipe_id = 3399  # Tasty Lion Steak
+
+[[recipes]]
+recipe_id = 3400  # Soothing Turtle Bisque
+
+[[recipes]]
+recipe_id = 4094  # Barbecued Buzzard Wing
+
+[[recipes]]
+recipe_id = 6412  # Kaldorei Spider Kabob
+
+[[recipes]]
+recipe_id = 6413  # Scorpid Surprise
+
+[[recipes]]
+recipe_id = 6414  # Roasted Kodo Meat
+
+[[recipes]]
+recipe_id = 6415  # Fillet of Frenzy
+
+[[recipes]]
+recipe_id = 6416  # Strider Stew
+
+[[recipes]]
+recipe_id = 6417  # Dig Rat Stew
+
+[[recipes]]
+recipe_id = 6418  # Crispy Lizard Tail
+
+[[recipes]]
+recipe_id = 6419  # Lean Venison
+
+[[recipes]]
+recipe_id = 6499  # Boiled Clams
+
+[[recipes]]
+recipe_id = 6500  # Goblin Deviled Clams
+
+[[recipes]]
+recipe_id = 6501  # Clam Chowder
+
+[[recipes]]
+recipe_id = 7213  # Giant Clam Scorcho
+
+[[recipes]]
+recipe_id = 7751  # Brilliant Smallfish
+
+[[recipes]]
+recipe_id = 7752  # Slitherskin Mackerel
+
+[[recipes]]
+recipe_id = 7753  # Longjaw Mud Snapper
+
+[[recipes]]
+recipe_id = 7754  # Loch Frenzy Delight
+
+[[recipes]]
+recipe_id = 7755  # Bristle Whisker Catfish
+
+[[recipes]]
+recipe_id = 7827  # Rainbow Fin Albacore
+
+[[recipes]]
+recipe_id = 7828  # Rockscale Cod
+
+[[recipes]]
+recipe_id = 8238  # Savory Deviate Delight
+
+[[recipes]]
+recipe_id = 8604  # Herb Baked Egg
+
+[[recipes]]
+recipe_id = 8607  # Smoked Bear Meat
+
+[[recipes]]
+recipe_id = 9513  # Thistle Tea
+
+[[recipes]]
+recipe_id = 13028  # Goldthorn Tea
+
+[[recipes]]
+recipe_id = 15853  # Lean Wolf Steak
+
+[[recipes]]
+recipe_id = 15855  # Roast Raptor
+
+[[recipes]]
+recipe_id = 15856  # Hot Wolf Ribs
+
+[[recipes]]
+recipe_id = 15861  # Jungle Stew
+
+[[recipes]]
+recipe_id = 15863  # Carrion Surprise
+
+[[recipes]]
+recipe_id = 15865  # Mystery Stew
+
+[[recipes]]
+recipe_id = 15906  # Dragonbreath Chili
+
+[[recipes]]
+recipe_id = 15910  # Heavy Kodo Stew
+
+[[recipes]]
+recipe_id = 15915  # Spiced Chili Crab
+
+[[recipes]]
+recipe_id = 15933  # Monster Omelet
+
+[[recipes]]
+recipe_id = 15935  # Crispy Bat Wing
+
+[[recipes]]
+recipe_id = 18238  # Spotted Yellowtail
+
+[[recipes]]
+recipe_id = 18239  # Cooked Glossy Mightfish
+
+[[recipes]]
+recipe_id = 18240  # Grilled Squid
+
+[[recipes]]
+recipe_id = 18241  # Filet of Redgill
+
+[[recipes]]
+recipe_id = 18242  # Hot Smoked Bass
+
+[[recipes]]
+recipe_id = 18243  # Nightfin Soup
+
+[[recipes]]
+recipe_id = 18244  # Poached Sunscale Salmon
+
+[[recipes]]
+recipe_id = 18245  # Lobster Stew
+
+[[recipes]]
+recipe_id = 18246  # Mightfish Steak
+
+[[recipes]]
+recipe_id = 18247  # Baked Salmon
+
+[[recipes]]
+recipe_id = 20626  # Undermine Clam Chowder
+
+[[recipes]]
+recipe_id = 20916  # Mithril Headed Trout
+
+[[recipes]]
+recipe_id = 21143  # Gingerbread Cookie
+
+[[recipes]]
+recipe_id = 21144  # Egg Nog
+
+[[recipes]]
+recipe_id = 21175  # Spider Sausage
+
+[[recipes]]
+recipe_id = 22480  # Tender Wolf Steak
+
+[[recipes]]
+recipe_id = 22761  # Runn Tum Tuber Surprise
+
+[[recipes]]
+recipe_id = 24418  # Heavy Crocolisk Stew
+
+[[recipes]]
+recipe_id = 24801  # Smoked Desert Dumplings
+
+[[recipes]]
+recipe_id = 25659  # Dirge's Kickin' Chimaerok Chops
+
+[[recipes]]
+recipe_id = 25704  # Smoked Sagefish
+
+[[recipes]]
+recipe_id = 25954  # Sagefish Delight
+
+[[recipes]]
+recipe_id = 470359  # Darkclaw Bisque
+
+[[recipes]]
+recipe_id = 470370  # Smoked Redgill
+
+[[recipes]]
+recipe_id = 1225758  # Prowler Steak
+
+[[recipes]]
+recipe_id = 1225759  # Filet o' Flank
+
+[[recipes]]
+recipe_id = 1225760  # Sunrise Omelette
+
+[[recipes]]
+recipe_id = 1225762  # Specklefin Feast
+
+[[recipes]]
+recipe_id = 1225763  # Grand Lobster Banquet
+
+[[recipes]]
+recipe_id = 1247741  # Spinefin Halibut
+
+[[recipes]]
+recipe_id = 1249957  # Peace Tea
+
+[[recipes]]
+recipe_id = 1249958  # Royal Tea
+
+[[recipes]]
+recipe_id = 1249959  # Root Tea
+
+[[recipes]]
+recipe_id = 1249960  # Triage Tea
+
+[[recipes]]
+recipe_id = 1249961  # Sunny Tea
+
+[[recipes]]
+recipe_id = 1249962  # Sage's Tea
+
+[[recipes]]
+recipe_id = 1249963  # Venomous Smoothie
+
+[[recipes]]
+recipe_id = 1249964  # Slimy Smoothie
+
+[[recipes]]
+recipe_id = 1249965  # Mrrggl Smrrthle
+
+[[recipes]]
+recipe_id = 1249966  # Calcified Smoothie
+
+[[recipes]]
+recipe_id = 1249967  # Spicy Smoothie
+
+[[recipes]]
+recipe_id = 1249968  # Wicked Smoothie
+
+[[recipes]]
+recipe_id = 1250142  # Savory Stag Sliders
+
+[[recipes]]
+recipe_id = 1250143  # Soaring Pamplona
+
+[[recipes]]
+recipe_id = 1250144  # Bat Hachee
+
+[[recipes]]
+recipe_id = 1250145  # Savory Turtle Stew
+
+[[recipes]]
+recipe_id = 1250146  # Flank au Poivre
+
+[[recipes]]
+recipe_id = 1250147  # Bear Bruscitti
+
+[[recipes]]
+recipe_id = 1250148  # Steaming Stag Steak
+
+[[recipes]]
+recipe_id = 1250149  # Swiftstrike Steak
+
+[[recipes]]
+recipe_id = 1250150  # Raging Raptor Ribs
+
+[[recipes]]
+recipe_id = 1250151  # Bear Brisket
+
+[[recipes]]
+recipe_id = 1250152  # Prehistoric Pulled Raptor
+
+[[recipes]]
+recipe_id = 1250153  # Raptor Rouladen
+
+[[recipes]]
+recipe_id = 1250154  # Twice-Spiced Raptor Slice
+
+[[recipes]]
+recipe_id = 1250155  # Giant Scrambled Eggs
+
+[[recipes]]
+recipe_id = 1250156  # Tasty Raptor Bites
+
+[[recipes]]
+recipe_id = 1250157  # Breakfast Omelette
+
+[[recipes]]
+recipe_id = 1250158  # Clam Linguine
+
+[[recipes]]
+recipe_id = 1252566  # Savory Whimsyfin Delight
+
+[[recipes]]
+recipe_id = 1262978  # Cookie's Feast
+
+[[recipes]]
+recipe_id = 1263067  # Iron Oven
+
+[[recipes]]
+recipe_id = 1270633  # Skywall Souffle
+
+[[recipes]]
+recipe_id = 1270635  # Pincer Bites
+
+[[recipes]]
+recipe_id = 1283400  # Journeyman Campfire
+
+[[recipes]]
+recipe_id = 1291341  # Expert Campfire
+
+[[recipes]]
+recipe_id = 1294014  # Sweetpaw Jam
+
+[[recipes]]
+recipe_id = 1295805  # Briny Seafood Stew
+
+[[recipes]]
+recipe_id = 1295834  # Plain Ol' Paletusk
+
+[[recipes]]
+recipe_id = 1319313  # Plated Armorfish

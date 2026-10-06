@@ -1,4 +1,4 @@
-"""STORY-014 Slice 2 in the app: the Recipe catalogs page previews before every write."""
+"""STORY-014 Slice 2 in the app: the Recipe catalogs page reviews every write live, then saves on one click."""
 from pathlib import Path
 
 import pytest
@@ -46,8 +46,12 @@ def upload(at, page, name="Forever Spells.html"):
     at.file_uploader[0].set_value((name, page.encode(), "text/html")).run()
 
 
+def save(at):
+    return next(b for b in at.button if b.label == "Save catalog")
+
+
 def start_add(at, profession):
-    [s for s in at.selectbox if s.label == "Profession"][-1].set_value(profession).run()  # The Add tab's.
+    widget(at.selectbox, "1. Profession").set_value(f"new:{profession}").run()
 
 
 def test_catalogs_page_follows_the_sidebar_experience(tmp_path, monkeypatch):
@@ -57,7 +61,8 @@ def test_catalogs_page_follows_the_sidebar_experience(tmp_path, monkeypatch):
     assert any(m.value == "#### WoW Forever catalogs" for m in at.markdown)
     table = at.dataframe[0].value
     assert list(table["Profession"]) == ["Tailoring"]
-    assert table.iloc[0]["Version"] == "0.1" and table.iloc[0]["Recipes"] == 2
+    assert table.iloc[0]["Version"] == "0.1" and table.iloc[0]["Recipes"] == 2 and table.iloc[0]["Items"] > 0
+    assert widget(at.selectbox, "1. Profession").value == "forever-tailoring"  # Existing catalogs come first.
     assert any(c.value.startswith("No WoW Forever catalog yet: alchemy") and "tailoring" not in c.value
                for c in at.caption)
     widget(at.selectbox, "Experience").set_value("classic").run()
@@ -76,23 +81,24 @@ def test_catalogs_page_follows_the_sidebar_experience(tmp_path, monkeypatch):
     assert not at.dataframe and not at.tabs
 
 
-def test_update_from_a_new_page_previews_then_regenerates_on_a_separate_click(tmp_path, monkeypatch):
+def test_update_from_a_new_page_reviews_live_then_saves_on_one_click(tmp_path, monkeypatch):
     at, config = open_page(tmp_path, monkeypatch)
-    upload(at, CHANGED_PAGE)
     before = tree(tmp_path)
-    button(at, "Preview changes").click().run()
+    upload(at, CHANGED_PAGE)
     assert not at.exception
-    assert tree(tmp_path) == before  # A preview writes nothing.
+    assert tree(tmp_path) == before  # The review writes nothing.
     changes = next(d.value for d in at.dataframe if "Change" in d.value.columns)
     assert any(line.startswith("changed recipe 2963") for line in changes["Change"])
-    assert any("version **0.2**" in m.value for m in at.markdown)
-    button(at, "Regenerate").click().run()
+    assert any("version **0.2**" in m.value and "**2 recipes** (now 2: 0 added, 0 removed)" in m.value
+               for m in at.markdown)
+    save(at).click().run()
     assert not at.exception
     assert any("catalog version 0.2" in s.value for s in at.success)
     listed = next(m.value for m in at.markdown if "Changed tracked files" in m.value)
     assert "forever-tailoring.toml" in listed and "recipe-selections" in listed
     assert 'catalog_version = "0.2"' in (config / "forever-tailoring.toml").read_text(encoding="utf-8")
     assert at.dataframe[0].value.iloc[0]["Version"] == "0.2"  # The status table reloaded.
+    assert widget(at.selectbox, "1. Profession").value == "forever-tailoring"
 
 
 def test_update_edits_recipes_and_vendors_from_the_archived_page(tmp_path, monkeypatch):
@@ -100,53 +106,64 @@ def test_update_edits_recipes_and_vendors_from_the_archived_page(tmp_path, monke
     assert widget(at.radio, "Page").value == "archived"  # No upload needed to change choices.
     assert widget(at.multiselect, "Recipes").value == [3755]
     assert widget(at.multiselect, "Sold by vendors").value == [2320]
-    button(at, "Preview changes").click().run()
-    assert any("Nothing would change" in i.value for i in at.info)
+    assert any("Nothing to save" in i.value for i in at.info)
+    assert not any(b.label == "Save catalog" for b in at.button)
     widget(at.multiselect, "Sold by vendors").set_value([]).run()
-    button(at, "Preview changes").click().run()
     assert not at.exception
     assert any("Coarse Thread (vendor mark)" in w.value for w in at.warning)
-    button(at, "Regenerate").click().run()
+    save(at).click().run()
     assert not at.exception
     selection = (config / "recipe-selections/forever-tailoring.toml").read_text(encoding="utf-8")
     assert "vendor" not in selection and 'catalog_version = "0.2"' in selection
     assert widget(at.multiselect, "Sold by vendors").value == []  # Choices restart from the written files.
 
 
+def test_the_review_names_recipes_added_and_removed(tmp_path, monkeypatch):
+    at, _ = open_page(tmp_path, monkeypatch)
+    widget(at.multiselect, "Recipes").set_value([2963]).run()  # Bolt alone: Linen Bag leaves the catalog.
+    assert not at.exception
+    assert any("**1 recipe** (now 2: 0 added, 1 removed)" in m.value for m in at.markdown)
+    assert any(e.label == "Recipes removed (1)" for e in at.expander)
+    assert not any(e.label.startswith("Recipes added") for e in at.expander)
+
+
 def test_update_refuses_a_page_from_another_game_version(tmp_path, monkeypatch):
     at, _ = open_page(tmp_path, monkeypatch)
     upload(at, CHANGED_PAGE.replace("/forever/", "/classic/"), "Classic Spells.html")
     assert any("never borrow" in e.value for e in at.error)
-    assert not any(b.label in ("Preview changes", "Regenerate") for b in at.button)
+    assert not any(b.label == "Save catalog" for b in at.button)
 
 
-def test_add_a_profession_previews_then_creates_its_selection_and_catalog(tmp_path, monkeypatch):
+def test_add_a_profession_reviews_then_creates_its_selection_and_catalog(tmp_path, monkeypatch):
     at, config = open_page(tmp_path, monkeypatch, forever_rules=False)
+    options = widget(at.selectbox, "1. Profession").options
+    assert any(o.startswith("Leatherworking · new catalog") for o in options)
+    assert any(o.startswith("Tailoring · update (2 recipes)") for o in options)
     start_add(at, "leatherworking")
     assert any("wowhead.com/forever/spells/professions/leatherworking" in m.value for m in at.markdown)
     at.file_uploader[-1].set_value(("Forever Leatherworking.html", LEATHER_PAGE.encode(), "text/html")).run()
     assert not at.exception
     assert any("2 of 3 recipes on this page" in c.value for c in at.caption)  # Lucky Bolt has no fixed yield.
-    adding = [m for m in at.multiselect if m.label == "Recipes"][-1]
+    adding = widget(at.multiselect, "Recipes")
     assert adding.value == []
-    [b for b in at.button if b.label == "Add all 2 matching"][-1].click().run()
-    adding = [m for m in at.multiselect if m.label == "Recipes"][-1]
+    button(at, "Add all 2 matching").click().run()
+    adding = widget(at.multiselect, "Recipes")
     assert adding.value == [2963, 3755]
     adding.set_value([3755]).run()
-    [m for m in at.multiselect if m.label.startswith("Sold by vendors")][-1].set_value([2320]).run()
+    widget(at.multiselect, "Sold by vendors").set_value([2320]).run()
     assert any("rules_version" in i.value for i in at.info)  # No enabled Forever market names one.
+    assert not any(b.label == "Save catalog" for b in at.button)
     widget(at.text_input, "Rules version").set_value("forever-beta-1.60").run()
-    button(at, "Preview catalog").click().run()
     assert not at.exception
-    assert not (config / "forever-leatherworking.toml").exists()
-    assert any("2 recipes (1 intermediates added)" in m.value for m in at.markdown)
-    button(at, "Create catalog").click().run()
+    assert not (config / "forever-leatherworking.toml").exists()  # The review writes nothing.
+    assert any("**2 recipes** (now 0: 2 added, 0 removed)" in m.value for m in at.markdown)
+    save(at).click().run()
     assert not at.exception
-    assert any("Wrote forever-leatherworking" in s.value for s in at.success)
+    assert any("Saved forever-leatherworking" in s.value for s in at.success)
     assert (config / "recipe-selections/forever-leatherworking.toml").exists()
     assert "Leatherworking" in list(at.dataframe[0].value["Profession"])
-    # Leatherworking now sorts first; the Update tab stays on Tailoring.
-    assert [s for s in at.selectbox if s.label == "Profession"][0].value == "forever-tailoring"
+    # The profession just saved stays selected, now as an update.
+    assert widget(at.selectbox, "1. Profession").value == "forever-leatherworking"
 
 
 def test_matching_recipes_are_added_and_removed_by_name(tmp_path, monkeypatch):
@@ -158,23 +175,34 @@ def test_matching_recipes_are_added_and_removed_by_name(tmp_path, monkeypatch):
     assert widget(at.multiselect, "Recipes").value == [3755]
 
 
+def test_secondary_skills_link_to_their_own_wowhead_page(tmp_path, monkeypatch):
+    at, _ = open_page(tmp_path, monkeypatch)
+    start_add(at, "first-aid")
+    assert any("wowhead.com/forever/spells/secondary-skills/first-aid" in m.value for m in at.markdown)
+
+
 def test_add_refuses_a_page_for_another_profession(tmp_path, monkeypatch):
     at, _ = open_page(tmp_path, monkeypatch)
     start_add(at, "alchemy")
     at.file_uploader[-1].set_value(("Leatherworking.html", LEATHER_PAGE.encode(), "text/html")).run()
     assert any("never borrow" in e.value for e in at.error)
-    assert not any(b.label == "Preview catalog" for b in at.button)
+    assert not any(b.label == "Save catalog" for b in at.button)
 
 
-def test_changing_the_selection_after_a_preview_needs_a_new_preview(tmp_path, monkeypatch):
+def test_a_save_click_on_a_review_the_files_have_since_changed_writes_nothing(tmp_path, monkeypatch):
     at, config = open_page(tmp_path, monkeypatch)
     upload(at, CHANGED_PAGE)
-    button(at, "Preview changes").click().run()
-    assert any(b.label == "Regenerate" for b in at.button)
+    stale = save(at)
     selection = config / "recipe-selections/forever-tailoring.toml"
-    selection.write_text(selection.read_text(encoding="utf-8") + "# edited elsewhere\n", encoding="utf-8")
-    at.run()
-    assert not any(b.label == "Regenerate" for b in at.button)
+    edited = selection.read_text(encoding="utf-8") + "# edited elsewhere\n"
+    selection.write_text(edited, encoding="utf-8")
+    catalog = (config / "forever-tailoring.toml").read_text(encoding="utf-8")
+    stale.click().run()
+    assert not at.exception
+    assert selection.read_text(encoding="utf-8") == edited  # The old review's click did nothing.
+    assert (config / "forever-tailoring.toml").read_text(encoding="utf-8") == catalog
+    assert not at.success
+    assert any(b.label == "Save catalog" for b in at.button)  # A fresh review of the new files.
 
 
 def test_pages_without_skill_levels_still_offer_recipes(tmp_path, monkeypatch):
@@ -194,7 +222,7 @@ def test_crafting_without_any_catalog_points_to_the_catalogs_page(tmp_path, monk
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=30).run()
     at.radio[0].set_value("Crafting").run()
     assert not at.exception
-    assert any("Add a profession" in i.value for i in at.info)
+    assert any("Add or update a profession" in i.value for i in at.info)
 
 
 def test_a_broken_selection_file_leaves_the_other_views_working(tmp_path, monkeypatch):

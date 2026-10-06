@@ -31,6 +31,7 @@ from .recipe_import import (
     parse_selection,
     prepare_catalog,
     single_makers,
+    spell_list_url,
     toml_value,
 )
 
@@ -40,7 +41,8 @@ ARCHIVE_DIR = ROOT / "data/recipe-sources"
 SELECTIONS = "recipe-selections"
 # Catalog file names start with these, for example classic-era-tailoring and forever-leatherworking.
 CATALOG_PREFIXES = {"classic": "classic-era", "forever": "forever"}
-# Wowhead's profession slugs (…/spells/professions/<slug>) for professions that craft items.
+# Wowhead's slugs (…/spells/professions/<slug>, or secondary-skills/ for Cooking and First Aid) for professions
+# that craft items.
 PROFESSIONS = ("alchemy", "blacksmithing", "cooking", "enchanting", "engineering", "first-aid",
                "leatherworking", "mining", "tailoring")
 DEFAULT_REFRESH_DAYS = 30  # A selection may set refresh_after_days.
@@ -70,7 +72,7 @@ def build_label(patch: str | None, build: int | None) -> str | None:
 
 def wowhead_page_url(game: str, profession: str) -> str:
     """The page the user saves in a browser; Brownstone never fetches it."""
-    return f"https://www.wowhead.com/{GAME_PATHS[game]}/spells/professions/{profession}"
+    return spell_list_url(GAME_PATHS[game], profession)
 
 
 def find_catalogs(config_dir: Path) -> list[dict]:
@@ -158,6 +160,7 @@ def catalog_status(entry: dict, sources: list, archive_dir: Path, today: date) -
         "label": profession_label(entry["selection"]["game_version"], entry["selection"]["profession"]),
         "rules_version": entry["selection"]["rules_version"],
         "catalog_version": catalog.get("catalog_version"), "recipes": len(catalog.get("recipes", [])),
+        "items": len(catalog.get("items", [])),
         "saved_at": catalog.get("verified_at"), "sha256": catalog.get("source_sha256"),
         "build": build, "archived": archived is not None,
         "unconfirmed": unconfirmed_values(catalog), "refresh": refresh_reasons(entry, sources, today),
@@ -186,7 +189,7 @@ def current_choices(entry: dict) -> dict:
 
 def preview_update(entry: dict, raw: bytes, saved_at: str, chosen: dict | None = None,
                    rules_version: str | None = None) -> dict:
-    """What Regenerate would write (writes nothing): the page, plus any recipe, item mark or rules changes.
+    """What Save catalog would write (writes nothing): the page, plus any recipe, item mark or rules changes.
 
     ``changed`` is False when nothing would change. Otherwise the catalog version is bumped, unless the
     catalog is being generated for the first time.

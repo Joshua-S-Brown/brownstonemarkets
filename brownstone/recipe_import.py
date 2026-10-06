@@ -2,7 +2,8 @@
 
 Wowhead's terms allow personal use through a web browser but not automated downloads (recorded in
 requirements.md), so this module never touches the network. One saved page, for example
-``https://www.wowhead.com/forever/spells/professions/tailoring``, carries every recipe of a profession
+``https://www.wowhead.com/forever/spells/professions/tailoring`` (Cooking and First Aid are under
+``.../spells/secondary-skills/``), carries every recipe of a profession
 (reagents, quantities, created item and count, skill learned at) and every item it mentions (name,
 sell price, and vendor buy price for vendor-sold items).
 
@@ -22,8 +23,18 @@ from typing import Any
 from .crafting import AVAILABILITY, parse_recipe_catalog
 
 GAME_PATHS = {"classic": "classic", "forever": "forever"}  # Catalog game_version -> Wowhead path segment.
-_CANONICAL = re.compile(
-    r'<link rel="canonical" href="https://www\.wowhead\.com/([a-z-]+)/spells/professions/([a-z-]+)">')
+# Wowhead lists Cooking and First Aid as secondary skills; every other crafting profession under professions.
+SECONDARY_SKILLS = frozenset({"cooking", "first-aid"})
+_CANONICAL = re.compile(r'<link rel="canonical" href="(https://www\.wowhead\.com/([a-z-]+)/spells/'
+                        r'(?:professions|secondary-skills)/([a-z-]+))">')
+_NOT_A_LIST = ("Not a Wowhead profession spell list page (no canonical .../spells/professions/... or "
+               ".../spells/secondary-skills/... link)")
+
+
+def spell_list_url(game_path: str, profession: str) -> str:
+    """The Wowhead page listing a profession's spells, under the section Wowhead files it in."""
+    section = "secondary-skills" if profession in SECONDARY_SKILLS else "professions"
+    return f"https://www.wowhead.com/{game_path}/spells/{section}/{profession}"
 _UNQUOTED_KEY = re.compile(r'([{,])([A-Za-z_]\w*):')
 _PATCH = re.compile(r'latest patch \((\d+(?:\.\d+)+)\)')
 _BUILD_FILTER = '"name":"Added in build"'
@@ -66,8 +77,8 @@ def extract_page(html: str, sha256: str, saved_at: str) -> dict:
     """Parse a saved profession list page into recipes and items keyed by ID (JSON-friendly)."""
     match = _CANONICAL.search(html)
     if not match:
-        raise ValueError("Not a Wowhead profession spell list page (no canonical .../spells/professions/... link)")
-    game_path, profession = match.groups()
+        raise ValueError(_NOT_A_LIST)
+    source_url, game_path, profession = match.groups()
     recipes = {}
     for row in _literal(html, "listviewspells =", "[", "]"):
         recipe = {"id": row["id"], "name": row["name"], "learnedat": row.get("learnedat"),
@@ -84,7 +95,7 @@ def extract_page(html: str, sha256: str, saved_at: str) -> dict:
                           "buyprice": prices.get("buyprice")}
     if not recipes or not items:
         raise ValueError("The saved page holds no recipe or item data")
-    return {"source_url": f"https://www.wowhead.com/{game_path}/spells/professions/{profession}",
+    return {"source_url": source_url,
             "game_path": game_path,
             "profession": profession, "sha256": sha256, "saved_at": saved_at,
             "recipes": recipes, "items": items}
@@ -117,8 +128,8 @@ def _archive_paths(raw: bytes, archive_dir: Path) -> tuple[str, str, Path, Path]
     html = raw.decode("utf-8", errors="replace")
     match = _CANONICAL.search(html)
     if not match:
-        raise ValueError("Not a Wowhead profession spell list page (no canonical .../spells/professions/... link)")
-    copy = archive_location(archive_dir, match.group(1), match.group(2), sha256)
+        raise ValueError(_NOT_A_LIST)
+    copy = archive_location(archive_dir, match.group(2), match.group(3), sha256)
     return sha256, html, copy, copy.with_suffix(".json")
 
 

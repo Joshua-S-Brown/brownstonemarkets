@@ -1,7 +1,9 @@
-"""Recipe catalogs: the sidebar experience's catalogs, its catalogs' status, then add or update a profession.
+"""Recipe catalogs: the sidebar experience's catalogs and their status, then one flow to add or update a profession.
 
-Every write follows a preview that writes nothing, on its own button, and then lists the tracked files to
-review and commit. Brownstone never downloads the Wowhead page; the user saves it in a browser.
+Choose a profession, its saved page and its recipes; the review below them follows every choice and writes
+nothing. **Save catalog** writes exactly what the review shows: its key carries a fingerprint of the choices and
+of the files on disk, so a click on a review that has since changed does nothing. Brownstone never downloads the
+Wowhead page; the user saves it in a browser.
 """
 import hashlib
 import json
@@ -17,7 +19,9 @@ from views.common import EXPERIENCES, show_context
 GAMES = {game: EXPERIENCES[game] for game in rc.CATALOG_PREFIXES}  # Experiences that have catalogs.
 KINDS = {"yield": "yield", "vendor": "vendor status and price", "post-launch": "post-launch"}
 WRITTEN = "catalogs-written"  # Session key: the last write's summary, shown after the page reloads.
+PICK = "catalogs-pick"  # Session key: the profession to select after a write (the one just saved).
 ARCHIVED, UPLOAD = "archived", "upload"
+NEW = "new:"  # Profession choices without a catalog yet are "new:<profession>"; others are catalog names.
 
 
 def render(config, sources, config_dir, archive_dir):
@@ -42,24 +46,23 @@ def render(config, sources, config_dir, archive_dir):
     statuses = [rc.catalog_status(entry, sources, archive_dir, today) for entry in entries]
     if statuses:
         _status_table(statuses)
+    else:
+        st.info(f"No {GAMES[game]} catalogs yet. Add a profession below.")
     missing = rc.missing_professions(entries)[game]
     st.caption(f"No {GAMES[game]} catalog yet: "
                + (", ".join(rc.profession_title(p).lower() for p in missing) or "none"))
     _details(statuses)
-    update, add = st.tabs([f"Update a {GAMES[game]} profession", f"Add a {GAMES[game]} profession"])
-    with update:
-        _update(game, entries, sources, archive_dir)
-    with add:
-        _add(game, missing, sources, config_dir, archive_dir)
+    st.markdown("#### Add or update a profession")
+    _manage(game, entries, missing, sources, config_dir, archive_dir)
 
 
 def _status_table(statuses):
     rows = [{
-        "Profession": rc.profession_title(status["profession"]), "Rules": status["rules_version"],
-        "Version": status["catalog_version"] or "not generated", "Recipes": status["recipes"],
-        "Page saved": status["saved_at"], "Game build": status["build"] or "page not archived here",
-        "SHA-256": (status["sha256"] or "")[:12], "Unconfirmed": len(status["unconfirmed"]),
-        "Refresh due": "yes" if status["refresh"] else "no",
+        "Profession": rc.profession_title(status["profession"]), "Recipes": status["recipes"],
+        "Items": status["items"], "Version": status["catalog_version"] or "not generated",
+        "Rules": status["rules_version"], "Page saved": status["saved_at"],
+        "Game build": status["build"] or "page not archived here", "SHA-256": (status["sha256"] or "")[:12],
+        "Unconfirmed": len(status["unconfirmed"]), "Refresh due": "yes" if status["refresh"] else "no",
     } for status in statuses]
     st.dataframe(rows, hide_index=True, width="stretch")
 
@@ -74,6 +77,29 @@ def _details(statuses):
                 st.warning(f"Refresh due: {reason}.")
             st.dataframe([{"Value": KINDS[value["kind"]], "Recipe or item": value["name"], "Note": value["note"]}
                           for value in status["unconfirmed"]], hide_index=True, width="stretch")
+
+
+def _manage(game, entries, missing, sources, config_dir, archive_dir):
+    """Step 1: one profession list, existing catalogs (to update) first, then professions without one."""
+    by_name = {entry["name"]: entry for entry in entries}
+    options = list(by_name) + [NEW + profession for profession in missing]
+    key = f"manage-{game}"
+    pending = st.session_state.pop(PICK, None)
+    if pending in options:  # Set before the widget exists, so the profession just saved stays selected.
+        st.session_state[key] = pending
+
+    def label(option):
+        if option.startswith(NEW):
+            return f"{rc.profession_title(option[len(NEW):])} · new catalog"
+        catalog = by_name[option]["catalog"] or {}
+        return (f"{rc.profession_title(by_name[option]['selection']['profession'])} · update "
+                f"({len(catalog.get('recipes', []))} recipes)")
+
+    choice = st.selectbox("1. Profession", options, key=key, format_func=label)
+    if choice.startswith(NEW):
+        _add(game, choice[len(NEW):], sources, config_dir, archive_dir)
+    else:
+        _update(game, by_name[choice], sources, archive_dir)
 
 
 def _page_upload(label_key, game, profession, archive_dir):
@@ -118,15 +144,8 @@ def _token(*parts):
     return hashlib.sha256(json.dumps(parts, sort_keys=True, default=str).encode()).hexdigest()
 
 
-def _update(game, entries, sources, archive_dir):
-    if not entries:
-        st.info(f"No {GAMES[game]} catalogs yet. Add a profession first.")
-        return
-    # Chosen by name, so adding a catalog (which reorders the list) never switches the selection.
-    by_name = {entry["name"]: entry for entry in entries}
-    name = st.selectbox("Profession", list(by_name), key=f"update-catalog-{game}",
-                        format_func=lambda n: rc.profession_title(by_name[n]["selection"]["profession"]))
-    entry = by_name[name]
+def _update(game, entry, sources, archive_dir):
+    st.markdown("**2. Saved page**")
     page = _page_for_update(entry, archive_dir)
     if page is None:
         return
@@ -136,22 +155,21 @@ def _update(game, entries, sources, archive_dir):
     except ValueError as error:
         st.error(f"Cannot use this page: {error}")
         return
+    st.markdown("**3. Recipes**")
     chosen = _choose(extract, f"update-{entry['name']}-{sha256[:16]}", rc.current_choices(entry))
     if chosen is None:
         return
     rules = _rules(game, sources, f"update-rules-{entry['name']}", entry["selection"]["rules_version"])
-    # The files on disk are part of the preview: if either changes, Regenerate needs a new preview.
+    # The files on disk are part of the review: if either changes, the old Save click is ignored.
     on_disk = [path.read_text(encoding="utf-8") if path.exists() else None
                for path in (entry["selection_path"], entry["catalog_path"])]
     token = _token("update", entry["name"], sha256, saved_at, on_disk, chosen, rules)
-    if st.button("Preview changes", key="update-preview"):
-        st.session_state["update-token"] = token
-    if st.session_state.get("update-token") == token:
-        _update_preview(game, entry, (raw, page_name, saved_at), archive_dir, chosen, rules)
+    st.markdown("**4. Review and save**")
+    _update_review(entry, (raw, page_name, saved_at), archive_dir, chosen, rules, token)
 
 
-def _update_preview(game, entry, page, archive_dir, chosen, rules):
-    """The preview of an update, and the Regenerate button that writes exactly it."""
+def _update_review(entry, page, archive_dir, chosen, rules, token):
+    """The live review of an update, and the Save button that writes exactly it."""
     raw, page_name, saved_at = page
     try:
         preview = rc.preview_update(entry, raw, saved_at, chosen, rules)
@@ -160,25 +178,20 @@ def _update_preview(game, entry, page, archive_dir, chosen, rules):
         return
     _show_page(preview)
     if not preview["changed"]:
-        st.info("Nothing would change: this page and these choices produce the current catalog exactly.")
+        st.info("Nothing to save: this page and these choices give the current catalog exactly.")
         return
-    st.markdown(f"Regenerating writes {GAMES[game]} {rc.profession_title(entry['selection']['profession'])} "
-                f"catalog version **{preview['catalog_version']}**"
-                + (f" (now {entry['selection']['catalog_version']})" if entry["catalog"] else "") + ".")
+    _summary(entry["catalog"], preview["catalog"], preview["catalog_version"])
     _show_changes(preview["changes"])
     for note in preview["dropped_notes"]:
         st.warning(f"Selection note removed: {note}.")
-    with st.expander("Selection file after this change"):
+    with st.expander("Selection file after saving"):
         st.code(preview["selection_text"], language="toml")
-    if st.button("Regenerate", type="primary", key="update-write"):
+    if st.button("Save catalog", type="primary", key=f"save-{token[:16]}"):
         _write(lambda: rc.regenerate(entry, raw, page_name, saved_at, archive_dir, chosen, rules), entry["name"])
 
 
-def _add(game, missing, sources, config_dir, archive_dir):
-    if not missing:
-        st.info(f"Every profession already has a {GAMES[game]} catalog.")
-        return
-    profession = st.selectbox("Profession", missing, key=f"add-profession-{game}", format_func=rc.profession_title)
+def _add(game, profession, sources, config_dir, archive_dir):
+    st.markdown("**2. Saved page**")
     upload = _page_upload(f"add-{game}-{profession}", game, profession, archive_dir)
     if upload is None:
         return
@@ -188,6 +201,7 @@ def _add(game, missing, sources, config_dir, archive_dir):
     except ValueError as error:
         st.error(f"Cannot use this page: {error}")
         return
+    st.markdown("**3. Recipes**")
     chosen = _choose(extract, f"add-{game}-{profession}-{sha256[:16]}", rc.choices([]))
     if chosen is None:
         return
@@ -198,24 +212,20 @@ def _add(game, missing, sources, config_dir, archive_dir):
     except ValueError as error:
         st.info(str(error))
         return
-    token = _token("add", sha256, saved_at, selection)
-    if st.button("Preview catalog", key="add-preview"):
-        st.session_state["add-token"] = token
-    if st.session_state.get("add-token") != token:
-        return
+    st.markdown("**4. Review and save**")
     try:
         preview = rc.preview_new(config_dir, raw, selection, saved_at)
     except Exception as error:
         st.error(f"Cannot build this catalog: {error}")
         return
     _show_page(preview)
-    added = len(preview["catalog"]["recipes"]) - len(selection["recipes"])
-    st.markdown(f"Creates **{GAMES[game]} {rc.profession_title(profession)}** ({preview['name']}) with "
-                f"{len(preview['catalog']['recipes'])} recipes ({added} intermediates added) and "
-                f"{len(preview['catalog']['items'])} items.")
+    _summary(None, preview["catalog"], selection["catalog_version"])
+    st.caption(f"Creates {preview['name']}: {len(selection['recipes'])} chosen recipes plus the intermediates "
+               "they need.")
     with st.expander("Selection file to write"):
         st.code(preview["selection_text"], language="toml")
-    if st.button("Create catalog", type="primary", key="add-write"):
+    token = _token("add", sha256, saved_at, selection, preview["text"])
+    if st.button("Save catalog", type="primary", key=f"save-{token[:16]}"):
         _write(lambda: rc.create(config_dir, raw, page_name, selection, saved_at, archive_dir), preview["name"])
 
 
@@ -284,15 +294,34 @@ def _rules(game, sources, key, current):
 def _show_page(preview):
     build = rc.build_label(preview["patch"], preview["build"])
     st.caption(f"Page saved {preview['saved_at']} · game build {build or 'not stated on the page'} · "
-               f"SHA-256 {preview['sha256'][:12]}… · nothing has been written yet")
+               f"SHA-256 {preview['sha256'][:12]}… · nothing is written until you save")
+
+
+def _summary(before, after, version):
+    """Before and after counts, and the recipes saving would add or remove, by name."""
+    old = {recipe["recipe_id"]: recipe["name"] for recipe in (before or {}).get("recipes", [])}
+    new = {recipe["recipe_id"]: recipe["name"] for recipe in after["recipes"]}
+    added = sorted(new[r] for r in new.keys() - old.keys())
+    removed = sorted(old[r] for r in old.keys() - new.keys())
+    items_before = len((before or {}).get("items", []))
+    st.markdown(f"Saving gives **{_count(len(new), 'recipe')}** (now {len(old)}: {len(added)} added, "
+                f"{len(removed)} removed) and **{_count(len(after['items']), 'item')}** (now {items_before}), "
+                f"catalog version **{version}**.")
+    for title, names in ((f"Recipes added ({len(added)})", added), (f"Recipes removed ({len(removed)})", removed)):
+        if names:
+            with st.expander(title):
+                st.markdown("\n".join(f"- {name}" for name in names))
+
+
+def _count(number, noun):
+    return f"{number} {noun}" + ("" if number == 1 else "s")
 
 
 def _show_changes(changes):
-    if changes is None:
-        st.caption("No catalog file yet; this creates it.")
-    elif changes:
-        st.dataframe([{"Change": line} for line in changes], hide_index=True, width="stretch")
-    else:
+    if changes:
+        with st.expander(f"Every recipe and vendor price change ({len(changes)})"):
+            st.dataframe([{"Change": line} for line in changes], hide_index=True, width="stretch")
+    elif changes is not None:
         st.caption("No recipe or vendor price changes; the catalog's header or evidence (date, SHA-256, "
                    "rules version) changes.")
 
@@ -303,11 +332,12 @@ def _write(action, name):
     except Exception as error:
         st.error(f"Nothing was written for {name}: {error}")
         return
-    for key in [key for key in st.session_state if key.endswith(("-token", "-recipes", "-vendors"))]:
+    for key in [key for key in st.session_state if key.endswith(("-recipes", "-vendors"))]:
         del st.session_state[key]  # Choices restart from the files just written.
     st.session_state[WRITTEN] = {"name": name, "version": result["catalog_version"],
                                  "tracked": [os.path.relpath(path, rc.ROOT) for path in result["tracked"]],
                                  "archived": [os.path.relpath(path, rc.ROOT) for path in result["archived"]]}
+    st.session_state[PICK] = name
     st.rerun()  # Reload so the status table and the board read the new files.
 
 
@@ -315,7 +345,8 @@ def _written():
     result = st.session_state.pop(WRITTEN, None)
     if result is None:
         return
-    st.success(f"Wrote {result['name']} catalog version {result['version']}.")
+    st.toast(f"Saved {result['name']} catalog version {result['version']}.")  # Seen wherever the page is scrolled.
+    st.success(f"Saved {result['name']} catalog version {result['version']}. The table below shows it.")
     if result["tracked"]:
         st.markdown("Changed tracked files, to review and commit yourself:\n"
                     + "\n".join(f"- `{path}`" for path in result["tracked"]))

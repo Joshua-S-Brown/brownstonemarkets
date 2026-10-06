@@ -27,7 +27,7 @@ def render(config, catalogs):
     if not selected:
         st.info(f"No compatible recipe catalog for {config['game_version']} / "
                 f"{config.get('rules_version', 'no rules version')}. "
-                "Add a profession or update its rules on Recipe catalogs.")
+                "Add or update a profession on Recipe catalogs.")
         return
     for catalog in selected:
         st.caption(f"{catalog['profession'].title()} · catalog {catalog.get('catalog_version', 'unversioned')} · "

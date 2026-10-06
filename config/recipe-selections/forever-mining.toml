@@ -1,0 +1,63 @@
+# Which recipes `python -m brownstone recipes` puts in config/forever-mining.toml.
+# List finished recipes; the intermediates they need are added from the same page.
+# Source page: https://www.wowhead.com/forever/spells/professions/mining, saved in a browser. Added in the app.
+game_version = "forever"
+rules_version = "forever-beta-1.60"
+profession = "mining"
+status = "beta-observed"
+catalog_version = "0.1"
+
+[recipe_defaults]
+output_quantity_verified = false
+output_quantity_note = "From Wowhead's list data; confirm in game by crafting one."
+
+[[recipes]]
+recipe_id = 2657  # Smelt Copper
+
+[[recipes]]
+recipe_id = 2658  # Smelt Silver
+
+[[recipes]]
+recipe_id = 2659  # Smelt Bronze
+
+[[recipes]]
+recipe_id = 3304  # Smelt Tin
+
+[[recipes]]
+recipe_id = 3307  # Smelt Iron
+
+[[recipes]]
+recipe_id = 3308  # Smelt Gold
+
+[[recipes]]
+recipe_id = 3569  # Smelt Steel
+
+[[recipes]]
+recipe_id = 10097  # Smelt Mithril
+
+[[recipes]]
+recipe_id = 10098  # Smelt Truesilver
+
+[[recipes]]
+recipe_id = 14891  # Smelt Dark Iron
+
+[[recipes]]
+recipe_id = 16153  # Smelt Thorium
+
+[[recipes]]
+recipe_id = 22967  # Smelt Elementium
+
+[[recipes]]
+recipe_id = 1230161  # Lodestone
+
+[[recipes]]
+recipe_id = 1249637  # Smelt Azerothium
+
+[[recipes]]
+recipe_id = 1262975  # Rock Garden
+
+[[recipes]]
+recipe_id = 1263071  # Molten Foundry
+
+[[recipes]]
+recipe_id = 1306126  # Smelt Heavy Thorium

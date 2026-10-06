@@ -6,7 +6,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"  # Game build rules; not a Forever server type.
 profession = "tailoring"
 status = "beta-observed"
-catalog_version = "0.1"
+catalog_version = "0.2"
 notes = "Forever beta, first tiers: Linen, Red Linen and Woolen bags with their bolts, plus Runecloth Bag for launch. Revalidate after material game builds by re-saving the page and regenerating."
 
 # Output counts: Wowhead's list data gives every recipe exactly 1. The "(2)" in its spell tooltips is the
@@ -29,6 +29,1230 @@ recipe_id = 3757  # Woolen Bag
 recipe_id = 18405  # Runecloth Bag
 availability = "post-launch"
 availability_note = "Needs Tailoring 260 and Forever's new dyes; not reachable on the level-capped beta."
+
+[[recipes]]
+recipe_id = 2385  # Brown Linen Vest
+
+[[recipes]]
+recipe_id = 2386  # Linen Boots
+
+[[recipes]]
+recipe_id = 2387  # Linen Cloak
+
+[[recipes]]
+recipe_id = 2389  # Red Linen Robe
+
+[[recipes]]
+recipe_id = 2392  # Red Linen Shirt
+
+[[recipes]]
+recipe_id = 2393  # White Linen Shirt
+
+[[recipes]]
+recipe_id = 2394  # Blue Linen Shirt
+
+[[recipes]]
+recipe_id = 2395  # Barbaric Linen Vest
+
+[[recipes]]
+recipe_id = 2396  # Green Linen Shirt
+
+[[recipes]]
+recipe_id = 2397  # Reinforced Linen Cape
+
+[[recipes]]
+recipe_id = 2399  # Green Woolen Vest
+
+[[recipes]]
+recipe_id = 2401  # Woolen Boots
+
+[[recipes]]
+recipe_id = 2402  # Woolen Cape
+
+[[recipes]]
+recipe_id = 2403  # Gray Woolen Robe
+
+[[recipes]]
+recipe_id = 2406  # Gray Woolen Shirt
+
+[[recipes]]
+recipe_id = 2963  # Bolt of Linen Cloth
+
+[[recipes]]
+recipe_id = 2964  # Bolt of Woolen Cloth
+
+[[recipes]]
+recipe_id = 3758  # Green Woolen Bag
+
+[[recipes]]
+recipe_id = 3813  # Small Silk Pack
+
+[[recipes]]
+recipe_id = 3839  # Bolt of Silk Cloth
+
+[[recipes]]
+recipe_id = 3840  # Heavy Linen Gloves
+
+[[recipes]]
+recipe_id = 3841  # Green Linen Bracers
+
+[[recipes]]
+recipe_id = 3842  # Handstitched Linen Britches
+
+[[recipes]]
+recipe_id = 3843  # Heavy Woolen Gloves
+
+[[recipes]]
+recipe_id = 3844  # Heavy Woolen Cloak
+
+[[recipes]]
+recipe_id = 3845  # Soft-soled Linen Boots
+
+[[recipes]]
+recipe_id = 3847  # Red Woolen Boots
+
+[[recipes]]
+recipe_id = 3848  # Double-stitched Woolen Shoulders
+
+[[recipes]]
+recipe_id = 3849  # Reinforced Woolen Shoulders
+
+[[recipes]]
+recipe_id = 3850  # Heavy Woolen Pants
+
+[[recipes]]
+recipe_id = 3851  # Phoenix Pants
+
+[[recipes]]
+recipe_id = 3852  # Gloves of Meditation
+
+[[recipes]]
+recipe_id = 3854  # Azure Silk Gloves
+
+[[recipes]]
+recipe_id = 3855  # Spidersilk Boots
+
+[[recipes]]
+recipe_id = 3856  # Spider Silk Slippers
+
+[[recipes]]
+recipe_id = 3857  # Enchanter's Cowl
+
+[[recipes]]
+recipe_id = 3858  # Shadow Hood
+
+[[recipes]]
+recipe_id = 3859  # Azure Silk Vest
+
+[[recipes]]
+recipe_id = 3860  # Boots of the Enchanter
+
+[[recipes]]
+recipe_id = 3861  # Long Silken Cloak
+
+[[recipes]]
+recipe_id = 3862  # Icy Cloak
+
+[[recipes]]
+recipe_id = 3863  # Spider Belt
+
+[[recipes]]
+recipe_id = 3864  # Star Belt
+
+[[recipes]]
+recipe_id = 3865  # Bolt of Mageweave
+
+[[recipes]]
+recipe_id = 3866  # Stylish Red Shirt
+
+[[recipes]]
+recipe_id = 3868  # Phoenix Gloves
+
+[[recipes]]
+recipe_id = 3869  # Bright Yellow Shirt
+
+[[recipes]]
+recipe_id = 3870  # Dark Silk Shirt
+
+[[recipes]]
+recipe_id = 3871  # Formal White Shirt
+
+[[recipes]]
+recipe_id = 3872  # Rich Purple Silk Shirt
+
+[[recipes]]
+recipe_id = 3873  # Black Swashbuckler's Shirt
+
+[[recipes]]
+recipe_id = 3914  # Brown Linen Pants
+
+[[recipes]]
+recipe_id = 3915  # Brown Linen Shirt
+
+[[recipes]]
+recipe_id = 6521  # Pearl-clasped Cloak
+
+[[recipes]]
+recipe_id = 6688  # Red Woolen Bag
+
+[[recipes]]
+recipe_id = 6690  # Lesser Wizard's Robe
+
+[[recipes]]
+recipe_id = 6692  # Robes of Arcana
+
+[[recipes]]
+recipe_id = 6693  # Green Silk Pack
+
+[[recipes]]
+recipe_id = 6695  # Black Silk Pack
+
+[[recipes]]
+recipe_id = 7623  # Brown Linen Robe
+
+[[recipes]]
+recipe_id = 7624  # White Linen Robe
+
+[[recipes]]
+recipe_id = 7629  # Red Linen Vest
+
+[[recipes]]
+recipe_id = 7630  # Blue Linen Vest
+
+[[recipes]]
+recipe_id = 7633  # Blue Linen Robe
+
+[[recipes]]
+recipe_id = 7639  # Blue Overalls
+
+[[recipes]]
+recipe_id = 7643  # Greater Adept's Robe
+
+[[recipes]]
+recipe_id = 7892  # Stylish Blue Shirt
+
+[[recipes]]
+recipe_id = 7893  # Stylish Green Shirt
+
+[[recipes]]
+recipe_id = 8465  # Simple Dress
+
+[[recipes]]
+recipe_id = 8467  # White Woolen Dress
+
+[[recipes]]
+recipe_id = 8483  # White Swashbuckler's Shirt
+
+[[recipes]]
+recipe_id = 8489  # Red Swashbuckler's Shirt
+
+[[recipes]]
+recipe_id = 8758  # Azure Silk Pants
+
+[[recipes]]
+recipe_id = 8760  # Azure Silk Hood
+
+[[recipes]]
+recipe_id = 8762  # Silk Headband
+
+[[recipes]]
+recipe_id = 8764  # Earthen Vest
+
+[[recipes]]
+recipe_id = 8766  # Azure Silk Belt
+
+[[recipes]]
+recipe_id = 8770  # Robe of Power
+
+[[recipes]]
+recipe_id = 8772  # Crimson Silk Belt
+
+[[recipes]]
+recipe_id = 8774  # Green Silken Shoulders
+
+[[recipes]]
+recipe_id = 8776  # Linen Belt
+
+[[recipes]]
+recipe_id = 8780  # Hands of Darkness
+
+[[recipes]]
+recipe_id = 8782  # Truefaith Gloves
+
+[[recipes]]
+recipe_id = 8784  # Green Silk Armor
+
+[[recipes]]
+recipe_id = 8786  # Azure Silk Cloak
+
+[[recipes]]
+recipe_id = 8789  # Crimson Silk Cloak
+
+[[recipes]]
+recipe_id = 8791  # Crimson Silk Vest
+
+[[recipes]]
+recipe_id = 8793  # Crimson Silk Shoulders
+
+[[recipes]]
+recipe_id = 8795  # Azure Shoulders
+
+[[recipes]]
+recipe_id = 8797  # Earthen Silk Belt
+
+[[recipes]]
+recipe_id = 8799  # Crimson Silk Pantaloons
+
+[[recipes]]
+recipe_id = 8802  # Crimson Silk Robe
+
+[[recipes]]
+recipe_id = 8804  # Crimson Silk Gloves
+
+[[recipes]]
+recipe_id = 12044  # Simple Linen Pants
+
+[[recipes]]
+recipe_id = 12045  # Simple Linen Boots
+
+[[recipes]]
+recipe_id = 12046  # Simple Kilt
+
+[[recipes]]
+recipe_id = 12047  # Colorful Kilt
+
+[[recipes]]
+recipe_id = 12048  # Black Mageweave Vest
+
+[[recipes]]
+recipe_id = 12049  # Black Mageweave Leggings
+
+[[recipes]]
+recipe_id = 12050  # Black Mageweave Robe
+
+[[recipes]]
+recipe_id = 12052  # Shadoweave Pants
+
+[[recipes]]
+recipe_id = 12053  # Black Mageweave Gloves
+
+[[recipes]]
+recipe_id = 12055  # Shadoweave Robe
+
+[[recipes]]
+recipe_id = 12056  # Red Mageweave Vest
+
+[[recipes]]
+recipe_id = 12059  # White Bandit Mask
+
+[[recipes]]
+recipe_id = 12060  # Red Mageweave Pants
+
+[[recipes]]
+recipe_id = 12061  # Orange Mageweave Shirt
+
+[[recipes]]
+recipe_id = 12064  # Orange Martial Shirt
+
+[[recipes]]
+recipe_id = 12065  # Mageweave Bag
+
+[[recipes]]
+recipe_id = 12066  # Red Mageweave Gloves
+
+[[recipes]]
+recipe_id = 12067  # Dreamweave Gloves
+
+[[recipes]]
+recipe_id = 12069  # Cindercloth Robe
+
+[[recipes]]
+recipe_id = 12070  # Dreamweave Vest
+
+[[recipes]]
+recipe_id = 12071  # Shadoweave Gloves
+
+[[recipes]]
+recipe_id = 12072  # Black Mageweave Headband
+
+[[recipes]]
+recipe_id = 12073  # Black Mageweave Boots
+
+[[recipes]]
+recipe_id = 12074  # Black Mageweave Shoulders
+
+[[recipes]]
+recipe_id = 12075  # Lavender Mageweave Shirt
+
+[[recipes]]
+recipe_id = 12076  # Shadoweave Shoulders
+
+[[recipes]]
+recipe_id = 12077  # Simple Black Dress
+
+[[recipes]]
+recipe_id = 12078  # Red Mageweave Shoulders
+
+[[recipes]]
+recipe_id = 12079  # Red Mageweave Bag
+
+[[recipes]]
+recipe_id = 12080  # Pink Mageweave Shirt
+
+[[recipes]]
+recipe_id = 12081  # Admiral's Hat
+
+[[recipes]]
+recipe_id = 12082  # Shadoweave Boots
+
+[[recipes]]
+recipe_id = 12084  # Red Mageweave Headband
+
+[[recipes]]
+recipe_id = 12085  # Tuxedo Shirt
+
+[[recipes]]
+recipe_id = 12086  # Shadoweave Mask
+
+[[recipes]]
+recipe_id = 12088  # Cindercloth Boots
+
+[[recipes]]
+recipe_id = 12089  # Tuxedo Pants
+
+[[recipes]]
+recipe_id = 12091  # White Wedding Dress
+
+[[recipes]]
+recipe_id = 12092  # Dreamweave Circlet
+
+[[recipes]]
+recipe_id = 12093  # Tuxedo Jacket
+
+[[recipes]]
+recipe_id = 18401  # Bolt of Runecloth
+
+[[recipes]]
+recipe_id = 18402  # Runecloth Belt
+
+[[recipes]]
+recipe_id = 18403  # Frostweave Tunic
+
+[[recipes]]
+recipe_id = 18404  # Frostweave Robe
+
+[[recipes]]
+recipe_id = 18406  # Runecloth Robe
+
+[[recipes]]
+recipe_id = 18407  # Runecloth Tunic
+
+[[recipes]]
+recipe_id = 18408  # Cindercloth Vest
+
+[[recipes]]
+recipe_id = 18409  # Runecloth Cloak
+
+[[recipes]]
+recipe_id = 18410  # Ghostweave Belt
+
+[[recipes]]
+recipe_id = 18411  # Frostweave Gloves
+
+[[recipes]]
+recipe_id = 18412  # Cindercloth Gloves
+
+[[recipes]]
+recipe_id = 18413  # Ghostweave Gloves
+
+[[recipes]]
+recipe_id = 18414  # Brightcloth Robe
+
+[[recipes]]
+recipe_id = 18415  # Brightcloth Gloves
+
+[[recipes]]
+recipe_id = 18416  # Ghostweave Vest
+
+[[recipes]]
+recipe_id = 18417  # Runecloth Gloves
+
+[[recipes]]
+recipe_id = 18418  # Cindercloth Cloak
+
+[[recipes]]
+recipe_id = 18419  # Felcloth Pants
+
+[[recipes]]
+recipe_id = 18420  # Brightcloth Cloak
+
+[[recipes]]
+recipe_id = 18421  # Wizardweave Leggings
+
+[[recipes]]
+recipe_id = 18422  # Cloak of Fire
+
+[[recipes]]
+recipe_id = 18423  # Runecloth Boots
+
+[[recipes]]
+recipe_id = 18424  # Frostweave Pants
+
+[[recipes]]
+recipe_id = 18434  # Cindercloth Pants
+
+[[recipes]]
+recipe_id = 18436  # Robe of Winter Night
+
+[[recipes]]
+recipe_id = 18437  # Felcloth Boots
+
+[[recipes]]
+recipe_id = 18438  # Runecloth Pants
+
+[[recipes]]
+recipe_id = 18439  # Brightcloth Pants
+
+[[recipes]]
+recipe_id = 18440  # Mooncloth Leggings
+
+[[recipes]]
+recipe_id = 18441  # Ghostweave Pants
+
+[[recipes]]
+recipe_id = 18442  # Felcloth Hood
+
+[[recipes]]
+recipe_id = 18444  # Runecloth Headband
+
+[[recipes]]
+recipe_id = 18445  # Mooncloth Bag
+
+[[recipes]]
+recipe_id = 18446  # Wizardweave Robe
+
+[[recipes]]
+recipe_id = 18447  # Mooncloth Vest
+
+[[recipes]]
+recipe_id = 18448  # Mooncloth Shoulders
+
+[[recipes]]
+recipe_id = 18449  # Runecloth Shoulders
+
+[[recipes]]
+recipe_id = 18450  # Wizardweave Turban
+
+[[recipes]]
+recipe_id = 18451  # Felcloth Robe
+
+[[recipes]]
+recipe_id = 18452  # Mooncloth Circlet
+
+[[recipes]]
+recipe_id = 18453  # Felcloth Shoulders
+
+[[recipes]]
+recipe_id = 18454  # Gloves of Spell Mastery
+
+[[recipes]]
+recipe_id = 18455  # Bottomless Bag
+
+[[recipes]]
+recipe_id = 18456  # Truefaith Vestments
+
+[[recipes]]
+recipe_id = 18457  # Robe of the Archmage
+
+[[recipes]]
+recipe_id = 18458  # Robe of the Void
+
+[[recipes]]
+recipe_id = 18560  # Mooncloth
+
+[[recipes]]
+recipe_id = 19435  # Mooncloth Boots
+
+[[recipes]]
+recipe_id = 20848  # Flarecore Mantle
+
+[[recipes]]
+recipe_id = 20849  # Flarecore Gloves
+
+[[recipes]]
+recipe_id = 21945  # Green Holiday Shirt
+
+[[recipes]]
+recipe_id = 22759  # Flarecore Wraps
+
+[[recipes]]
+recipe_id = 22813  # Gordok Ogre Suit
+
+[[recipes]]
+recipe_id = 22866  # Belt of the Archmage
+
+[[recipes]]
+recipe_id = 22867  # Felcloth Gloves
+
+[[recipes]]
+recipe_id = 22868  # Inferno Gloves
+
+[[recipes]]
+recipe_id = 22869  # Mooncloth Gloves
+
+[[recipes]]
+recipe_id = 22870  # Cloak of Warding
+
+[[recipes]]
+recipe_id = 22902  # Mooncloth Robe
+
+[[recipes]]
+recipe_id = 23662  # Wisdom of the Timbermaw
+
+[[recipes]]
+recipe_id = 23663  # Mantle of the Timbermaw
+
+[[recipes]]
+recipe_id = 23664  # Argent Boots
+
+[[recipes]]
+recipe_id = 23665  # Argent Shoulders
+
+[[recipes]]
+recipe_id = 23666  # Flarecore Robe
+
+[[recipes]]
+recipe_id = 23667  # Flarecore Leggings
+
+[[recipes]]
+recipe_id = 24091  # Bloodvine Vest
+
+[[recipes]]
+recipe_id = 24092  # Bloodvine Leggings
+
+[[recipes]]
+recipe_id = 24093  # Bloodvine Boots
+
+[[recipes]]
+recipe_id = 24901  # Runed Stygian Leggings
+
+[[recipes]]
+recipe_id = 24902  # Runed Stygian Belt
+
+[[recipes]]
+recipe_id = 24903  # Runed Stygian Boots
+
+[[recipes]]
+recipe_id = 26085  # Soul Pouch
+
+[[recipes]]
+recipe_id = 26086  # Felcloth Bag
+
+[[recipes]]
+recipe_id = 26087  # Core Felcloth Bag
+
+[[recipes]]
+recipe_id = 26403  # Festival Dress
+
+[[recipes]]
+recipe_id = 26407  # Festival Suit
+
+[[recipes]]
+recipe_id = 27658  # Enchanted Mageweave Pouch
+
+[[recipes]]
+recipe_id = 27659  # Enchanted Runecloth Bag
+
+[[recipes]]
+recipe_id = 27660  # Big Bag of Enchantment
+
+[[recipes]]
+recipe_id = 27724  # Cenarion Herb Bag
+
+[[recipes]]
+recipe_id = 27725  # Satchel of Cenarius
+
+[[recipes]]
+recipe_id = 28205  # Glacial Gloves
+
+[[recipes]]
+recipe_id = 28207  # Glacial Vest
+
+[[recipes]]
+recipe_id = 28208  # Glacial Cloak
+
+[[recipes]]
+recipe_id = 28209  # Glacial Wrists
+
+[[recipes]]
+recipe_id = 28210  # Gaea's Embrace
+
+[[recipes]]
+recipe_id = 28480  # Sylvan Vest
+
+[[recipes]]
+recipe_id = 28481  # Sylvan Crown
+
+[[recipes]]
+recipe_id = 28482  # Sylvan Shoulders
+
+[[recipes]]
+recipe_id = 44950  # Green Winter Clothes
+
+[[recipes]]
+recipe_id = 44958  # Red Winter Clothes
+
+[[recipes]]
+recipe_id = 428424  # Phoenix Bindings
+
+[[recipes]]
+recipe_id = 435827  # Hyperconductive Arcano-Filament
+
+[[recipes]]
+recipe_id = 435841  # Invoker's Cord
+
+[[recipes]]
+recipe_id = 435848  # Invoker's Mantle
+
+[[recipes]]
+recipe_id = 461727  # Leather-Reinforced Runecloth Bag
+
+[[recipes]]
+recipe_id = 1227723  # Crusader's Knapsack
+
+[[recipes]]
+recipe_id = 1227724  # Crimson Dawnwoven Bag
+
+[[recipes]]
+recipe_id = 1229504  # Faction Banner
+
+[[recipes]]
+recipe_id = 1257013  # Linen Reagent Bag
+
+[[recipes]]
+recipe_id = 1257017  # Woolen Reagent Bag
+
+[[recipes]]
+recipe_id = 1257368  # Novice Arcanist's Sash
+
+[[recipes]]
+recipe_id = 1257369  # Novice Ardent's Sash
+
+[[recipes]]
+recipe_id = 1257370  # Pristine Boots
+
+[[recipes]]
+recipe_id = 1257371  # Silky Boots
+
+[[recipes]]
+recipe_id = 1257372  # Flame Boots
+
+[[recipes]]
+recipe_id = 1257373  # Shadow Boots
+
+[[recipes]]
+recipe_id = 1257374  # Pearly Boots
+
+[[recipes]]
+recipe_id = 1257375  # Shining Boots
+
+[[recipes]]
+recipe_id = 1257376  # Filigreed Pristine Gown
+
+[[recipes]]
+recipe_id = 1257377  # Filigreed Silky Gown
+
+[[recipes]]
+recipe_id = 1257378  # Filigreed Flame Gown
+
+[[recipes]]
+recipe_id = 1257379  # Filigreed Shadow Gown
+
+[[recipes]]
+recipe_id = 1257380  # Filigreed Pearly Gown
+
+[[recipes]]
+recipe_id = 1257381  # Filigreed Shining Gown
+
+[[recipes]]
+recipe_id = 1257382  # Pristine Gloves
+
+[[recipes]]
+recipe_id = 1257383  # Silky Gloves
+
+[[recipes]]
+recipe_id = 1257384  # Flame Gloves
+
+[[recipes]]
+recipe_id = 1257385  # Shadow Gloves
+
+[[recipes]]
+recipe_id = 1257386  # Pearly Gloves
+
+[[recipes]]
+recipe_id = 1257387  # Shining Gloves
+
+[[recipes]]
+recipe_id = 1257388  # Pristine Sash
+
+[[recipes]]
+recipe_id = 1257389  # Silky Sash
+
+[[recipes]]
+recipe_id = 1257390  # Flame Sash
+
+[[recipes]]
+recipe_id = 1257391  # Shadow Sash
+
+[[recipes]]
+recipe_id = 1257392  # Pearly Sash
+
+[[recipes]]
+recipe_id = 1257393  # Shining Sash
+
+[[recipes]]
+recipe_id = 1257394  # Filigreed Pristine Leggings
+
+[[recipes]]
+recipe_id = 1257395  # Filigreed Silky Leggings
+
+[[recipes]]
+recipe_id = 1257396  # Filigreed Flame Leggings
+
+[[recipes]]
+recipe_id = 1257397  # Filigreed Shadow Leggings
+
+[[recipes]]
+recipe_id = 1257398  # Filigreed Pearly Leggings
+
+[[recipes]]
+recipe_id = 1257399  # Filigreed Shining Leggings
+
+[[recipes]]
+recipe_id = 1257400  # Pristine Circlet
+
+[[recipes]]
+recipe_id = 1257401  # Silky Circlet
+
+[[recipes]]
+recipe_id = 1257402  # Flame Circlet
+
+[[recipes]]
+recipe_id = 1257403  # Shadow Circlet
+
+[[recipes]]
+recipe_id = 1257404  # Pearly Circlet
+
+[[recipes]]
+recipe_id = 1257405  # Shining Circlet
+
+[[recipes]]
+recipe_id = 1257406  # Pristine Gown
+
+[[recipes]]
+recipe_id = 1257407  # Silky Gown
+
+[[recipes]]
+recipe_id = 1257408  # Flame Gown
+
+[[recipes]]
+recipe_id = 1257409  # Shadow Gown
+
+[[recipes]]
+recipe_id = 1257410  # Pearly Gown
+
+[[recipes]]
+recipe_id = 1257411  # Shining Gown
+
+[[recipes]]
+recipe_id = 1257412  # Silk Reagent Bag
+
+[[recipes]]
+recipe_id = 1257413  # Filigreed Pristine Circlet
+
+[[recipes]]
+recipe_id = 1257414  # Filigreed Silky Circlet
+
+[[recipes]]
+recipe_id = 1257415  # Filigreed Flame Circlet
+
+[[recipes]]
+recipe_id = 1257416  # Filigreed Shadow Circlet
+
+[[recipes]]
+recipe_id = 1257417  # Filigreed Pearly Circlet
+
+[[recipes]]
+recipe_id = 1257418  # Filigreed Shining Circlet
+
+[[recipes]]
+recipe_id = 1257419  # Pristine Leggings
+
+[[recipes]]
+recipe_id = 1257420  # Silky Leggings
+
+[[recipes]]
+recipe_id = 1257421  # Flame Leggings
+
+[[recipes]]
+recipe_id = 1257422  # Shadow Leggings
+
+[[recipes]]
+recipe_id = 1257423  # Pearly Leggings
+
+[[recipes]]
+recipe_id = 1257424  # Shining Leggings
+
+[[recipes]]
+recipe_id = 1257425  # Earthen Leggings
+
+[[recipes]]
+recipe_id = 1257426  # Gilded Slippers
+
+[[recipes]]
+recipe_id = 1257427  # Frothing Slippers
+
+[[recipes]]
+recipe_id = 1257428  # Fiery Slippers
+
+[[recipes]]
+recipe_id = 1257429  # Black Slippers
+
+[[recipes]]
+recipe_id = 1257430  # Golden Slippers
+
+[[recipes]]
+recipe_id = 1257431  # Radiant Slippers
+
+[[recipes]]
+recipe_id = 1257432  # Earthen Silk Slippers
+
+[[recipes]]
+recipe_id = 1257433  # Earthen Silk Hood
+
+[[recipes]]
+recipe_id = 1257434  # Earthen Silk Gloves
+
+[[recipes]]
+recipe_id = 1257435  # Earthen Silk Cuffs
+
+[[recipes]]
+recipe_id = 1257436  # Gilded Handwraps
+
+[[recipes]]
+recipe_id = 1257437  # Frothing Handwraps
+
+[[recipes]]
+recipe_id = 1257438  # Fiery Handwraps
+
+[[recipes]]
+recipe_id = 1257439  # Black Handwraps
+
+[[recipes]]
+recipe_id = 1257440  # Golden Handwraps
+
+[[recipes]]
+recipe_id = 1257441  # Radiant Handwraps
+
+[[recipes]]
+recipe_id = 1257442  # Earthen Silk Shoulders
+
+[[recipes]]
+recipe_id = 1257443  # Mageweave Reagent Bag
+
+[[recipes]]
+recipe_id = 1257444  # Gilded Cord
+
+[[recipes]]
+recipe_id = 1257445  # Frothing Cord
+
+[[recipes]]
+recipe_id = 1257446  # Fiery Cord
+
+[[recipes]]
+recipe_id = 1257447  # Black Cord
+
+[[recipes]]
+recipe_id = 1257448  # Golden Cord
+
+[[recipes]]
+recipe_id = 1257449  # Radiant Cord
+
+[[recipes]]
+recipe_id = 1257450  # Nethergeld Shoulders
+
+[[recipes]]
+recipe_id = 1257451  # Netherfroth Shoulders
+
+[[recipes]]
+recipe_id = 1257452  # Netherflame Shoulders
+
+[[recipes]]
+recipe_id = 1257453  # Netherpearl Shoulders
+
+[[recipes]]
+recipe_id = 1257454  # Nethershine Shoulders
+
+[[recipes]]
+recipe_id = 1257455  # Netherlight Shoulders
+
+[[recipes]]
+recipe_id = 1257456  # Nethergeld Cuffs
+
+[[recipes]]
+recipe_id = 1257457  # Netherfroth Cuffs
+
+[[recipes]]
+recipe_id = 1257458  # Netherflame Cuffs
+
+[[recipes]]
+recipe_id = 1257459  # Netherpearl Cuffs
+
+[[recipes]]
+recipe_id = 1257460  # Nethershine Cuffs
+
+[[recipes]]
+recipe_id = 1257461  # Netherlight Cuffs
+
+[[recipes]]
+recipe_id = 1257462  # Ghostweave Cord
+
+[[recipes]]
+recipe_id = 1257463  # Earthenweave Gloves
+
+[[recipes]]
+recipe_id = 1257464  # Earthenweave Cord
+
+[[recipes]]
+recipe_id = 1257465  # Runecloth Reagent Bag
+
+[[recipes]]
+recipe_id = 1257466  # Gilded Waistcord
+
+[[recipes]]
+recipe_id = 1257467  # Frothing Waistcord
+
+[[recipes]]
+recipe_id = 1257468  # Fiery Waistcord
+
+[[recipes]]
+recipe_id = 1257469  # Black Waistcord
+
+[[recipes]]
+recipe_id = 1257470  # Golden Waistcord
+
+[[recipes]]
+recipe_id = 1257471  # Radiant Waistcord
+
+[[recipes]]
+recipe_id = 1257472  # Earthenweave Boots
+
+[[recipes]]
+recipe_id = 1257473  # Gilded Gloves
+
+[[recipes]]
+recipe_id = 1257474  # Frothing Gloves
+
+[[recipes]]
+recipe_id = 1257475  # Fiery Gloves
+
+[[recipes]]
+recipe_id = 1257476  # Black Gloves
+
+[[recipes]]
+recipe_id = 1257477  # Golden Gloves
+
+[[recipes]]
+recipe_id = 1257478  # Radiant Gloves
+
+[[recipes]]
+recipe_id = 1257479  # Gilded Sandals
+
+[[recipes]]
+recipe_id = 1257480  # Frothing Sandals
+
+[[recipes]]
+recipe_id = 1257481  # Fiery Sandals
+
+[[recipes]]
+recipe_id = 1257482  # Black Sandals
+
+[[recipes]]
+recipe_id = 1257483  # Golden Sandals
+
+[[recipes]]
+recipe_id = 1257484  # Radiant Sandals
+
+[[recipes]]
+recipe_id = 1257485  # Earthenweave Mantle
+
+[[recipes]]
+recipe_id = 1257486  # Earthenweave Vest
+
+[[recipes]]
+recipe_id = 1257487  # Runecloth Cuffs
+
+[[recipes]]
+recipe_id = 1257488  # Earthenweave Leggings
+
+[[recipes]]
+recipe_id = 1257489  # Ghostweave Mantle
+
+[[recipes]]
+recipe_id = 1257490  # Ghostweave Boots
+
+[[recipes]]
+recipe_id = 1257491  # Earthenweave Cuffs
+
+[[recipes]]
+recipe_id = 1257492  # Mooncloth Reagent Bag
+
+[[recipes]]
+recipe_id = 1257493  # Ghostweave Hood
+
+[[recipes]]
+recipe_id = 1257494  # Earthenweave Crown
+
+[[recipes]]
+recipe_id = 1257495  # Bottomless Reagent Bag
+
+[[recipes]]
+recipe_id = 1263032  # Spinning Wheel
+
+[[recipes]]
+recipe_id = 1263080  # Loom
+
+[[recipes]]
+recipe_id = 1292941  # Manaflare Pants
+
+[[recipes]]
+recipe_id = 1292942  # Manaflare Gloves
+
+[[recipes]]
+recipe_id = 1292943  # Manaflare Mantle
+
+[[recipes]]
+recipe_id = 1292944  # Manaflare Boots
+
+[[recipes]]
+recipe_id = 1292957  # Pants of Conviction
+
+[[recipes]]
+recipe_id = 1292958  # Gloves of Conviction
+
+[[recipes]]
+recipe_id = 1292959  # Mantle of Conviction
+
+[[recipes]]
+recipe_id = 1292960  # Treads of Conviction
+
+[[recipes]]
+recipe_id = 1292961  # Leggings of Conviction
+
+[[recipes]]
+recipe_id = 1292962  # Handguards of Conviction
+
+[[recipes]]
+recipe_id = 1292963  # Pauldrons of Conviction
+
+[[recipes]]
+recipe_id = 1292964  # Boots of Conviction
+
+[[recipes]]
+recipe_id = 1292977  # Demonheart Leggings
+
+[[recipes]]
+recipe_id = 1292978  # Demonheart Gloves
+
+[[recipes]]
+recipe_id = 1292979  # Demonheart Spaulders
+
+[[recipes]]
+recipe_id = 1292980  # Demonheart Boots
+
+[[recipes]]
+recipe_id = 1297120  # Venomspew Gloves
+
+[[recipes]]
+recipe_id = 1297121  # Venomspew Cord
+
+[[recipes]]
+recipe_id = 1297122  # Venomspew Footpads
+
+[[recipes]]
+recipe_id = 1297123  # Swarmtender's Gloves
+
+[[recipes]]
+recipe_id = 1297124  # Swarmtender's Cord
+
+[[recipes]]
+recipe_id = 1297125  # Swarmtender's Footpads
+
+[[recipes]]
+recipe_id = 1301439  # Cloudy Stormsewn Vest
+
+[[recipes]]
+recipe_id = 1301440  # Cloudy Stormsewn Cuffs
+
+[[recipes]]
+recipe_id = 1301441  # Cloudy Stormsewn Handwraps
+
+[[recipes]]
+recipe_id = 1301442  # Cloudy Stormsewn Cord
+
+[[recipes]]
+recipe_id = 1301443  # Cloudy Stormsewn Leggings
+
+[[recipes]]
+recipe_id = 1301444  # Cloudy Stormsewn Shoes
+
+[[recipes]]
+recipe_id = 1301463  # Azure Stormsewn Vest
+
+[[recipes]]
+recipe_id = 1301464  # Azure Stormsewn Cuffs
+
+[[recipes]]
+recipe_id = 1301465  # Azure Stormsewn Handwraps
+
+[[recipes]]
+recipe_id = 1301466  # Azure Stormsewn Cord
+
+[[recipes]]
+recipe_id = 1301468  # Azure Stormsewn Leggings
+
+[[recipes]]
+recipe_id = 1301469  # Azure Stormsewn Shoes
+
+[[recipes]]
+recipe_id = 1301532  # Cloudy Stormsewn Cowl
+
+[[recipes]]
+recipe_id = 1301533  # Cloudy Stormsewn Epaulets
+
+[[recipes]]
+recipe_id = 1301540  # Azure Stormsewn Cowl
+
+[[recipes]]
+recipe_id = 1301541  # Azure Stormsewn Epaulets
+
+[[recipes]]
+recipe_id = 1306540  # Robes of Fiery Devastation
+
+[[recipes]]
+recipe_id = 1306541  # Mana-infused Cord
+
+[[recipes]]
+recipe_id = 1306542  # Rime-encrusted Boots
+
+[[recipes]]
+recipe_id = 1306543  # Fel Cape
+
+[[recipes]]
+recipe_id = 1306544  # Cloak of Earth and Sky
+
+[[recipes]]
+recipe_id = 1306545  # Felblood Soul Bag
 
 [[items]]
 item_id = 249430  # Magenta Dye

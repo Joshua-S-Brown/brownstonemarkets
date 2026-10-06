@@ -6,6 +6,7 @@ import pytest
 from conftest import make_source
 from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
 
+from brownstone import recipe_catalogs as rc
 from brownstone.markets import MARKET_KEYS
 from brownstone.metrics import rebuild_scan_metrics
 from brownstone.pipeline import import_scans
@@ -123,16 +124,25 @@ def app_for(config, monkeypatch):
     return at
 
 
+def classic_only_item():
+    """An item in a real Classic catalog and in no Forever catalog, whichever professions have been added."""
+    items = {"classic": set(), "forever": set()}
+    for entry in rc.find_catalogs(rc.CONFIG_DIR):
+        items[entry["selection"]["game_version"]] |= {item["item_id"] for item in entry["catalog"]["items"]}
+    return min(items["classic"] - items["forever"], default=999_999_999)  # Else an item in no catalog.
+
+
 def test_scan_changes_app_selects_two_scans_filters_compatible_catalogs_and_labels(tmp_path, monkeypatch):
     config, _ = import_pair(tmp_path)
     extra = write_scans(tmp_path / "third.lua", scan("third", FINISHED - 7200, [listing(1, 1, 50)]))
     import_scans(config, extra, now=NOW)
     # Real compatible catalog includes Linen Cloth (2589). Item 1 deliberately shares its name.
+    classic_only = classic_only_item()
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb")) as db:
         db.execute("UPDATE market_snapshots SET item_name='Linen Cloth' WHERE item_id=1")
         for table in ("market_snapshots", "scan_listings"):
             db.execute(f"UPDATE {table} SET item_id=2589 WHERE item_id=2")
-            db.execute(f"UPDATE {table} SET item_id=10050 WHERE item_id=6")  # Classic-only catalog item.
+            db.execute(f"UPDATE {table} SET item_id={classic_only} WHERE item_id=6")
         rebuild_scan_metrics(db)
     at = app_for(config, monkeypatch)
     first = next(w for w in at.selectbox if w.label == "First scan")

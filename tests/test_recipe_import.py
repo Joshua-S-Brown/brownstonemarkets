@@ -14,6 +14,7 @@ from brownstone.recipe_import import (
     dumps_catalog,
     extract_page,
     load_selection,
+    spell_list_url,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,6 +55,21 @@ def test_parses_saved_page_data_including_unquoted_keys():
     assert page["recipes"]["3755"]["reagents"] == [[2996, 3], [2320, 3]]
     assert page["items"]["4238"]["name"] == "Linen Bag [test]"
     assert page["items"]["2320"] == {"name": "Coarse Thread", "sellprice": 2, "buyprice": 10}
+
+
+def test_secondary_skill_pages_keep_their_own_address(tmp_path):
+    # Wowhead files Cooking and First Aid under secondary-skills, not professions.
+    cooking = PAGE.replace("/spells/professions/tailoring", "/spells/secondary-skills/cooking")
+    page = extract_page(cooking, "abc", "2026-10-06")
+    assert page["source_url"] == "https://www.wowhead.com/forever/spells/secondary-skills/cooking"
+    assert (page["game_path"], page["profession"]) == ("forever", "cooking")
+    saved = tmp_path / "Forever Spells _ Cooking.html"
+    saved.write_text(cooking, encoding="utf-8")
+    copy_path, manifest = archive_page(saved, tmp_path / "archive", "2026-10-06")
+    assert copy_path.parent == tmp_path / "archive/wowhead/forever/cooking"
+    assert manifest["source_url"].endswith("/forever/spells/secondary-skills/cooking")
+    assert spell_list_url("forever", "first-aid") == "https://www.wowhead.com/forever/spells/secondary-skills/first-aid"
+    assert spell_list_url("classic", "mining") == "https://www.wowhead.com/classic/spells/professions/mining"
 
 
 def test_rejects_pages_without_profession_data():
@@ -137,7 +153,7 @@ def test_forever_catalog_has_beta_tiers_new_dyes_and_only_forever_evidence():
     assert "/classic/" not in text
     catalog = load_recipe_catalog(ROOT / "config/forever-tailoring.toml")
     finished = {i for i, item in catalog["items_by_id"].items() if item["role"] == "finished"}
-    assert finished == {4238, 5762, 4240, 14046}  # Linen, Red Linen, Woolen and Runecloth bags.
+    assert {4238, 5762, 4240, 14046} <= finished  # Linen, Red Linen, Woolen and Runecloth bags among the rest.
     assert material_plan(catalog, 3755) == {2320: 3, 2589: 6}
     assert material_plan(catalog, 18405) == {8170: 2, 14047: 25, 14341: 1, 249409: 2, 249430: 4}
     runecloth_bag = catalog["recipes_by_id"][18405]
@@ -166,9 +182,10 @@ def test_archive_keeps_bytes_once_and_remembers_the_saved_date(tmp_path):
 def test_catalog_changes_lists_recipe_and_price_differences():
     old = tomllib.loads((ROOT / "config/forever-tailoring.toml").read_text(encoding="utf-8"))
     new = copy.deepcopy(old)
-    new["recipes"][0]["inputs"][0]["quantity"] += 1
-    new["items"][0]["vendor_price_copper"] = 12
-    new["recipes"].pop()
+    recipes = {recipe["recipe_id"]: recipe for recipe in new["recipes"]}
+    recipes[2963]["inputs"][0]["quantity"] += 1
+    next(item for item in new["items"] if item["item_id"] == 2320)["vendor_price_copper"] = 12
+    new["recipes"].remove(recipes[18405])
     changes = catalog_changes(old, new)
     assert any(line.startswith("changed recipe 2963") for line in changes)
     assert any(line.startswith("removed recipe 18405") for line in changes)
