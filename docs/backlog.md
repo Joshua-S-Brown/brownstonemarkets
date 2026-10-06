@@ -33,13 +33,14 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-025 Today
-2. STORY-027 removed listings
-3. STORY-015b crafting across professions
-4. STORY-021 item page and charts
-5. STORY-026 scan coverage and rhythm
-6. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-7. STORY-006 replay
+1. STORY-030 less text, less scrolling (ad hoc, 2026-10-06: top of the stack)
+2. STORY-025 Today
+3. STORY-027 removed listings
+4. STORY-015b crafting across professions
+5. STORY-021 item page and charts
+6. STORY-026 scan coverage and rhythm
+7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+8. STORY-006 replay
 
 **Reordered 2026-10-06 (product owner):** Today comes first because it is the first page that answers what to do. STORY-027 and STORY-015b follow because they unblock Today's biggest gaps: sales speed, and chains such as ore → bars → armor (*Today, later versions* under Later). The launch runbook (STORY-020a/b) moved to Later.
 
@@ -48,6 +49,28 @@ STORY-016 (backup) is deferred to Later (product owner, 2026-10-06).
 STORY-011a is a bounded research task for any convenient gap. Tailoring yield and vendor checks run alongside all of this; a confirmed multi-yield requirement takes priority.
 
 **Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, deferred to Later; its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
+
+### STORY-030 — Less text, less scrolling
+
+Ad hoc, added by the product owner on 2026-10-06 after reviewing Today on real data. Display only: no calculation, ranking, storage, schema or addon change. Stays in Streamlit; a React front end is not planned.
+
+As a gold maker, I want each page to show the decision first and keep explanations and provenance one click away, so that I can use the app without scrolling past text I have already read.
+
+Acceptance:
+- **Sidebar is navigation and actions only:** the experience choice (and the source choice when an experience has several), the Refresh from TSM or addon import controls, and the View list. Source ID, label, market ID, feed type and the `market.toml` hint move into a collapsed **Source details** expander in the sidebar. Every page still names its experience, source and market under the title (`show_context`); update UI-01 in `requirements.md`, which currently also requires them in the sidebar.
+- **Today:**
+  - **Settings collapse to one summary line** (gold available, minimum batch gain, most crafts per item) with the existing form inside an expander or popover. It opens on its own when gold available is 0c or the settings file couldn't be read. Validation, the per-source settings file, save-only writes and error messages are unchanged.
+  - **Craft, Buy, Sell and Below vendor are tabs** instead of stacked sections. Each tab keeps its "N more" count; the Craft tab keeps the hidden-reason counts and the Buy tab keeps the whole-shopping-list total.
+  - **Tables show decision columns first.** Craft: item, profession, batch, limited by, material cost, batch profit, profit per craft, thin. Buy: material, route, required units, purchased units, cost, highest unit price, cheap now. Sell: output, batch, lowest competing unit, listings, units, undercut unit, profit at undercut, thin. Below vendor: item, units, cost, vendor pays per unit, gain. Everything else (catalog, recipe, availability, evidence notes, recipe source, listings counts not listed above, p25, provenance) stays one click away, for example a "Show evidence columns" toggle or an expander per tab.
+  - **Provenance shown once, staleness never hidden.** Source, market, snapshot/scan, evidence time and time basis are identical on every row, so they appear once on the page. When the evidence is stale or future-dated the banner stays, and every table still shows a State column reading *stale — inspect only*. Update the Today *Evidence and honesty* bullet in `requirements.md` to match.
+  - **One caption line** for rules and provenance (Today version, cautious price, auction cut, source, snapshot/scan). The TSM *not available for this source* notice stays, shown only for TSM.
+- **Crafting:**
+  - **Recipes that can't be evaluated** appear in one collapsed expander, "N recipes could not be evaluated", holding a table (output, profession, catalog, reason) instead of one warning box per recipe (79 on the Forever beta).
+  - **The per-catalog caption lines** (one per compatible catalog) move into one collapsed "Catalogs on this board (N)" expander.
+  - **The board's explanatory captions** (coverage, depth meaning, margin and label rules) move into one collapsed "How to read this board" expander. One provenance caption stays visible (policy, snapshot, source, SHA-256 prefix).
+- **Unchanged:** freshness captions and stale warnings (DATA-05), every value, label, ranking and column's meaning, and the other pages (Browse market, Opportunities, Recipe catalogs, Scan changes), apart from the shared sidebar.
+- **Tested offline** with AppTest: the sidebar shows no source or market caption outside its expander, and each page still names them; Today renders four tabs, the settings summary, and the form opened when gold is 0c or settings are corrupt; stale Today tables still show *stale — inspect only*; Crafting with several unsupported recipes renders one expander and no per-recipe warnings. Update existing tests that read sidebar captions or Today's stacked layout.
+- **Docs:** `requirements.md` (UI-01 and Today's evidence bullet), `status.md` (Interface, test count), `design.md` only if a view's structure description changes.
 
 ### STORY-021 — Item page and charts
 
