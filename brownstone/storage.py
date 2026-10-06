@@ -13,7 +13,7 @@ from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 from .item_names import remember_local_catalog_names, remember_observed_names
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -149,7 +149,34 @@ def _migrate_to_5(db):
     db.execute(_V5_BACKFILL)
 
 
-MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4, 5: _migrate_to_5}
+_V6_LISTING_COLUMNS = {"seller": "VARCHAR", "time_left": "BIGINT", "quality": "BIGINT",
+                       "level": "BIGINT", "level_type": "VARCHAR", "required_level": "BIGINT",
+                       "item_link": "VARCHAR", "variant_id": "VARCHAR", "variant_state": "VARCHAR"}
+
+
+def _migrate_to_6(db):
+    """Richer scans and variant-aware prices; no guessing or rewriting old observations."""
+    # Views must be rebound after adding columns; DuckDB freezes SELECT * at view creation.
+    for table in ("market_snapshots", "scan_listings"):
+        db.execute(f"DROP VIEW IF EXISTS named_{table}")
+    for column, dtype in _V6_LISTING_COLUMNS.items():
+        db.execute(f"ALTER TABLE scan_listings ADD COLUMN IF NOT EXISTS {column} {dtype}")
+    for column in ("variant_id", "variant_state"):
+        db.execute(f"ALTER TABLE market_snapshots ADD COLUMN IF NOT EXISTS {column} VARCHAR")
+    for column, dtype in {"format_version": "BIGINT", "duration_seconds": "DOUBLE",
+                          "availability_json": "VARCHAR"}.items():
+        db.execute(f"ALTER TABLE addon_scans ADD COLUMN IF NOT EXISTS {column} {dtype}")
+    db.execute(f"""CREATE TABLE IF NOT EXISTS scan_items (
+        source_id VARCHAR NOT NULL, scan_id VARCHAR NOT NULL, item_id BIGINT NOT NULL,
+        snapshot_id VARCHAR, {_MARKET_COLUMNS}, environment VARCHAR,
+        class_id BIGINT, subclass_id BIGINT, item_level BIGINT, max_stack_size BIGINT,
+        vendor_sell_copper BIGINT, PRIMARY KEY (source_id, scan_id, item_id))""")
+    for statement in _V5_DDL[2:]:
+        db.execute(statement)
+
+
+MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4, 5: _migrate_to_5,
+              6: _migrate_to_6}
 
 
 def _has_table(db, name: str) -> bool:
@@ -246,12 +273,14 @@ def known_scan(db, config: Mapping[str, Any], scan_id: str) -> dict | None:
     return {key: record[key] for key in ("snapshot_id", "scan_sha256", "priced", "item_count")}
 
 
-def load_scan(db, scan: Path, listings: Path, prices: Path | None) -> None:
+def load_scan(db, scan: Path, listings: Path, prices: Path | None, items: Path | None = None) -> None:
     """Insert one new addon scan from its silver files: the scan row, its listings and, when the scan
     is complete, its item prices. Callers check ``known_scan`` first; a repeat insert fails on the key."""
     _require_current(db)
     db.execute("INSERT INTO addon_scans BY NAME SELECT * FROM read_parquet(?)", [str(scan)])
     db.execute("INSERT INTO scan_listings BY NAME SELECT * FROM read_parquet(?)", [str(listings)])
+    if items is not None:
+        db.execute("INSERT INTO scan_items BY NAME SELECT * FROM read_parquet(?)", [str(items)])
     if prices is not None:
         db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(prices)])
     snapshot_id = db.execute("SELECT snapshot_id FROM read_parquet(?)", [str(scan)]).fetchone()[0]
@@ -296,23 +325,36 @@ def scope_predicate(config: Mapping[str, Any]) -> tuple[str, list[Any]]:
     return " AND ".join(f"{key}=?" for key in keys), [config[key] for key in keys]
 
 
-def price_observations(db, config: Mapping[str, Any], snapshot_id: str, item_ids) -> dict[int, dict]:
+def _variant_predicate(variant_id: str | None, state: str | None) -> tuple[str, list]:
+    if variant_id is None and state is None:
+        # Keep legacy catalog reads; v3 unresolved evidence never feeds a base-item calculation.
+        return "variant_id IS NULL AND (variant_state IS NULL OR variant_state='base')", []
+    # Explicit reads are exact: legacy (null-state) rows never answer for a format-3 state.
+    return "variant_id IS NOT DISTINCT FROM ? AND variant_state=?", [
+        variant_id, state or "variant"]
+
+
+def price_observations(db, config: Mapping[str, Any], snapshot_id: str, item_ids,
+                       variant_id: str | None = None, variant_state: str | None = None) -> dict[int, dict]:
     """Read unit copper prices with the source and entire market identity, never item ID alone."""
     if not item_ids:
         return {}
     predicates, scope = scope_predicate(config)
     placeholders = ", ".join("?" for _ in item_ids)
+    item_predicate, item_scope = _variant_predicate(variant_id, variant_state)
     rows = db.execute(
         f"SELECT item_id, min_buyout, market_value FROM market_snapshots WHERE snapshot_id=? "
-        f"AND {predicates} AND item_id IN ({placeholders})",
-        [snapshot_id, *scope, *item_ids],
+        f"AND {predicates} AND item_id IN ({placeholders}) "
+        f"AND {item_predicate}",
+        [snapshot_id, *scope, *item_ids, *item_scope],
     ).fetchall()
     return {item_id: {"min_buyout": listed, "market_value": market}
             for item_id, listed, market in rows}
 
 
 def listing_depth(db, config: Mapping[str, Any], snapshot_id: str,
-                  item_ids: list[int]) -> dict[int, dict[str, int]] | None:
+                  item_ids: list[int], variant_id: str | None = None,
+                  variant_state: str | None = None) -> dict[int, dict[str, int]] | None:
     """Listing counts and units in the exact priced scan, including listings without a buyout.
 
     None means depth is unavailable (TSM, or no matching complete priced addon scan).
@@ -332,10 +374,12 @@ def listing_depth(db, config: Mapping[str, Any], snapshot_id: str,
     if not item_ids:
         return {}
     placeholders = ", ".join("?" for _ in item_ids)
+    item_predicate, item_scope = _variant_predicate(variant_id, variant_state)
     rows = db.execute(
         f"SELECT item_id, count(*), sum(quantity) FROM scan_listings WHERE snapshot_id=? "
-        f"AND {predicates} AND scan_id=? AND item_id IN ({placeholders}) GROUP BY item_id",
-        [*parameters, scan[0], *item_ids],
+        f"AND {predicates} AND scan_id=? AND item_id IN ({placeholders}) "
+        f"AND {item_predicate} GROUP BY item_id",
+        [*parameters, scan[0], *item_ids, *item_scope],
     ).fetchall()
     depth = {item_id: {"listings": 0, "units": 0} for item_id in item_ids}
     depth.update({item_id: {"listings": listings, "units": units} for item_id, listings, units in rows})

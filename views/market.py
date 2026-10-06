@@ -35,6 +35,8 @@ def render_browse(config):
                "Blank means unavailable or no listing, not free.")
     display = results.select(
         pl.col("item_name").alias("Item"), pl.col("item_id").alias("Item ID"),
+        pl.col("variant_id").alias("Variant"),
+        pl.col("variant_state").fill_null("legacy").alias("Variant state"),
         *[(pl.when(pl.col(src) > 0).then(pl.col(src) / COPPER_PER_GOLD)).alias(dst) for src, dst in [
             ("min_buyout", "Minimum buyout (g)"), ("market_value", "Market value (g)"),
             ("recent_value", "Recent (g)"), ("historical_value", "Historical (g)")]],
@@ -78,7 +80,9 @@ def render_opportunities(config):
         return
     display = results.select(
         pl.col("rank").alias("Rank"), pl.col("item_name").alias("Item"),
-        pl.col("item_id").alias("Item ID"), (pl.col("min_buyout") / COPPER_PER_GOLD).alias("Minimum buyout (g)"),
+        pl.col("item_id").alias("Item ID"), pl.col("variant_id").alias("Variant"),
+        pl.col("variant_state").fill_null("legacy").alias("Variant state"),
+        (pl.col("min_buyout") / COPPER_PER_GOLD).alias("Minimum buyout (g)"),
         (pl.col("reference_copper") / COPPER_PER_GOLD).alias("Reference (g)"),
         (pl.col("discount") * 100).alias("Discount (%)"),
         (pl.col("net_spread_copper") / COPPER_PER_GOLD).alias("Estimated spread (g)"),

@@ -17,7 +17,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing active in code. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
+STORY-023 software is implemented (addon 0.3.0, scan format 3, migration 6); beta measurement and a complete 0.3.0 scan import are pending. Use the checklist in `addon/README.md`; capture/identity rules and limits are ADDON-08/09 in `requirements.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
 **Through the last full beta testing day, 21 October** (manual, in game):
 - **Keep scanning.** Four complete scans of the Normal Alliance house are imported (16:47Z, 17:46Z and 22:54Z on 2026-10-04, and 20:34Z on 2026-10-05; the last two are addon 0.2.0). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
@@ -55,7 +55,7 @@ STORY-011a is a bounded research task for any convenient gap. Tailoring yield an
 
 As a gold maker, I want the addon to record everything the auction house shows that matters for pricing and competition, so that live history has it from launch day, because scans can't be retaken.
 
-Today the addon keeps 6 of the 18 values the auction API returns per listing, and reads no item reference data.
+Software implemented; keep this story open until the beta measurements, variant tooltip checks and one complete 0.3.0 beta import pass. Current software state is in `status.md`; approved capture/identity/limits are ADDON-08/09 in `requirements.md`.
 
 Acceptance:
 - **Record** in `requirements.md` (ADDON rules) which fields are captured. Seller names are stored, locally only (ADDON-07, decided 2026-10-05).

@@ -1,4 +1,4 @@
--- Brownstone Scan: read-only auction house scan (SPIKE-008 prototype).
+-- Brownstone Scan: read-only auction house scan (STORY-023).
 --
 -- A scan starts only from the "Brownstone Scan" button or "/bscan start" while
 -- the auction house window is open. The addon only reads listings. It never
@@ -8,11 +8,11 @@
 -- logout. See addon/README.md for the format and the measurement checklist.
 
 local ADDON = "BrownstoneScan"
-local SCHEMA_VERSION = 2
-local ADDON_VERSION = "0.2.0"
--- Each listing is saved as one short string in this field order (schema 2), with names stored
--- once per scan. Brownstone does all pricing; the addon only records what the client reports.
-local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index"
+local SCHEMA_VERSION = 3
+local ADDON_VERSION = "0.3.0"
+-- Each listing is saved as one short string in this field order (schema 3), with names stored
+-- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
+local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
 local FLAG_COMPLETE_INFO, FLAG_COMMODITY = 1, 2
 
 local CHUNK = 2000            -- listings read per frame, to avoid freezing the client
@@ -139,40 +139,85 @@ local function isCommodity(itemID)
     return cached
 end
 
--- Fills one listing from the modern replicate list (index is 0-based).
+-- Both auction APIs expose the same 18-value tuple. Keep the level type: level can mean
+-- required level or something else. Empty seller/link values remain missing, never guessed.
+local function listingInfo(name, texture, count, quality, usable, level, levelType,
+    minBid, minIncrement, buyout, bidAmount, highBidder, bidderFullName, owner, ownerFullName,
+    saleStatus, itemID, hasAllInfo)
+    if not itemID then return nil end
+    return { name = name, item_id = itemID, quantity = count, quality = quality,
+        level = level, level_type = levelType, min_bid = minBid, buyout = buyout, bid = bidAmount,
+        seller = (ownerFullName and ownerFullName ~= "") and ownerFullName or owner,
+        complete_info = hasAllInfo }
+end
+
+-- Modern indexes are 0-based; legacy indexes are 1-based. Optional readers are guarded.
 local function readModern(index)
-    local name, _, count, _, _, _, _, minBid, _, buyout, bidAmount, _, _, _, _, _, itemID, hasAllInfo =
-        C_AuctionHouse.GetReplicateItemInfo(index)
-    if not itemID then return nil end
-    return name, itemID, count, minBid, buyout, bidAmount, isCommodity(itemID), hasAllInfo
+    local r = listingInfo(C_AuctionHouse.GetReplicateItemInfo(index))
+    if not r then return nil end
+    r.commodity = isCommodity(r.item_id)
+    r.time_left = safe(C_AuctionHouse.GetReplicateItemTimeLeft, index)
+    r.item_link = safe(C_AuctionHouse.GetReplicateItemLink, index)
+    return r
 end
 
--- Legacy list (index is 1-based).
 local function readLegacy(index)
-    local name, _, count, _, _, _, _, minBid, _, buyout, bidAmount, _, _, _, _, _, itemID, hasAllInfo =
-        GetAuctionItemInfo("list", index)
-    if not itemID then return nil end
-    return name, itemID, count, minBid, buyout, bidAmount, false, hasAllInfo
+    local r = listingInfo(GetAuctionItemInfo("list", index))
+    if not r then return nil end
+    r.time_left = safe(GetAuctionItemTimeLeft, "list", index)
+    r.item_link = safe(GetAuctionItemLink, "list", index)
+    return r
 end
 
--- Index of a name in the scan's name list, adding it the first time; 0 when the client hasn't loaded it.
-local function nameIndex(s, name)
-    if not name or name == "" then return 0 end
-    local index = s.nameIndex[name]
+-- Indexed text is stored exactly as returned (including full links), once per scan.
+local function textIndex(s, tableName, value)
+    if not value or value == "" then return 0 end
+    local indexes = s.textIndexes[tableName]
+    local index = indexes[value]
     if not index then
-        index = #s.names + 1
-        s.names[index] = name
-        s.nameIndex[name] = index
+        index = #s[tableName] + 1
+        s[tableName][index] = value
+        indexes[value] = index
     end
     return index
 end
 
--- One listing as "item_id:quantity:buyout:min_bid:bid:flags:name_index" (LISTING_FORMAT). Prices are
--- integer copper as the client reports them (buyout is the whole stack); 0 means none, never free.
-local function addListing(s, name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo)
-    local flags = (hasAllInfo and FLAG_COMPLETE_INFO or 0) + (commodity and FLAG_COMMODITY or 0)
-    s.listings[#s.listings + 1] = ("%s:%s:%s:%s:%s:%s:%s"):format(itemID, count or 0, buyout or 0,
-        minBid or 0, bidAmount or 0, flags, nameIndex(s, name))
+-- One item-reference observation/lookup attempt per ID per scan. No retries, waits or
+-- requests for uncached data: missing values are saved as missing in this observation.
+local function recordItem(s, itemID)
+    if s.itemSeen[itemID] then return end
+    s.itemSeen[itemID] = true
+    local r = { item_id = itemID }
+    local instant = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+    if type(instant) == "function" then
+        local ok, id, itemType, subtype, equip, icon, classID, subclassID = pcall(instant, itemID)
+        if ok and id then r.class_id, r.subclass_id = classID, subclassID end
+    end
+    local info = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+    if type(info) == "function" then
+        local ok, name, link, quality, itemLevel, required, itemType, subtype, stack, equip, icon, sell =
+            pcall(info, itemID)
+        if ok and name then
+            r.item_level, r.max_stack_size, r.vendor_sell_copper = itemLevel, stack, sell
+        end
+    end
+    s.items[#s.items + 1] = r
+end
+
+local function optionalNumber(value)
+    return value ~= nil and tostring(value) or ""
+end
+
+local function addListing(s, r)
+    local flags = (r.complete_info and FLAG_COMPLETE_INFO or 0) + (r.commodity and FLAG_COMMODITY or 0)
+    s.listings[#s.listings + 1] = table.concat({
+        tostring(r.item_id), tostring(r.quantity or 0), tostring(r.buyout or 0),
+        tostring(r.min_bid or 0), tostring(r.bid or 0), tostring(flags),
+        tostring(textIndex(s, "names", r.name)), tostring(textIndex(s, "sellers", r.seller)),
+        optionalNumber(r.time_left), optionalNumber(r.quality), optionalNumber(r.level),
+        tostring(textIndex(s, "level_types", r.level_type)), tostring(textIndex(s, "links", r.item_link)),
+    }, ":")
+    recordItem(s, r.item_id)
 end
 
 ---------------------------------------------------------------------------
@@ -188,7 +233,7 @@ local function finish(status, reason)
     s.finished_at_utc = utc(s.finished_at)
     s.duration_seconds = GetTime() - s.clock_start
     s.clock_start = nil
-    s.phase, s.waited, s.cursor, s.total, s.skipped, s.nameIndex = nil, nil, nil, nil, nil, nil
+    s.phase, s.waited, s.cursor, s.total, s.skipped, s.textIndexes, s.itemSeen = nil, nil, nil, nil, nil, nil, nil
     commodityCache = {}
     s.status = status
     s.stop_reason = reason
@@ -212,14 +257,14 @@ local function readChunks()
     local read, limit = 0, CHUNK
     while s.cursor < s.total and read < limit do
         local index = s.cursor
-        local name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo
+        local r
         if s.api == "modern" then
-            name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo = readModern(index)
+            r = readModern(index)
         else
-            name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo = readLegacy(index + 1)
+            r = readLegacy(index + 1)
         end
-        if itemID then
-            addListing(s, name, itemID, count, minBid, buyout, bidAmount, commodity, hasAllInfo)
+        if r then
+            addListing(s, r)
         else
             s.skipped = (s.skipped or 0) + 1
         end
@@ -242,7 +287,9 @@ local function beginReading()
     s.cursor = 0
     s.listings = {}
     s.names = {}
-    s.nameIndex = {}
+    s.sellers, s.level_types, s.links, s.items = {}, {}, {}, {}
+    s.textIndexes = { names = {}, sellers = {}, level_types = {}, links = {} }
+    s.itemSeen = {}
     commodityCache = {}
     if s.api == "modern" then
         s.total = C_AuctionHouse.GetNumReplicateItems() or 0

@@ -131,6 +131,8 @@ def test_price_read_enforces_source_and_full_market_identity():
         # Same snapshot, item and house, but another source: never mixed silently (DATA-08).
         db.execute("INSERT INTO market_snapshots VALUES ('same', 4240, 1, 1, 'theirs', ?, ?, ?, ?, ?, ?, ?, ?)",
                    identity)
+        db.execute("ALTER TABLE market_snapshots ADD COLUMN variant_id VARCHAR")
+        db.execute("ALTER TABLE market_snapshots ADD COLUMN variant_state VARCHAR")
         assert price_observations(db, source, "same", [4240]) == {4240: {"min_buyout": 400, "market_value": 450}}
         assert price_observations(db, {**source, "realm": "wrong"}, "same", [4240]) == {}
         assert price_observations(db, {**source, "source_id": "other"}, "same", [4240]) == {}

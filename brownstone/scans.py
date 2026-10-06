@@ -15,11 +15,16 @@ from typing import Any
 
 import polars as pl
 
-# 1: one keyed table per listing (SPIKE-008). 2: one packed string per listing plus the scan's distinct names,
-# about a tenth of the size. Both import identically; the addon writes 2 from version 0.2.0.
-SCAN_SCHEMA_VERSIONS = (1, 2)
+from . import scan_details
+from .variants import ITEM_KEYS
+
+# 1: keyed listings. 2: packed listings and distinct names. 3: richer packed listings,
+# indexed text (including full links) and per-scan item reference observations.
+SCAN_SCHEMA_VERSIONS = (1, 2, 3)
 PACKED_FIELDS = ("item_id", "quantity", "buyout", "min_bid", "bid", "flags", "name_index")
 PACKED_FORMAT = ":".join(PACKED_FIELDS)
+PACKED_V3_FIELDS = (*PACKED_FIELDS, *scan_details.EXTRA_FIELDS)
+PACKED_V3_FORMAT = ":".join(PACKED_V3_FIELDS)
 FLAG_COMPLETE_INFO, FLAG_COMMODITY = 1, 2
 # market_value is the price of the unit at this quantity-weighted percentile (nearest rank).
 MARKET_VALUE_PERCENTILE = 25
@@ -247,7 +252,7 @@ def listing_frame(scan: dict) -> pl.DataFrame:
     scan_id = scan["scan_id"]
     listings = _list(scan.get("listings"), f"Scan {scan_id} listings")
     try:
-        frame = _packed_listings(scan, listings) if scan.get("schema_version") == 2 else _keyed_listings(listings)
+        frame = _packed_listings(scan, listings) if scan.get("schema_version") in (2, 3) else _keyed_listings(listings)
     except (TypeError, pl.exceptions.PolarsError) as error:
         raise ValueError(f"Scan {scan_id}: listing fields must be integer copper and counts: {error}") from error
     except ValueError as error:
@@ -273,8 +278,11 @@ def listing_frame(scan: dict) -> pl.DataFrame:
     if disagree.height:
         raise ValueError(f"Scan {scan_id}: {disagree.height} listings report a unit_buyout that is not "
                          "buyout / quantity")
-    return frame.select("listing_index", "item_id", "item_name", "quantity", "buyout", "unit_buyout",
-                        "unit_buyout_ceil", "min_bid", "bid", "complete_info")
+    if scan.get("schema_version") != 3:
+        frame = frame.with_columns([pl.lit(None, dtype).alias(key)
+                                    for key, dtype in scan_details.LISTING_DETAILS.items()])
+    return frame.select(*scan_details.LISTING_DETAILS, "listing_index", "item_id", "item_name", "quantity", "buyout",
+                        "unit_buyout", "unit_buyout_ceil", "min_bid", "bid", "complete_info")
 
 
 def _keyed_listings(listings: list) -> pl.DataFrame:
@@ -292,26 +300,12 @@ def _packed_listings(scan: dict, listings: list) -> pl.DataFrame:
     hadn't loaded the name. Zero buyout or bid means none, as in schema 1. A commodity flag means the client
     priced per unit, which the stack pricing rules don't cover, so the scan is rejected rather than priced wrongly.
     """
-    if scan.get("listing_format") != PACKED_FORMAT:
-        raise ValueError(f"listing_format {scan.get('listing_format')!r} is not {PACKED_FORMAT!r}")
-    if any(not isinstance(listing, str) for listing in listings):
-        raise ValueError("every listing must be a packed string")
     names = _list(scan.get("names"), "names")
     if not all(isinstance(name, str) for name in names):
         raise ValueError("names must be a list of text")
-    parts = pl.Series("listing", listings, dtype=pl.String).str.split(":")
-    if listings and (parts.list.len() != len(PACKED_FIELDS)).any():
-        raise ValueError(f"every listing needs {len(PACKED_FIELDS)} fields: {PACKED_FORMAT}")
-    fields = pl.DataFrame({field: parts.list.get(i, null_on_oob=True).cast(pl.Int64, strict=True)
-                           for i, field in enumerate(PACKED_FIELDS)}, schema=dict.fromkeys(PACKED_FIELDS, pl.Int64))
-    flags = fields["flags"]
-    if (flags < 0).any() or (flags > FLAG_COMPLETE_INFO | FLAG_COMMODITY).any():
-        raise ValueError("unknown listing flags")
-    if ((flags & FLAG_COMMODITY) > 0).any():
-        raise ValueError("the client reported commodity (per-unit) listings; only stack prices are supported")
-    if ((fields["name_index"] < 0) | (fields["name_index"] > len(names))).any():
-        raise ValueError(f"a listing's name_index is outside the scan's {len(names)} names")
-    return fields.select(
+    fields = _packed_fields(scan, listings)
+    _validate_packed_fields(fields, names)
+    result = fields.select(
         "item_id",
         pl.col("name_index").replace_strict(dict(enumerate(names, 1)), default=None, return_dtype=pl.String)
         .alias("name"),
@@ -322,6 +316,46 @@ def _packed_listings(scan: dict, listings: list) -> pl.DataFrame:
         pl.when(pl.col("bid") > 0).then(pl.col("bid")).alias("bid"),
         ((pl.col("flags") & FLAG_COMPLETE_INFO) > 0).alias("complete_info"),
     )
+    if scan.get("schema_version") == 3:
+        result = result.hstack(scan_details.listing_details(scan, fields))
+    return result
+
+
+def _packed_fields(scan: dict, listings: list) -> pl.DataFrame:
+    """The packed integer fields as reported; empty optional fields are null."""
+    packed_fields = PACKED_V3_FIELDS if scan.get("schema_version") == 3 else PACKED_FIELDS
+    packed_format = ":".join(packed_fields)
+    if scan.get("listing_format") != packed_format:
+        raise ValueError(f"listing_format {scan.get('listing_format')!r} is not {packed_format!r}")
+    if any(not isinstance(listing, str) for listing in listings):
+        raise ValueError("every listing must be a packed string")
+    parts = pl.Series("listing", listings, dtype=pl.String).str.split(":")
+    if listings and (parts.list.len() != len(packed_fields)).any():
+        raise ValueError(f"every listing needs {len(packed_fields)} fields: {packed_format}")
+    return pl.DataFrame({field: parts.list.get(i, null_on_oob=True).replace("", None).cast(pl.Int64, strict=True)
+                         for i, field in enumerate(packed_fields)}, schema=dict.fromkeys(packed_fields, pl.Int64))
+
+
+def optional_out_of_range(scan: dict) -> dict[str, int]:
+    """Format 3's reported optional values that import stored as missing; zero for older formats.
+    Call after ``listing_frame`` has validated the scan."""
+    if scan.get("schema_version") != 3:
+        return dict.fromkeys(scan_details.OPTIONAL_RANGES, 0)
+    return scan_details.out_of_range(_packed_fields(scan, _list(scan.get("listings"), "listings")))
+
+
+def _validate_packed_fields(fields: pl.DataFrame, names: list) -> None:
+    flags = fields["flags"]
+    if fields.select(pl.any_horizontal(pl.col(*PACKED_FIELDS).is_null()).any()).item():
+        raise ValueError("missing packed field")
+    if fields.filter(pl.any_horizontal(pl.col("buyout", "min_bid", "bid") < 0)).height:
+        raise ValueError("negative price in packed listing")
+    if (flags < 0).any() or (flags > FLAG_COMPLETE_INFO | FLAG_COMMODITY).any():
+        raise ValueError("unknown listing flags")
+    if ((flags & FLAG_COMMODITY) > 0).any():
+        raise ValueError("the client reported commodity (per-unit) listings; only stack prices are supported")
+    if ((fields["name_index"] < 0) | (fields["name_index"] > len(names))).any():
+        raise ValueError(f"a listing's name_index is outside the scan's {len(names)} names")
 
 
 def nonexact_stacks(listings: pl.DataFrame) -> int:
@@ -338,21 +372,22 @@ def item_prices(listings: pl.DataFrame) -> pl.DataFrame:
       that never sell; similar in spirit to TSM's average of the cheapest 15-30% of units.
     - ``recent_value`` and ``historical_value``: 0; one scan has no history.
     """
-    priced = listings.filter(pl.col("unit_buyout_ceil").is_not_null()).sort("item_id", "unit_buyout_ceil")
-    target = (pl.col("quantity").sum().over("item_id") * MARKET_VALUE_PERCENTILE + 99) // 100
-    prices = (priced.with_columns(pl.col("quantity").cum_sum().over("item_id").alias("units"), target.alias("target"))
-              .group_by("item_id").agg(
+    priced = listings.filter(pl.col("unit_buyout_ceil").is_not_null()).sort(*ITEM_KEYS, "unit_buyout_ceil")
+    target = (pl.col("quantity").sum().over(ITEM_KEYS) * MARKET_VALUE_PERCENTILE + 99) // 100
+    prices = (priced.with_columns(pl.col("quantity").cum_sum().over(ITEM_KEYS).alias("units"), target.alias("target"))
+              .group_by(ITEM_KEYS).agg(
                   pl.col("unit_buyout_ceil").min().alias("min_buyout"),
                   pl.col("unit_buyout_ceil").filter(pl.col("units") >= pl.col("target")).min().alias("market_value")))
-    names = (listings.filter(pl.col("item_name").is_not_null()).group_by("item_id", "item_name").len()
-             .sort(["item_id", "len", "item_name"], descending=[False, True, False])
-             .unique("item_id", keep="first", maintain_order=True).select("item_id", "item_name"))
-    items = listings.select("item_id").unique()
-    return (items.join(names, on="item_id", how="left").join(prices, on="item_id", how="left")
+    names = (listings.filter(pl.col("item_name").is_not_null()).group_by(*ITEM_KEYS, "item_name").len()
+             .sort([*ITEM_KEYS, "len", "item_name"], descending=[False, False, False, True, False])
+             .unique(ITEM_KEYS, keep="first", maintain_order=True).select(*ITEM_KEYS, "item_name"))
+    items = listings.select(ITEM_KEYS).unique()
+    return (items.join(names, on=ITEM_KEYS, how="left", nulls_equal=True)
+            .join(prices, on=ITEM_KEYS, how="left", nulls_equal=True)
             .select(
-                "item_id",
+                *ITEM_KEYS,
                 pl.coalesce("item_name", pl.concat_str(pl.lit("Item "), pl.col("item_id").cast(pl.String)))
                 .alias("item_name"),
                 pl.col("market_value").fill_null(0), pl.col("min_buyout").fill_null(0),
                 pl.lit(0, pl.Int64).alias("recent_value"), pl.lit(0, pl.Int64).alias("historical_value"))
-            .sort("item_id"))
+            .sort(ITEM_KEYS))

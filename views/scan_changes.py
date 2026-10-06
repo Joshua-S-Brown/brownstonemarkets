@@ -70,7 +70,7 @@ def _price(metric, value):
 
 def _display_row(row):
     output = {"Item ID": row["item_id"], "Item": row["item_name"],
-              "Status": _status(row)}
+              "Variant": row["variant_id"], "Variant state": row["variant_state"], "Status": _status(row)}
     for side in ("earlier", "later"):
         values = row[side]
         for metric in METRICS:

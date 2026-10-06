@@ -13,7 +13,7 @@ _SEARCH = "(contains(lower(item_name), lower(?)) OR contains(CAST(item_id AS VAR
 
 def browse(connection, snapshot_id, config, search="", limit=100):
     predicate, scope = scope_predicate(config)
-    return connection.execute(f"""SELECT item_id, item_name, min_buyout,
+    return connection.execute(f"""SELECT item_id, item_name, variant_id, variant_state, min_buyout,
         market_value, recent_value, historical_value, updated_at FROM named_market_snapshots
         WHERE snapshot_id=? AND {predicate} AND {_SEARCH}
         ORDER BY item_name, item_id LIMIT ?""", [snapshot_id, *scope, search, search, limit]).pl()
@@ -46,8 +46,9 @@ def rank(connection: duckdb.DuckDBPyConnection, snapshot_id: str, config: Mappin
                     AS net_spread_copper
             FROM price_references
         ), ranked AS (
-            SELECT row_number() OVER (ORDER BY discount DESC, net_spread_copper DESC, item_id) AS rank,
-                snapshot_id, market_id, item_id, item_name, updated_at,
+            SELECT row_number() OVER (ORDER BY discount DESC, net_spread_copper DESC, item_id,
+                    variant_state NULLS FIRST, variant_id NULLS FIRST) AS rank,
+                snapshot_id, market_id, item_id, variant_id, variant_state, item_name, updated_at,
                 min_buyout, reference_copper, discount, net_spread_copper,
                 min_buyout / {COPPER_PER_GOLD}.0 AS buy_gold,
                 net_spread_copper / {COPPER_PER_GOLD}.0 AS net_spread_gold

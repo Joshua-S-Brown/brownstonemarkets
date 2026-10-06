@@ -14,7 +14,7 @@ import duckdb
 import polars as pl
 import pyarrow.parquet as pq
 
-from . import scans
+from . import scan_details, scans
 from .analysis import rank
 from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import FUTURE_TOLERANCE_HOURS
@@ -405,8 +405,16 @@ def _validate_scans(records: list[dict], now: datetime, summaries: list[dict] | 
             raise ValueError(f"Scan {summary['scan_id']} finished in the future ({summary['finished_at']}); "
                              "check the computer's clock")
     for record in records:
-        scans.listing_frame(record)
+        frame = scans.listing_frame(record)
+        items = scan_details.item_frame(record)
+        _check_reference_items(frame, items)
+        scan_details.duration(record)
     return summaries
+
+
+def _check_reference_items(listings: pl.DataFrame, items: pl.DataFrame) -> None:
+    if items.filter(~pl.col("item_id").is_in(listings["item_id"].implode())).height:
+        raise ValueError("item reference has no listing in this scan")
 
 
 def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha256: str,
@@ -424,12 +432,17 @@ def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha2
     snapshot_id = f"{config['source_id']}:{summary['scan_id']}"
     identity = {**_observation_keys(config), "snapshot_id": snapshot_id}
     listings = scans.listing_frame(record)
+    items = scan_details.item_frame(record)
+    measured = scan_details.availability(listings, items, scans.optional_out_of_range(record))
     priced = not summary["partial"] and listings.height > 0
     prices = scans.item_prices(listings) if priced else None
     stem = silver / f"{sid}_{summary['scan_id']}"
     columns = [pl.lit(value, dtype=pl.String).alias(key) for key, value in identity.items()]
     pq.write_table(listings.with_columns(pl.lit(summary["scan_id"]).alias("scan_id"), *columns).to_arrow(),
                    f"{stem}_listings.parquet", compression="zstd")
+    items_path = Path(f"{stem}_items.parquet")
+    pq.write_table(items.with_columns(pl.lit(summary["scan_id"]).alias("scan_id"), *columns).to_arrow(),
+                   items_path, compression="zstd")
     prices_path = None
     if prices is not None:
         prices_path = Path(f"{stem}_prices.parquet")
@@ -437,13 +450,17 @@ def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha2
             *columns, pl.lit(summary["finished_at"]).alias("updated_at"), pl.lit(now).alias("collected_at"),
             pl.lit(sha256).alias("source_sha256")).to_arrow(), prices_path, compression="zstd")
     scan_row = {key: value for key, value in summary.items() if key not in ("neutral", "errors")}
-    scan_row.update(identity, priced=priced, nonexact_stacks=scans.nonexact_stacks(listings),
+    scan_row.update(identity, format_version=record["schema_version"],
+                    duration_seconds=scan_details.duration(record),
+                    availability_json=json.dumps(measured, sort_keys=True) if record["schema_version"] == 3 else None,
+                    priced=priced, nonexact_stacks=scans.nonexact_stacks(listings),
                     item_count=prices.height if prices is not None else None, source_sha256=sha256,
                     collection_id=sid, collected_at=now)
     scan_path = Path(f"{stem}_scan.parquet")
     pq.write_table(pl.DataFrame([scan_row]).with_columns(pl.col(pl.Null).cast(pl.String)).to_arrow(), scan_path)
-    load_scan(db, scan_path, Path(f"{stem}_listings.parquet"), prices_path)
+    load_scan(db, scan_path, Path(f"{stem}_listings.parquet"), prices_path, items_path)
     outcome = "imported" if priced else "empty" if listings.height == 0 else "partial (not priced)"
     return {**result, "outcome": outcome, "snapshot_id": snapshot_id, "priced": priced,
             "items": scan_row["item_count"], "nonexact_stacks": scan_row["nonexact_stacks"],
-            "errors": summary["errors"]}
+            "errors": summary["errors"], "format_version": record["schema_version"],
+            "duration_seconds": scan_details.duration(record), "availability": measured}

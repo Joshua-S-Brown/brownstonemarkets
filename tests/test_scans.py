@@ -94,7 +94,7 @@ def test_parser_subset_escapes_and_errors():
     with pytest.raises(ValueError, match="BrownstoneScanDB"):
         scans.read_saved_variables(b"OtherDB = {\n}\n")
     with pytest.raises(ValueError, match="schema_version"):
-        scans.read_saved_variables(b'BrownstoneScanDB = {\n["schema_version"] = 3,\n}\n')
+        scans.read_saved_variables(b'BrownstoneScanDB = {\n["schema_version"] = 4,\n}\n')
 
 
 def test_stack_pricing_rounds_up_and_never_prices_missing_buyouts():

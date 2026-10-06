@@ -176,7 +176,8 @@ def test_fresh_and_migrated_databases_are_identical_and_versioned(tmp_path):
         fresh.execute("UPDATE schema_info SET value='99'")
         with pytest.raises(RuntimeError, match="newer"):
             ensure_schema(fresh)
-        assert [name for name, _ in columns(old)][-4:] == ["source_id", "server_type", "faction", "environment"]
+        assert [name for name, _ in columns(old)][-6:] == [
+            "source_id", "server_type", "faction", "environment", "variant_id", "variant_state"]
 
 
 def test_market_id_derivation_matches_pre_split_ids():

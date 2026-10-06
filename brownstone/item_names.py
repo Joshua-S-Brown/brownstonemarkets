@@ -34,8 +34,11 @@ def _remember(db, candidates: str, parameters: list) -> None:
 
 def remember_observed_names(db, snapshot_id: str | None = None) -> None:
     """Backfill all observations, or incrementally remember one newly imported snapshot's labels."""
-    price_filter = "WHERE snapshot_id=?" if snapshot_id is not None else ""
-    listing_filter = "WHERE l.snapshot_id=?" if snapshot_id is not None else ""
+    # A variant's name ("Willow Robe of the Bear") never becomes the item ID's label; legacy rows lack
+    # variant evidence and keep their existing behavior (ADDON-08).
+    base = "({0}variant_state IS NULL OR {0}variant_state='base')"
+    price_filter = f"WHERE {base.format('')}" + (" AND snapshot_id=?" if snapshot_id is not None else "")
+    listing_filter = f"WHERE {base.format('l.')}" + (" AND l.snapshot_id=?" if snapshot_id is not None else "")
     parent_scope = " AND ".join(f"s.{key} IS NOT DISTINCT FROM l.{key}" for key in MARKET_KEYS)
     candidates = f"""
         SELECT game_version, item_id, item_name, 1 AS origin_rank,
