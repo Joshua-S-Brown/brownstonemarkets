@@ -132,3 +132,155 @@ def test_button_starts_only_on_click_and_timeout_does_not_save_empty_scan():
     g.mainFrame.scripts.OnUpdate(g.mainFrame, 31)
     assert len(g.BrownstoneScanDB.scans) == 0 and g.mainFrame.scripts.OnUpdate is None
     assert any("timeout" in m for m in g.messages.values())
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_maintenance_buttons_follow_auction_window_and_reload(legacy):
+    lua, g = client(legacy)
+    if legacy:
+        lua.execute("AuctionFrame = AuctionHouseFrame; AuctionHouseFrame = nil")
+    parent = g.AuctionFrame if legacy else g.AuctionHouseFrame
+    parent.shown = False
+    assert g.reloadButton is None and g.clearButton is None
+    parent.shown = True
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    assert g.reloadButton.text == "Reload" and g.clearButton.text == "Clear saved scans"
+    assert g.reloadButton.template == g.clearButton.template == "UIPanelButtonTemplate"
+    assert g.reloadButton.point[3] == "LEFT" and g.clearButton.point[3] == "LEFT"
+    assert g.requests == 0
+    g.reloadButton.Click(g.reloadButton)
+    assert g.reloads == 1
+    g.clearButton.Click(g.clearButton)
+    pending = g.popup
+    parent.shown = False
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_CLOSED")
+    assert not pending.shown and len(g.BrownstoneScanDB.scans) == 0
+    assert not g.reloadButton.IsShown(g.reloadButton) and not g.clearButton.IsShown(g.clearButton)
+    g.reloadButton.Click(g.reloadButton)
+    g.clearButton.Click(g.clearButton)
+    assert g.reloads == 1 and not g.popup.shown
+    parent.shown = True
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    g.reloadButton.Click(g.reloadButton)
+    assert g.reloads == 2 and g.requests == 0
+
+
+def test_clear_button_refuses_unsaved_scans_without_confirmation_or_force():
+    _, g = client()
+    g.SlashCmdList.BROWNSTONESCAN("start")
+    complete(g)
+    g.clearButton.Click(g.clearButton)
+    assert g.popup is None and len(g.BrownstoneScanDB.scans) == 1
+    assert "nothing was cleared" in g.messages[len(g.messages)]
+    assert "Type /reload, import into Brownstone" in g.messages[len(g.messages)]
+    g.SlashCmdList.BROWNSTONESCAN("clear")
+    assert len(g.BrownstoneScanDB.scans) == 1
+    g.SlashCmdList.BROWNSTONESCAN("clear all")
+    assert len(g.BrownstoneScanDB.scans) == 0  # override remains slash-only
+
+
+def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
+    lua, g = client()
+    g.BrownstoneScanDB.scans = lua.table_from([lua.table_from({"scan_id": "old-1"}),
+                                            lua.table_from({"scan_id": "old-2"})])
+    g.SlashCmdList.BROWNSTONESCAN("label Keep this label")
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    before = python_value(g.BrownstoneScanDB)
+    g.clearButton.Click(g.clearButton)
+    assert python_value(g.BrownstoneScanDB) == before
+    assert "Delete 2 saved" in g.popup.text and "Import them into Brownstone first" in g.popup.text
+    definition = g.StaticPopupDialogs.BROWNSTONESCAN_CLEAR_SAVED
+    assert definition.hideOnEscape and definition.timeout == 0 and definition.preferredIndex == 3
+    g.popup.Cancel(g.popup)
+    assert python_value(g.BrownstoneScanDB) == before
+    g.clearButton.Click(g.clearButton)
+    g.popup.Accept(g.popup)
+    button_result = python_value(g.BrownstoneScanDB)
+    assert len(g.BrownstoneScanDB.scans) == 0 and g.BrownstoneScanDB.label == "Keep this label"
+    assert "next /reload" in g.messages[len(g.messages)] and g.reloads == 0
+    g.BrownstoneScanDB.scans = lua.table_from([lua.table_from({"scan_id": "old-1"}),
+                                            lua.table_from({"scan_id": "old-2"})])
+    g.SlashCmdList.BROWNSTONESCAN("clear")
+    assert python_value(g.BrownstoneScanDB) == button_result
+    assert g.BrownstoneScanDB.addon_version == "0.3.1" and g.BrownstoneScanDB.schema_version == 3
+
+
+@pytest.mark.parametrize("ending", [
+    "complete", "stop", "closed", "timeout", "not_ready", "error", "zero", "legacy_throttled",
+])
+def test_maintenance_buttons_disabled_until_every_scan_exit(ending):
+    lua, g = client(legacy=ending == "legacy_throttled", rows=0 if ending == "zero" else 5)
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    if ending == "not_ready":
+        lua.execute("C_AuctionHouse.IsThrottledMessageSystemReady = function() return false end")
+    elif ending == "error":
+        lua.execute('C_AuctionHouse.ReplicateItems = function() error("test failure") end')
+    elif ending == "legacy_throttled":
+        lua.execute("CanSendAuctionQuery = function() return false, false end")
+    g.scanButton.Click(g.scanButton)
+    if ending not in {"not_ready", "error", "legacy_throttled"}:
+        assert not g.reloadButton.enabled and not g.clearButton.enabled
+        # Also invoke callbacks directly to verify guards beyond client disabled state.
+        g.reloadButton.scripts.OnClick()
+        g.clearButton.scripts.OnClick()
+        assert g.reloads == 0 and g.popup is None
+        if ending in {"complete", "zero"}:
+            complete(g)
+        elif ending == "stop":
+            g.SlashCmdList.BROWNSTONESCAN("stop")
+        elif ending == "closed":
+            g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_CLOSED")
+        else:
+            g.mainFrame.scripts.OnUpdate(g.mainFrame, 31)
+    assert g.reloadButton.enabled and g.clearButton.enabled
+    g.reloadButton.Click(g.reloadButton)
+    assert g.reloads == 1
+
+
+def test_pending_clear_is_hidden_on_scan_start_and_rechecks_unsaved_on_accept():
+    lua, g = client()
+    g.BrownstoneScanDB.scans[1] = lua.table_from({"scan_id": "saved"})
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    g.clearButton.Click(g.clearButton)
+    pending = g.popup
+    g.SlashCmdList.BROWNSTONESCAN("start")
+    assert not pending.shown
+    definition = g.StaticPopupDialogs.BROWNSTONESCAN_CLEAR_SAVED
+    definition.OnAccept(pending)
+    assert len(g.BrownstoneScanDB.scans) == 1
+    complete(g)
+    definition.OnAccept(pending)
+    assert len(g.BrownstoneScanDB.scans) == 2
+    assert "nothing was cleared" in g.messages[len(g.messages)]
+
+
+def test_clear_confirmation_rejects_changed_saved_count_and_allows_zero():
+    lua, g = client()
+    g.BrownstoneScanDB.scans[1] = lua.table_from({"scan_id": "saved"})
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    g.clearButton.Click(g.clearButton)
+    g.SlashCmdList.BROWNSTONESCAN("clear")
+    g.popup.Accept(g.popup)
+    assert "Saved scans changed" in g.messages[len(g.messages)]
+    g.clearButton.Click(g.clearButton)
+    assert "Delete 0 saved" in g.popup.text
+    g.popup.Accept(g.popup)
+    assert len(g.BrownstoneScanDB.scans) == 0 and "next /reload" in g.messages[len(g.messages)]
+
+
+def test_slash_commands_label_status_stop_help_and_case_still_work():
+    _, g = client()
+    command = g.SlashCmdList.BROWNSTONESCAN
+    assert g.SLASH_BROWNSTONESCAN1 == "/bscan"
+    command("  LABEL  Test house  ")
+    command("START")
+    record = complete(g)
+    assert record["label"] == "Test house"
+    command("status")
+    assert "1 saved scan(s). API: modern" in g.messages[len(g.messages)]
+    command("stop")
+    assert "No scan is running" in g.messages[len(g.messages)]
+    command("label")
+    assert g.BrownstoneScanDB.label is None
+    command("unknown")
+    assert "/bscan start | stop | status | label <text> | clear [all]" in g.messages[len(g.messages)]

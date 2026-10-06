@@ -9,7 +9,7 @@
 
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 3
-local ADDON_VERSION = "0.3.0"
+local ADDON_VERSION = "0.3.1"
 -- Each listing is saved as one short string in this field order (schema 3), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -19,7 +19,7 @@ local CHUNK = 2000            -- listings read per frame, to avoid freezing the 
 local START_TIMEOUT = 30      -- seconds to wait for the server to answer the request
 
 local frame = CreateFrame("Frame")
-local button
+local button, reloadButton, clearButton
 local ensureButton
 local scan  -- the scan in progress, or nil
 -- Scans finished since login or the last /reload. They are only in memory until the game writes the
@@ -28,6 +28,60 @@ local unsavedScans = 0
 
 local function say(msg)
     print("|cff66ccffBrownstoneScan:|r " .. msg)
+end
+
+-- Shared by the slash command and the confirmed button; only the slash command
+-- can explicitly request the existing "all" override.
+local function canClearScans(force)
+    if unsavedScans > 0 and not force then
+        say(("%d scan(s) from this session aren't in the file yet, so nothing was cleared. Type /reload, "
+            .. "import into Brownstone, then /bscan clear. (/bscan clear all deletes them anyway.)"):format(unsavedScans))
+        return false
+    end
+    return true
+end
+
+local function clearScans(force)
+    if not canClearScans(force) then return end
+    BrownstoneScanDB.scans = {}
+    unsavedScans = 0
+    say("Saved scans cleared (written at the next /reload).")
+end
+
+local CLEAR_POPUP = "BROWNSTONESCAN_CLEAR_SAVED"
+StaticPopupDialogs[CLEAR_POPUP] = {
+    text = "Delete %d saved Brownstone scan(s)? Import them into Brownstone first. Reload afterward to write the change.",
+    button1 = "Clear saved scans",
+    button2 = CANCEL,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,  -- keep clear of the popup slots Blizzard's protected dialogs use
+    OnAccept = function(self)
+        if scan then return end
+        if not canClearScans(false) then return end
+        if #BrownstoneScanDB.scans ~= self.data then
+            say("Saved scans changed; click Clear saved scans again to review the count.")
+            return
+        end
+        clearScans(false)
+    end,
+}
+
+local function confirmClearScans()
+    if scan or not canClearScans(false) then return end
+    local count = #BrownstoneScanDB.scans
+    StaticPopup_Show(CLEAR_POPUP, count, nil, count)
+end
+
+local function reloadUI()
+    if not scan then ReloadUI() end
+end
+
+local function setMaintenanceEnabled(enabled)
+    for _, control in ipairs({ reloadButton, clearButton }) do
+        if enabled then control:Enable() else control:Disable() end
+    end
 end
 
 local function utc(t)
@@ -228,6 +282,7 @@ local function finish(status, reason)
     local s = scan
     if not s then return end
     scan = nil
+    setMaintenanceEnabled(true)
     frame:SetScript("OnUpdate", nil)
     s.finished_at = time()
     s.finished_at_utc = utc(s.finished_at)
@@ -354,6 +409,9 @@ local function startScan()
         waited = 0,
     }
 
+    StaticPopup_Hide(CLEAR_POPUP)
+    setMaintenanceEnabled(false)
+
     if api == "modern" then
         if C_AuctionHouse.IsThrottledMessageSystemReady and not C_AuctionHouse.IsThrottledMessageSystemReady() then
             scan.errors[#scan.errors + 1] = "auction house message system not ready"
@@ -426,6 +484,17 @@ function ensureButton()
     button:SetText("Brownstone Scan")
     button:SetPoint("BOTTOMRIGHT", parent, "TOPRIGHT", -40, 2)  -- above the window, clear of its own buttons
     button:SetScript("OnClick", startScan)
+    reloadButton = CreateFrame("Button", "BrownstoneScanReloadButton", parent, "UIPanelButtonTemplate")
+    reloadButton:SetSize(70, 22)
+    reloadButton:SetText("Reload")
+    reloadButton:SetPoint("RIGHT", button, "LEFT", -4, 0)
+    reloadButton:SetScript("OnClick", reloadUI)
+    clearButton = CreateFrame("Button", "BrownstoneScanClearButton", parent, "UIPanelButtonTemplate")
+    clearButton:SetSize(140, 22)
+    clearButton:SetText("Clear saved scans")
+    clearButton:SetPoint("RIGHT", reloadButton, "LEFT", -4, 0)
+    clearButton:SetScript("OnClick", confirmClearScans)
+    setMaintenanceEnabled(not scan)
 end
 
 frame:SetScript("OnEvent", function(_, event, arg1)
@@ -438,6 +507,7 @@ frame:SetScript("OnEvent", function(_, event, arg1)
     elseif event == "AUCTION_HOUSE_SHOW" then
         ensureButton()
     elseif event == "AUCTION_HOUSE_CLOSED" then
+        StaticPopup_Hide(CLEAR_POPUP)
         stopScan("stopped", "auction house window closed")
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then
         if scan and scan.api == "modern" and scan.phase == "waiting" then
@@ -472,14 +542,7 @@ SlashCmdList["BROWNSTONESCAN"] = function(msg)
         say(("%d saved scan(s). API: %s. Last: %s."):format(n, tostring(detectApi()),
             last and (last.scan_id .. " " .. last.status .. ", " .. (last.listing_count or 0) .. " listings") or "none"))
     elseif cmd == "clear" then
-        if unsavedScans > 0 and rest:lower() ~= "all" then
-            say(("%d scan(s) from this session aren't in the file yet, so nothing was cleared. Type /reload, "
-                .. "import into Brownstone, then /bscan clear. (/bscan clear all deletes them anyway.)"):format(unsavedScans))
-            return
-        end
-        BrownstoneScanDB.scans = {}
-        unsavedScans = 0
-        say("Saved scans cleared (written at the next /reload).")
+        clearScans(rest:lower() == "all")
     else
         say("/bscan start | stop | status | label <text> | clear [all]")
     end

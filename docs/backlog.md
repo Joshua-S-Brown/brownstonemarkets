@@ -17,7 +17,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-STORY-023 software is implemented (addon 0.3.0, scan format 3, migration 6); beta measurement and a complete 0.3.0 scan import are pending. Use the checklist in `addon/README.md`; capture/identity rules and limits are ADDON-08/09 in `requirements.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
+STORY-023 software is implemented (addon 0.3.0, scan format 3, migration 6); beta measurement and a complete format-3 scan import (addon 0.3.0 or later) are pending. Use the checklist in `addon/README.md`; capture/identity rules and limits are ADDON-08/09 in `requirements.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
 **Through the last full beta testing day, 21 October** (manual, in game):
 - **Keep scanning.** Five complete scans of the Normal Alliance house are imported; dates and counts are in `status.md` → *Limitations*. Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
@@ -56,7 +56,7 @@ STORY-011a is a bounded research task for any convenient gap. Tailoring yield an
 
 As a gold maker, I want the addon to record everything the auction house shows that matters for pricing and competition, so that live history has it from launch day, because scans can't be retaken.
 
-Software implemented; keep this story open until the beta measurements, variant tooltip checks and one complete 0.3.0 beta import pass. Current software state is in `status.md`; approved capture/identity/limits are ADDON-08/09 in `requirements.md`.
+Software implemented; keep this story open until the beta measurements, variant tooltip checks and one complete format-3 beta import (addon 0.3.0 or later, version recorded) pass. Current software state is in `status.md`; approved capture/identity/limits are ADDON-08/09 in `requirements.md`.
 
 Acceptance:
 - **Record** in `requirements.md` (ADDON rules) which fields are captured. Seller names are stored, locally only (ADDON-07, decided 2026-10-05).
@@ -65,7 +65,7 @@ Acceptance:
 - **Measured on the beta:** for each new field, how often it's available (for example, seller missing when the client hasn't loaded the listing), plus scan duration and file size compared with 0.2.0, kept within a recorded limit.
 - **Still read-only:** no buying, posting, bidding or other auction-house actions, and no unattended scanning (SPIKE-008).
 - **Compatible:** a new scan format version; the importer still reads formats 1 and 2, and older scans simply lack the new fields (null, never guessed). Schema changes go through a numbered migration.
-- **Tested by 21 October:** at least one complete 0.3.0 beta scan imported.
+- **Tested by 21 October:** at least one complete format-3 beta scan (addon 0.3.0 or later) imported.
 - Depends on nothing. Feeds the implemented metrics layer (ADDON-10), STORY-027 and STORY-028.
 
 ### STORY-020a — Rehearse the launch-day in-game steps
@@ -83,6 +83,8 @@ Acceptance:
 ### STORY-029 — Reload and clear buttons in the addon
 
 Requested 2026-10-06.
+
+Software implemented in addon 0.3.1 and verified offline. Only the in-game beta check remains: `.toc` interface number and button placement. Behaviour, decisions and the check instructions are in `addon/README.md` → *Reload and clear controls*; current verification state is in `status.md`.
 
 As a gold maker, I want buttons for `/reload` and `/bscan clear` next to the scan button, so that the scan, reload, import, clear, reload routine doesn't need typed commands every time.
 

@@ -2,7 +2,30 @@
 clock, requests, referenceCalls, instantCalls, messages = 0, 0, {}, {}, {}
 SlashCmdList = {}
 WOW_PROJECT_ID = 99
-AuctionHouseFrame = { IsShown = function() return true end }
+AuctionHouseFrame = { shown = true }
+function AuctionHouseFrame:IsShown() return self.shown end
+StaticPopupDialogs = {}
+CANCEL = "Cancel"
+reloads = 0
+function ReloadUI() reloads = reloads + 1 end
+function StaticPopup_Show(which, arg1, arg2, data)
+    local definition = StaticPopupDialogs[which]
+    popup = { which = which, data = data, text = definition.text:format(arg1), shown = true }
+    function popup:Accept()
+        assert(self.shown)
+        self.shown = false
+        definition.OnAccept(self, self.data)
+    end
+    function popup:Cancel()
+        assert(self.shown)
+        self.shown = false
+        if definition.OnCancel then definition.OnCancel(self, self.data) end
+    end
+    return popup
+end
+function StaticPopup_Hide(which)
+    if popup and popup.which == which then popup.shown = false end
+end
 function print(text) messages[#messages + 1] = text end
 function GetTime() return clock end
 function time() return 1793816400 end
@@ -17,16 +40,23 @@ function UnitName() return "Example Auctioneer" end
 function UnitGUID() return "test-npc" end
 function GetZoneText() return "Stormwind City" end
 function GetSubZoneText() return "Trade District" end
-function CreateFrame(kind)
-    local f = { scripts = {} }
+function CreateFrame(kind, name, parent, template)
+    local f = { scripts = {}, parent = parent, template = template, enabled = true }
     function f:RegisterEvent(event) end
     function f:SetScript(event, callback) self.scripts[event] = callback end
-    function f:SetSize() end
+    function f:SetSize(width, height) self.width, self.height = width, height end
     function f:SetText(text) self.text = text end
-    function f:SetPoint() end
-    function f:Enable() end
-    function f:Disable() end
-    if kind == "Frame" then mainFrame = f else scanButton = f end
+    function f:SetPoint(...) self.point = { ... } end
+    function f:Enable() self.enabled = true end
+    function f:Disable() self.enabled = false end
+    function f:IsShown() return not self.parent or self.parent:IsShown() end
+    function f:Click()
+        if self.enabled and self:IsShown() then self.scripts.OnClick(self) end
+    end
+    if kind == "Frame" then mainFrame = f
+    elseif name == "BrownstoneScanButton" then scanButton = f
+    elseif name == "BrownstoneScanReloadButton" then reloadButton = f
+    elseif name == "BrownstoneScanClearButton" then clearButton = f end
     return f
 end
 local function auctionInfo(index) return unpack(listingData[index], 1, 18) end

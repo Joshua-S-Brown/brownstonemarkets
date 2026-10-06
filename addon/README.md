@@ -1,4 +1,4 @@
-# Brownstone Scan 0.3.0
+# Brownstone Scan 0.3.1
 
 A **read-only** auction house scanner for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -27,12 +27,24 @@ I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C
 1. Log in on the character for the house you want (Alliance at the Roleplaying house for the launch market) and open the auction house.
 2. Optional: `/bscan label US Roleplaying Alliance` so the scan carries your own description of where it was taken.
 3. Click **Brownstone Scan** (or `/bscan start`). The button shows progress. Leave the window open.
-4. When chat says the scan is finished, type `/reload` to make the game write the file.
+4. When chat says the scan is finished, click **Reload** (or type `/reload`) to make the game write the file.
 5. Repeat once at a neutral auction house with `/bscan label neutral`. Wait 15 minutes between scans.
 
 Commands: `/bscan start | stop | status | label <text> | clear [all]`.
 
 **Keep the file small, in this order:** scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. The addon keeps every scan until you clear it, and each import reads the whole file. `/bscan clear` refuses while a scan from this session hasn't been written to the file yet (`/bscan clear all` overrides that). After an import that saved something new, Brownstone says clearing is safe; if it says *Nothing new*, `/reload` and import again first.
+
+### Reload and clear controls (STORY-029)
+
+Version 0.3.1 adds **Clear saved scans** and **Reload** immediately to the left of **Brownstone Scan**, using the same auction-window parent and standard `UIPanelButtonTemplate`. The scan button keeps its existing position; the row extends left with 4-pixel gaps (Clear 140×22, Reload 70×22). Both new buttons are disabled from scan start until completion or any stop/error/timeout path. Reload calls `ReloadUI()` directly; clearing never automatically reloads, so the user controls when changes are written.
+
+**Visibility decision:** the controls are available only with the auction house open, like the existing scan button. This keeps one small, contextual row without a persistent screen panel or new commands. For the manual scan → Reload → import → Clear → Reload routine, leave the house open during the import or reopen it afterward; the existing slash commands also work with the house closed.
+
+**Clear decision:** the button shares the protected `/bscan clear` logic and never uses the `all` override. Unsaved session scans refuse immediately with reload/import guidance. Otherwise a standard `StaticPopupDialogs` / `StaticPopup_Show` confirmation names the saved-scan count and reminds you to import into Brownstone first. Cancel or Escape changes nothing; there is no timeout or automatic acceptance. Zero scans still get confirmation, matching the command's harmless empty clear. Accept removes only `BrownstoneScanDB.scans`, preserves the label/metadata, and prints the existing next-reload reminder. Slash commands retain their existing behaviour, including immediate protected clear and the explicit `clear all` override.
+
+**Pending-confirmation decision:** starting a scan or closing the house dismisses the popup with `StaticPopup_Hide`. The callbacks also refuse during a scan and recheck unsaved scans and the confirmed count at acceptance, protecting against state changes after the dialog opened. If the count changed, click Clear again to review it.
+
+**Beta check still required:** load 0.3.1 on Forever, confirm `.toc` interface **16001** matches the client, and check the three-button row fits above the auction window without overlap/clipping. Exercise Reload, Cancel/Escape, confirmed clear, unsaved-scan refusal and scan-time disabling in game. Offline stubs cannot prove actual client layout or SavedVariables disk writes. The standard popup contract is visible in the [Classic client UI source](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_StaticPopup/StaticPopup.lua); actual Forever behaviour remains subject to this check.
 
 **Updating the addon:** copy the new `BrownstoneScan` folder over the old one and `/reload`. Scans saved by an older version stay in their format and still import.
 
@@ -44,7 +56,7 @@ After `/reload` or logout:
 <Forever folder>/WTF/Account/<ACCOUNT NAME>/SavedVariables/BrownstoneScan.lua
 ```
 
-It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list. Addon 0.3.0 writes format 3; scans written by 0.1.0/0.2.0 keep formats 1/2 and still import. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list. Addon 0.3.1 writes the unchanged format 3; scans written by 0.1.0/0.2.0 keep formats 1/2 and still import. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
@@ -108,15 +120,15 @@ Keep results and SavedVariables files locally. Format 3 files contain seller nam
 
 If the client prints "No auction API found", run `/dump C_AuctionHouse` and `/dump QueryAuctionItems` and send the output.
 
-## 0.3.0 beta checklist (STORY-023)
+## Format-3 beta checklist (STORY-023)
 
-Complete by **21 October**, leaving the acceptance record below pending until measured in game.
+Complete by **21 October**, leaving the acceptance record below pending until measured in game. Every baseline and candidate measurement must name the exact addon version used (including 0.3.1 if these controls are installed). The format-3 capture contract and ADDON-09 limits are unchanged; do not label 0.3.1 measurements as 0.3.0. Record versions alongside the local aggregate report; older scans do not carry a per-scan addon version, so use the installed version and retained file provenance rather than guessing.
 
 1. **Baseline:** using 0.2.0, take one complete scan at the same house, `/reload`, retain a local single-scan file, import it, then `/bscan clear` and `/reload`. If an existing 0.2.0 file has exactly one scan, it can be the baseline. Record build, house, listing count, duration and uncompressed file bytes.
-2. **Update and capture:** copy 0.3.0 over the installed addon, `/reload`, confirm it loads and `/bscan status` works. At least 15 minutes after the preceding scan, click the scan button with the house open. Record lag/errors and finished vs reported count. `/reload`, retain the local single-scan file, then Preview/Import in Brownstone. Confirm completed format 3, official reference data and separate variant rows. Try `/bscan start` on another manually initiated scan; closing the house during reading should save only a partial scan and no prices.
+2. **Update and capture:** copy the current addon over the installed addon, `/reload`, confirm it loads and `/bscan status` works. At least 15 minutes after the preceding scan, click the scan button with the house open. Record lag/errors and finished vs reported count. `/reload`, retain the local single-scan file, then Preview/Import in Brownstone. Confirm completed format 3, official reference data and separate variant rows. Try `/bscan start` on another manually initiated scan; closing the house during reading should save only a partial scan and no prices.
 3. **Availability and limits:** run the local summary below against baseline/candidate files. Record each available/total count, including sellers, links, required-level type (the raw `level_types` values), all five item-reference fields, unresolved links and `listing_out_of_range`. Record reload lag. Compare duration and bytes per listing against ADDON-09's limits; missing remains null, and reported zero quality/level/vendor values remain zero.
 4. **Variant tooltips/links:** look for Willow Robe (6538) Monkey/Bear/Eagle and Primal Wraps (15010) Whale/Bear, or equivalent currently listed suffix gear. Compare tooltips for different suffixes and multiple listings of the same suffix. Inspect actual payloads: observed bonus IDs are listed in ADDON-08; the traditional suffix field was empty. Confirm different stats have different stored keys/prices, while identical stat modifications with different viewer/context/modifier-28 provenance retain the same key. Check Linen Cloth as a plain base item. Record any unexpected fields or equal keys with different stats before relying on those prices.
-5. **Preserve:** re-import the same file and confirm duplicates. Retain the files and measurement record locally; only after a successful import, `/bscan clear` and `/reload`. A complete 0.3.0 beta import, accepted timing/size results and tooltip confirmation are required to close STORY-023.
+5. **Preserve:** re-import the same file and confirm duplicates. Retain the files and measurement record locally; only after a successful import, `/bscan clear` and `/reload`. A complete format-3 beta import, accepted timing/size results and tooltip confirmation are required to close STORY-023.
 
 To inspect a full modern listing link after a manual scan, replace `INDEX` with its zero-based replicate index (legacy uses `GetAuctionItemLink("list", INDEX)` with one-based indexing):
 
@@ -129,7 +141,7 @@ This reads the captured list; it does not start a scan. Record item-link payload
 **Local availability/size summary** (run from the repository; replace both file paths). This reads files without writing or migrating a database and prints only aggregate measurements. It requires one scan per file so saved-file size is comparable. Gzip archive inputs are measured after decompression.
 
 ```bash
-.venv/bin/python - /path/to/baseline-0.2.0.lua /path/to/candidate-0.3.0.lua <<'PY'
+.venv/bin/python - /path/to/baseline-0.2.0.lua /path/to/candidate-0.3.1.lua <<'PY'
 import gzip
 import json
 import sys
@@ -166,8 +178,8 @@ PY
 
 | Acceptance measurement | Result |
 | --- | --- |
-| Beta date/build/house, baseline and candidate scan IDs | Pending |
-| Complete 0.3.0 scan imported; duplicate verified | Pending |
+| Beta date/build/house, baseline and candidate addon versions and scan IDs | Pending |
+| Complete format-3 scan imported; duplicate verified | Pending |
 | New-field availability (attach local aggregate report) | Pending |
 | Duration ratio and uncompressed bytes/listing ratio vs ADDON-09 | Pending |
 | Scan/reload lag, errors; button and slash command | Pending |
