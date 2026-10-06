@@ -44,8 +44,15 @@ _Last updated 2026-10-05._
   - The CLI uses `--source`; `--market` still works as an alias.
 - **Beta/live identity (STORY-017):** implemented under DATA-03 in `requirements.md`. The tracked Forever source is explicitly beta, with its source ID unchanged. Every price, scan and listing carries environment; Browse, Opportunities, crafting, depth, Scan changes, manifest selection and import deduplication all enforce it. Page captions show the derived beta market ID.
 - **Item names (STORY-022):** Browse/search, Opportunities and Scan changes resolve missing labels through version-scoped names collected from scans, TSM rows and catalogs; crafting and board depth already use catalog labels. Name policy lives in DATA-02 (`requirements.md`). Stored observations and archives remain unchanged.
-- **Storage:** code supports schema 6 with backed-up, idempotent migrations (see `design.md` → Schema migrations). The inspected local `data/brownstone.duckdb` is at version 6. Upgrades run at app startup or explicit import and preserve a backup of the starting schema; migration verification for STORY-023 uses only copied databases. Earlier backups remain intact. Old manifests are adapted only in memory.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (93.91% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Storage:** code supports schema 7 with backed-up, idempotent migrations (see `design.md` → Schema migrations). The inspected local `data/brownstone.duckdb` remains at version 6; STORY-024 verification upgraded only a copy. Upgrades run at app startup or explicit import and preserve a backup of the starting schema; migration verification for STORY-023 uses only copied databases. Earlier backups remain intact. Old manifests are adapted only in memory.
+- **Market metrics (STORY-024):** schema 7 stores versioned facts from the shared `metrics.py`
+  calculator at scan import. Definitions and evidence limits live in ADDON-10 (`requirements.md`).
+  Existing databases backfill outside frozen migration DDL on startup/import, retrying unfinished
+  initialization. `rebuild_scan_metrics(db)` recomputes from stored listings transactionally;
+  scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
+  Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
+  historical price observations remain preserved. No new dashboard or trading policy is introduced.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (94.11% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.3.0**, writing scan format **3**. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2 still import with new fields null, raw bytes/hashes intact. Schema migration 6 adds the fields and reference table without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records per-field availability counts and duration locally.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and Classic's `REQ_LEVEL_ABBR`, pending the beta value. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -55,7 +62,7 @@ _Last updated 2026-10-05._
 
 ## Limitations
 
-- **Beta scans so far:** four complete Normal Alliance scans (16:47Z, 17:46Z and 22:54Z on 2026-10-04, and 20:34Z on 2026-10-05) and one stopped scan, all from the beta and identified separately from the live house by schema 4 (DATA-03). The last two are addon 0.2.0; the newest has 97,239 listings of 3,059 items and is kept in bronze as a 517 KB `.lua.gz`.
+- **Beta scans so far:** five complete Normal Alliance scans (16:47Z, 17:46Z and 22:54Z on 2026-10-04, 20:34Z on 2026-10-05, and 16:16Z on 2026-10-06) and one stopped scan, all from the beta and identified separately from the live house by schema 4 (DATA-03). The last three are addon 0.2.0; the newest has 77,731 listings of 3,041 items.
 - Addon 0.1.0/0.2.0 was measured on one beta house only; 0.3.0 has only offline verification: not the Roleplaying or a neutral house, and `/bscan start` without the button is untested. Beta region and realm values are generic, so scans are identified by auctioneer, zone and label. The `.toc` interface number 16001 may change with beta builds.
 - Required skill levels are display-only.
 - The Recipe catalogs page shows a catalog's game build only when its archived page is on this machine (`data/` isn't in Git). Regenerating records the uploaded file's name as the manifest's `original_name`, as the CLI does.
@@ -83,11 +90,27 @@ _Last updated 2026-10-05._
 git diff --check
 ```
 
-Expected: 375 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 413 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 
 Real-data preview/import was checked on 2026-10-05 against temporary copies of the database and a 51 MB schema-1 scan file (about 2–3 s per preview or import; originals unchanged).
+
+STORY-024 verification (2026-10-06, local copy only): schema 6→7 preserved all 49,964 price
+observations, 491,661 listings, 6 scan rows and the empty reference table. Five complete scans
+produce 14,946 metric rows; every minimum/25th percentile agrees with the corresponding stored
+item prices (zero sentinels normalized to null), and every listing count/unit total agrees with
+baseline listing aggregation and the depth reader. Zero mismatches. All 14,946 historical seller
+measure/coverage sets remain null. Two rebuilds match the initial backfill exactly; migration-7
+replay leaves rows unchanged. The schema-6 backup equals the pre-upgrade copy byte for byte and
+remains unchanged after replay. The original database SHA-256 remains
+`16d6a31b26bb6a9596fe9d74a1f38914502e2b1117ecb512cb5df0654fd8134a`.
+Aggregate-only verification script, report and copied databases are under ignored `work/story-024/`.
+No real format-3 seller/variant availability is claimed; offline fixtures cover it. Tests cover
+weighted odd/even percentile ranks, stacks/rounding/no buyout, strict thresholds, seller coverage,
+exact variant/legacy separation, every source/market/scan/snapshot field, deterministic rebuild,
+import/rebuild rollback, schema-7 interrupted-backfill retry and schema-6 backup/replay/layout.
+Rebuild currently materializes eligible listings locally; memory-bounded scaling remains a limitation.
 
 STORY-023 real-data verification (local copies): migration 5→6 took 75 ms and preserved all 46,923 price observations, 413,930 listings and 5 scan rows from the preserved database backup. All six historical scan comparisons and price/depth reads across four complete scans matched the pre-story reader results. Migration replay kept data unchanged; the schema-5 backup equalled the pre-upgrade copy. Re-importing the archived 0.2.0 scan returned one duplicate in 219 ms. The live database and archive SHA-256 stayed unchanged during this check. The local verification script, report and copies are under ignored `work/story-023/`. These are software checks, not 0.3.0 beta measurements.
 

@@ -10,6 +10,7 @@ from test_scans import FINISHED, NOW, addon_source, listing, packed, scan, write
 from brownstone import scan_details, scans, variants
 from brownstone.analysis import browse, rank
 from brownstone.markets import MARKET_KEYS
+from brownstone.metrics import rebuild_scan_metrics
 from brownstone.pipeline import import_scans, preview_scans
 from brownstone.scan_changes import compare_scans
 from brownstone.storage import MIGRATIONS, ensure_schema, listing_depth, price_observations, upgrade_database
@@ -280,8 +281,12 @@ def test_variant_prices_depth_and_comparisons_enforce_every_scope_key(tmp_path, 
         db.execute(f"UPDATE market_snapshots SET {key}='another' WHERE snapshot_id='my-scans:rich'")
         assert price_observations(db, config, "my-scans:rich", [6538], v) == {}
         diff = compare_scans(db, config, "old", "rich")
-        assert all(r["later"]["min_buyout"] is None for r in diff["items"])
+        assert any(r["later"]["min_buyout"] == 500 for r in diff["items"])
+        db.execute(f"UPDATE scan_metrics SET {key}='another' WHERE snapshot_id='my-scans:rich'")
+        diff = compare_scans(db, config, "old", "rich")
+        assert not diff["items"] and len(diff["vanished"]) == 4
         db.execute(f"UPDATE scan_listings SET {key}='another' WHERE scan_id='rich'")
+        rebuild_scan_metrics(db)
         assert listing_depth(db, config, "my-scans:rich", [6538], v) == {6538: {"listings": 0, "units": 0}}
         diff = compare_scans(db, config, "old", "rich")
         assert not diff["items"] and len(diff["vanished"]) == 4

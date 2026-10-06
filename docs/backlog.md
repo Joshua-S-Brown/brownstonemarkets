@@ -20,30 +20,29 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 STORY-023 software is implemented (addon 0.3.0, scan format 3, migration 6); beta measurement and a complete 0.3.0 scan import are pending. Use the checklist in `addon/README.md`; capture/identity rules and limits are ADDON-08/09 in `requirements.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
 **Through the last full beta testing day, 21 October** (manual, in game):
-- **Keep scanning.** Four complete scans of the Normal Alliance house are imported (16:47Z, 17:46Z and 22:54Z on 2026-10-04, and 20:34Z on 2026-10-05; the last two are addon 0.2.0). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
+- **Keep scanning.** Five complete scans of the Normal Alliance house are imported; dates and counts are in `status.md` → *Limitations*. Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
 - **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result by hand in `config/recipe-selections/forever-tailoring.toml` with the date, then regenerate on the Recipe catalogs page. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
 - **If any yield is more than 1,** *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
 
 ## Next
 
 **Agreed order (groomed 2026-10-05):** the app is almost all tables today, so user-facing analysis now gets its own lane in Next instead of waiting behind launch preparation. The layers, each building on the one before:
-- **Scans** (exists) → **market metrics** (STORY-024: one defined set of measures per item per scan) → **analysis views** (item page, charts, sellers) and the **Today** page (what to buy, craft and sell now).
+- **Scans** (exists) → **market metrics** (exists; ADDON-10 in `requirements.md`) → **analysis views** (item page, charts, sellers) and the **Today** page (what to buy, craft and sell now).
 - An optional AI narration layer can come later. It may only explain those defined metrics, never invent numbers (*Out of scope*).
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
 1. STORY-023 addon 0.3.0 (by 21 October)
 2. STORY-020a runbook rehearsal (by 21 October)
-3. STORY-024 market metrics (the next development story, chosen 2026-10-06)
-4. STORY-029 addon reload and clear buttons (ideally on the beta before 21 October)
-5. STORY-021 item page and charts
-6. STORY-025 Today
-7. STORY-026 scan coverage and rhythm
-8. STORY-020b runbook completion (finished one or two days before 4 November, whatever else is in progress)
-9. STORY-027 removed listings
-10. STORY-028 sellers and supply chains
-11. STORY-006 replay
-12. STORY-015b crafting across professions
+3. STORY-029 addon reload and clear buttons (ideally on the beta before 21 October)
+4. STORY-021 item page and charts
+5. STORY-025 Today
+6. STORY-026 scan coverage and rhythm
+7. STORY-020b runbook completion (finished one or two days before 4 November, whatever else is in progress)
+8. STORY-027 removed listings
+9. STORY-028 sellers and supply chains
+10. STORY-006 replay
+11. STORY-015b crafting across professions
 
 STORY-016 (backup) is deferred to Later (product owner, 2026-10-06).
 
@@ -67,7 +66,7 @@ Acceptance:
 - **Still read-only:** no buying, posting, bidding or other auction-house actions, and no unattended scanning (SPIKE-008).
 - **Compatible:** a new scan format version; the importer still reads formats 1 and 2, and older scans simply lack the new fields (null, never guessed). Schema changes go through a numbered migration.
 - **Tested by 21 October:** at least one complete 0.3.0 beta scan imported.
-- Depends on nothing. Feeds STORY-024, STORY-027 and STORY-028.
+- Depends on nothing. Feeds the implemented metrics layer (ADDON-10), STORY-027 and STORY-028.
 
 ### STORY-020a — Rehearse the launch-day in-game steps
 
@@ -80,17 +79,6 @@ Acceptance:
 - **Rehearsed and timed** on the beta by the last full beta testing day (21 October), with each step's time recorded.
 - **Placeholders** for the steps STORY-020b completes.
 - Depends on nothing; uses STORY-023's addon if it's ready.
-
-### STORY-024 — Market metrics layer
-
-As a gold maker, I want one defined set of market measures for each item in each scan, so that every chart, recommendation and later explanation agrees.
-
-Acceptance:
-- **Defined once** in `requirements.md`, as versioned rules: lowest unit buyout; unit-weighted median, 10th and 25th percentile unit buyout; units listed; listing count; the share of units in the largest stack; and units listed below a given price. Seller count and the top seller's share are added when STORY-023 data exists. Prices are integer copper. A listing without a buyout counts as listed but is never priced.
-- **Stored and rebuildable:** calculated at import and rebuildable from stored listings with identical results, keyed by source, full market identity (DATA-03), scan and item (plus variant when STORY-023 provides one). Partial scans are excluded or clearly labelled.
-- **One source of truth:** the board's depth and Scan changes use these measures where they overlap instead of recomputing them, or the overlap is documented.
-- **Tests** cover quantity weighting, stacks, listings without a buyout, partial scans and isolation by full market identity.
-- Uses STORY-023 fields when available.
 
 ### STORY-029 — Reload and clear buttons in the addon
 
@@ -122,8 +110,8 @@ Acceptance:
   - the catalogs that make or use it, with profession and role, and its board rows
   - freshness (DATA-05)
 - **Charts never invent data:** a scan where the item was absent is a gap, never zero, and every point names its scan.
-- **The same rules:** one source at a time, missing never zero, and no categories inferred. It reads STORY-024's measures and the stored listings.
-- Depends on STORY-024. Links to the *Value-add chart* (Later) once that exists.
+- **The same rules:** one source at a time, missing never zero, and no categories inferred. It reads ADDON-10 metrics and the stored listings.
+- Depends on the implemented market metrics layer (ADDON-10). Links to the *Value-add chart* (Later) once that exists.
 
 ### STORY-025 — Today: what to buy, craft and sell now
 
@@ -137,7 +125,7 @@ Acceptance:
 - **Rule-based and explainable:** each rule and threshold is versioned in `requirements.md`. No hidden scoring and no AI.
 - **Honest:** a stale scan is flagged at the top; missing prices never become recommendations; nothing is called a sale.
 - **Decide** whether Today becomes the page the app opens on (recommended).
-- Depends on STORY-024; better with STORY-023. Later steps under *Market timing* extend it with timing advice.
+- Depends on the implemented market metrics layer (ADDON-10); better with STORY-023. Later steps under *Market timing* extend it with timing advice.
 
 ### STORY-026 — Scan coverage and your play rhythm
 
@@ -175,7 +163,7 @@ Acceptance:
 - **Honest labels:** always *removed*, never *sold*. Scans carry no auction ID, so a sale, a cancellation and an expiry can look the same; it's an upper bound on sales.
 - **Only consecutive scans** within a maximum gap recorded in `requirements.md`.
 - Shown per item (on the item page) and as a list, and usable by Today as evidence.
-- Depends on STORY-024; better with STORY-023.
+- Depends on the implemented market metrics layer (ADDON-10); better with STORY-023.
 
 ### STORY-028 — Sellers and their supply chains
 
@@ -186,7 +174,7 @@ Acceptance:
 - **Per seller:** what they list, grouped by catalog chain (materials, intermediates and outputs by catalog membership, never names), how much, and how often they repost.
 - **Per chain:** how concentrated supply is (the share held by the top sellers), so crowded and open chains are visible.
 - **Private:** seller names stay on this machine, as recorded in STORY-023's decision.
-- Depends on STORY-023 (seller capture) and STORY-024.
+- Depends on STORY-023 (seller capture) and the implemented market metrics layer (ADDON-10).
 
 ### STORY-011a — Survey third-party scan sources
 
@@ -225,7 +213,7 @@ Acceptance:
 
 These are grouped by what unblocks them.
 
-**Inventory-aware economics** (unblocked: `scan_listings` holds every listing; depth is now displayed, see `status.md`). STORY-024 and STORY-025 cover the thin-market signals and the cost of buying listing by listing; the rest stays here:
+**Inventory-aware economics** (unblocked: `scan_listings` holds every listing; depth is now displayed, see `status.md`). The implemented market metrics (ADDON-10) supply the facts; STORY-025 covers action rules and the cost of buying listing by listing; the rest stays here:
 - **Cost from the listing ladder:** what N units actually cost when bought listing by listing, and the most you can buy below a price.
 - **Undercut-aware sale price.**
 - **A suggested craft quantity limited by input depth.**
@@ -286,7 +274,7 @@ Acceptance:
 - **Bags and bank:** what you hold, so Today's *Sell* list includes it and *Buy* skips what you already have.
 - **Known recipes and skill:** limits the board to what you can actually craft (compare STORY-015b's list of your professions).
 
-**AI narration** (suggested 2026-10-05; after STORY-024 and STORY-025): a plain-language summary of Today and the item page that explains only defined metrics and rule results, cites every number, and never invents one or recommends without explainable features (*Out of scope*). Needs a decision about which model runs it and what data leaves this machine.
+**AI narration** (suggested 2026-10-05; after STORY-025; reads ADDON-10 metrics): a plain-language summary of Today and the item page that explains only defined metrics and rule results, cites every number, and never invents one or recommends without explainable features (*Out of scope*). Needs a decision about which model runs it and what data leaves this machine.
 
 **Addon follow-ups** (any time, none urgent):
 - Scan the Roleplaying house once the beta offers it, and a neutral house when reachable, to confirm house identification and the 15% cut market.

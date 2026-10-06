@@ -8,12 +8,12 @@ from typing import Any
 
 import duckdb
 
-from . import markets
+from . import markets, metrics
 from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 from .item_names import remember_local_catalog_names, remember_observed_names
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -175,8 +175,23 @@ def _migrate_to_6(db):
         db.execute(statement)
 
 
+# Frozen schema only: derived-data initialization/rebuild lives in metrics.py.
+def _migrate_to_7(db):
+    """Versioned aggregate facts with exact share/coverage numerators and denominators."""
+    db.execute("""CREATE TABLE IF NOT EXISTS scan_metrics (
+        metric_key VARCHAR PRIMARY KEY, metrics_version BIGINT NOT NULL, source_id VARCHAR NOT NULL,
+        market_id VARCHAR, game_version VARCHAR, region VARCHAR, scope VARCHAR, realm VARCHAR,
+        server_type VARCHAR, faction VARCHAR, environment VARCHAR,
+        scan_id VARCHAR NOT NULL, snapshot_id VARCHAR NOT NULL, item_id BIGINT NOT NULL,
+        variant_id VARCHAR, variant_state VARCHAR,
+        min_buyout BIGINT, unit_buyout_p10 BIGINT, unit_buyout_p25 BIGINT, unit_buyout_median BIGINT,
+        units BIGINT, listings BIGINT, priced_units BIGINT, largest_stack_units BIGINT,
+        seller_known_listings BIGINT, seller_known_units BIGINT, seller_count BIGINT, top_seller_units BIGINT)
+        """)
+
+
 MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4, 5: _migrate_to_5,
-              6: _migrate_to_6}
+              6: _migrate_to_6, 7: _migrate_to_7}
 
 
 def _has_table(db, name: str) -> bool:
@@ -209,6 +224,7 @@ def ensure_schema(db):
     for target in range(version + 1, SCHEMA_VERSION + 1):
         MIGRATIONS[target](db)
         db.execute("INSERT OR REPLACE INTO schema_info VALUES ('schema_version', ?)", [str(target)])
+    metrics.initialize_metrics(db)
 
 
 def upgrade_database(data_dir: Path, create: bool = False) -> bool:
@@ -227,6 +243,8 @@ def upgrade_database(data_dir: Path, create: bool = False) -> bool:
         version = schema_version(db)
         has_data = _has_table(db, "market_snapshots")
     if version == SCHEMA_VERSION:
+        with duckdb.connect(str(path)) as db:
+            metrics.initialize_metrics(db)
         return False
     _refuse_newer(version)
     if existed and has_data:
@@ -284,6 +302,8 @@ def load_scan(db, scan: Path, listings: Path, prices: Path | None, items: Path |
     if prices is not None:
         db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(prices)])
     snapshot_id = db.execute("SELECT snapshot_id FROM read_parquet(?)", [str(scan)]).fetchone()[0]
+    row = db.execute("SELECT source_id, scan_id FROM read_parquet(?)", [str(scan)]).fetchone()
+    metrics.store_scan_metrics(db, row[0], row[1])
     remember_observed_names(db, snapshot_id)
 
 
@@ -355,7 +375,7 @@ def price_observations(db, config: Mapping[str, Any], snapshot_id: str, item_ids
 def listing_depth(db, config: Mapping[str, Any], snapshot_id: str,
                   item_ids: list[int], variant_id: str | None = None,
                   variant_state: str | None = None) -> dict[int, dict[str, int]] | None:
-    """Listing counts and units in the exact priced scan, including listings without a buyout.
+    """Stored metric counts and units in the exact priced scan, including listings without a buyout.
 
     None means depth is unavailable (TSM, or no matching complete priced addon scan).
     In a matching scan, an absent item has zero listings and units: it was not listed.
@@ -376,10 +396,10 @@ def listing_depth(db, config: Mapping[str, Any], snapshot_id: str,
     placeholders = ", ".join("?" for _ in item_ids)
     item_predicate, item_scope = _variant_predicate(variant_id, variant_state)
     rows = db.execute(
-        f"SELECT item_id, count(*), sum(quantity) FROM scan_listings WHERE snapshot_id=? "
+        f"SELECT item_id, listings, units FROM scan_metrics WHERE snapshot_id=? "
         f"AND {predicates} AND scan_id=? AND item_id IN ({placeholders}) "
-        f"AND {item_predicate} GROUP BY item_id",
-        [*parameters, scan[0], *item_ids, *item_scope],
+        f"AND {item_predicate} AND metrics_version=?",
+        [*parameters, scan[0], *item_ids, *item_scope, metrics.METRICS_VERSION],
     ).fetchall()
     depth = {item_id: {"listings": 0, "units": 0} for item_id in item_ids}
     depth.update({item_id: {"listings": listings, "units": units} for item_id, listings, units in rows})

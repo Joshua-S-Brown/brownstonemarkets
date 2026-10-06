@@ -57,8 +57,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 - **ADDON-01 House identity:** the configured source defines the market; nothing is derived from a scan. Each scan's player faction must match the market's alliance or horde faction, and must not be from a neutral house. A neutral market needs the client's `neutral = true` or a configured auctioneer. Optional `scan_evidence` (`faction`, `auctioneer`, `zone`, `realm`, `label`) must match exactly. Any mismatch in any selected scan fails the whole import, naming the scan, field, observed and configured values, before anything reaches DuckDB. Beta region and realm are generic and aren't evidence by default.
 - **ADDON-02 Stack pricing:** a listing's unit price is `buyout / quantity` in integer copper. When that isn't exact, `unit_buyout` stays empty and `unit_buyout_ceil` rounds up, so a unit's cost is never understated; derived prices use `unit_buyout_ceil`. On the sale side this can overstate a unit by under 1c; the manifest counts such stacks (`nonexact_stacks`). A reported `unit_buyout` (schema 1) that disagrees with the division rejects the scan. A missing or zero `buyout` has no unit price and is never free.
 - **ADDON-03 Item prices:** each complete scan writes one `market_snapshots` row per item identity, including variant and resolution state (ADDON-08):
-  - `min_buyout`: the cheapest unit price.
-  - `market_value`: the quantity-weighted 25th percentile of unit prices (nearest rank, each listed unit counted once). It is the price that buys a quarter of listed supply. It ignores one stray cheap stack, which `min_buyout` already shows, and high listings that never sell, which can dominate a median on thin markets. It is close in spirit to TSM's average of the cheapest 15–30% of units.
+  - `min_buyout` and `market_value`: projections of ADDON-10's lowest unit buyout and quantity-weighted 25th percentile, using the shared calculator.
   - `recent_value` and `historical_value`: 0 (unavailable), so the discount screen explains it can't run.
   - Items listed only without a buyout get 0/0, so Browse still finds them.
   - Cautious and listed bases (CRAFT-04) use these unchanged.
@@ -96,6 +95,65 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 
   API contracts: [Blizzard generated auction definitions](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua), [Classic item definitions](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_APIDocumentationGenerated/ItemDocumentation.lua). Forever availability is still subject to beta measurement.
   - **Measurement limits:** one full 0.3.0 beta scan must be imported by 21 October. Compare single-scan 0.2.0 and 0.3.0 files from the same house with similar listing counts: duration at most **2×** baseline, uncompressed bytes per listing at most **4×** baseline. Record actual values, lag/reload time, and availability counts/denominators for every new listing/item field; there is no invented availability threshold. Availability affects evidence, not completion status. Import records these counts (including resolved/base/unresolved links and out-of-range optional values) and duration locally in the per-scan manifest and database. File byte counts are the original uncompressed input, not gzip bronze size. A failed limit leaves beta acceptance pending; remeasure after any change.
+
+### ADDON-10 Market metrics (metrics_version 1, approved 2026-10-06, STORY-024)
+
+The market metrics layer describes observed listed supply, not executed sales, demand, liquidity,
+realizable profit or a seller's complete activity. These facts support subsequent buying/crafting,
+market timing and competitor models without inventing evidence. Rules below define version 1;
+a changed definition requires a new metrics version and an explicit rebuild policy.
+
+- **Eligibility:** store metrics only for `status='completed'`, `partial=false`, `priced=true` addon
+  scans. `priced` is the existing complete/nonempty flag, not a guarantee of a buyout for every item.
+  Complete scans containing only no-buyout listings still have supply metrics with null prices.
+  Partial/unpriced scans retain their existing observations, but metrics are unavailable. An empty
+  scan has no metric rows. Missing prices are always null in this layer, never zero.
+- **Identity:** `metrics_version + source_id + every MARKET_KEYS field + scan_id + snapshot_id +
+  item_id + variant_id + variant_state`. This includes derived `market_id` and all seven DATA-03
+  fields. Never pool variants, base or unresolved identities. Formats 1/2 retain null variant state
+  (displayed as legacy), including historical scans whose format metadata is null. No retrospective
+  link interpretation or seller backfill. ADDON-08's legacy/base cross-scan comparison policy stays
+  a read-time matching policy; it does not merge facts. Every listing must match its stored parent
+  on source, full market identity, scan and snapshot.
+- **Prices:** use positive `unit_buyout_ceil` from ADDON-02, in integer copper. Lowest unit buyout is
+  the minimum. Median, 10th and 25th percentile are quantity-weighted nearest rank: sort prices,
+  let N be buyout-priced units, and choose the first price whose cumulative quantity reaches
+  `ceil(p*N/100)` for p=50,10,25. Count each unit once, without interpolation. The even-count median
+  is the lower middle unit. The 25th percentile agrees exactly with ADDON-03's market value.
+  No-buyout quantities never enter N. All four prices are null when N=0; priced units is then zero.
+- **Supply:** units listed sums all quantities; listing count counts listing rows, including rows
+  without buyouts. Largest-stack share is `max(quantity) / units listed`, for one listing (ties do
+  not combine). Shares are exact numerator/denominator integer pairs, not rounded stored floats.
+- **Supply below a price:** calculate at read time from stored listings, under identical eligibility
+  and exact identity predicates. Sum quantities with positive `unit_buyout_ceil` strictly less than
+  the caller's positive integer-copper threshold; equality and no-buyout listings do not count.
+  Reject nonpositive/noninteger thresholds. This reuses listings instead of duplicating a threshold
+  distribution. It describes units at quoted unit prices, not an executable whole-stack purchase
+  cost. An absent exact identity in an eligible scan returns zero; an ineligible scan is unavailable.
+  Null variant/state arguments select legacy exactly, unlike catalog depth's compatibility default.
+- **Sellers:** format-3 seller count is distinct observed nonblank strings compared exactly as
+  stored, without guessed character equivalence or case normalization. Sum each observed seller's
+  units, including no-buyout listings. Top seller share is the largest such sum divided by all
+  seller-known units. With incomplete coverage, label it *top observed seller's share of seller-known
+  units*. Always report seller-known listing/total listing and seller-known unit/total unit coverage
+  alongside seller measures. Missing sellers are never an invented seller. Format 3 with no known
+  sellers has null seller count/top share and zero known counts over total supply. Formats 1/2 and
+  historical null-format scans have null seller measures and coverage, not zero. ADDON-07 applies:
+  no seller strings or top-seller identity in metric storage, returned aggregates, logs, reports,
+  exports or external services. Existing local listing evidence remains local.
+- **Storage/rebuild:** migration 7 creates `scan_metrics` using frozen schema DDL only. Version-aware
+  derived initialization, outside migrations, backfills eligible stored listings before analytical
+  reads and records completion only after success. Missing completion at schema 7 retries on startup
+  or explicit import. One transactional rebuild path recalculates version 1 from stored listings;
+  repeated runs give identical rows, including after reordered input. Imports compute new facts in
+  the existing scan transaction. Preserve archives, silver and historical observation rows.
+- **Shared calculations:** addon item prices project this calculator's minimum and 25th percentile
+  into `market_snapshots`. Its existing ADDON-03 zero sentinel remains for compatibility only;
+  metric outputs use null. Historical price rows are not rewritten. TSM's price contract stays
+  unchanged. Board depth reads stored units/listings; Scan changes reads stored minimum, percentile,
+  units and listings, retaining ADDON-08 matching and DATA-02 naming. Name-only listing aggregation
+  remains for labels; threshold supply reads listings because its price is caller-selected.
+
 
 ### Money
 - **MONEY-01:** store and calculate integer copper only. 1g = 100s = 10,000c.
@@ -161,6 +219,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 - **OPS-03 One home machine** (decided 2026-10-05): Brownstone, its `data/` folder and all addon scanning run on the Mac. The Windows desktop doesn't scan for now, which keeps one scan file and one writer; scanning on a second machine needs its own decision first (importing a second file). Windows stays a supported, CI-tested platform (OPS-01).
   - Local storage is enough: about 5 MB per beta scan all-in (up to about 10 MB expected for a busier live house), so roughly 5–35 GB a year at 3–10 scans a day. Cloud storage and a home server aren't needed. `data/` must not sit in a live-synced folder such as iCloud Drive, because DuckDB has a single writer.
   - Backups are deferred (product owner, 2026-10-06): STORY-016 is no longer due by 21 October and has no date. Until it is done, migrations still copy the database first (OPS-02), but nothing else protects the raw archive.
+
 
 ## Not modeled (do not imply otherwise)
 

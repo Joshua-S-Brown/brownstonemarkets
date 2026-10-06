@@ -4,6 +4,7 @@ from datetime import UTC
 from typing import Any
 
 from .config import ADDON_PROVIDER
+from .metrics import METRICS_VERSION
 from .storage import scope_predicate
 
 METRICS = ("min_buyout", "market_value", "listings", "units")
@@ -28,19 +29,20 @@ def _scan_items_sql(predicate: str) -> str:
     # only items without one fall back to the version-scoped lookup.
     return f"""
         SELECT d.item_id, d.variant_id, d.variant_state,
-            coalesce(p.item_name, d.item_name, n.item_name, 'Item ' || d.item_id::VARCHAR) AS item_name,
-            CASE WHEN p.min_buyout > 0 THEN p.min_buyout END AS min_buyout,
-            CASE WHEN p.market_value > 0 THEN p.market_value END AS market_value, d.listings, d.units
-        FROM (SELECT item_id, variant_id, variant_state,
-                min(loaded_item_name(item_name)) AS item_name, count(*) AS listings,
-                sum(quantity)::BIGINT AS units
-            FROM scan_listings WHERE {predicate} AND scan_id=? AND snapshot_id=?
-            GROUP BY item_id, variant_id, variant_state) d
+            coalesce(p.item_name, l.item_name, n.item_name, 'Item ' || d.item_id::VARCHAR) AS item_name,
+            d.min_buyout, d.unit_buyout_p25 AS market_value, d.listings, d.units
+        FROM (SELECT * FROM scan_metrics WHERE {predicate} AND scan_id=? AND snapshot_id=?
+            AND metrics_version={METRICS_VERSION}) d
         LEFT JOIN (SELECT item_id, variant_id, variant_state,
-                loaded_item_name(item_name) AS item_name, min_buyout, market_value
+                loaded_item_name(item_name) AS item_name
             FROM market_snapshots WHERE {predicate} AND snapshot_id=?) p
             ON p.item_id=d.item_id AND p.variant_id IS NOT DISTINCT FROM d.variant_id
                 AND p.variant_state IS NOT DISTINCT FROM d.variant_state
+        LEFT JOIN (SELECT item_id, variant_id, variant_state, min(loaded_item_name(item_name)) AS item_name
+            FROM scan_listings WHERE {predicate} AND scan_id=? AND snapshot_id=?
+            GROUP BY item_id, variant_id, variant_state) l
+            ON l.item_id=d.item_id AND l.variant_id IS NOT DISTINCT FROM d.variant_id
+                AND l.variant_state IS NOT DISTINCT FROM d.variant_state
         LEFT JOIN item_names n ON n.game_version=? AND n.item_id=d.item_id
     """
 
@@ -77,7 +79,7 @@ def compare_scans(db, config: Mapping[str, Any], first_id: str, second_id: str,
     parameters = []
     for scan in (earlier, later):
         parameters.extend([*scope, scan["scan_id"], scan["snapshot_id"], *scope, scan["snapshot_id"],
-                           config["game_version"]])
+                           *scope, scan["scan_id"], scan["snapshot_id"], config["game_version"]])
     rows = db.execute(f"""WITH a AS ({query}), b AS ({query}), {_MATCH_SQL}
         SELECT coalesce(a.item_id, b.item_id), coalesce(a.variant_id, b.variant_id),
             coalesce(a.match_state, b.match_state), coalesce(b.item_name, a.item_name),

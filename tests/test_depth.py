@@ -5,6 +5,7 @@ from conftest import make_source
 from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
 
 from brownstone.markets import MARKET_KEYS
+from brownstone.metrics import rebuild_scan_metrics
 from brownstone.pipeline import import_scans
 from brownstone.storage import latest_snapshot, listing_depth
 
@@ -48,6 +49,7 @@ def test_depth_requires_every_source_and_market_field(tmp_path, key):
         assert listing_depth(db, {**config, key: "another"}, sid, [1]) is None
         # Even with valid scan metadata, listing rows with a different identity cannot contribute.
         db.execute(f"UPDATE scan_listings SET {key}=?", ["another"])
+        rebuild_scan_metrics(db)
         assert listing_depth(db, config, sid, [1]) == {1: {"listings": 0, "units": 0}}
 
 

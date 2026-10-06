@@ -13,7 +13,7 @@ TSM CSV ──download──▶ bronze (exact bytes + manifest JSON)
 SavedVariables .lua ──copy──▶ bronze (gzip of the exact bytes, stored once per SHA-256, + manifest JSON)
         ──parse/check─▶ scans (Lua subset parser, house evidence, stack unit prices)
         ──silver──────▶ per scan: _scan, _listings, _items and, if complete, _prices Parquet
-        ──load────────▶ DuckDB addon_scans + scan_listings + scan_items; market_snapshots for complete scans only
+        ──load────────▶ DuckDB addon_scans + scan_listings + scan_items + scan_metrics; market_snapshots for complete scans only
 
 saved Wowhead page ──archive─▶ data/recipe-sources (exact bytes once per SHA-256 + manifest)
         ──extract─▶ recipes and items ──select─▶ catalog TOML (config/recipe-selections/*.toml)
@@ -40,6 +40,7 @@ brownstone/             importable without Streamlit
   sources.py            HTTP download
   scans.py              BrownstoneScan SavedVariables: parse, validate, house check, unit and item prices
   scan_details.py       format-3 reference validation and local availability counts
+  metrics.py            versioned aggregate calculator, transactional rebuild and scoped readers
   variants.py           conservative link parser and canonical item identity (ADDON-08)
   normalization.py      CSV → validated frame
   pipeline.py           run (TSM CSV), read-only preview_scans and shared reviewed/CLI import_scans
@@ -72,6 +73,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 | Item name lookup | `game_version, item_id` | `item_names`: label, `origin_rank` (observed 1, catalog 0), `observed_at`, evidence reference. Label policy is DATA-02; no market/source/rules identity is relaxed for prices or supply |
 | Addon scan | `source_id, scan_id` → `snapshot_id = <source_id>:<scan_id>` | `addon_scans`: status, `partial`, `priced`, times, counts, `nonexact_stacks`, client, house evidence, scan and file SHA-256. Its import manifest lists every scan with an outcome (`imported`, `duplicate`, `partial (not priced)`, `empty`) and counts `already_imported`, `remaining_unimported` (including unselected scans) and `other_house` (file scans from another auction house); `scan_id`, `updated_at` and `analytical_snapshot_id` name the newest complete scan, and status is `no_complete_scan` when there is none |
 | Listing | `source_id, scan_id, listing_index` + market identity | `scan_listings`: `item_id, item_name, quantity, buyout` (whole stack), `unit_buyout` (exact only), `unit_buyout_ceil`, `min_bid, bid, complete_info`, plus nullable ADDON-09 fields and ADDON-08 variant/resolution |
+| Scan metrics | version + source + full market + scan/snapshot + item/variant/state | `scan_metrics`: integer price/count facts and share/coverage numerators; rules in ADDON-10. `metric_key` is canonical JSON of every identity field, preserving nulls without hash/delimiter collisions; primary key enforces uniqueness |
 | Scan item reference | source + scan + item ID + full market identity | `scan_items`: base-item observations from ADDON-09; `_items.parquet` in silver; legacy scans have no reference observations |
 | Catalog | `game_version, rules_version, catalog_version` | TOML generated from a selection file and one saved page (CRAFT-08). Header: `source_url`, `source_sha256`, `verified_at`. Items: role, Wowhead URL, optional `vendor_price_copper` with `vendor_price_source_url`, `vendor_verified`, `availability`. Recipes: inputs, `output_quantity`, `required_skill`, Wowhead spell URL, `verification_url`, `evidence_sha256`, optional `output_quantity_verified`, `availability` |
 | Recipe selection | file name = catalog name | `config/recipe-selections/<catalog>.toml`: catalog header fields, finished `[[recipes]]` (with optional overrides), `[recipe_defaults]`, `[[items]]` vendor evidence and notes |
@@ -87,6 +89,10 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
   - Version 4: adds `environment` to all three observation tables. Stored Forever rows collected before the frozen 2026-11-04 00:00 UTC boundary become beta; all others become live. Listings lack `collected_at`, so the migration uses the parent `addon_scans` row matched by `source_id, scan_id`; a missing/null timestamp falls into live. Beta IDs are re-derived with the suffix instead of blindly appending, making interruption/replay harmless. Only null environments are classified, so already classified rows stay intact. The frozen date cites the official source under Product direction in `requirements.md`.
   - Version 5: adds `item_names`, the `loaded_item_name` SQL macro, and `named_market_snapshots` / `named_scan_listings` views. Backfills both stored price rows and all listings; listing timestamps come from their parent scan matched on source, scan ID and every market key. It changes no observation rows. The table, macro, views and backfill are frozen SQL in `storage.py`; table creation, view replacement and the deterministic backfill (existing winners kept) are replayable. Valid local catalogs seed after the upgrade, outside the frozen observation migration; malformed catalogs of any kind are skipped.
   - Version 6: adds nullable richer listing fields, `variant_id, variant_state` on listings and prices, `format_version, duration_seconds, availability_json` on scans, and `scan_items`. Rebinds named views after column additions (DuckDB binds star projections at creation). Historical rows and hashes are unchanged. Replay is idempotent, with schema-5 backup before the upgrade; fresh and upgraded layouts are tested. Capture and variant rules are ADDON-08/09 in `requirements.md`.
+  - Version 7: adds `scan_metrics` and a canonical structured identity primary key. DDL only; no
+    calculation is frozen in the migration. `ensure_schema` then calls `metrics.initialize_metrics`,
+    also retried by `upgrade_database` when schema 7 exists without the metrics completion marker.
+    Eligibility, measures, nulls and seller policy live in ADDON-10 (`requirements.md`).
 - **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
 - **Callers.** The app calls it at startup for whichever source is selected (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
 - **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
@@ -109,7 +115,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 
 - `storage.scope_predicate` supplies the source and full `MARKET_KEYS` predicate to price, depth and comparison reads.
 - `scan_changes.eligible_scans(db, config)` reads the selected source's completed, non-partial, priced `addon_scans` rows, ordered by finish time and scan ID descending. Finish times are normalized to UTC independently of DuckDB's session timezone.
-- `compare_scans(db, config, first_id, second_id, item_ids=None)` validates distinct eligible IDs and orders them chronologically. DuckDB aggregates `scan_listings` per item, scoped by source, market, scan ID and snapshot ID; stored `market_snapshots` prices are joined with the same source, market and snapshot scope. A full outer join returns only item aggregates to Python, never raw listings.
+- `compare_scans(db, config, first_id, second_id, item_ids=None)` validates distinct eligible IDs and orders them chronologically. DuckDB reads `scan_metrics` facts per exact identity, scoped by source, market, scan ID, snapshot ID and metrics version. `market_snapshots` and a name-only `scan_listings` aggregation provide labels, with the same scope; neither supplies numeric metrics. A full outer join returns only item aggregates to Python, never raw listings.
 - The result carries earlier/later scan metadata, their time gap, shared `items`, `new` and `vanished`. Each row has item ID/name, earlier/later metric dictionaries (minimum buyout, market value, listings, units), later-minus-earlier changes and a changed flag. A missing side is `None`; unavailable prices and changes are `None`, with integer copper for all valid prices. Optional item IDs filter every list; an empty list matches nothing.
 - `views/scan_changes.py` renders UI-06, using `compatible_catalogs` for the item-ID filter, shared context/freshness display and money helpers. The sidebar registers it as **Scan changes**. Existing calculation pages keep their contracts.
 
@@ -122,7 +128,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
   - the all-craft expansion
   - cost, net revenue, profit, margin and break-even
 - `Decimal` handles the auction-cut rounding.
-- `storage.listing_depth` returns listing and unit counts by item for the same analytical snapshot used by `price_observations`. It first checks the scoped `addon_scans` record is complete and priced, then aggregates `scan_listings` with the source, full market identity, snapshot ID and scan ID. It returns `None` when unavailable, or zero counts for absent requested items. The Crafting view renders these separately from `rank_recipes`; depth never enters calculation or policy inputs (CRAFT-09).
+- `storage.listing_depth` returns listing and unit counts by item for the same analytical snapshot used by `price_observations`. It first checks the scoped `addon_scans` record is complete and priced, then reads `scan_metrics` with the source, full market identity, snapshot ID, scan ID and metrics version. It returns `None` when unavailable, or zero counts for absent requested items. The Crafting view renders these separately from `rank_recipes`; depth never enters calculation or policy inputs (CRAFT-09).
 - Catalog discovery supplies `catalog_id` from the selection-file stem. Standalone catalogs default to a header identity (`game_version:rules_version:profession:catalog_version`); combined inputs must have unique identities. Rows carry `catalog_id`, `recipe_id` and `profession`, and `catalog_for_row` resolves details to the original catalog.
 - `rank_catalogs` selects compatible catalogs, calls `rank_recipes` separately for each graph, and applies the same shared ranking helper to all rows. `filter_profession` preserves combined ranks. Prices and depth are read once for the union of compatible catalog item IDs, using the same source, full market scope and analytical snapshot. See CRAFT-05 and UI-01/UI-04 in `requirements.md` for behavior.
 - `rank_recipes` checks that the catalog, market and snapshot are compatible, then:
@@ -175,3 +181,41 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 `price_observations` and `listing_depth` retain their catalog item-ID return shape. Default reads accept base rows and historical null fields, but exclude format-3 unresolved/variant rows; explicit `variant_id`/`variant_state` arguments select an exact variant or unresolved pool (never legacy null-state rows) within the same full market/source/snapshot scope. Catalogs have no variant selectors today, so a variant-only output stays missing prices instead of inheriting a different suffix's price. No crafting rules-version check is relaxed.
 
 Tests execute the actual addon under Lua 5.1 through the declared, pinned dev dependency Lupa. Offline WoW stubs exercise both API paths, optional missing/erroring fields, chunking, manual start, timeout/close and item-reference caching, then import the emitted scan. Python coverage measures application code; it does not claim Lua branch coverage or substitute for beta API/tooltip measurements.
+
+
+## Market metrics layer (STORY-024)
+
+The only business definitions are ADDON-10 in `requirements.md`. `metrics.calculate_metrics` uses
+Polars group/window operations over listing quantities, without per-unit row expansion. Raw
+validated frames represent one scan; stored frames automatically group on every source/market/scan/
+snapshot/item identity field. Partially supplied scope is rejected rather than silently discarded. The import
+price adapter `scans.item_prices` selects this calculator's minimum/25th percentile into the established
+price contract. `storage.load_scan` calls `metrics.store_scan_metrics` in its caller's transaction.
+
+`metrics.rebuild_scan_metrics(db)` owns one transaction, recalculates from `scan_listings` joined to
+eligible parents on every `SCAN_KEYS` field, upserts canonical keys, removes obsolete version-1 rows,
+and records `schema_info.metrics_version` only on success. Upsert before deletion avoids DuckDB's
+same-transaction indexed delete/reinsert limitation. Errors roll back facts and completion together.
+It takes no clock and writes no run timestamp. Initialization is outside frozen migrations; a missing
+completion marker retries even if the schema upgrade already finished. `upgrade_database` still
+backs up the starting schema before DDL. Do not call rebuild inside another transaction.
+
+For an already upgraded connection, manual rebuild is:
+
+```python
+from brownstone.metrics import rebuild_scan_metrics
+rows = rebuild_scan_metrics(db)
+```
+
+`read_scan_metrics(db, config, snapshot_id)` returns every exact item identity and nullable prices,
+counts, exact numerator/denominator shares and coverage; None means an ineligible scan. It emits no
+seller strings. `units_below_price` takes an exact item/variant/state and positive integer threshold.
+`storage.listing_depth` retains its catalog compatibility selector and zero counts for absent items;
+`scan_changes` preserves the existing name and comparison policies. Stored addon prices remain for
+Browse/Opportunities/crafting and TSM compatibility; their numeric calculation is shared, not duplicated.
+Rebuild preserves these historical observations rather than rewriting them.
+
+The rebuild currently materializes all eligible listings locally in Polars; no streaming/bounded-memory
+claim is made. Derived metrics are not automatically invalidated by unsupported direct SQL edits to
+observations: explicitly rebuild after changing stored evidence. Manual writes bypass the structured
+key calculation; imports/rebuilds are the supported writers. No dependency was added.

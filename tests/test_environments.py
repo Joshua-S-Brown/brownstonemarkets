@@ -15,6 +15,7 @@ from brownstone.analysis import browse, rank, screenable_count
 from brownstone.config import build_source
 from brownstone.crafting import load_recipe_catalog
 from brownstone.markets import MARKET_KEYS, legacy_environment, upgrade_legacy
+from brownstone.metrics import rebuild_scan_metrics
 from brownstone.pipeline import import_scans, preview_scans
 from brownstone.scan_changes import compare_scans, eligible_scans
 from brownstone.storage import (
@@ -185,6 +186,7 @@ def test_multi_scan_queries_isolate_same_source_house_item_and_time(tmp_path):
             db.execute(f"""INSERT INTO {table} BY NAME SELECT * REPLACE
                 ('beta' AS environment, market_id||'-beta' AS market_id,
                  snapshot_id||'-beta' AS snapshot_id{scan_key}{extra}) FROM {table}""")
+        rebuild_scan_metrics(db)
         beta = {**config, "environment": "beta", "market_id": config["market_id"] + "-beta"}
         assert [s["scan_id"] for s in eligible_scans(db, config)] == ["new", "old"]
         assert [s["scan_id"] for s in eligible_scans(db, beta)] == ["new-beta", "old-beta"]

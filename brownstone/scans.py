@@ -15,7 +15,7 @@ from typing import Any
 
 import polars as pl
 
-from . import scan_details
+from . import metrics, scan_details
 from .variants import ITEM_KEYS
 
 # 1: keyed listings. 2: packed listings and distinct names. 3: richer packed listings,
@@ -26,8 +26,6 @@ PACKED_FORMAT = ":".join(PACKED_FIELDS)
 PACKED_V3_FIELDS = (*PACKED_FIELDS, *scan_details.EXTRA_FIELDS)
 PACKED_V3_FORMAT = ":".join(PACKED_V3_FIELDS)
 FLAG_COMPLETE_INFO, FLAG_COMMODITY = 1, 2
-# market_value is the price of the unit at this quantity-weighted percentile (nearest rank).
-MARKET_VALUE_PERCENTILE = 25
 # Configurable house evidence and where each value lives in a scan.
 EVIDENCE_FIELDS = {
     "faction": ("faction", "player"), "auctioneer": ("house", "npc_name"), "zone": ("house", "zone"),
@@ -367,17 +365,13 @@ def item_prices(listings: pl.DataFrame) -> pl.DataFrame:
     """Item-level unit prices in the market_snapshots shape (integer copper; 0 means no buyout listing).
 
     - ``min_buyout``: the cheapest unit price (rounded up for non-exact stacks).
-    - ``market_value``: the unit price at the MARKET_VALUE_PERCENTILE of all listed units, nearest rank,
+    - ``market_value``: the unit price at the 25th percentile of buyout-priced units, nearest rank,
       weighting each listing by its quantity. Robust to one stray cheap stack and to high listings
       that never sell; similar in spirit to TSM's average of the cheapest 15-30% of units.
     - ``recent_value`` and ``historical_value``: 0; one scan has no history.
     """
-    priced = listings.filter(pl.col("unit_buyout_ceil").is_not_null()).sort(*ITEM_KEYS, "unit_buyout_ceil")
-    target = (pl.col("quantity").sum().over(ITEM_KEYS) * MARKET_VALUE_PERCENTILE + 99) // 100
-    prices = (priced.with_columns(pl.col("quantity").cum_sum().over(ITEM_KEYS).alias("units"), target.alias("target"))
-              .group_by(ITEM_KEYS).agg(
-                  pl.col("unit_buyout_ceil").min().alias("min_buyout"),
-                  pl.col("unit_buyout_ceil").filter(pl.col("units") >= pl.col("target")).min().alias("market_value")))
+    prices = metrics.calculate_metrics(listings).select(
+        *ITEM_KEYS, "min_buyout", pl.col("unit_buyout_p25").alias("market_value"))
     names = (listings.filter(pl.col("item_name").is_not_null()).group_by(*ITEM_KEYS, "item_name").len()
              .sort([*ITEM_KEYS, "len", "item_name"], descending=[False, False, False, True, False])
              .unique(ITEM_KEYS, keep="first", maintain_order=True).select(*ITEM_KEYS, "item_name"))

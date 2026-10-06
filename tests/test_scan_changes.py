@@ -7,6 +7,7 @@ from conftest import make_source
 from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
 
 from brownstone.markets import MARKET_KEYS
+from brownstone.metrics import rebuild_scan_metrics
 from brownstone.pipeline import import_scans
 from brownstone.scan_changes import compare_scans, eligible_scans
 
@@ -75,9 +76,9 @@ def test_every_scope_field_required_for_choices_prices_and_listings(tmp_path, ke
         assert eligible_scans(db, wrong) == []
         with pytest.raises(ValueError):
             compare_scans(db, wrong, "old", "new")
-        db.execute(f"UPDATE market_snapshots SET {key}='another' WHERE snapshot_id='my-scans:new'")
+        db.execute(f"UPDATE scan_metrics SET {key}='another' WHERE snapshot_id='my-scans:new'")
         diff = compare_scans(db, config, "old", "new")
-        assert all(row["later"]["min_buyout"] is None for row in diff["items"])
+        assert not diff["items"] and len(diff["vanished"]) == 5
         db.execute(f"UPDATE scan_listings SET {key}='another' WHERE scan_id='new'")
         diff = compare_scans(db, config, "old", "new")
         assert not diff["items"] and not diff["new"] and len(diff["vanished"]) == 5
@@ -86,16 +87,18 @@ def test_every_scope_field_required_for_choices_prices_and_listings(tmp_path, ke
 
 
 @pytest.mark.parametrize("table,id_column", [("scan_listings", "snapshot_id"),
-                                             ("scan_listings", "scan_id"), ("market_snapshots", "snapshot_id")])
+                                             ("scan_listings", "scan_id"), ("scan_metrics", "snapshot_id")])
 def test_exact_snapshot_and_scan_ids_required(tmp_path, table, id_column):
     config, _ = import_pair(tmp_path)
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb")) as db:
         db.execute(f"UPDATE {table} SET {id_column}='wrong' WHERE snapshot_id='my-scans:new'")
+        if table == "scan_listings":
+            rebuild_scan_metrics(db)
         diff = compare_scans(db, config, "old", "new")
         if table == "scan_listings":
             assert not diff["items"] and not diff["new"]
         else:
-            assert all(row["later"]["market_value"] is None for row in diff["items"])
+            assert not diff["items"] and len(diff["vanished"]) == 5
 
 
 def test_sql_aggregates_supply_and_preserves_historical_weighted_prices(tmp_path):
@@ -130,6 +133,7 @@ def test_scan_changes_app_selects_two_scans_filters_compatible_catalogs_and_labe
         for table in ("market_snapshots", "scan_listings"):
             db.execute(f"UPDATE {table} SET item_id=2589 WHERE item_id=2")
             db.execute(f"UPDATE {table} SET item_id=10050 WHERE item_id=6")  # Classic-only catalog item.
+        rebuild_scan_metrics(db)
     at = app_for(config, monkeypatch)
     first = next(w for w in at.selectbox if w.label == "First scan")
     second = next(w for w in at.selectbox if w.label == "Second scan")
