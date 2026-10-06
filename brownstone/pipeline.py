@@ -158,14 +158,19 @@ def _file_signature(stat: os.stat_result) -> tuple[int, ...]:
 
 
 def _read_scan_bytes(path: Path) -> bytes:
-    """Bounded read with best-effort detection of replacement or writes; not an atomic snapshot."""
+    """Bounded read with best-effort detection of replacement or writes; not an atomic snapshot.
+
+    Descriptor and path stats are each compared only with themselves: on Windows, ``os.fstat`` and
+    ``Path.stat`` use different APIs and can disagree about an unchanged file.
+    """
+    path_before = _file_signature(path.stat())
     with path.open("rb") as file:
         before = _file_signature(os.fstat(file.fileno()))
         raw = file.read(MAX_SCAN_BYTES + 1)
         after = _file_signature(os.fstat(file.fileno()))
     if len(raw) > MAX_SCAN_BYTES:
         raise ValueError("Scan file exceeds the 256 MiB read limit; retry with a smaller saved file")
-    if before != after or after != _file_signature(path.stat()) or len(raw) != after[2]:
+    if before != after or path_before != _file_signature(path.stat()) or len(raw) != after[2]:
         raise ValueError("Scan file changed while reading; wait for /reload or logout to finish and Preview again")
     return raw
 

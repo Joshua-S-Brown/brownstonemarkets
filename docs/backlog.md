@@ -20,19 +20,76 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 Nothing active in code. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
 **Through the last full beta testing day, 21 October** (manual, in game):
-- **Keep scanning.** Three complete scans of the Normal Alliance house are imported (16:47Z, 17:46Z and 22:54Z on 2026-10-04; the last is addon 0.2.0). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
+- **Keep scanning.** Four complete scans of the Normal Alliance house are imported (16:47Z, 17:46Z and 22:54Z on 2026-10-04, and 20:34Z on 2026-10-05; the last two are addon 0.2.0). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
 - **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result by hand in `config/recipe-selections/forever-tailoring.toml` with the date, then regenerate on the Recipe catalogs page. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
 - **If any yield is more than 1,** *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
 
 ## Next
 
-**Agreed order (reviewed 2026-10-05):** current workflow stories STORY-014, STORY-018 and STORY-015a are implemented (see `status.md`); launch preparation is next. Tailoring yield and vendor checks run alongside this work; a confirmed multi-yield requirement takes priority.
+**Agreed order (groomed 2026-10-05):** the app is almost all tables today, so user-facing analysis now gets its own lane in Next instead of waiting behind launch preparation. The layers, each building on the one before:
+- **Scans** (exists) → **market metrics** (STORY-024: one defined set of measures per item per scan) → **analysis views** (item page, charts, sellers) and the **Today** page (what to buy, craft and sell now).
+- An optional AI narration layer can come later. It may only explain those defined metrics, never invent numbers (*Out of scope*).
+- Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
-**Launch preparation:** STORY-016 → STORY-020, completed before the first live import. STORY-016 is due by the last full beta testing day, 21 October, as the beta closes (OPS-03); it isn't urgent before then. Use the gap after beta testing for cleanup, verified backup/restore and source configuration review (DATA-03); aim to finish final cutover preparation one or two days before launch. Draft and rehearse the in-game runbook steps while the beta is available, then finish the checklist after the preparation stories.
+**Order:**
+1. STORY-022 item names
+2. STORY-023 addon 0.3.0 (by 21 October)
+3. STORY-020a runbook rehearsal (by 21 October)
+4. STORY-016 backup (by 21 October)
+5. STORY-024 market metrics
+6. STORY-021 item page and charts
+7. STORY-025 Today
+8. STORY-026 scan coverage and rhythm
+9. STORY-020b runbook completion (finished one or two days before 4 November, whatever else is in progress)
+10. STORY-027 removed listings
+11. STORY-028 sellers and supply chains
+12. STORY-006 replay
+13. STORY-015b crafting across professions
+
+STORY-011a is a bounded research task for any convenient gap. Tailoring yield and vendor checks run alongside all of this; a confirmed multi-yield requirement takes priority.
+
+**Why STORY-023 is early:** scans can't be retaken. Anything the addon doesn't capture from launch day is missing for those weeks, so the richer scan format must be tested on the beta before it closes.
 
 **Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, and its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
 
-**After launch:** the remaining stories below. STORY-011a can be a bounded research task when convenient, but must not delay the baseline workflow or launch preparation. Reassess STORY-006 before expanding history features.
+### STORY-022 — Item names everywhere
+
+As a gold maker, I want every item shown by its name, so that tables, charts and recommendations are readable.
+
+Acceptance:
+- **A derived name lookup per game version,** filled at import from any listing whose name loaded and from catalog names, and backfilled from stored listings through a numbered migration. Bronze and stored listings are never rewritten.
+- **Views use it** wherever a scan's own name is missing (Browse, Scan changes, the board's depth and later views). `Item <ID>` remains only when no scan or catalog has ever named the item.
+- **Names are labels only.** They never cross game versions, never join data (item ID within the full market still does) and never imply a category.
+- **Real data:** report how many of the stored items gain a name, including Runecloth (14047).
+- Depends on nothing. Replaces the item-name note under *Addon follow-ups*.
+
+### STORY-023 — Capture more of each scan (addon 0.3.0)
+
+As a gold maker, I want the addon to record everything the auction house shows that matters for pricing and competition, so that live history has it from launch day, because scans can't be retaken.
+
+Today the addon keeps 6 of the 18 values the auction API returns per listing, and reads no item reference data.
+
+Acceptance:
+- **Decide and record** in `requirements.md` (ADDON rules) which fields are captured, including whether seller names are stored. They are other players' character names: kept on this machine, never exported, published or shared.
+- **Per listing,** from the auction APIs the addon already uses: seller, time-left bucket, item quality, required level, and the item link wherever it identifies a variant (for example a random suffix such as "of the Monkey"), so gear variants are priced separately. Decide and record how a variant is identified and joined (DATA-03 still applies).
+- **Per item, once per scan:** official class and subclass, item level, maximum stack size and vendor sell price. Official classes are game data, so filtering by them isn't inferring categories from names.
+- **Measured on the beta:** for each new field, how often it's available (for example, seller missing when the client hasn't loaded the listing), plus scan duration and file size compared with 0.2.0, kept within a recorded limit.
+- **Still read-only:** no buying, posting, bidding or other auction-house actions, and no unattended scanning (SPIKE-008).
+- **Compatible:** a new scan format version; the importer still reads formats 1 and 2, and older scans simply lack the new fields (null, never guessed). Schema changes go through a numbered migration.
+- **Tested by 21 October:** at least one complete 0.3.0 beta scan imported.
+- Depends on nothing. Feeds STORY-024, STORY-027 and STORY-028.
+
+### STORY-020a — Rehearse the launch-day in-game steps
+
+Split from STORY-020 at grooming (2026-10-05) so the part that needs the beta isn't blocked by STORY-016.
+
+As a gold maker, I want the in-game half of the launch checklist rehearsed while the beta is still up, so that launch day has no surprises.
+
+Acceptance:
+- **A draft runbook** in `docs/`, linked from `status.md`, with the in-game steps: install or update the addon and check that it loads (the `.toc` interface number may change), first scan, `/reload`, import, clear.
+- **Rehearsed and timed** on the beta by the last full beta testing day (21 October), with each step's time recorded.
+- **Placeholders** for the steps STORY-020b completes.
+- Depends on nothing; uses STORY-023's addon if it's ready.
 
 ### STORY-016 — Back up local data
 
@@ -44,29 +101,96 @@ Acceptance:
 - **Restore tested once:** restored into a fresh folder, the app opens it and the Forever board matches the original.
 - Bronze is the irreplaceable part. Derived data becomes rebuildable with STORY-006.
 
-### STORY-020 — Launch-day runbook
+### STORY-024 — Market metrics layer
+
+As a gold maker, I want one defined set of market measures for each item in each scan, so that every chart, recommendation and later explanation agrees.
+
+Acceptance:
+- **Defined once** in `requirements.md`, as versioned rules: lowest unit buyout; unit-weighted median, 10th and 25th percentile unit buyout; units listed; listing count; the share of units in the largest stack; and units listed below a given price. Seller count and the top seller's share are added when STORY-023 data exists. Prices are integer copper. A listing without a buyout counts as listed but is never priced.
+- **Stored and rebuildable:** calculated at import and rebuildable from stored listings with identical results, keyed by source, full market identity (DATA-03), scan and item (plus variant when STORY-023 provides one). Partial scans are excluded or clearly labelled.
+- **One source of truth:** the board's depth and Scan changes use these measures where they overlap instead of recomputing them, or the overlap is documented.
+- **Tests** cover quantity weighting, stacks, listings without a buyout, partial scans and isolation by full market identity.
+- Depends on STORY-022; uses STORY-023 fields when available.
+
+### STORY-021 — Item page and charts
+
+Extended at grooming (2026-10-05) with time-series and ladder charts, the app's first charts.
+
+As a gold maker, I want one page per item that explains its price, so that I can see the listings behind a number, how it has moved, and what I craft with it.
+
+Acceptance:
+- **Pick an item** from Browse, the board, Scan changes or Today; the chosen item stays selected when switching views.
+- **The page shows:**
+  - a time-series chart of lowest and typical price and units listed across this source's scans, with each point's scan time (UTC and local)
+  - the listing ladder in the chosen scan as a chart and table (quantity, unit price, cumulative units)
+  - the catalogs that make or use it, with profession and role, and its board rows
+  - freshness (DATA-05)
+- **Charts never invent data:** a scan where the item was absent is a gap, never zero, and every point names its scan.
+- **The same rules:** one source at a time, missing never zero, and no categories inferred. It reads STORY-024's measures and the stored listings.
+- Depends on STORY-024. Links to the *Value-add chart* (Later) once that exists.
+
+### STORY-025 — Today: what to buy, craft and sell now
+
+As a gold maker, I want a short page of what to buy, craft and sell right now, each with its reason, so that a few minutes in game are well spent.
+
+Acceptance:
+- **Three short lists** from the newest complete scan, each capped (for example ten rows), every row with its evidence and a confidence label:
+  - **Buy:** listings well below the item's own typical price in this scan, or below its vendor sell price (STORY-023); later also below its own history. Shows how many units qualify and their total cost when bought listing by listing.
+  - **Craft:** profitable board rows, with how many crafts the listed inputs support.
+  - **Sell:** board outputs where current listings support a price, given the lowest competing listing and thin markets (few listings, or most units in one stack).
+- **Rule-based and explainable:** each rule and threshold is versioned in `requirements.md`. No hidden scoring and no AI.
+- **Honest:** a stale scan is flagged at the top; missing prices never become recommendations; nothing is called a sale.
+- **Decide** whether Today becomes the page the app opens on (recommended).
+- Depends on STORY-024; better with STORY-023. Later steps under *Market timing* extend it with timing advice.
+
+### STORY-026 — Scan coverage and your play rhythm
+
+As a gold maker, I want to see when I've scanned and when I usually play, so that I know which times are covered and when it's worth making time to log in.
+
+Acceptance:
+- **Coverage grid:** scans by hour and weekday in local time for the selected source, with counts and gaps.
+- **Your rhythm:** the hours and days you usually scan, from scan times only.
+- **What's missing:** which slots need scans before timing claims can be made, with the thresholds recorded in `requirements.md`.
+- Works on beta scans now. Depends on nothing (uses `addon_scans`). Feeds *Plan ahead* under Later.
+
+### STORY-020b — Finish the launch-day runbook
+
+The rest of STORY-020, split at grooming (2026-10-05). Finished one or two days before 4 November.
 
 As a gold maker, I want a short, tested checklist for 4 November, so that the switch to the live game is quick and nothing is missed.
 
 Acceptance:
-- **A runbook** in `docs/`, linked from `status.md`, covering:
+- **Completes STORY-020a's runbook** with:
   - backing up before and after (STORY-016)
-  - adding and enabling the live Roleplaying Alliance source in `config/market.local.toml`, with its `rules_version`
-  - checking that the addon loads (the `.toc` interface number may change)
-  - the first scan, `/reload` and import
+  - adding and enabling the live Roleplaying Alliance source in `config/market.local.toml`, with its own `source_id`, `environment = "live"`, the live game folder's `scan_path` and its `rules_version` (DATA-03)
   - re-saving each Forever Wowhead page and regenerating. If the live `rules_version` differs from the beta's, every Forever catalog stays inspection-only until regenerated (*Refresh due* flags it).
   - re-checking *Known Forever market facts* in `requirements.md`
-- **Rehearsal and completion:** draft and rehearse the in-game steps by the last full beta testing day, with each step timed. After STORY-016 and STORY-017, finish and check the backup, restore and source-cutover steps using archived scans and data copies; live-house checks happen at launch.
-- Depends on STORY-016 and STORY-017.
+- **Checked** using archived scans and data copies: the backup, restore and source-cutover steps work end to end. Live-house checks happen at launch.
+- Depends on STORY-016 and STORY-020a.
 
-### STORY-012 — Compare a market with a reference market
+### STORY-027 — Removed listings between scans
 
-As a gold maker, I want to see an item's price on Forever next to its price on Classic Era, so that I can sanity-check Forever prices and spot import errors, especially in the first weeks after launch.
+Moved from *Demand from your own scans* (Later) at grooming (2026-10-05).
+
+As a gold maker, I want to see which listings disappeared between two scans, so that I have some evidence of what moves, since the game shows no sales.
 
 Acceptance:
-- **Explicit pairing.** The user picks two configured sources, each a different market. Items pair on item ID only inside this view, and the view is labeled as a comparison of different markets. Nothing from it feeds crafting, the board or any price basis (DATA-03, DATA-08).
-- **Shown with care.** Each side shows its own source, scan time and freshness, plus the ratio between them. Items missing or unpriced on either side are listed, never treated as zero.
-- **Evidence for the idea:** on 2026-10-04, 2,323 of 2,927 priced Forever beta items were also priced on Mankrik. Common materials were within about 0.5–2× (Linen Cloth 38c vs 32c), but scarce high-level ones diverged widely (Runecloth 2g 55s vs 10s 75c). The median ratio was 0.32.
+- **Matching:** listings present in one scan and gone from the next, matched on item, quantity and buyout, plus seller and time left when STORY-023 provides them. Time left separates expiry from an early disappearance.
+- **Honest labels:** always *removed*, never *sold*. Scans carry no auction ID, so a sale, a cancellation and an expiry can look the same; it's an upper bound on sales.
+- **Only consecutive scans** within a maximum gap recorded in `requirements.md`.
+- Shown per item (on the item page) and as a list, and usable by Today as evidence.
+- Depends on STORY-024; better with STORY-023.
+
+### STORY-028 — Sellers and their supply chains
+
+As a gold maker, I want to see who supplies each market and which crafting chains they focus on, so that I can choose chains with less competition and expect undercuts.
+
+Acceptance:
+- **Per item:** sellers by share of units listed, their prices against the lowest and typical price, and how that changes between scans.
+- **Per seller:** what they list, grouped by catalog chain (materials, intermediates and outputs by catalog membership, never names), how much, and how often they repost.
+- **Per chain:** how concentrated supply is (the share held by the top sellers), so crowded and open chains are visible.
+- **Private:** seller names stay on this machine, as recorded in STORY-023's decision.
+- Depends on STORY-023 (seller capture) and STORY-024.
 
 ### STORY-011a — Survey third-party scan sources
 
@@ -77,19 +201,6 @@ As a gold maker, I want to know whether any trustworthy third-party Forever scan
 Acceptance:
 - **Survey and record.** Check AHledger, Booty Bay Broker and TSM for an official export or API and terms that allow personal use. Record the result in `requirements.md`, closing that open decision. No code.
 - If a source qualifies, STORY-011b moves to Next.
-
-### STORY-021 — Item page
-
-As a gold maker, I want one page per item that explains its price, so that I can see the listings behind a number, how it has moved, and what I craft with it.
-
-Acceptance:
-- **Pick an item** from Browse or the board.
-- **The page shows:**
-  - the listing ladder in the chosen scan (quantity, unit price, cumulative units)
-  - its prices in each scan of this source
-  - the catalogs that make or use it, with profession and role
-- **The same rules:** one source at a time, missing never zero, and no categories inferred.
-- Depends on STORY-018 (prices for any snapshot).
 
 ### STORY-006 — Replay and rebuild local data
 
@@ -114,26 +225,30 @@ Acceptance:
 
 ## Later
 
-**Optional client-version cutover guard:** investigate whether recorded client versions can flag a misconfigured beta/live source during STORY-020 and first live imports. Source configuration remains authoritative (DATA-03); STORY-017 adds no client-version evidence checks.
+**Optional client-version cutover guard:** investigate whether recorded client versions can flag a misconfigured beta/live source during STORY-020b and first live imports. Source configuration remains authoritative (DATA-03); STORY-017 adds no client-version evidence checks.
 
 These are grouped by what unblocks them.
 
-**Inventory-aware economics** (unblocked: `scan_listings` holds every listing; depth is now displayed, see `status.md`):
+**Inventory-aware economics** (unblocked: `scan_listings` holds every listing; depth is now displayed, see `status.md`). STORY-024 and STORY-025 cover the thin-market signals and the cost of buying listing by listing; the rest stays here:
 - **Cost from the listing ladder:** what N units actually cost when bought listing by listing, and the most you can buy below a price.
 - **Undercut-aware sale price.**
 - **A suggested craft quantity limited by input depth.**
 - **Thin-market flag:** few listings, a wide gap between minimum buyout and market value, or most units in one stack. Thresholds need a decision.
 
 **Demand from your own scans** (needs repeated scans and STORY-018; optional sources from STORY-011b can add more data points):
-- **Removed listings:** listings that disappear between scans, matched on item, quantity and buyout. Scans carry no auction ID, so a sale, a cancellation and an expiry look the same. It is an upper bound on sales, labeled *removed*, never *sold*. This is Forever's substitute for TSM sale rates.
+- *Removed listings* is now STORY-027 in Next.
 - **Did the board hold up?** Whether "potential craft" rows were still profitable at the next scan. A tiny check is possible with beta scans; it means something after one to two weeks of live scans.
 
 **Market timing and a daily brief** (requested 2026-10-04; needs post-launch history, not beta scans (STORY-017)). The goal is to know when to buy and sell each kind of item (materials, crafted goods, equipment), and to open the app to a short list of the day's priorities without being online all day.
 - **Honest limits:** scans happen only when you are at the auction house, so hour-of-day and weekday patterns are sampled at your playtimes. A pattern is shown only with its coverage (scans per hour and weekday), and claimed only where coverage is enough. Weekday effects such as the weekly reset need at least four weeks. Optional sources (STORY-011b) could fill hours you don't scan.
 - **Steps** (each needs the one before):
-  1. **Scan coverage:** scans by hour and weekday, and gaps, so you can deliberately fill them in a few sessions a week.
+  1. **Scan coverage:** now STORY-026 in Next.
   2. **Timing profile:** per item, and for groups by catalog role (material, intermediate, finished; never inferred from names), price and supply by hour and weekday, with a confidence label. A weekday chart overlays price against supply (units listed, never called demand or volume sold). "Cheapest to buy" and "best to sell" windows only where coverage supports them.
-  3. **Daily brief:** one page of today's priorities, each with its evidence and confidence: profitable crafts with depth, inputs below their own recent median, outputs above it, and what the timing profile says to buy or hold. It can start rule-based on the newest scan and STORY-018, and gain timing as history grows.
+  3. **Daily brief:** STORY-025 (*Today*) is its rule-based first version on the newest scan. This step adds the timing profile's advice: what to buy now or hold, and what to post now or wait on, each with its coverage.
+  4. **Plan ahead** (requested 2026-10-05): next-day planning, not only right now.
+     - **When to log in:** suggested sessions that combine your usual play times (STORY-026) with the hours the timing profile marks as best to buy or sell, and how much each session is worth on current evidence.
+     - **Key times and milestones:** a calendar of known events entered by hand, each with its source (weekly reset, maintenance, holidays, patch days, launch-week phases). Their effect on prices is shown only once enough scans cover them.
+     - **Tomorrow's plan:** what to buy tonight for tomorrow's crafts, and which listings will expire before your next usual session (needs time left, STORY-023).
 
 **History chain** (each step needs the one before):
 1. Replay (STORY-006).
@@ -147,7 +262,16 @@ These are grouped by what unblocks them.
 **Classic demand context** (was STORY-003 in Next; moved at grooming, 2026-10-04, because it serves the stand-in, not Forever):
 - TSM's Classic regional file is ingested as its own source and never mixed with realm prices. Its columns are `avgSalePrice, saleRate, soldPerDay` (feasibility confirmed 2026-10-04).
 - The board shows sold-per-day and sale rate with their own timestamp, labeled as context, not a promise to sell.
-- *Removed listings* (above) is the Forever equivalent and should replace or check it.
+- *Removed listings* (STORY-027) is the Forever equivalent and should replace or check it.
+
+**STORY-012 — Compare a market with a reference market** (moved from Next at grooming, 2026-10-05: its own evidence shows Forever and Classic prices diverge too much for a strong sanity check, and it targets the first weeks after launch):
+
+As a gold maker, I want to see an item's price on Forever next to its price on Classic Era, so that I can sanity-check Forever prices and spot import errors, especially in the first weeks after launch.
+
+Acceptance:
+- **Explicit pairing.** The user picks two configured sources, each a different market. Items pair on item ID only inside this view, and the view is labeled as a comparison of different markets. Nothing from it feeds crafting, the board or any price basis (DATA-03, DATA-08).
+- **Shown with care.** Each side shows its own source, scan time and freshness, plus the ratio between them. Items missing or unpriced on either side are listed, never treated as zero.
+- **Evidence for the idea:** on 2026-10-04, 2,323 of 2,927 priced Forever beta items were also priced on Mankrik. Common materials were within about 0.5–2× (Linen Cloth 38c vs 32c), but scarce high-level ones diverged widely (Runecloth 2g 55s vs 10s 75c). The median ratio was 0.32.
 
 **STORY-011b — Third-party scan ingestion** (only if STORY-011a finds a qualifying source):
 - **Separate source.** A qualifying feed is ingested as its own source for the same market, with raw preservation and provenance like every other source.
@@ -161,10 +285,17 @@ These are grouped by what unblocks them.
 - **Best use of a material:** for an item such as Linen or Wool Cloth, compare selling it with each craft it feeds, at current prices.
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
 
+**Your own character's data** (suggested 2026-10-05; needs a decision because it reads beyond the auction house, though still read-only):
+- **Your auctions and sold-auction mail:** real sales and prices for your own listings, the only true sales data available. It would calibrate *Removed listings* (STORY-027).
+- **Bags and bank:** what you hold, so Today's *Sell* list includes it and *Buy* skips what you already have.
+- **Known recipes and skill:** limits the board to what you can actually craft (compare STORY-015b's list of your professions).
+
+**AI narration** (suggested 2026-10-05; after STORY-024 and STORY-025): a plain-language summary of Today and the item page that explains only defined metrics and rule results, cites every number, and never invents one or recommends without explainable features (*Out of scope*). Needs a decision about which model runs it and what data leaves this machine.
+
 **Addon follow-ups** (any time, none urgent):
 - Scan the Roleplaying house once the beta offers it, and a neutral house when reachable, to confirm house identification and the 15% cut market.
 - Check whether `/bscan start` works without the button click.
-- Item names: 4,690 listings arrived before the client loaded the item, and some items (Runecloth, 14047) appear only that way, so Browse shows `Item <ID>`. Crafting uses catalog names, so it's unaffected. Fix: take an item's name from any scan of the same game version where it loaded.
+- Item names: now STORY-022 in Next.
 
 **Recipe coverage** (unblocked by STORY-004):
 - **More recipes and professions:** added in the app on the Recipe catalogs page and shown together on the board (`status.md`); routing across professions is STORY-015b.

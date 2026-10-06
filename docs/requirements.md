@@ -40,7 +40,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 - **DATA-02 Validation:** required columns, integer copper prices, unique positive item IDs and timestamps that are either all present or all absent. A missing name becomes `Item <ID>`. Zero means unavailable or no listing.
 - **DATA-03 Market identity:** a market is one auction house: `game_version + region + scope + realm + server_type + faction + environment`. Item IDs never join across any of these.
   - **Fields:**
-    - `environment` is `live` or `beta` (decided 2026-10-05, STORY-017). Forever sources must configure it explicitly; Classic and Retail are always `live` (the default; `beta` is refused, decided 2026-10-05). It comes only from source configuration, never scan contents or client-version inference. A beta and live scan of the same house have identical house evidence; verify the configuration during cutover (STORY-020).
+    - `environment` is `live` or `beta` (decided 2026-10-05, STORY-017). Forever sources must configure it explicitly; Classic and Retail are always `live` (the default; `beta` is refused, decided 2026-10-05). It comes only from source configuration, never scan contents or client-version inference. A beta and live scan of the same house have identical house evidence; verify the configuration during cutover (STORY-020b).
     - `scope` is `house` (one auction house) or `region` (a region-wide commodity pool).
     - `realm` names the house where realms exist; `server_type` (normal/pvp/roleplaying/hardcore) names it in realmless Forever. A market uses one or the other, never both.
     - `faction` is alliance, horde, neutral, or blank for cross-faction houses.
@@ -138,10 +138,13 @@ Demand, sale likelihood, depth-adjusted costs and quantities (listing depth is d
 
 ## Open decisions
 
-- Useful action thresholds beyond profit > 0.
+- Useful action thresholds beyond profit > 0 (Today's buy, craft and sell rules, STORY-025).
 - Classic regional demand integration (Classic demand context, under Later in `backlog.md`).
 - Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011a).
 - Where backups go and how often (STORY-016; the timing is decided under OPS-03), historical retention and scheduling.
+- Which additional fields addon 0.3.0 captures, including whether other players' seller names are stored locally, and how item variants such as random suffixes are identified (STORY-023).
+- Whether the addon may read your own character's data beyond the auction house: your auctions, sold-auction mail, bags, bank and known recipes (*Your own character's data*, Later in `backlog.md`).
+- Whether to add AI narration, which model runs it and what data may leave this machine (*AI narration*, Later in `backlog.md`).
 - Whether to remove the Retail regression sources. SPIKE-008 found Forever listings are per-stack, not Retail-style per-unit commodities, so the Retail commodity feed is not a close test of Forever's model.
 
 None is approved by default.

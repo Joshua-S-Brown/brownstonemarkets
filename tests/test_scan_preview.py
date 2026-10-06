@@ -1,6 +1,8 @@
 """Read-only preparation and exactly reviewed imports, using deterministic race simulations."""
 import gzip
+import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import duckdb
 import pytest
@@ -87,6 +89,33 @@ def test_read_change_detection_and_bound_are_deterministic(tmp_path, monkeypatch
         preview_scans(config, now=NOW)
 
 
+def test_descriptor_and_path_stats_are_never_compared_with_each_other(tmp_path, monkeypatch):
+    """Windows: fstat and stat can report different device/file IDs for one unchanged file."""
+    config = addon_source(tmp_path / "data")
+    path = write_scans(tmp_path / "scan.lua", scan("s", FINISHED, [listing(1, 1, 50)]))
+    real_fstat = pipeline.os.fstat
+
+    def windows_fstat(fd):
+        stat = real_fstat(fd)
+        return SimpleNamespace(st_dev=stat.st_dev + 1, st_ino=stat.st_ino + 1, st_size=stat.st_size,
+                               st_mtime_ns=stat.st_mtime_ns, st_ctime_ns=stat.st_ctime_ns + 1)
+
+    monkeypatch.setattr(pipeline.os, "fstat", windows_fstat)
+    assert preview_scans(config, path, now=NOW).new_ids == ["s"]
+    assert import_scans(config, path, now=NOW)["status"] == "complete"
+    other = write_scans(tmp_path / "other.lua", scan("t", FINISHED, [listing(1, 1, 60)]))
+    real_open = Path.open
+
+    def replaced_before_open(self, *args, **kwargs):
+        if self == path and other.exists():
+            os.replace(other, path)
+        return real_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", replaced_before_open)
+    with pytest.raises(ValueError, match="changed while reading"):
+        preview_scans(config, path, now=NOW)
+
+
 @pytest.mark.parametrize("content", [b"", b"BrownstoneScanDB = {", b"nonsense", b"\xff"])
 def test_bad_files_are_read_only_and_retryable(tmp_path, content):
     path = tmp_path / "broken.lua"
@@ -102,9 +131,10 @@ def test_missing_and_unreadable_files_do_not_create_data(tmp_path, monkeypatch):
     config = addon_source(tmp_path / "data", tmp_path / "missing.lua")
     with pytest.raises(FileNotFoundError):
         preview_scans(config, now=NOW)
+    unreadable = write_scans(tmp_path / "unreadable.lua", scan("s", FINISHED, [listing(1, 1, 50)]))
     monkeypatch.setattr(Path, "open", lambda *args, **kwargs: (_ for _ in ()).throw(PermissionError("Unreadable")))
     with pytest.raises(PermissionError):
-        preview_scans(config, now=NOW)
+        preview_scans(config, unreadable, now=NOW)
     assert not config["data_dir"].exists()
 
 
