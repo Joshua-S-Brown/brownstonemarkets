@@ -58,8 +58,8 @@ As a gold maker, I want the addon to record everything the auction house shows t
 Today the addon keeps 6 of the 18 values the auction API returns per listing, and reads no item reference data.
 
 Acceptance:
-- **Decide and record** in `requirements.md` (ADDON rules) which fields are captured, including whether seller names are stored. They are other players' character names: kept on this machine, never exported, published or shared.
-- **Per listing,** from the auction APIs the addon already uses: seller, time-left bucket, item quality, required level, and the item link wherever it identifies a variant (for example a random suffix such as "of the Monkey"), so gear variants are priced separately. Decide and record how a variant is identified and joined (DATA-03 still applies).
+- **Record** in `requirements.md` (ADDON rules) which fields are captured. Seller names are stored, locally only (ADDON-07, decided 2026-10-05).
+- **Per listing,** from the auction APIs the addon already uses: seller, time-left bucket, item quality, required level, and the item link wherever it identifies a variant (for example a random suffix such as "of the Monkey"), so gear variants are priced separately (ADDON-08, decided 2026-10-05). Propose, and record once approved, which item-link fields identify a variant and how it joins (DATA-03 still applies).
 - **Per item, once per scan:** official class and subclass, item level, maximum stack size and vendor sell price. Official classes are game data, so filtering by them isn't inferring categories from names.
 - **Measured on the beta:** for each new field, how often it's available (for example, seller missing when the client hasn't loaded the listing), plus scan duration and file size compared with 0.2.0, kept within a recorded limit.
 - **Still read-only:** no buying, posting, bidding or other auction-house actions, and no unattended scanning (SPIKE-008).
