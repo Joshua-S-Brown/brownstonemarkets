@@ -30,6 +30,7 @@ app.py                  Streamlit entry: sidebar, Refresh, view dispatch
 views/                  Streamlit only; display, no calculations
   common.py             snapshot loading, freshness display, gold columns
   crafting.py           Action Board and recipe explanation
+  today.py              Today settings form, funded plan and scan evidence tables
   catalogs.py           Recipe catalogs page: status, one add-or-update flow (live review, then Save)
   market.py             Browse market and Opportunities
   scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
@@ -49,12 +50,15 @@ brownstone/             importable without Streamlit
   item_names.py         keeps derived version-scoped labels current on import, catalog seeding and app start
   analysis.py           browse and discount screen queries
   freshness.py          the one staleness policy
-  money.py              copper ↔ gold display helpers
+  money.py              explicit g/s/c parser and copper ↔ gold display helpers
   crafting.py           catalog loading, expansion, route costs, price bases
   recipe_import.py      saved Wowhead profession page → archive, extract, catalog TOML (no network)
   recipe_catalogs.py    catalogs found by selection file: status, previews and the add/update writes
   selection_files.py    in-place edits of a selection file that keep its comments
   action_board.py       ranking and label policy (versioned)
+  today.py              Today v1 prefix ladders, batch sizing, reservation, shopping/sell/aside results
+  today_data.py         one scoped read of prices, base/legacy listings, metrics and vendor references
+  today_settings.py     validated integer settings and atomic local JSON persistence
   cli.py                `python -m brownstone`: collect or import a source; `recipes` subcommand
 launch.py               local server launcher with code-fingerprint restart
 ```
@@ -166,7 +170,7 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 ## Known design debt
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 94% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.
@@ -219,3 +223,30 @@ The rebuild currently materializes all eligible listings locally in Polars; no s
 claim is made. Derived metrics are not automatically invalidated by unsupported direct SQL edits to
 observations: explicitly rebuild after changing stored evidence. Manual writes bypass the structured
 key calculation; imports/rebuilds are the supported writers. No dependency was added.
+
+
+## Today contracts (STORY-025)
+
+Rules and decisions live in `requirements.md` → Today v1. `read_today_evidence` returns
+`(observations, listings, metrics, vendor_sell_prices)` for one source and analytical snapshot.
+Listings are grouped base/legacy catalog identities with `(quantity, full buyout, unit ceil)` tuples;
+metrics retain ADDON-10 counts and p25. Missing listing support is `None`, distinct from an empty
+eligible scan's `{}`. No seller strings enter this path. Catalog compatibility retains game/rules
+version; storage predicates retain source and every MARKET_KEYS field plus scan/snapshot and item
+variant state. No schema changes or migrations are needed.
+
+`build_today` takes catalogs, scoped evidence, `TodaySettings` and the caller's clock. It returns
+four capped lists (`craft`, `buy`, `sell`, `below_vendor`), mutually exclusive hidden reason counts,
+remaining counts, complete shopping cost, freshness and Today version. Craft rows retain board
+routes and recipe/catalog provenance. Prefix units/buyouts support whole-stack quotes with binary
+search for the affordable bound; the most profitable size is then chosen among the bound and each size just
+before an input needs another listing. Each selection reserves funds and listing offsets. No per-unit expansion or per-recipe SQL.
+Selection rounds re-size remaining candidates against the same remaining resources. Duplicate
+output routes are counted and omitted once an output is selected; sell follows the chosen route,
+and shopping combines item/route purchases. Evidence state is attached to every result row. Settings I/O is separate from pure calculations; the UI writes only
+on Save, to `today_settings.settings_path(data_dir, source_id)` (one file per source in the shared data
+directory), and reports invalid or failed reads/writes without hiding the tables.
+
+Offline fixtures in `test_today.py`, `test_today_data.py` and `test_today_view.py` cover this contract
+without discovering local catalogs. Performance verification uses a copied database with current
+local catalog selections; aggregate measurements and limitations are in `status.md`.

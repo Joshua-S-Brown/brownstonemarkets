@@ -25,3 +25,21 @@ def format_money(copper: int | None) -> str:
     if copper_part or not parts:
         parts.append(f"{copper_part}c")
     return sign + " ".join(parts)
+
+
+def parse_money(text: str) -> int:
+    """Parse explicit integer g/s/c amounts, including format_money's signed output."""
+    import re
+
+    value = text.strip().lower()
+    sign = -1 if value.startswith("-") else 1
+    value = value.removeprefix("-").strip()
+    tokens = list(re.finditer(r"(\d{1,3}(?:,\d{3})+|\d+)\s*([gsc])", value))
+    remainder = re.sub(r"(\d{1,3}(?:,\d{3})+|\d+)\s*([gsc])", "", value)
+    if not tokens or remainder.strip():
+        raise ValueError("Use explicit units, for example 12g 50s or 75s; bare numbers are not amounts.")
+    units = [token[2] for token in tokens]
+    if len(set(units)) != len(units):
+        raise ValueError("Use each of g, s and c at most once.")
+    multipliers = {"g": COPPER_PER_GOLD, "s": COPPER_PER_SILVER, "c": 1}
+    return sign * sum(int(token[1].replace(",", "")) * multipliers[token[2]] for token in tokens)

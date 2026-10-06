@@ -68,6 +68,8 @@ Acceptance:
 
 ### STORY-025 — Today: what to craft, buy and sell now
 
+Implemented and pending review; rules and decisions: `requirements.md` → *Today (version 1)*.
+
 Reshaped with the product owner 2026-10-06: rank by total gold for the effort, sized to your funds, instead of a list of deals. No sniping: nothing here depends on catching a listing within minutes.
 
 As a gold maker, I want the app to open on a short plan of what to craft, buy and sell right now, sized to the gold I have, so that my time in game goes to the biggest worthwhile gains and not to copper.

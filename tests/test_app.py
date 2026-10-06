@@ -26,6 +26,8 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert not any(w.label == "Recipe catalog" for w in at.selectbox)
+    assert at.radio[0].value == "Today"
+    at.radio[0].set_value("Crafting").run()
     assert any(m.value == "#### Action Board" for m in at.markdown)
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert set(table["Profession"]) == {"Alchemy", "Enchanting", "Tailoring"}
@@ -73,6 +75,8 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     assert not at.exception
     assert any("Imported" in s.value for s in at.success)
     assert not any(w.label == "Recipe catalog" for w in at.selectbox)
+    assert at.radio[0].value == "Today"
+    at.radio[0].set_value("Crafting").run()
     combined = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert {"Alchemy", "Tailoring"} <= set(combined["Profession"])  # Plus any professions added in the app.
     alchemy = combined[combined["Profession"] == "Alchemy"]
@@ -218,6 +222,8 @@ def test_combined_board_duplicate_recipe_selection_uses_own_catalog(tmp_path, mo
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert not any(w.label in {"Recipe catalog", "Data source"} for w in at.selectbox)
+    assert at.radio[0].value == "Today"
+    at.radio[0].set_value("Crafting").run()
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert len(table) == 6 and set(table["Profession"]) == {"Tailoring", "Alchemy"}
     wool = table[table["Item"] == "Woolen Bag"].set_index("Profession")
@@ -321,6 +327,8 @@ def test_sidebar_experience_resolves_source_and_market_on_every_market_page(tmp_
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
+    assert at.radio[0].value == "Today"
+    at.radio[0].set_value("Crafting").run()
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert {"Alchemy", "Tailoring"} <= set(table["Profession"])
     forever = f"Showing **WoW Forever** · source {addon.get('label', addon['source_id'])} · market {addon['market_id']}"
@@ -358,6 +366,8 @@ def test_multiple_sources_for_one_experience_require_explicit_sidebar_selection(
     assert not any(c.value.startswith(("Source ", "Market ")) for c in at.caption)
     next(w for w in at.selectbox if w.label == "Data source").set_value(0).run()
     assert not at.exception
+    assert at.radio[0].value == "Today"
+    at.radio[0].set_value("Crafting").run()
     assert any("Action" in t.value.columns for t in at.dataframe)
     next(w for w in at.selectbox if w.label == "Data source").set_value(1).run()
     assert not at.exception

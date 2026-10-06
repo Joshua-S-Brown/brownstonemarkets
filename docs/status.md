@@ -25,12 +25,18 @@ _Last updated 2026-10-06._
   - A page from another game version or profession is refused. After a write the page lists the changed tracked files and never commits. Generation goes through the same `prepare_catalog` as `python -m brownstone recipes`.
   - The recipe step says how many of the page's recipes can be chosen and why the rest can't: no item made (enchants on gear), no fixed yield on Wowhead (Classic Enchanting's 7 oils list 0), or seasonal. The 2026-10-04 pages offer 226 of 287 Classic Tailoring, 413 of 471 Forever Tailoring, 101 of 132 Classic Alchemy, 167 of 202 Forever Alchemy and 12 of 204 Classic Enchanting recipes. The Alchemy and Enchanting catalogs, added in the app, hold every offered recipe; Classic Tailoring is a deliberately small subset (6 recipes); Forever Tailoring holds 412 recipes from the page saved 2026-10-06.
   - Checked on the real config and archive: all five catalogs regenerate from their archived pages unchanged (no bump, no tracked file written) and show builds 1.15.8 (67156) and 1.60.1 (70205); a preview takes 8–31 ms. Classic Enchanting holds no Season of Discovery recipes.
-- **Crafting:** five generated catalogs: Classic and Forever Tailoring and Alchemy, and Classic Enchanting. Every compatible catalog shares one Action Board with a Profession column and filter (STORY-015a). Recipe costs and details stay within their own catalog, including duplicate recipe IDs and shared outputs. Cautious and listed price bases, policy 0.2, five labels, per-recipe error isolation and per-catalog parse isolation (a catalog that fails to load is named and left off the board) are preserved. Incompatible catalogs explain their rules mismatch, offer unpriced inspection and link to Recipe catalogs.
+- **Crafting:** twelve generated catalogs. Forever (1,930 recipes, pages saved 2026-10-04 to 2026-10-06): Alchemy 167, Blacksmithing 430, Cooking 129, Enchanting 28, Engineering 205, First Aid 31, Leatherworking 511, Mining 17, Tailoring 412. Classic Era: Alchemy 101, Enchanting 12, Tailoring 6. Every compatible catalog shares one Action Board with a Profession column and filter (STORY-015a). Recipe costs and details stay within their own catalog, including duplicate recipe IDs and shared outputs. Cautious and listed price bases, policy 0.2, five labels, per-recipe error isolation and per-catalog parse isolation (a catalog that fails to load is named and left off the board) are preserved. Incompatible catalogs explain their rules mismatch, offer unpriced inspection and link to Recipe catalogs.
+- **Today (STORY-025, pending review):** settings persist per source in ignored local JSON; a funded,
+  supply-reserved craft plan ranks whole-stack batch profit, with a merged shopping list, output
+  competition/undercut evidence and independent below-vendor aside. Every list caps at 10 and counts
+  the rest; hidden recipes show reasons. Stale data stays inspectable with a warning and every row
+  non-actionable. TSM labels listing-dependent evidence unavailable. Rules and decisions are in
+  `requirements.md` → Today v1; contracts are in `design.md` → Today contracts.
 - **Scan changes (STORY-018):** compare any two distinct eligible addon scans of the selected source and market; defaults to the newest two scan IDs. Displays per-unit prices, listing/unit counts, changes, separate new/vanished lists, compatible-catalog item filtering, UTC finish times, gap and freshness. Missing listings, no buyout and no market value have distinct labels. Eligibility and display rules are in UI-06 (`requirements.md`). Market scope includes environment (DATA-03).
 - **Market depth (STORY-019):** Crafting shows output listing/unit counts and a direct-input depth summary on each board row, and the same counts in recipe inputs and shopping lists. Counts come from the exact priced scan. Missing listings and unavailable depth have distinct labels; depth is display-only (CRAFT-09 in `requirements.md`).
 - **Interface:**
   - The sidebar Classic/Forever experience choice resolves the source and market together; every view follows them, including Recipe catalogs, and each page names the experience, source and market under its title. If an experience has several enabled sources, the sidebar asks for a source and shows nothing until one is chosen (today only Retail, with Area 52 and region commodities). The database upgrade runs on browsing for the selected source when a database exists; Preview never migrates.
-  - Crafting opens by default for markets with a compatible catalog. It shows the board, a recipe summary in g/s/c and expandable evidence.
+  - Today opens by default for every source (STORY-025, implemented pending review). Crafting remains available with its board, recipe summary in g/s/c and expandable evidence.
   - Browse market, Opportunities, Recipe catalogs and Scan changes are also available. Opportunities explains when a source can't support it.
   - All money is displayed in gold.
 - **Launcher:** `launch.py` (via `Start Brownstone.command` / `.cmd`) restarts its own server when the code has changed.
@@ -52,7 +58,7 @@ _Last updated 2026-10-06._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (94.30% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (94.73% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.3.1**, writing scan format **3**. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2 still import with new fields null, raw bytes/hashes intact. Schema migration 6 adds the fields and reference table without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records per-field availability counts and duration locally.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -92,7 +98,7 @@ _Last updated 2026-10-06._
 git diff --check
 ```
 
-Expected: 431 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 506 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 
@@ -174,3 +180,35 @@ Forever Tailoring rows (2026-10-04, on a copy of `data/brownstone.duckdb`; the o
 | 4 | Runecloth Bag (post-launch) | missing prices | 24g 47s 6c | — | — | none | Bolt of Runecloth 37 / 152; Magenta Dye 29 / 44; Cerulean Dye 111 / 261; Rugged Leather 24 / 129 |
 
 All three low-tier bags craft their bolts (2 Linen Cloth at 35c, 3 Wool Cloth at 70c) and buy thread and dye from vendors. Runecloth Bag would buy its bolts (87s); the dyes alone cost 19g 52s 6c.
+
+
+### Today real-data verification (2026-10-06)
+
+Calculated using **copies** of each source's database and current local catalog selections; no
+original database writes or seller-name reads. Settings: 100g available, scaled 1% / 10s floor
+(1g effective minimum), cap 5. Timings include opening the copy and evidence reads; copying files
+and catalog discovery are excluded. Both newest snapshots were fresh at verification time; stale
+and future-date handling is verified separately with offline fixtures.
+
+| Source / evidence | Craft | Buy | Sell | Below vendor | Rest (craft / buy / sell / aside) | Read / calculate / total |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| Forever beta, scan `20261006T203259Z-ea00ed` | 10 | 10 | 10 | 0 | 23 / 14 / 0 / 0 | 0.0628 / 0.0898 / 0.1526 s |
+| Classic TSM, snapshot `20261004T135552051172Z_8b24dbea` | 6 | 10 | 6 | 0 | 0 / 7 / 0 / 0 | 0.2294 / 0.0057 / 0.2350 s |
+
+Forever hidden: missing prices 1,389; unsupported recipes 79; insufficient listed materials 7;
+one craft exceeds remaining funds 63; below minimum gain 273. Top batches: Barbaric Bracers,
+5 crafts, 32g 87s 70c estimated batch profit (cap); Azure Gustwoven Hood, 5, 19g 67s 97c (cap);
+Frost Oil, 4, 17g 57s 33c (more crafts lower profit: a fifth is affordable but earns less).
+With 10,000g and a 1,000-craft cap, the Forever calculation takes 0.28 s.
+
+Classic hidden: missing prices 12; unsupported recipes 1; one craft exceeds remaining funds 78;
+below minimum gain 13. Top batches: Elixir of Frost Power, 5, 11g 28s 20c (cap);
+Major Troll's Blood Potion, 5, 8g 91s 15c (cap); Major Rejuvenation Potion, 5, 6g 48s 40c (cap).
+TSM has no listing-dependent estimates; its costs and batch quantities use aggregate prices.
+
+Today v1 retains aggregate-selected routes while quoting actual whole listings; it does not search
+alternate routes after cheap supply is exhausted. Whole-stack surplus is uncredited and unshared.
+The greedy plan is affordable, not a global optimum. Below-vendor evidence is an independent aside,
+restricted to base/legacy identities with an observed scan vendor-sell reference. Missing reference
+prices are omitted. Sales speed, stockpile, volatility, character inventory/recipes, cross-profession
+routes and automated actions remain outside STORY-025 (see backlog → Today, later versions).

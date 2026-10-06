@@ -16,3 +16,6 @@ data/**
 config/*.local.toml
 .coverage
 htmlcov/
+
+# Today preferences (one file per source, plus a save's temporary file) remain local even with a custom data directory.
+today-settings.*.local.json*

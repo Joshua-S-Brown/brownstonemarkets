@@ -6,7 +6,6 @@ from pathlib import Path
 
 import streamlit as st
 
-from brownstone.action_board import compatible
 from brownstone.config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
 from brownstone.crafting import parse_recipe_catalog
 from brownstone.item_names import seed_catalog_names
@@ -14,7 +13,7 @@ from brownstone.pipeline import run
 from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
 from brownstone.storage import upgrade_database
 from views import catalogs as catalogs_view
-from views import crafting, market, scan_changes, scan_import
+from views import crafting, market, scan_changes, scan_import, today
 from views.common import EXPERIENCES
 
 ROOT = Path(__file__).resolve().parent
@@ -72,12 +71,10 @@ with st.sidebar:
     else:
         st.session_state.pop("scan_import_identity", None)
         refresh = st.button("Refresh from TSM", type="primary", width="stretch")
-    views = ["Crafting", "Browse market", "Opportunities", "Recipe catalogs", "Scan changes"]
-    craftable = any(compatible(catalog, config) for catalog in catalogs)
-    # Keyed per source so each market remembers its own view. Once Crafting's link has set the view,
-    # the default index must not compete with it (Streamlit warns about both).
+    views = ["Today", "Crafting", "Browse market", "Opportunities", "Recipe catalogs", "Scan changes"]
+    # Every source starts on Today and remembers subsequent navigation.
     view_key = f"view-{config['source_id']}"
-    view = st.radio("View", views, index=0 if craftable or view_key in st.session_state else 1, key=view_key)
+    view = st.radio("View", views, index=0, key=view_key)
 
 # Views open the database read-only, so bring an existing older database up to date first. This never
 # creates one, and Preview itself never migrates (ADDON-06).
@@ -105,7 +102,9 @@ if refresh:
         except Exception as error:
             st.error(f"Refresh failed: {error}. Your previous successful snapshot remains available.")
 
-if view == "Crafting":
+if view == "Today":
+    today.render(config, catalogs)
+elif view == "Crafting":
     crafting.render(config, catalogs)
 elif view == "Browse market":
     market.render_browse(config)

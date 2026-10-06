@@ -201,6 +201,77 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   - **Must load:** a catalog the board's loader would reject (for example two recipes making one item) is refused before anything is written.
 - **CRAFT-09 Market depth (STORY-019):** the board shows auction listing and unit counts for each output and direct input; the recipe input table shows the same counts. Counts include listings without a buyout and describe the exact complete, priced scan used for the prices, scoped by source and full market identity. An absent item is labeled **Not listed** with zero observed listings and units. TSM or a snapshot without a matching priced addon scan shows **Unavailable**, with no counts. Depth is display-only: it changes no cost, action label, ranking or policy version, and is not vendor stock or a claim about demand.
 
+### Today (today_version 1, STORY-025, implemented pending review 2026-10-06)
+
+- **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
+  source during the session. Each source has its own ignored preferences file,
+  `data_dir/today-settings.<source_id>.local.json`, because the data directory is shared and each
+  source's funds are its own. It is written atomically (through a `.tmp` sibling, also ignored) only on
+  Save; the pattern is also ignored for custom data directories. Invalid or unreadable settings show a
+  warning and defaults, never silently replace the file. A rejected or failed Save shows an error and the
+  tables stay visible, still sized by the last saved settings. Gold starts at **0c**, because funds cannot be inferred. Explicit integer `g/s/c`
+  text is required (case-insensitive, optional spaces, each unit at most once; properly grouped thousands
+  commas accepted). Bare numbers get a units hint. The parser round-trips signed money display; settings
+  reject negative amounts. Minimum mode starts **scaled**, **1%** (**100 basis points**) with a **10s**
+  floor. Fixed mode uses only the fixed minimum. Scaled mode is `max(fixed, ceil(gold * basis_points / 10000))`.
+  Percentage is adjustable from **0 to 100%** in hundredths; most crafts per item starts at **5**, adjustable
+  from **1 to 1,000** (bounded to keep interactive calculations predictable). All amounts are integer copper.
+- **Routes and batch costs:** reuse compatible Action Board catalog-local routes under the cautious
+  basis (CRAFT-03/04/05); no cross-profession routing. Routes are selected once from aggregate evidence,
+  then held fixed while sizing. Today changes auction purchase costs to the exact listing ladder, ordered
+  by positive unit-buyout-ceiling, then quantity and buyout for deterministic ties. **Whole listings** are
+  bought: include the entire buyout when the final stack exceeds required units. Show required and purchased
+  units; surplus has **no revenue credit**, and is not reused by another batch in v1. Vendor routes use
+  their catalog purchase prices without a supply limit. Unsupported expansion remains isolated and hidden
+  with its reason. Cautious output revenue and auction-cut rounding remain per CRAFT-07, per execution.
+- **One funded plan:** first rank the board and prepare prefix ladders, then quote batches by binary search,
+  without walking listings for each recipe or expanding stacks. For each candidate, batch sizes are
+  bounded by priced input supply, remaining gold and the per-item craft cap; within that bound the size with
+  the greatest batch profit is chosen (the smaller on ties), because deeper listings can make extra crafts
+  lose money. Profit can only peak at the bound or just before an input needs another listing, so only
+  those sizes are quoted. Select the greatest **total batch profit**, reserve its complete input listings and cost, then re-size/rank remaining candidates.
+  Repeat up to **10 craft rows**. Select each output only once, choosing the catalog/recipe with
+  the greatest feasible batch profit; hide other routes as **output already planned**, so the per-item
+  cap cannot be multiplied by duplicate catalogs. Display the selected rows by descending batch
+  profit, then recipe ID, then catalog identity; there is no score. This greedy plan makes the combined shopping list payable and
+  avoids double-use of cheap listings; it does not claim globally optimal portfolio profit. The limiting factor is
+  **more crafts lower profit** when a smaller size beats the bound; otherwise ties prefer cap, then input
+  supply, then gold. Profit per craft displays `floor(batch_profit / batch_size)`;
+  exact batch profit remains authoritative. Each row identifies its recipe/catalog, rules and provenance,
+  quantities, costs, revenue, competition, limits, availability and unconfirmed yield/vendor evidence.
+- **Hidden and capped:** hide invalid recipes (unsupported recipe before missing prices), no batch with
+  priced supply (**insufficient listed materials**), batches where one craft exceeds remaining funds
+  (**one craft exceeds funds**), and nonpositive profit or profit strictly below the minimum (**below
+  minimum gain**). Reasons are mutually exclusive in that order and describe the remaining plan budget.
+  Count remaining feasible outputs (each output once, whatever its routes) outside the 10-row selection
+  separately from hidden rows. Every list
+  caps at **10 rows**, with a count of the rest; shopping totals include materials beyond its display cap.
+- **Buy:** merge the selected batches' purchases by base item and buy/vendor route, summing required units,
+  purchased units and full buyouts, and taking the highest paid unit-buyout-ceiling. Sort by cost descending,
+  item ID, route. *Cheap now* is informational only: for auction purchases, full cost divided by purchased
+  units is **strictly below** that exact scan identity's quantity-weighted **25th percentile** (ADDON-10).
+  Vendor routes and missing percentile evidence never receive the flag.
+- **Below vendor price:** a separate, independent aside, not an addition to the craft budget. Only base
+  or legacy identities supported by the v1 catalog evidence reads are considered; variants/unresolved
+  identities are excluded rather than pooled. Use the selected scan's positive **vendor sell** reference,
+  never a catalog vendor purchase price. Include complete listings with unit-buyout-ceiling **strictly
+  below** that reference. Gain is vendor price × purchased units minus actual buyouts, positive and **at
+  least the minimum gain**. Sort gain descending then item ID. Nothing implies a completed sale.
+- **Sell:** one row per selected output, with its chosen catalog/recipe identity.
+  Show lowest positive competing unit price, all listings/units (including no-buyout listings), largest
+  stack, and **1c** below the lowest as undercut price. A lowest price of **1c** has no valid positive
+  undercut and no undercut-profit estimate. Profit at undercut uses the selected batch costs and auction
+  cut; it can be negative. **Thin** means **fewer than 3 listings**, or the largest stack holds **at least
+  half** of listed units. No claim about demand, sales speed, deposits, or actual sales is made.
+- **Evidence and honesty:** every displayed row carries source, market, snapshot/scan, evidence time and
+  time basis, and stale state. DATA-05's configured freshness limit applies unchanged: stale/future rows
+  remain inspectable but are **never actionable**, and the page shows a banner. No missing/zero price
+  becomes a recommendation. TSM has **not available for this source** for individual listings, thin,
+  undercuts, cheap-now and below-vendor evidence. Its batches use cautious aggregate purchase estimates,
+  gold and cap only. Base/null-legacy compatibility follows ADDON-08; all storage reads retain full
+  source/market/snapshot identity and catalog compatibility retains `rules_version`.
+
+
 ### Interface
 - **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** after the read-only preview (addon sources; ADDON-06) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden. The shared sidebar experience choice resolves its source and market together when there is one enabled source for that experience. If there are several, an explicit sidebar source choice is required; sources are never merged. Every view follows the selection, including Recipe catalogs. Each page names the selected experience, source and market under its title, and the sidebar shows them too.
 - **UI-02:** Browse market finds items regardless of price or discount. Categories are not inferred from names or commodity status.
@@ -223,11 +294,10 @@ a changed definition requires a new metrics version and an explicit rebuild poli
 
 ## Not modeled (do not imply otherwise)
 
-Demand, sale likelihood, depth-adjusted costs and quantities (listing depth is displayed under CRAFT-09, but no calculation uses it), deposits, recommended quantities, vendor stock, reputation discounts, recipe quality/rank, reagent alternatives and multi-yield recipes. The importer rejects variable yields, and an intermediate yielding more than 1 can fail with "Fractional unit costs". Every current catalog recipe yields 1.
+Demand, sale likelihood, deposits, vendor stock, reputation discounts, recipe quality/rank, reagent alternatives and multi-yield recipes. Today v1 models listing costs and bounded batches under its rules above; the Action Board's depth remains display-only under CRAFT-09. The importer rejects variable yields, and an intermediate yielding more than 1 can fail with "Fractional unit costs". Every current catalog recipe yields 1.
 
 ## Open decisions
 
-- Useful action thresholds beyond profit > 0 (Today's buy, craft and sell rules, STORY-025).
 - Classic regional demand integration (Classic demand context, under Later in `backlog.md`).
 - Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011a).
 - Where backups go and how often (STORY-016; the timing is decided under OPS-03), historical retention and scheduling.
