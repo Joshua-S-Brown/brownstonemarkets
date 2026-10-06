@@ -15,7 +15,7 @@ from brownstone.action_board import rank_recipes
 from brownstone.config import build_source
 from brownstone.crafting import load_recipe_catalog
 from brownstone.pipeline import import_guidance, import_scans
-from brownstone.storage import MIGRATIONS, latest_snapshot, price_observations, schema_version
+from brownstone.storage import MIGRATIONS, SCHEMA_VERSION, latest_snapshot, price_observations, schema_version
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests/fixtures/brownstone_scan_sample.lua"
@@ -156,7 +156,7 @@ def test_import_preserves_bytes_dedupes_and_labels_partial_scans(tmp_path):
     outcomes = {s["scan_id"]: (s["outcome"], s["partial"]) for s in manifest["scans"]}
     assert outcomes == {COMPLETE: ("imported", False), STOPPED: ("partial (not priced)", True)}
     with duckdb.connect(str(tmp_path / "data/brownstone.duckdb")) as db:
-        assert schema_version(db) == 4
+        assert schema_version(db) == SCHEMA_VERSION
         assert db.execute("SELECT scan_id, partial, priced, nonexact_stacks FROM addon_scans ORDER BY scan_id"
                           ).fetchall() == [(COMPLETE, False, True, 1), (STOPPED, True, False, 0)]
         assert db.execute("SELECT count(*), count(DISTINCT market_id) FROM scan_listings").fetchone() == (6, 1)
@@ -260,7 +260,7 @@ def test_migrates_an_existing_v2_database(tmp_path):
     import_scans(addon_source(data), now=NOW)
     assert (data / "brownstone.v2.backup.duckdb").exists()
     with duckdb.connect(str(data / "brownstone.duckdb")) as db:
-        assert schema_version(db) == 4
+        assert schema_version(db) == SCHEMA_VERSION
         assert db.execute("SELECT item_name, min_buyout FROM market_snapshots WHERE snapshot_id='old'"
                           ).fetchall() == [("Runecloth", 9500)]
         assert db.execute("SELECT count(*) FROM scan_listings").fetchone()[0] == 6

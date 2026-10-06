@@ -19,6 +19,7 @@ from brownstone.pipeline import import_scans, preview_scans
 from brownstone.scan_changes import compare_scans, eligible_scans
 from brownstone.storage import (
     MIGRATIONS,
+    SCHEMA_VERSION,
     completed_snapshots,
     latest_snapshot,
     listing_depth,
@@ -115,7 +116,7 @@ def test_v3_migration_backup_manifest_adapter_and_duplicate_reimport(tmp_path):
     backup = database.with_name("brownstone.v3.backup.duckdb")
     assert digest(backup) == before_hash
     with duckdb.connect(str(database)) as db:
-        assert schema_version(db) == 4
+        assert schema_version(db) == SCHEMA_VERSION
         for table, count in zip(TABLES, counts, strict=True):
             assert db.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == count
             assert db.execute(f"SELECT DISTINCT environment, market_id FROM {table} "
@@ -244,7 +245,7 @@ def test_app_startup_migrates_v3_for_any_selected_source(tmp_path, monkeypatch, 
     at = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py")).run()
     assert not at.exception and any("upgraded" in t.value for t in at.toast)
     with duckdb.connect(str(database), read_only=True) as db:
-        assert schema_version(db) == 4
+        assert schema_version(db) == SCHEMA_VERSION
     assert database.with_name("brownstone.v3.backup.duckdb").exists()
     if selected == "beta":
         for view in ("Crafting", "Browse market", "Opportunities", "Scan changes"):

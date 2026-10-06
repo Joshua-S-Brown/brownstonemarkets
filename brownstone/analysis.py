@@ -14,7 +14,7 @@ _SEARCH = "(contains(lower(item_name), lower(?)) OR contains(CAST(item_id AS VAR
 def browse(connection, snapshot_id, config, search="", limit=100):
     predicate, scope = scope_predicate(config)
     return connection.execute(f"""SELECT item_id, item_name, min_buyout,
-        market_value, recent_value, historical_value, updated_at FROM market_snapshots
+        market_value, recent_value, historical_value, updated_at FROM named_market_snapshots
         WHERE snapshot_id=? AND {predicate} AND {_SEARCH}
         ORDER BY item_name, item_id LIMIT ?""", [snapshot_id, *scope, search, search, limit]).pl()
 
@@ -38,7 +38,7 @@ def rank(connection: duckdb.DuckDBPyConnection, snapshot_id: str, config: Mappin
     return connection.execute(f"""
         WITH price_references AS (
             SELECT *, least(market_value, recent_value, historical_value) AS reference_copper
-            FROM market_snapshots WHERE snapshot_id = ? AND {predicate}
+            FROM named_market_snapshots WHERE snapshot_id = ? AND {predicate}
               AND min_buyout > 0 AND market_value > 0 AND recent_value > 0 AND historical_value > 0
         ), candidates AS (
             SELECT *, 1.0 - min_buyout::DOUBLE / reference_copper AS discount,

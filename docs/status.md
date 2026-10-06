@@ -43,8 +43,9 @@ _Last updated 2026-10-05._
   - The catalog `ruleset` field is now `rules_version`.
   - The CLI uses `--source`; `--market` still works as an alias.
 - **Beta/live identity (STORY-017):** implemented under DATA-03 in `requirements.md`. The tracked Forever source is explicitly beta, with its source ID unchanged. Every price, scan and listing carries environment; Browse, Opportunities, crafting, depth, Scan changes, manifest selection and import deduplication all enforce it. Page captions show the derived beta market ID.
-- **Storage:** code supports schema 4 with backed-up, idempotent migrations (see `design.md` → Schema migrations). The original local `data/brownstone.duckdb` remains at version 3, untouched by this work; the next app startup for any selected source or explicit import upgrades it and creates the version-3 backup. Earlier backups remain intact. Old manifests are adapted only in memory.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (93.66% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Item names (STORY-022):** Browse/search, Opportunities and Scan changes resolve missing labels through version-scoped names collected from scans, TSM rows and catalogs; crafting and board depth already use catalog labels. Name policy lives in DATA-02 (`requirements.md`). Stored observations and archives remain unchanged.
+- **Storage:** code supports schema 5 with backed-up, idempotent migrations (see `design.md` → Schema migrations). The original local `data/brownstone.duckdb` remains at version 4, untouched by this work; the next app startup for any selected source or explicit import upgrades it and creates the version-4 backup. Earlier backups remain intact. Old manifests are adapted only in memory.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (93.77% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon (SPIKE-008, done):** `addon/BrownstoneScan/` is a read-only addon that scans on a click or `/bscan start` and saves listings to SavedVariables (`schema_version` 1; sample at `tests/fixtures/brownstone_scan_sample.lua`; install and measurements in `addon/README.md`). Verified on the Forever beta, build 70205, interface 16001: one full scan of the Stormwind Alliance Normal house, 101,485 listings in about 10.6 s, 24 MB file, written correctly. Decision and format are in `requirements.md`. Scans are imported as described above.
   - **Real scan kept** at `data/inbox/addon-scans/BrownstoneScan-forever-beta-2026-10-04.lua`. That's a byte-for-byte copy (SHA-256 `207a2b95…`) of the game's SavedVariables file: scan `20261004T164730Z-c651bd`, Alliance Normal house. It's ignored by Git like all of `data/`, so back it up with `data/`.
@@ -62,7 +63,7 @@ _Last updated 2026-10-05._
   - **Availability:** Runecloth Bag and its two dyes are marked post-launch, but the 2026-10-04 17:46Z scan has both dyes on the beta auction house (Magenta 44 units, Cerulean 261).
 - Multi-yield recipes aren't supported (see `requirements.md` → *Not modeled*). Every current recipe makes 1.
 - Crafting and Opportunities use one addon scan: no recent or historical values and no discount screen. Scan changes compares saved scans without deriving historical price metrics. Listing depth is displayed, but not used in calculations.
-- The real beta scan has thin high-level Tailoring coverage, because most beta characters are low level; low-tier bags and cloth are well listed. Runecloth Bag has no listings, so its board row shows missing prices, and Runecloth has two listings, which carry no loaded name.
+- The real beta scan has thin high-level Tailoring coverage, because most beta characters are low level; low-tier bags and cloth are well listed. Runecloth Bag has no listings, so its board row shows missing prices.
 - Mankrik has no upstream scan time, so price age is unknown and "stale" only measures time since download.
 - Classic historical values are zero, so the discount screen cannot run on Classic.
 - Not modeled: see `requirements.md` → *Not modeled*.
@@ -76,13 +77,18 @@ _Last updated 2026-10-05._
 .venv/bin/python -m pytest -p no:cacheprovider --cov
 .venv/bin/python -m ruff check .
 .venv/bin/python -m mypy
+git diff --check
 ```
 
-Expected: 293 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 308 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 
 Real-data preview/import was checked on 2026-10-05 against temporary copies of the database and a 51 MB schema-1 scan file (about 2–3 s per preview or import; originals unchanged).
+
+Item-name verification: `tests/test_item_names.py` covers later-loaded names, catalog-only names, placeholders/blank names excluded, unknown and separate game versions, shared labels without mixed prices across sources/houses/environments, observed/catalog precedence, newest loaded names and lexical ties, older imports, TSM timestamps and collection-time fallback, partial listings, Browse/search and Opportunities, Scan changes (a scan's own loaded name before newer lookup names), padded names trimmed, catalog-labelled board depth, migration backfill/replay/backup and unchanged observation rows. Malformed catalogs, including ones missing IDs, remain isolated; the app seeds catalog labels only into an existing database.
+
+On a copy of the schema-4 real database (2026-10-05), migration 4→5 plus catalog seeding named 625 of the 1,140 Forever items that had placeholders, leaving 515 of 3,384 items unnamed. Classic remains 2 unnamed of 5,868; Retail remains 242 of 29,150. Runecloth's three Forever price rows now display Runecloth using catalog evidence; none had a loaded price-row name. All four 166-row Forever boards (including depth), all six Scan changes comparisons (apart from names) and all other Browse/Opportunities values across seven snapshot/source contexts were identical. Stored observation tables and a migration replay were identical too. The version-4 backup equals the original copy. All 98 original files under `data/` retained their SHA-256; the database hash before/after is `e0f3fca9411cacf667ebfbd8235502b29b250273a4932020e9d5a73a3996f372`. Timings for this run: migration/catalog seed 149 ms, replay 68 ms, four boards 37→40 ms, six comparisons 67→130 ms, all Browse/Opportunities reads 21→42 ms. Verification script, reports and database copies are under ignored `work/story-022/`, excluded from commits.
 
 Beta/live verification: `tests/test_environments.py` covers explicit configuration, unchanged live IDs, launch-boundary and timezone classification, v3 migration/backup/replay, old-manifest resolution without edits, duplicate re-import, full-scope single/multi-scan reads, same-key scope conflicts, CSV deduplication, CLI and app startup from either beta or Classic. Existing per-market-key depth and Scan changes tests include environment; preview tests cover environment changes invalidating a review.
 
@@ -119,7 +125,7 @@ Addon import dry run (2026-10-04, on copies of `data/brownstone.duckdb` at versi
 
 | Item | Listings / units | Min buyout | Market value |
 | --- | --- | --- | --- |
-| Runecloth (14047, shown as `Item 14047`) | 2 / 4 | 2g 55s | 2g 55s |
+| Runecloth (14047) | 2 / 4 | 2g 55s | 2g 55s |
 | Bolt of Runecloth | 35 / 142 | 86s 95c | 87s |
 | Runecloth Bag | none | — | — |
 | Rugged Leather | 19 / 110 | 5s | 5s |

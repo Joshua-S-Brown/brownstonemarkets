@@ -9,6 +9,7 @@ import streamlit as st
 from brownstone.action_board import compatible
 from brownstone.config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
 from brownstone.crafting import parse_recipe_catalog
+from brownstone.item_names import seed_catalog_names
 from brownstone.pipeline import run
 from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
 from brownstone.storage import upgrade_database
@@ -86,6 +87,15 @@ try:
 except Exception as error:
     st.error(f"Could not upgrade the database: {error}. Close other Brownstone windows or terminals and reload.")
     st.stop()
+# Catalog labels (DATA-02) are written once per database and catalog contents, not on every rerun.
+name_seed = (str(config["data_dir"]), hash(tuple((catalog["game_version"], item["item_id"], item.get("name"))
+                                                for catalog in catalogs for item in catalog.get("items", []))))
+if st.session_state.get("catalog_name_seed") != name_seed:
+    try:
+        seed_catalog_names(config["data_dir"], catalogs)
+        st.session_state["catalog_name_seed"] = name_seed
+    except Exception as error:  # Labels are a convenience: never block the views over them.
+        st.warning(f"Catalog item names unavailable: {error}")
 
 if refresh:
     with st.spinner("Downloading and preserving the latest market snapshot…"):

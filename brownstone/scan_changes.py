@@ -24,13 +24,19 @@ def eligible_scans(db, config: Mapping[str, Any]) -> list[dict]:
 
 
 def _scan_items_sql(predicate: str) -> str:
+    # This scan's own loaded names come first (price row, then listings with lexical ties, per DATA-02);
+    # only items without one fall back to the version-scoped lookup.
     return f"""
-        SELECT d.item_id, p.item_name, CASE WHEN p.min_buyout > 0 THEN p.min_buyout END AS min_buyout,
+        SELECT d.item_id, coalesce(p.item_name, d.item_name, n.item_name, 'Item ' || d.item_id::VARCHAR)
+                AS item_name,
+            CASE WHEN p.min_buyout > 0 THEN p.min_buyout END AS min_buyout,
             CASE WHEN p.market_value > 0 THEN p.market_value END AS market_value, d.listings, d.units
-        FROM (SELECT item_id, count(*) AS listings, sum(quantity)::BIGINT AS units
+        FROM (SELECT item_id, min(loaded_item_name(item_name)) AS item_name, count(*) AS listings,
+                sum(quantity)::BIGINT AS units
             FROM scan_listings WHERE {predicate} AND scan_id=? AND snapshot_id=? GROUP BY item_id) d
-        LEFT JOIN (SELECT item_id, item_name, min_buyout, market_value FROM market_snapshots
-            WHERE {predicate} AND snapshot_id=?) p USING (item_id)
+        LEFT JOIN (SELECT item_id, loaded_item_name(item_name) AS item_name, min_buyout, market_value
+            FROM market_snapshots WHERE {predicate} AND snapshot_id=?) p USING (item_id)
+        LEFT JOIN item_names n ON n.game_version=? AND n.item_id=d.item_id
     """
 
 
@@ -50,7 +56,8 @@ def compare_scans(db, config: Mapping[str, Any], first_id: str, second_id: str,
     query = _scan_items_sql(predicate)
     parameters = []
     for scan in (earlier, later):
-        parameters.extend([*scope, scan["scan_id"], scan["snapshot_id"], *scope, scan["snapshot_id"]])
+        parameters.extend([*scope, scan["scan_id"], scan["snapshot_id"], *scope, scan["snapshot_id"],
+                           config["game_version"]])
     rows = db.execute(f"""WITH a AS ({query}), b AS ({query})
         SELECT coalesce(a.item_id, b.item_id), coalesce(b.item_name, a.item_name),
             a.min_buyout, a.market_value, a.listings, a.units,
@@ -68,12 +75,12 @@ def compare_scans(db, config: Mapping[str, Any], first_id: str, second_id: str,
     return result
 
 
-def _diff_row(item_id: int, name: str | None, values: list) -> dict:
+def _diff_row(item_id: int, name: str, values: list) -> dict:
     earlier = dict(zip(METRICS, values[:4], strict=True)) if values[2] is not None else None
     later = dict(zip(METRICS, values[4:], strict=True)) if values[6] is not None else None
     changes = {metric: None for metric in METRICS}
     if earlier is not None and later is not None:
         changes = {metric: later[metric] - earlier[metric]
                    if earlier[metric] is not None and later[metric] is not None else None for metric in METRICS}
-    return {"item_id": item_id, "item_name": name or f"Item {item_id}", "earlier": earlier, "later": later,
+    return {"item_id": item_id, "item_name": name, "earlier": earlier, "later": later,
             "change": changes, "changed": earlier != later}

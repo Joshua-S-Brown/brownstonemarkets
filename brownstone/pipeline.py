@@ -18,6 +18,7 @@ from . import scans
 from .analysis import rank
 from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import FUTURE_TOLERANCE_HOURS
+from .item_names import remember_local_catalog_names
 from .normalization import PRICE_COLUMNS, normalize
 from .sources import download
 from .storage import known_scan, load_scan, load_snapshot, upgrade_database
@@ -303,6 +304,7 @@ def _save_collection(config: Source, path: Path, now: datetime, raw: bytes,
 def _load_collection(db, config: Source, folders: dict[str, Path], sid: str, now: datetime, sha256: str,
                      records: list[dict], summaries: list[dict], all_records: list[dict], manifest: dict) -> None:
     _check_conflicts(summaries, _known_scans(db, config, summaries))
+    remember_local_catalog_names(db)
     results = [_import_scan(db, config, folders["silver"], sid, now, sha256, record, summary)
                for record, summary in zip(records, summaries, strict=True)]
     manifest["scans"] = results

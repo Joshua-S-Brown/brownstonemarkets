@@ -11,8 +11,9 @@ import duckdb
 from . import markets
 from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
+from .item_names import remember_local_catalog_names, remember_observed_names
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -101,7 +102,54 @@ def _migrate_to_4(db):
             WHERE environment='beta'""")
 
 
-MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4}
+# NULL, blank and any generated placeholder are absent, even when the placeholder's ID is wrong.
+_V5_DDL = ("""CREATE TABLE IF NOT EXISTS item_names (
+    game_version VARCHAR NOT NULL, item_id BIGINT NOT NULL, item_name VARCHAR NOT NULL,
+    origin_rank INTEGER NOT NULL, observed_at TIMESTAMPTZ NOT NULL, evidence VARCHAR NOT NULL,
+    PRIMARY KEY (game_version, item_id))""",
+           """CREATE OR REPLACE MACRO loaded_item_name(name) AS
+    CASE WHEN trim(name) != '' AND NOT regexp_full_match(trim(name), 'Item [0-9]+') THEN trim(name) END""",
+           *(f"""CREATE OR REPLACE VIEW named_{table} AS
+    SELECT p.* REPLACE (coalesce(loaded_item_name(p.item_name), n.item_name,
+        'Item ' || p.item_id::VARCHAR) AS item_name)
+    FROM {table} p LEFT JOIN item_names n USING (game_version, item_id)"""
+             for table in ("market_snapshots", "scan_listings")))
+# Backfill every stored price and listing; listings take their parent scan's time, matched on every
+# schema-5 market key. Same winner policy as item_names._remember, frozen here.
+_V5_BACKFILL = """INSERT INTO item_names
+    SELECT game_version, item_id, loaded_item_name(item_name), 1, observed_at, evidence FROM (
+        SELECT *, row_number() OVER (PARTITION BY game_version, item_id
+            ORDER BY observed_at DESC, loaded_item_name(item_name), evidence) AS choice
+        FROM (
+            SELECT game_version, item_id, item_name,
+                coalesce(updated_at, collected_at, TIMESTAMPTZ '1970-01-01') AS observed_at,
+                concat_ws(':', source_id, snapshot_id, 'price') AS evidence
+            FROM market_snapshots
+            UNION ALL
+            SELECT l.game_version, l.item_id, l.item_name,
+                coalesce(s.finished_at, s.collected_at, TIMESTAMPTZ '1970-01-01'),
+                concat_ws(':', l.source_id, l.scan_id, 'listing', l.listing_index)
+            FROM scan_listings l LEFT JOIN addon_scans s ON s.source_id=l.source_id AND s.scan_id=l.scan_id
+                AND s.market_id IS NOT DISTINCT FROM l.market_id
+                AND s.game_version IS NOT DISTINCT FROM l.game_version AND s.region IS NOT DISTINCT FROM l.region
+                AND s.scope IS NOT DISTINCT FROM l.scope AND s.realm IS NOT DISTINCT FROM l.realm
+                AND s.server_type IS NOT DISTINCT FROM l.server_type
+                AND s.faction IS NOT DISTINCT FROM l.faction AND s.environment IS NOT DISTINCT FROM l.environment
+        ) candidates
+        WHERE game_version IS NOT NULL AND item_id > 0 AND loaded_item_name(item_name) IS NOT NULL
+    ) WHERE choice=1
+    ON CONFLICT (game_version, item_id) DO NOTHING"""
+
+
+def _migrate_to_5(db):
+    """Derived names and named read views; observations remain byte-for-byte unchanged."""
+    for statement in _V5_DDL:
+        db.execute(statement)
+    # A rerun after a partial upgrade recomputes the same winners, so existing rows stay.
+    db.execute(_V5_BACKFILL)
+
+
+MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4, 5: _migrate_to_5}
 
 
 def _has_table(db, name: str) -> bool:
@@ -160,6 +208,7 @@ def upgrade_database(data_dir: Path, create: bool = False) -> bool:
             shutil.copy2(path, backup)
     with duckdb.connect(str(path)) as db:
         ensure_schema(db)
+        remember_local_catalog_names(db)
     return True
 
 
@@ -173,9 +222,11 @@ def load_snapshot(db, silver: Path, frame, config: Source) -> tuple[str, bool]:
     existing = db.execute(f"""SELECT snapshot_id FROM market_snapshots
         WHERE {predicate} AND updated_at IS NOT DISTINCT FROM ? AND source_sha256=? LIMIT 1""",
         [*scope, frame["updated_at"][0], frame["source_sha256"][0]]).fetchone()
+    remember_local_catalog_names(db)
     if existing:
         return existing[0], False
     db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(silver)])
+    remember_observed_names(db, frame["snapshot_id"][0])
     return frame["snapshot_id"][0], True
 
 
@@ -203,6 +254,8 @@ def load_scan(db, scan: Path, listings: Path, prices: Path | None) -> None:
     db.execute("INSERT INTO scan_listings BY NAME SELECT * FROM read_parquet(?)", [str(listings)])
     if prices is not None:
         db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(prices)])
+    snapshot_id = db.execute("SELECT snapshot_id FROM read_parquet(?)", [str(scan)]).fetchone()[0]
+    remember_observed_names(db, snapshot_id)
 
 
 def completed_snapshots(config: Source) -> list[dict]:

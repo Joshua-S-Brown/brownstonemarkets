@@ -32,36 +32,24 @@ Nothing active in code. Brownstone can now run on our own addon scans alone (STO
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-022 item names
-2. STORY-023 addon 0.3.0 (by 21 October)
-3. STORY-020a runbook rehearsal (by 21 October)
-4. STORY-016 backup (by 21 October)
-5. STORY-024 market metrics
-6. STORY-021 item page and charts
-7. STORY-025 Today
-8. STORY-026 scan coverage and rhythm
-9. STORY-020b runbook completion (finished one or two days before 4 November, whatever else is in progress)
-10. STORY-027 removed listings
-11. STORY-028 sellers and supply chains
-12. STORY-006 replay
-13. STORY-015b crafting across professions
+1. STORY-023 addon 0.3.0 (by 21 October)
+2. STORY-020a runbook rehearsal (by 21 October)
+3. STORY-016 backup (by 21 October)
+4. STORY-024 market metrics
+5. STORY-021 item page and charts
+6. STORY-025 Today
+7. STORY-026 scan coverage and rhythm
+8. STORY-020b runbook completion (finished one or two days before 4 November, whatever else is in progress)
+9. STORY-027 removed listings
+10. STORY-028 sellers and supply chains
+11. STORY-006 replay
+12. STORY-015b crafting across professions
 
 STORY-011a is a bounded research task for any convenient gap. Tailoring yield and vendor checks run alongside all of this; a confirmed multi-yield requirement takes priority.
 
 **Why STORY-023 is early:** scans can't be retaken. Anything the addon doesn't capture from launch day is missing for those weeks, so the richer scan format must be tested on the beta before it closes.
 
 **Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, and its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
-
-### STORY-022 — Item names everywhere
-
-As a gold maker, I want every item shown by its name, so that tables, charts and recommendations are readable.
-
-Acceptance:
-- **A derived name lookup per game version,** filled at import from any listing whose name loaded and from catalog names, and backfilled from stored listings through a numbered migration. Bronze and stored listings are never rewritten.
-- **Views use it** wherever a scan's own name is missing (Browse, Scan changes, the board's depth and later views). `Item <ID>` remains only when no scan or catalog has ever named the item.
-- **Names are labels only.** They never cross game versions, never join data (item ID within the full market still does) and never imply a category.
-- **Real data:** report how many of the stored items gain a name, including Runecloth (14047).
-- Depends on nothing. Replaces the item-name note under *Addon follow-ups*.
 
 ### STORY-023 — Capture more of each scan (addon 0.3.0)
 
@@ -110,7 +98,7 @@ Acceptance:
 - **Stored and rebuildable:** calculated at import and rebuildable from stored listings with identical results, keyed by source, full market identity (DATA-03), scan and item (plus variant when STORY-023 provides one). Partial scans are excluded or clearly labelled.
 - **One source of truth:** the board's depth and Scan changes use these measures where they overlap instead of recomputing them, or the overlap is documented.
 - **Tests** cover quantity weighting, stacks, listings without a buyout, partial scans and isolation by full market identity.
-- Depends on STORY-022; uses STORY-023 fields when available.
+- Uses STORY-023 fields when available.
 
 ### STORY-021 — Item page and charts
 
@@ -295,7 +283,6 @@ Acceptance:
 **Addon follow-ups** (any time, none urgent):
 - Scan the Roleplaying house once the beta offers it, and a neutral house when reachable, to confirm house identification and the 15% cut market.
 - Check whether `/bscan start` works without the button click.
-- Item names: now STORY-022 in Next.
 
 **Recipe coverage** (unblocked by STORY-004):
 - **More recipes and professions:** added in the app on the Recipe catalogs page and shown together on the board (`status.md`); routing across professions is STORY-015b.
