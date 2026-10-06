@@ -34,8 +34,8 @@ STORY-023 software is implemented (addon 0.3.0, scan format 3, migration 6); bet
 **Order:**
 1. STORY-023 addon 0.3.0 (by 21 October)
 2. STORY-020a runbook rehearsal (by 21 October)
-3. STORY-016 backup (by 21 October)
-4. STORY-024 market metrics
+3. STORY-024 market metrics (the next development story, chosen 2026-10-06)
+4. STORY-029 addon reload and clear buttons (ideally on the beta before 21 October)
 5. STORY-021 item page and charts
 6. STORY-025 Today
 7. STORY-026 scan coverage and rhythm
@@ -45,11 +45,13 @@ STORY-023 software is implemented (addon 0.3.0, scan format 3, migration 6); bet
 11. STORY-006 replay
 12. STORY-015b crafting across professions
 
+STORY-016 (backup) is deferred to Later (product owner, 2026-10-06).
+
 STORY-011a is a bounded research task for any convenient gap. Tailoring yield and vendor checks run alongside all of this; a confirmed multi-yield requirement takes priority.
 
 **Why STORY-023 is early:** scans can't be retaken. Anything the addon doesn't capture from launch day is missing for those weeks, so the richer scan format must be tested on the beta before it closes.
 
-**Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, and its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
+**Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, deferred to Later; its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
 
 ### STORY-023 — Capture more of each scan (addon 0.3.0)
 
@@ -79,16 +81,6 @@ Acceptance:
 - **Placeholders** for the steps STORY-020b completes.
 - Depends on nothing; uses STORY-023's addon if it's ready.
 
-### STORY-016 — Back up local data
-
-As the product owner, I want a tested backup of `data/`, so that the beta scans, which can't be retaken after beta testing ends, survive a disk failure or a bad migration.
-
-Acceptance:
-- **Decide and record** in `requirements.md` where backups go (a location you control, such as a second disk) and when to take them, for example after each import session and before every migration or launch step.
-- **One documented procedure** that refuses to run while a writer holds the DuckDB lock, copies `data/` to a dated folder, and verifies the copy: file count, and SHA-256 of every bronze file.
-- **Restore tested once:** restored into a fresh folder, the app opens it and the Forever board matches the original.
-- Bronze is the irreplaceable part. Derived data becomes rebuildable with STORY-006.
-
 ### STORY-024 — Market metrics layer
 
 As a gold maker, I want one defined set of market measures for each item in each scan, so that every chart, recommendation and later explanation agrees.
@@ -99,6 +91,22 @@ Acceptance:
 - **One source of truth:** the board's depth and Scan changes use these measures where they overlap instead of recomputing them, or the overlap is documented.
 - **Tests** cover quantity weighting, stacks, listings without a buyout, partial scans and isolation by full market identity.
 - Uses STORY-023 fields when available.
+
+### STORY-029 — Reload and clear buttons in the addon
+
+Requested 2026-10-06.
+
+As a gold maker, I want buttons for `/reload` and `/bscan clear` next to the scan button, so that the scan, reload, import, clear, reload routine doesn't need typed commands every time.
+
+Acceptance:
+- **Two buttons** beside the existing *Brownstone Scan* button: *Reload* (calls `ReloadUI()`, which writes saved scans to the file) and *Clear saved scans*.
+- **Clear stays protected:** the button behaves like `/bscan clear`, never `/bscan clear all`. It refuses while this session has scans not yet written to the file and says to reload and import first. Otherwise it asks for confirmation, showing how many saved scans will be deleted and reminding you to import into Brownstone first. After clearing, it says a reload is needed to write the change (the *Reload* button is right there).
+- **Disabled while a scan is running**, for both buttons, so a scan is never cut short by a stray click.
+- **Decide** whether the buttons should also be reachable with the auction house closed (for example the reload after an import), or only on the auction house window like the scan button today. Record it in `addon/README.md`.
+- **Still read-only:** the buttons only reload the interface and clear the addon's own saved data; no auction-house actions (SPIKE-008). Slash commands keep working.
+- **Tested offline** in the Lua harness (`tests/test_addon.py`): clear refused with unsaved scans, confirmation required, buttons disabled during a scan, reload called. Checked once in game on the beta (the `.toc` interface number and button placement).
+- Addon version bump. The scan format is unchanged, so no importer change. To avoid confusing STORY-023's beta timing and size measurements, release it after those are taken, or note in the measurement record which version was used.
+- Depends on nothing.
 
 ### STORY-021 — Item page and charts
 
@@ -154,7 +162,7 @@ Acceptance:
   - re-saving each Forever Wowhead page and regenerating. If the live `rules_version` differs from the beta's, every Forever catalog stays inspection-only until regenerated (*Refresh due* flags it).
   - re-checking *Known Forever market facts* in `requirements.md`
 - **Checked** using archived scans and data copies: the backup, restore and source-cutover steps work end to end. Live-house checks happen at launch.
-- Depends on STORY-016 and STORY-020a.
+- Depends on STORY-016 (deferred; its backup steps wait for it) and STORY-020a.
 
 ### STORY-027 — Removed listings between scans
 
@@ -289,6 +297,18 @@ Acceptance:
 - **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*). **Moves to the top of Next if the Bolt of Linen Cloth check finds a yield above 1.**
 - **Skill-up demand map:** from the catalogs' skill levels and quantities, which materials levelling crafters will need at each skill band. A reasoned expectation for stocking up before launch, not a forecast.
 - **In-game recipe reader (optional):** the addon could read the Tailoring window (reagents, `GetTradeSkillNumMade`) and the trainer list (required skill) to confirm Wowhead values automatically. This widens the read-only addon and needs its own decision.
+
+**STORY-016 — Back up local data**
+
+Deferred from Next by the product owner (2026-10-06).
+
+As the product owner, I want a tested backup of `data/`, so that the beta scans, which can't be retaken after beta testing ends, survive a disk failure or a bad migration.
+
+Acceptance:
+- **Decide and record** in `requirements.md` where backups go (a location you control, such as a second disk) and when to take them, for example after each import session and before every migration or launch step.
+- **One documented procedure** that refuses to run while a writer holds the DuckDB lock, copies `data/` to a dated folder, and verifies the copy: file count, and SHA-256 of every bronze file.
+- **Restore tested once:** restored into a fresh folder, the app opens it and the Forever board matches the original.
+- Bronze is the irreplaceable part. Derived data becomes rebuildable with STORY-006.
 
 ## Out of scope
 
