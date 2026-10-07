@@ -293,6 +293,7 @@ Acceptance:
 - **Intermediate steps** the catalog route uses (for example thread → bolt → armor) appear as indented steps with their own quantities, so the chain is visible. Nothing beyond the catalog's own routes (cross-profession chains stay STORY-015b).
 - **Unchanged:** the Buy tab's merged list, staleness labels (*stale — inspect only* still shows) and the 10-row limit.
 - **Offline tests:** per-craft materials add up to the craft's cost and to the merged Buy list across crafts; a vendor route; an intermediate step; stale evidence.
+- **Implementation notes** (added 2026-10-07 at hand-off): read the materials from the selected craft row's existing `purchases` (the reserved quotes Today already made), never re-quote listings, so the details can't disagree with the plan. Intermediate steps come from the recipe's chosen catalog route (`crafting.py`, method `craft`); yields stay 1 (CRAFT-08). Calculation stays in `brownstone/` (no Streamlit), display in `views/today.py`. A display-only change: `TODAY_VERSION` stays 1.
 
 ### STORY-043 — Today: only what you can make
 
