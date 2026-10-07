@@ -58,6 +58,8 @@ def test_v4_mixed_import_raw_effective_precedence_provenance_counts_and_dedup(tm
                           "WHERE scan_id='enriched' ORDER BY item_id").fetchall() == [(5, 20, 100), (15, 1, 0)]
         assert db.execute("SELECT pass_fields_json FROM scan_items WHERE scan_id='rich'").fetchall() == [
             (None,), (None,)]
+        stored = db.execute("SELECT availability_json FROM addon_scans WHERE scan_id='enriched'").fetchone()[0]
+        assert json.loads(stored) == measured
         assert json.loads(db.execute("SELECT pass_fields_json FROM scan_items WHERE scan_id='enriched' "
                                      "AND item_id=2589").fetchone()[0]) == list(scan_details.PASS_FIELDS)
         before = {t: db.execute(f"SELECT * FROM {t} ORDER BY ALL").fetchall()

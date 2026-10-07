@@ -452,7 +452,7 @@ def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha2
     scan_row = {key: value for key, value in summary.items() if key not in ("neutral", "errors")}
     scan_row.update(identity, format_version=record["schema_version"],
                     duration_seconds=scan_details.duration(record),
-                    availability_json=json.dumps(measured, sort_keys=True) if record["schema_version"] == 3 else None,
+                    availability_json=json.dumps(measured, sort_keys=True) if record["schema_version"] >= 3 else None,
                     priced=priced, nonexact_stacks=scans.nonexact_stacks(listings),
                     item_count=prices.height if prices is not None else None, source_sha256=sha256,
                     collection_id=sid, collected_at=now)
