@@ -41,7 +41,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 **Order:**
 1. STORY-031 item info pass (addon; beta, small)
 2. STORY-032 character snapshots: gold, bags, bank (addon + import; beta)
-3. STORY-037 a second machine's files (both machines are played in the beta)
+3. STORY-037 a second machine's files (both machines are played in the beta; next to implement)
 4. STORY-033 event journal (addon; beta)
 5. STORY-038 Today craft details (Brownstone; works on existing scans)
 6. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
@@ -113,6 +113,7 @@ Acceptance:
 - **Reconciliation:** between two snapshots of a character, actual change minus recorded movements is the residual. A positive item residual is *gathered or looted*; negative is *used or destroyed*; a gold residual is *other income or spending* (quests, repairs, training), kept apart from trading profit. Residuals are shown, never hidden, so a missing journal shows up.
 - **Integer copper,** all characters kept separate unless summed explicitly, and the 5% (or 15% neutral) cut taken from invoices, not assumed.
 - **Offline tests** from beta fixtures: a full buy → craft → post → sale cycle, an expiry, a mail between characters and a gathering residual.
+- **Across machines** (moved from STORY-037): mail between characters on different machines appears once as sent and once as received; a missing drop shows as an unmatched mail.
 
 ### STORY-035 — Auction deposits
 
@@ -139,18 +140,27 @@ Acceptance:
 
 ### STORY-037 — A second machine's files
 
-Added 2026-10-06; direction under OPS-03 in `requirements.md`.
+Added 2026-10-06; refined 2026-10-07 for implementation. Decisions are under OPS-03 in `requirements.md`: Google Drive drop folder (installed and signed in on both machines), Windows scans accepted, Brownstone and `data/` only on the Mac, and the Windows PC has the repository cloned.
 
-As a gold maker who plays characters on both the Mac and the Windows PC, I want both machines' addon files in Brownstone, so that the ledger covers every character.
+As a gold maker who plays characters on both the Mac and the Windows PC, I want both machines' addon files in Brownstone, so that scans now, and character data and the ledger later, cover every character.
 
 Acceptance:
-- **Drop folder:** a folder in Google Drive (decided 2026-10-06, OPS-03), synced by Google Drive for desktop on both machines. It holds only addon file copies, never `data/`, since DuckDB must stay off synced folders. Record its local path on the Mac in `market.local.toml`; Drive's streaming and mirroring modes must both work, since Brownstone only reads.
-- **Windows setup documented:** installing the addon on the Windows PC (copied from the repository, as on the Mac) and Google Drive for desktop, in `addon/README.md`.
-- **On Windows:** a small documented script copies the addon file after you log out, as a new, never-overwritten, timestamped file named by machine.
-- **On the Mac:** Brownstone previews and imports each dropped file like the local one, tagging every record with its machine. Identical bytes and scan IDs still deduplicate (DATA-01, ADDON-04).
-- **Clearing** on each machine is guided per file, so a file that hasn't been imported is never cleared.
-- **Clean-up:** once a dropped file is imported, Brownstone says it can be removed from the drop folder (the exact bytes are already archived); it never deletes files there itself.
-- **Cross-check:** mail between characters on different machines appears once as sent and once as received; a missing drop shows as an unmatched mail.
+- **Machine names, never inferred:** every addon input carries a machine name from configuration: `machine` for the Mac's own `scan_path`, and the name embedded in each dropped file's name. Lowercase letters, digits and hyphens only. A machine is provenance, not part of `MARKET_KEYS`: scans from both machines of the same house are one market.
+- **Drop folder setting:** an optional `drop_folder` on the addon source, set only in the untracked `config/market.local.toml` (the Google Drive path contains the account email). Without it, everything behaves as today. Brownstone only reads the drop folder: it never writes, renames or deletes files there.
+- **Windows drop script** in the repository (for example `tools/windows/`), PowerShell with a double-click `.cmd` wrapper, needing nothing installed. Its settings (SavedVariables path, drop folder, machine name) live in an untracked local file next to it, with a tracked example. It:
+  - refuses while the game is running (the game writes the file only on logout or `/reload`) and when the source file is missing;
+  - copies the file to `<machine>-<UTC time>-BrownstoneScan.lua`, writing a temporary name first and renaming when complete, so Drive never syncs a half-written file under the final name;
+  - never overwrites, verifies the copy's SHA-256 against the source, and says *nothing new* without copying when the bytes match that machine's latest drop;
+  - only reads the SavedVariables file.
+- **Preview and import on the Mac** (app and CLI):
+  - Preview lists the Mac's own file plus every dropped file matching the naming pattern, each with machine, drop time and its scans (new, duplicate, other house). Other files (partial copies, Drive conflict copies such as `name (1).lua`, unrelated files) are listed as ignored, with the reason.
+  - A file that can't be read (still syncing, Drive offline, truncated) is reported on its own row and doesn't block the other files.
+  - Each imported file is archived byte-for-byte in bronze as its own collection, with its machine and original file name in the manifest. Every imported scan is stored with its machine (a new numbered migration; scans imported before this story keep machine missing, never guessed).
+  - The existing rules apply unchanged per file: house evidence, invalidation of a reviewed preview, scan-ID/hash deduplication and conflicts, partial scans unpriced.
+- **Clean-up guidance:** for each dropped file, whether every scan in it is imported, so it can be deleted from the drop folder by hand. For each machine, the latest drop and whether it is fully imported, with the reminder that `/bscan clear` on that machine is safe only if you haven't played there since that drop.
+- **Docs:** Windows setup in `addon/README.md` (installing the addon from the repository, Drive for desktop, the script's settings, and the routine: log out → run the script → import on the Mac → clear in game next session); the rules in `requirements.md`; contracts in `design.md`; current state in `status.md`.
+- **Offline tests:** naming and ignored files, machine validation, two machines' scans of the same house in one market, duplicate and conflicting scan IDs across files, an unreadable drop beside a good one, other-house drops, clean-up status, the migration (backup, replay, missing machine for older scans), CLI and the import page. The script's tests run where PowerShell is available (Windows CI) and are skipped elsewhere, with the skip visible.
+- **Moved out:** the mail cross-check between characters on different machines needs the event journal; it is now part of STORY-034.
 
 ### STORY-038 — Today craft details
 
