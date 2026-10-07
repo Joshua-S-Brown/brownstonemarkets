@@ -41,19 +41,23 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 **Order:**
 1. STORY-031 item info pass (addon; beta, small)
 2. STORY-032 character snapshots: gold, bags, bank (addon + import; beta)
-3. STORY-033 event journal (addon; beta)
-4. STORY-035 auction deposits (needs a beta check)
-5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-6. STORY-037 a second machine's files
-7. STORY-036 vendor price ceilings
-8. STORY-027 removed listings
-9. STORY-015b crafting across professions
-10. STORY-021 item page and charts
-11. STORY-026 scan coverage and rhythm
-12. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-13. STORY-006 replay
+3. STORY-037 a second machine's files (both machines are played in the beta)
+4. STORY-033 event journal (addon; beta)
+5. STORY-038 Today craft details (Brownstone; works on existing scans)
+6. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
+7. STORY-035 auction deposits (needs a beta check)
+8. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+9. STORY-036 vendor price ceilings
+10. STORY-027 removed listings
+11. STORY-015b crafting across professions
+12. STORY-021 item page and charts
+13. STORY-026 scan coverage and rhythm
+14. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+15. STORY-006 replay
 
 STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
+
+**Added 2026-10-06 (product owner, after using Today on real data):** STORY-038 and STORY-039 follow the beta-capture stories because they need no game access and work on scans already taken. Character gold and inventory (STORY-032) and the second machine (STORY-037) are needed soon for multiple characters, so STORY-037 moves up to follow STORY-032: both machines will be played in the beta, and the journal (STORY-033) is most useful once both machines' files come in; *Restock* under Later is what lets Today use them.
 
 **Reordered 2026-10-06 (product owner, after reviewing outside design notes):** reading your own character's data is approved (`requirements.md` → *Product direction*). Everything that must be captured in game moves to the top, because the beta closes after 21 October and its behaviour (event names, mail contents, deposits) has to be observed there before launch. The addon side records raw evidence first (STORY-032, STORY-033) and Brownstone interprets it later (STORY-034), so nothing is lost if the interpretation is wrong. Earlier: Today came first because it is the first page that answers what to do; STORY-027 and STORY-015b unblock its biggest gaps (sales speed; chains such as ore → bars → armor). The launch runbook (STORY-020a/b) is in Later.
 
@@ -140,11 +144,40 @@ Added 2026-10-06; direction under OPS-03 in `requirements.md`.
 As a gold maker who plays characters on both the Mac and the Windows PC, I want both machines' addon files in Brownstone, so that the ledger covers every character.
 
 Acceptance:
-- **Decide and record** the drop folder: a folder both machines can reach (for example a synced cloud folder), never holding `data/`, since DuckDB must stay off synced folders.
+- **Drop folder:** a folder in Google Drive (decided 2026-10-06, OPS-03), synced by Google Drive for desktop on both machines. It holds only addon file copies, never `data/`, since DuckDB must stay off synced folders. Record its local path on the Mac in `market.local.toml`; Drive's streaming and mirroring modes must both work, since Brownstone only reads.
+- **Windows setup documented:** installing the addon on the Windows PC (copied from the repository, as on the Mac) and Google Drive for desktop, in `addon/README.md`.
 - **On Windows:** a small documented script copies the addon file after you log out, as a new, never-overwritten, timestamped file named by machine.
 - **On the Mac:** Brownstone previews and imports each dropped file like the local one, tagging every record with its machine. Identical bytes and scan IDs still deduplicate (DATA-01, ADDON-04).
 - **Clearing** on each machine is guided per file, so a file that hasn't been imported is never cleared.
+- **Clean-up:** once a dropped file is imported, Brownstone says it can be removed from the drop folder (the exact bytes are already archived); it never deletes files there itself.
 - **Cross-check:** mail between characters on different machines appears once as sent and once as received; a missing drop shows as an unmatched mail.
+
+### STORY-038 — Today craft details
+
+Added 2026-10-06 (product owner feedback on Today). Display of what the plan already calculates; no change to sizing, ranking or Today's rules.
+
+As a gold maker, I want to pick a craft on Today and see exactly what it needs, so that I know what to buy for that item without working it out from the merged shopping list.
+
+Acceptance:
+- **Select a row** in the Craft tab (Streamlit row selection); a details table appears under it. Nothing is selected by default, and the selection clears when the plan changes.
+- **Materials for that craft only:** each material for the selected batch with route (auction house or vendor), required units, purchased units, cost and highest unit price, from the same reserved listings the plan used. The rows sum exactly to the craft's material cost, in integer copper.
+- **Intermediate steps** the catalog route uses (for example thread → bolt → armor) appear as indented steps with their own quantities, so the chain is visible. Nothing beyond the catalog's own routes (cross-profession chains stay STORY-015b).
+- **Unchanged:** the Buy tab's merged list, staleness labels (*stale — inspect only* still shows) and the 10-row limit.
+- **Offline tests:** per-craft materials add up to the craft's cost and to the merged Buy list across crafts; a vendor route; an intermediate step; stale evidence.
+
+### STORY-039 — Choose and adjust the Today plan
+
+Added 2026-10-06 (product owner feedback on Today). Depends on STORY-038.
+
+As a gold maker, I want to tick the crafts I'll actually make and change their batch sizes, so that Buy and Sell match what I'm really going to do.
+
+Acceptance:
+- **Choose:** each Craft row has a tick box (all ticked by default) and an editable batch size, at least 1 and at most the row's feasible size under Today's rules (funds, listed supply, per-item cap).
+- **Recalculate:** Buy, Sell and the shopping total use only ticked crafts at their chosen sizes, re-reserving listings in plan order, so the list stays payable and cheap listings aren't counted twice.
+- **Freed gold:** by default, gold freed by unticking or shrinking a craft goes to the next-best crafts under the existing greedy rules. A toggle keeps the plan to exactly what was ticked instead. Record the rule in `requirements.md` → *Today* with a new `today_version`.
+- **Kept for the session only** and per source; choices reset when the scan or settings change, and nothing is written to disk unless a later decision says so.
+- **Honest numbers:** a smaller batch than the profit-best size shows its lower profit; a choice that is no longer feasible after a new scan is dropped with a note, never silently resized.
+- **Offline tests:** untick with and without refill, a shrunk and a grown batch, infeasible sizes rejected, and reserved listings never shared between crafts.
 
 STORY-016 (backup) is deferred to Later (product owner, 2026-10-06).
 
@@ -301,7 +334,7 @@ These are grouped by what unblocks them.
 - **Sales speed instead of a fixed cap:** replace *most crafts per item* with how many units of the output disappear between scans. Needs STORY-027 and a few weeks of live scans; label it removed, not sold.
 - **Stockpile:** materials below their own multi-day typical price, worth buying ahead for recipes you craft often, with a holding limit tied to gold available. Needs price history across days (*History chain*), so after launch.
 - **Volatility:** how much an item's typical price swings across scans, shown as a risk note and used to demote unstable crafts. Needs the same history.
-- **Restock:** what you hold in bags and bank, so *Buy* skips it and *Sell* includes it. Needs STORY-032.
+- **Restock:** what you hold in bags and bank, so *Buy* skips it and *Sell* includes it. Needs STORY-032 (and STORY-037 for characters on the Windows PC); pairs with STORY-039's chosen plan.
 - **Whole chains:** ore → bars → armor across professions, with the gain at each stage (sell bars or craft on). Needs STORY-015b.
 - **Gold per hour:** if the scaled minimum gain feels wrong in play, try a time-based minimum instead. Decide after using version 1.
 

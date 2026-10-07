@@ -315,6 +315,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   - Manifests written before a change are read through an upgrade adapter; they are never edited.
 - **OPS-03 One home machine** (decided 2026-10-05): Brownstone, its `data/` folder and all addon scanning run on the Mac. The Windows desktop doesn't scan for now, which keeps one scan file and one writer; scanning on a second machine needs its own decision first (importing a second file). Windows stays a supported, CI-tested platform (OPS-01).
   - **Revisited 2026-10-06 (product owner):** with character data (STORY-032/033), characters played on Windows produce their own logs. Direction: Brownstone and `data/` stay on the Mac as the only database writer; each machine's addon file is a separate input, tagged by machine, copied write-once into a drop folder the Mac imports from. The contract is STORY-037; until it is done, only the Mac's file is imported.
+  - **Drop folder decided 2026-10-06 (product owner):** Google Drive, through Google Drive for desktop on both machines (free tier; the account already exists). It holds only copies of addon files, never `data/`. Brownstone reads it as an ordinary local folder; files can be cleaned out after import because bronze keeps the exact bytes (DATA-01).
   - Local storage is enough: about 5 MB per beta scan all-in (up to about 10 MB expected for a busier live house), so roughly 5–35 GB a year at 3–10 scans a day. Cloud storage and a home server aren't needed. `data/` must not sit in a live-synced folder such as iCloud Drive, because DuckDB has a single writer.
   - Backups are deferred (product owner, 2026-10-06): STORY-016 is no longer due by 21 October and has no date. Until it is done, migrations still copy the database first (OPS-02), but nothing else protects the raw archive.
 
@@ -329,7 +330,7 @@ Demand, sale likelihood, deposits, vendor stock, reputation discounts, recipe qu
 - Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011a).
 - Where backups go and how often (STORY-016; the timing is decided under OPS-03), historical retention and scheduling.
 - The movement ledger's contract: which recorded events become which movements, and how lots and cost basis are assigned (STORY-034).
-- How a second machine's files reach the Mac, and from which folder (STORY-037).
+- The exact drop-folder layout, file naming and clean-up routine for a second machine's files (STORY-037; the service is decided under OPS-03).
 - Whether to model the Black Market vendor and its prices, once confirmed in game (STORY-036).
 - Whether to add AI narration, which model runs it and what data may leave this machine (*AI narration*, Later in `backlog.md`).
 - Whether to remove the Retail regression sources. SPIKE-008 found Forever listings are per-stack, not Retail-style per-unit commodities, so the Retail commodity feed is not a close test of Forever's model.
