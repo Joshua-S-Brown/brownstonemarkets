@@ -8,8 +8,9 @@
 -- logout. See addon/README.md for the format and the measurement checklist.
 
 local ADDON = "BrownstoneScan"
-local SCHEMA_VERSION = 4
-local ADDON_VERSION = "0.4.0"
+local SCHEMA_VERSION = 5
+local SCAN_VERSION = 4
+local ADDON_VERSION = "0.5.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -46,17 +47,26 @@ local function canClearScans(force)
     return true
 end
 
+local clearSnapshots
+
 local function clearScans(force)
     if scan or itemPass then say("Wait for the scan and its item info pass to finish before clearing.") return end
     if not canClearScans(force) then return end
     BrownstoneScanDB.scans = {}
     unsavedScans = 0
-    say("Saved scans cleared (written at the next /reload).")
+    local removed = clearSnapshots()
+    if removed then
+        say(("Saved scans cleared, and %d character snapshot(s) from before this login; this login's are kept "
+            .. "(written at the next /reload)."):format(removed))
+    else
+        say("Saved scans cleared. This login's time is unknown, so every character snapshot was kept "
+            .. "(written at the next /reload).")
+    end
 end
 
 local CLEAR_POPUP = "BROWNSTONESCAN_CLEAR_SAVED"
 StaticPopupDialogs[CLEAR_POPUP] = {
-    text = "Delete %d saved Brownstone scan(s)? Import them into Brownstone first. Reload afterward to write the change.",
+    text = "Delete %d saved Brownstone scan(s) and snapshots older than this login? Import them into Brownstone first. Reload afterward to write the change.",
     button1 = "Clear saved scans",
     button2 = CANCEL,
     timeout = 0,
@@ -179,6 +189,162 @@ local function collectContext()
             subzone = GetSubZoneText(),
         },
     }
+end
+
+---------------------------------------------------------------------------
+-- Character snapshots: event-driven reads only, no requests, timers or item movement.
+---------------------------------------------------------------------------
+local bankOpen = false
+local sessionKey, loginTime
+local sessionSeen = false  -- the first PLAYER_ENTERING_WORLD since this addon file was loaded
+local firedEvents = {}
+local worldSignal = {}
+
+local function identityKey(name, realm)
+    return ("%d:%s%d:%s"):format(#name, name, #realm, realm)
+end
+
+local function characterKey()
+    local name, realm = safe(UnitName, "player"), safe(GetRealmName)
+    if not name or not realm then return nil end
+    return identityKey(name, realm), name, realm
+end
+
+local function startSession(initial, reload)
+    worldSignal = { initial_login = initial, reloading_ui = reload, observed_at = time() }
+    local key = characterKey()
+    if not key then return end
+    sessionKey = key
+    local sessions = BrownstoneScanDB.sessions
+    if initial == true and reload == false then
+        local now = time()
+        sessions[key] = { login_at = now, login_at_utc = utc(now), initial_login = true }
+    elseif initial == false and reload == true and sessions[key] then
+        sessions[key].reload_seen = true
+    else
+        -- Unknown signal: never invent a new login that could permit deleting current evidence.
+        say("Login/reload signal unknown; snapshot clear will retain all snapshots. Record /bscan status for beta.")
+        loginTime = nil
+        return
+    end
+    loginTime = sessions[key] and sessions[key].login_at
+end
+
+-- The client's own bank code places bank bags after every equipped bag (NUM_TOTAL_EQUIPPED_BAG_SLOTS
+-- includes a modern reagent bag; older clients only define NUM_BAG_SLOTS). Container numbers are not
+-- taken from Enum.BagIndex, whose names can include a reagent bag on clients where that number is the
+-- first bank bag. Bank IDs are never read with the bank closed.
+local function equippedBags()
+    return NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
+end
+
+local function containerIDs(kind)
+    local ids = {}
+    local function add(id) if type(id) == "number" then ids[#ids + 1] = id end end
+    local equipped = equippedBags()
+    if kind == "bags" then
+        add(KEYRING_CONTAINER)
+        for id = 0, equipped do add(id) end
+    else
+        add(REAGENTBANK_CONTAINER)
+        add(BANK_CONTAINER or -1)
+        for id = equipped + 1, equipped + (NUM_BANKBAGSLOTS or 7) do add(id) end
+    end
+    table.sort(ids)
+    return ids
+end
+
+local function readSlot(id, slot)
+    local failed = false
+    local function read(fn, ...)
+        if type(fn) ~= "function" then return nil end
+        local ok, value = pcall(fn, ...)
+        if not ok then failed = true return nil end
+        return value
+    end
+    local api = C_Container or {}
+    local link = read(api.GetContainerItemLink or GetContainerItemLink, id, slot)
+    local itemID = read(api.GetContainerItemID or GetContainerItemID, id, slot)
+    local count, occupied
+    if type(api.GetContainerItemInfo) == "function" then
+        local info = read(api.GetContainerItemInfo, id, slot)
+        if info then
+            count, occupied = info.stackCount, true
+            itemID, link = info.itemID or itemID, info.hyperlink or link
+        end
+    elseif type(GetContainerItemInfo) == "function" then
+        local ok, texture, quantity = pcall(GetContainerItemInfo, id, slot)
+        if ok then count, occupied = quantity, texture ~= nil else failed = true end
+    end
+    if not occupied and not itemID and not link then return nil, failed end
+    return { container_id = id, slot = slot, item_id = itemID, count = count, item_link = link }, failed
+end
+
+local function captureCharacter(kind, event)
+    if kind == "bank" and not bankOpen then return end
+    local key, name, realm = characterKey()
+    local faction = safe(UnitFactionGroup, "player")
+    if not key or not faction then say("Character identity unavailable; snapshot not saved.") return end
+    local now = time()
+    local db = BrownstoneScanDB
+    db.snapshot_sequence = (db.snapshot_sequence or 0) + 1
+    local snapshot = { snapshot_id = key .. ":" .. kind .. ":" .. now .. ":" .. db.snapshot_sequence,
+        character = name, realm = realm, faction = faction, kind = kind, sequence = db.snapshot_sequence,
+        captured_at = now, captured_at_utc = utc(now), addon_version = ADDON_VERSION,
+        event = event, login_at = loginTime, world_signal = worldSignal, client = collectContext().client,
+        slots = {}, containers = {},
+        rejected_events = {}, fired_events = {},
+        container_api = C_Container and "C_Container" or "legacy",
+        -- Beta check: the client's container layout behind the IDs read (see containerIDs).
+        container_layout = { equipped_bags = equippedBags(), bank_bag_slots = NUM_BANKBAGSLOTS,
+            reagent_bag_enum = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag } }
+    for _, e in ipairs(missingEvents) do snapshot.rejected_events[#snapshot.rejected_events + 1] = e end
+    for e, count in pairs(firedEvents) do snapshot.fired_events[e] = count end
+    if kind == "bags" then snapshot.gold_copper = safe(GetMoney) end
+    local api = C_Container or {}
+    local canRead = api.GetContainerItemInfo or GetContainerItemInfo or api.GetContainerItemID
+        or GetContainerItemID or api.GetContainerItemLink or GetContainerItemLink
+    for _, id in ipairs(containerIDs(kind)) do
+        local size = canRead and safe(api.GetContainerNumSlots or GetContainerNumSlots, id) or nil
+        -- A closed/inaccessible main bank sometimes reports zero slots. Do not call that empty.
+        if kind == "bank" and id == (BANK_CONTAINER or -1) and size == 0 then size = nil end
+        local container = { container_id = id, size = size }
+        snapshot.containers[#snapshot.containers + 1] = container
+        if type(size) == "number" then
+            for slot = 1, size do
+                local item, failed = readSlot(id, slot)
+                if failed then container.slots_readable = false end
+                if item then snapshot.slots[#snapshot.slots + 1] = item end
+            end
+        end
+    end
+    db.snapshots[#db.snapshots + 1] = snapshot
+end
+
+-- Returns how many snapshots were removed, or nil when the login time is unknown and all are kept.
+clearSnapshots = function()
+    if not loginTime then return nil end
+    local kept = {}
+    for _, snapshot in ipairs(BrownstoneScanDB.snapshots) do
+        if not snapshot.captured_at or snapshot.captured_at >= loginTime then kept[#kept + 1] = snapshot end
+    end
+    local removed = #BrownstoneScanDB.snapshots - #kept
+    BrownstoneScanDB.snapshots = kept
+    return removed
+end
+
+local function characterStatus()
+    local key = characterKey()
+    local bank
+    for _, snapshot in ipairs(BrownstoneScanDB.snapshots) do
+        if identityKey(snapshot.character, snapshot.realm) == key and snapshot.kind == "bank" then bank = snapshot.captured_at_utc end
+    end
+    say(("%d character snapshot(s); login: %s; bank: %s; session: %s."):format(
+        #BrownstoneScanDB.snapshots, tostring(loginTime), bank or "bank unknown", tostring(sessionKey)))
+    local events = {}
+    for e, count in pairs(firedEvents) do events[#events + 1] = e .. "=" .. count end
+    table.sort(events)
+    say("Character events fired: " .. table.concat(events, ", "))
 end
 
 ---------------------------------------------------------------------------
@@ -506,7 +672,7 @@ local function startScan()
     local ctx = collectContext()
     local now = time()
     scan = {
-        schema_version = SCHEMA_VERSION,
+        schema_version = SCAN_VERSION,
         scan_id = ("%s-%06x"):format(date("!%Y%m%dT%H%M%SZ", now), math.random(0, 0xFFFFFF)),
         started_at = now,
         started_at_utc = utc(now),
@@ -587,6 +753,10 @@ for _, event in ipairs({
     "REPLICATE_ITEM_LIST_UPDATE",
     "AUCTION_ITEM_LIST_UPDATE",
     "GET_ITEM_INFO_RECEIVED",
+    "PLAYER_ENTERING_WORLD",
+    "PLAYER_LOGOUT",
+    "BANKFRAME_OPENED",
+    "BANKFRAME_CLOSED",
 }) do
     if not pcall(frame.RegisterEvent, frame, event) then
         missingEvents[#missingEvents + 1] = event
@@ -622,6 +792,27 @@ frame:SetScript("OnEvent", function(_, event, arg1, arg2)
         BrownstoneScanDB.schema_version = SCHEMA_VERSION
         BrownstoneScanDB.addon_version = ADDON_VERSION
         BrownstoneScanDB.scans = BrownstoneScanDB.scans or {}
+        BrownstoneScanDB.snapshots = BrownstoneScanDB.snapshots or {}
+        BrownstoneScanDB.sessions = BrownstoneScanDB.sessions or {}
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        firedEvents[event] = (firedEvents[event] or 0) + 1
+        -- Only the first world entry after loading (login or /reload) sets the login marker; later
+        -- loading screens, including clients that pass no flags, leave it alone.
+        if not sessionSeen or arg1 or arg2 then
+            sessionSeen = true
+            startSession(arg1, arg2)
+        end
+    elseif event == "PLAYER_LOGOUT" then
+        firedEvents[event] = (firedEvents[event] or 0) + 1
+        captureCharacter("bags", event)
+    elseif event == "BANKFRAME_OPENED" then
+        firedEvents[event] = (firedEvents[event] or 0) + 1
+        bankOpen = true
+        captureCharacter("bank", event)
+    elseif event == "BANKFRAME_CLOSED" then
+        firedEvents[event] = (firedEvents[event] or 0) + 1
+        captureCharacter("bank", event)
+        bankOpen = false
     elseif event == "AUCTION_HOUSE_SHOW" then
         ensureButton()
     elseif event == "AUCTION_HOUSE_CLOSED" then
@@ -658,6 +849,7 @@ SlashCmdList["BROWNSTONESCAN"] = function(msg)
     elseif cmd == "status" then
         local n = #BrownstoneScanDB.scans
         local last = BrownstoneScanDB.scans[n]
+        characterStatus()
         say(("Events the client rejected: %s."):format(#missingEvents > 0 and table.concat(missingEvents, ", ") or "none"))
         say(("%d saved scan(s). API: %s. Last: %s."):format(n, tostring(detectApi()),
             last and (last.scan_id .. " " .. last.status .. ", " .. (last.listing_count or 0) .. " listings") or "none"))

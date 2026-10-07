@@ -27,7 +27,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - **Prepare a beta character for the character-data tests** (added 2026-10-06): level one **gathering** profession (Mining or Herbalism) and one **crafting** profession that uses it, far enough to gather, craft, post, sell, let something expire and cancel. Keep a little gold to buy and vendor with. This is what STORY-032 and STORY-033 are tested on.
 - **Test the new addon builds in game** once STORY-031 to STORY-033 are ready (aim: by 13 October, leaving a week of beta). Each run records what actually happened, so it can be preserved as a test fixture before the beta closes:
   - **Item info pass (STORY-031):** after a scan, how many items still lack vendor price, item level and stack size, against the 0.3.1 numbers.
-  - **Snapshots (STORY-032):** gold and bags written on logout and on `/reload`; bank only after opening the bank; two characters on the same account.
+  - **Snapshots (STORY-032):** gold and bags written on logout and on `/reload`; bank only after opening the bank; two characters on the same account. With a new character (added 2026-10-07: no spare bags yet), test the backpack, any equipped bags, the main bank and one bank bag slot if you can buy it. That bank bag must appear in the bank snapshots (taken when you open the bank) and never in the logout snapshot of your bags. Whatever you can't test yet moves to *Snapshot coverage* under Later.
   - **Event journal (STORY-033):** buy from the auction house, post, cancel, let one expire, sell one; open the mailbox and take the invoice and the returned item; craft; gather; buy and sell at a vendor; send mail between your own characters. Note which events fired and with what values.
   - **Unconfirmed claims** (`requirements.md` → *Known Forever market facts*): time from a sale to its gold in the mailbox; the deposit charged for a few posts of known vendor price and duration (STORY-035); whether the Black Market vendor exists, where, and its prices (STORY-036); the postage for mail to your own characters, with and without attached items and gold (added 2026-10-06: moving materials to the character with the right profession may cost something per mail).
 
@@ -75,7 +75,7 @@ Acceptance:
 
 ### STORY-032 — Character snapshots: gold, bags and bank
 
-Added 2026-10-06; refined 2026-10-07 for implementation. Must be testable in game by 13 October (*Now*), so the beta can confirm it on both machines before it closes after 21 October.
+**Implemented and reviewed (2026-10-07); pending the in-game beta check.** Added 2026-10-06; refined 2026-10-07 for implementation. Must be testable in game by 13 October (*Now*), so the beta can confirm it on both machines before it closes after 21 October.
 
 As a gold maker, I want the addon to record what each of my characters holds, so that Today can count what I already have and the ledger can reconcile what changed between sessions.
 
@@ -350,6 +350,8 @@ Acceptance:
 These are grouped by what unblocks them.
 
 **Seller capture** (found 2026-10-06; blocks STORY-028 and seller matching in STORY-027): the Forever beta's bulk scan returns no seller names (ADDON-07). Left blocked until after go-live (product owner, 2026-10-06): check whether live scans return seller names. Only if they don't, decide between another read-only way of getting them (such as per-item searches, at the cost of many more auction-house requests and a longer scan) and dropping or reshaping STORY-028.
+
+**Snapshot coverage** (added 2026-10-07; needs a character with more bags and bank slots, possibly after go-live): STORY-032's checks that a new beta character can't reach. Every equipped bag slot full; several bank bags, including the last bank bag slot; the keyring and any reagent containers the client has; a full bank compared item by item; and bank-close reads with many bags open. Use the checklist in `addon/README.md` (*All containers* and *Bank open and close*) and record the client's `container_layout` values. Until then, container coverage is confirmed only for the containers actually tested.
 
 **Today, later versions** (captured 2026-10-06 with the product owner; each extends STORY-025 once its data exists):
 - **Sales speed instead of a fixed cap:** replace *most crafts per item* with how many units of the output disappear between scans. Needs STORY-027 and a few weeks of live scans; label it removed, not sold.

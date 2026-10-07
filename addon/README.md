@@ -1,6 +1,6 @@
-# Brownstone Scan 0.4.0
+# Brownstone Scan 0.5.0
 
-A **read-only** auction house scanner for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
+A **read-only** auction house scanner and character snapshot recorder for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
 ## What it does and doesn't do
 
@@ -32,7 +32,8 @@ I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C
 
 Commands: `/bscan start | stop | status | label <text> | clear [all]`.
 
-**Keep the file small, in this order:** scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. The addon keeps every scan until you clear it, and each import reads the whole file. `/bscan clear` refuses while a scan from this session hasn't been written to the file yet (`/bscan clear all` overrides that). After an import that saved something new, Brownstone says clearing is safe; if it says *Nothing new*, `/reload` and import again first.
+**Keep the file small, in this order:** scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. The addon keeps every scan until you clear it, and each import reads the whole file. `/bscan clear` refuses while a scan from this session hasn't been written to the file yet (`/bscan clear all` overrides that). Follow the full-import and latest-machine checks under OPS-03 before clearing;
+character snapshots follow ADDON-11 and keep the current login across `/reload`.
 
 ### Reload and clear controls (STORY-029)
 
@@ -40,7 +41,7 @@ Version 0.3.1 adds **Clear saved scans** and **Reload** immediately to the left 
 
 **Visibility decision:** the controls are available only with the auction house open, like the existing scan button. This keeps one small, contextual row without a persistent screen panel or new commands. For the manual scan → Reload → import → Clear → Reload routine, leave the house open during the import or reopen it afterward; the existing slash commands also work with the house closed.
 
-**Clear decision:** the button shares the protected `/bscan clear` logic and never uses the `all` override. Unsaved session scans refuse immediately with reload/import guidance. Otherwise a standard `StaticPopupDialogs` / `StaticPopup_Show` confirmation names the saved-scan count and reminds you to import into Brownstone first. Cancel or Escape changes nothing; there is no timeout or automatic acceptance. Zero scans still get confirmation, matching the command's harmless empty clear. Accept removes only `BrownstoneScanDB.scans`, preserves the label/metadata, and prints the existing next-reload reminder. Slash commands retain their existing behaviour, including immediate protected clear and the explicit `clear all` override.
+**Clear decision:** the button shares the protected `/bscan clear` logic and never uses the `all` override. Unsaved session scans refuse immediately with reload/import guidance. Otherwise a standard `StaticPopupDialogs` / `StaticPopup_Show` confirmation names the saved-scan count and reminds you to import into Brownstone first. Cancel or Escape changes nothing; there is no timeout or automatic acceptance. Zero scans still get confirmation, matching the command's harmless empty clear. Accept clears `BrownstoneScanDB.scans` and prunes snapshots under ADDON-11, preserves the label/metadata, and prints the existing next-reload reminder. Slash commands retain their existing behaviour, including immediate protected clear and the explicit `clear all` override.
 
 **Pending-confirmation decision:** starting a scan or closing the house dismisses the popup with `StaticPopup_Hide`. The callbacks also refuse during a scan and recheck unsaved scans and the confirmed count at acceptance, protecting against state changes after the dialog opened. If the count changed, click Clear again to review it.
 
@@ -56,7 +57,8 @@ After `/reload` or logout:
 <Forever folder>/WTF/Account/<ACCOUNT NAME>/SavedVariables/BrownstoneScan.lua
 ```
 
-It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list. Addon 0.4.0 writes format 4; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions` and
+`snapshot_sequence`. Addon **0.5.0** writes file format **5** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
@@ -346,3 +348,116 @@ and this repository clone. The rules are OPS-03 in `docs/requirements.md`.
 Drive streaming placeholders may be unavailable offline or still syncing. Make files available offline,
 wait for sync, and preview again after any change. A file Drive is still downloading shows *Scan file changed while reading*; wait a minute and preview again. A local rename does not guarantee the Mac has
 received the completed file yet. The first real round trip passed on 2026-10-07.
+
+## Character snapshots: format 5 (STORY-032)
+
+Install **BrownstoneScan 0.5.0 on both the Mac and Windows PC**, replacing the whole installed
+`Interface/AddOns/BrownstoneScan` folder while WoW is closed. The `.toc` remains account-wide
+`## SavedVariables: BrownstoneScanDB`; do not create per-character SavedVariables files.
+Existing scan records remain formats 1–4. Windows copies the same whole account file with the
+existing drop script; no script/settings change is needed.
+
+The authoritative capture and clear rules are [ADDON-11](../docs/requirements.md#addon-11-character-snapshots-story-032).
+The added file fields are:
+
+| Field | Evidence |
+| --- | --- |
+| `snapshots` | Array of independent bags or bank observations, including snapshots without scans. |
+| `snapshot_id`, `sequence` | Length-prefixed character/realm + kind + Unix seconds + persistent account sequence; numeric order for same-second observations. |
+| `character`, `realm`, `faction`, `kind` | Exact character/realm strings, player faction, `bags` or `bank`. |
+| `captured_at`, `captured_at_utc`, `addon_version`, `client` | Unix seconds, UTC text, **0.5.0**, client build evidence. |
+| `gold_copper` | Bags only: nullable integer copper from `GetMoney`; a reported zero remains zero. |
+| `slots` | Occupied slots: `container_id`, `slot`, nullable `item_id`, `count`, exact `item_link`. |
+| `containers` | Reported container IDs, nullable sizes, `slots_readable = false` on reader errors; unknown never means empty. |
+| `event`, `fired_events`, `rejected_events`, `container_api` | Trigger, fired counts this runtime, guarded-registration failures, modern/legacy reader. |
+| `login_at`, `world_signal` | Login marker and actual initial-login/reloading-UI arguments (missing arguments omitted). |
+| `sessions` | Character/realm-keyed persisted login markers, initial-login evidence and reload-seen flag. |
+| `snapshot_sequence` | Account-wide monotonic same-second discriminator, retained when clearing. |
+
+Gold/bags are read at `PLAYER_LOGOUT`; bank only at open/close, never by logout with a closed bank.
+Modern `C_Container` readers fall back to legacy globals. Slot evidence is kept without resolving
+variants yet. Preview/import uses the existing addon source, exact-byte archive and file inventory.
+The import page's latest-character table reports gold in gold and independently timed bags/bank,
+counts and machine. Incomplete container coverage has unknown totals. **Fully imported** now covers
+both scans and snapshots, including snapshot-only files. New/duplicate/other-house snapshot rows
+appear beside scans in page and CLI previews. All matching snapshots in a selected file import;
+`--scan` restricts scans only. Character data does not yet change Today.
+
+### Character snapshots beta checklist — Mac and Windows, pending
+
+Repeat the capture checks on **each machine**, using **0.5.0**, before relying on this evidence.
+Use two characters on the **same account**. Preserve all before/after files privately; do not clear
+unimported evidence. Character data stays private under the same transport rules as scans.
+
+1. **Install and initial login:** with WoW closed, replace the addon folder on the Mac. On Windows,
+   use the repository containing these changes (after they have been committed/pushed and pulled)
+   or copy the same 0.5.0 folder directly. Confirm the AddOns version and `/bscan status`. Log in
+   afresh after installation, rather than installing only via `/reload`, to establish a login marker.
+   Record OS/machine label, addon version, date, character, realm, faction, client version/build and
+   `/dump select(4, GetBuildInfo())`. Record every rejected event from status. Check the `.toc` interface
+   number against the build. Do not assume event names are supported because the addon loaded.
+2. **Bank unknown:** choose a character whose bank has never been recorded, or, after importing all
+   prior evidence, start a new login and clear old snapshots. Before opening the bank, `/bscan status`
+   should say *bank unknown*. Log out; check that a bags snapshot exists and there is no bank snapshot
+   for that character. Record money from the game and expected occupied bags/slots for comparison.
+3. **Logout and reload bags separately:** log in, note gold and a few known stacks/links, then `/reload`.
+   Inspect the SavedVariables file after writing finishes: `event = PLAYER_LOGOUT`, gold in copper,
+   character/realm/faction, UTC time, addon version and complete occupied slots. Repeat with normal
+   logout/exit. Compare expected and stored IDs/counts/links; record which event fired and any missing
+   bags, Lua errors, write/reload lag or unavailable APIs. If logout events cannot still read bags,
+   retain the evidence and report it; event timing is unconfirmed on Forever.
+4. **All containers:** inspect backpack, equipped bags and every supported keyring/reagent bag.
+   Record `Enum.BagIndex`, `NUM_BAG_SLOTS`, `NUM_TOTAL_EQUIPPED_BAG_SLOTS`, `NUM_BANKBAGSLOTS` and
+   available container constants using read-only `/dump` calls, and compare them with each snapshot's
+   `container_layout`. In particular, confirm that the first bank bag (container 5 when four bags are
+   equipped) appears in bank snapshots and never in bag snapshots. Compare stored IDs/sizes/occupied slots with the UI. Empty slots
+   must be absent. For unavailable values, confirm omission/null rather than zero. Record which
+   modern `C_Container` or legacy globals exist and their actual tuple/table behavior; do not infer
+   support from a modern client's documentation.
+5. **Bank open and close separately:** note known bank stacks, open the bank, run `/bscan status`,
+   then close it and run status again; `/reload` to write. Expect two bank IDs, each with its own UTC
+   time and `BANKFRAME_OPENED`/`BANKFRAME_CLOSED`. Compare main bank, bank bags and reagent bank
+   IDs/counts/links. Specifically record whether close still permits reads, returns zero sizes or
+   loses slot data, and whether any bank access happened with the UI closed. An inaccessible main
+   bank is unknown, not empty. Compare snapshot `containers`, `slots` and event counters, keeping
+   both raw observations. Close-event availability is a beta check, not an offline guarantee.
+6. **Login versus reload and clear:** open/close the bank, `/reload`, retain the file and login marker,
+   then `/bscan clear` and `/reload` within the same login. All snapshots captured since that login
+   must remain, with unchanged IDs/content; scans already written should be emptied. Inspect
+   `world_signal` and `sessions`: initial login should be `(true, false)`, reload `(false, true)`,
+   with identical `login_at`. A world transition (any flags) must not reset it. Record actual
+   flags. If either signal is absent/unexpected, clearing must retain all snapshots; report the
+   warning and flags instead of assuming a new login. `clear all` must still retain current-session
+   snapshots. A fresh login after importing prior evidence should prune older snapshots; if its
+   bank record was pruned, in-game status is *bank unknown* while Brownstone retains the imported
+   bank time. Test the confirmed Clear button too. Test unsaved-scan refusal and the existing
+   scan → `/reload` → import → clear routine with snapshots present.
+7. **Two characters:** log out of the first and into the second on the same account. Repeat bags
+   capture and bank open/close. Both characters must appear in the single account file, with
+   distinct IDs and login markers. Retain both before any next-login clear.
+8. **Mac import:** wait for the write to finish, then Preview addon scans in Brownstone. Compare
+   snapshot characters/times/kinds/counts/machine and new/duplicate/other-house states with the
+   file; import it and inspect the latest-character table. Check gold, bags time, separate bank
+   time/counts and *bank unknown* where appropriate. Preview again: duplicate IDs and Fully imported
+   (when every record belongs to this source). A character from another faction/configured realm
+   must be *other house*, block Fully imported and stay out of this source's character table.
+   Do not alter the source's house evidence to bypass the mismatch.
+9. **Windows round trip:** after both characters' captures, log out and **close WoW**, run
+   `tools/windows/drop-scans.cmd`, wait for Drive sync, then preview/import on the Mac. Confirm
+   `windows-pc` provenance, every character's snapshots, exact-byte bronze collection and both
+   file/latest-drop Fully imported status. Repeat another drop that overlaps prior snapshots;
+   unchanged IDs must be duplicates, newly captured IDs new, with earlier stored machine retained.
+   Include a snapshots-only file (no scan needed). CLI check on the Mac:
+
+   ```bash
+   .venv/bin/python -m brownstone --source forever-us-normal-alliance-addon --preview
+   ```
+
+   Follow OPS-03 before next-session clear: latest drop fully imported, nothing played since that
+   drop. Current-login snapshots remain even when clear is allowed. The drop script's *Nothing new*
+   does not authorize clearing. Delete only fully imported drops by hand, preserving local evidence.
+10. **Record results:** retain a private row per OS/character/action with build/addon version, exact
+    initial/reload flags and login times, rejected/fired events, API shape/container IDs/sizes,
+    expected versus stored copper/item/slot/link values, bank open/close availability, snapshot IDs,
+    preview/import outcomes, machine/drop UTC, timing/lag and Lua errors. State failures explicitly;
+    offline stubs cannot confirm these Forever beta behaviors. Keep raw files private for diagnosis.

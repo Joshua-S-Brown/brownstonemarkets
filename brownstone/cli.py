@@ -2,6 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from . import character_snapshots
 from .config import ADDON_PROVIDER, LOCAL_OVERRIDES, Source, read_sources
 from .pipeline import import_guidance, import_scans, preview_scans, run
 from .recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR
@@ -91,12 +92,14 @@ def _select_source(args: argparse.Namespace) -> Source:
 
 
 def _report_scans(config: Source, manifest: dict) -> None:
+    for snapshot in manifest.get("snapshots", []):
+        print(f"Snapshot {snapshot['snapshot_id']}: {snapshot['outcome']}")
     for scan in manifest["scans"]:
         print(f"Scan {scan['scan_id']}: {scan['status']}, {scan['listing_count']:,} listings, {scan['outcome']}")
     if manifest["status"] == "complete":
         print(f"Prices for {manifest['rows']:,} items from scan {manifest['scan_id']} "
               f"(finished {manifest['updated_at']}) are now current for {config['market_id']}")
-    else:
+    elif manifest["scans"]:
         print("No complete scan among the imported scans; prices are unchanged")
     print(import_guidance(manifest))
 
@@ -121,6 +124,8 @@ def _addon_command(config: Source, args: argparse.Namespace) -> None:
         for summary, known, mismatch in zip(single.summaries, single.known, single.mismatches, strict=True):
             state = "duplicate" if known else "other house" if mismatch else "new"
             print(f"{config.get('machine', 'missing')} {summary['scan_id']}: {state}")
+        for row in character_snapshots.preview_rows(single, config.get("machine")):
+            print(row)
         return
     _report_scans(config, import_scans(config, args.input, args.scans))
 
@@ -130,6 +135,8 @@ def _report_inputs(preview) -> None:
         print(row)
     for file in preview.files:
         if file.preview:
+            for row in character_snapshots.preview_rows(file.preview, file.machine):
+                print(row)
             for summary, known, mismatch in zip(file.preview.summaries, file.preview.known,
                                                 file.preview.mismatches, strict=True):
                 state = "duplicate" if known else "other house" if mismatch else "new"

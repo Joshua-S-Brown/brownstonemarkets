@@ -136,7 +136,7 @@ def _dict(value: Any) -> dict:
     return value if isinstance(value, dict) else {}
 
 
-def read_saved_variables(raw: bytes) -> list[dict]:
+def read_addon_database(raw: bytes) -> dict:
     """Every scan in a BrownstoneScan SavedVariables file, in file order."""
     try:
         text = raw.decode("utf-8-sig")
@@ -145,13 +145,27 @@ def read_saved_variables(raw: bytes) -> list[dict]:
     database = parse_lua(text).get("BrownstoneScanDB")
     if not isinstance(database, dict):
         raise ValueError("No BrownstoneScanDB table in this file")
-    if database.get("schema_version") not in SCAN_SCHEMA_VERSIONS:
+    if database.get("schema_version") not in (*SCAN_SCHEMA_VERSIONS, 5):
         raise ValueError(f"Unsupported BrownstoneScanDB schema_version {database.get('schema_version')!r}")
-    scans = _list(database.get("scans"), "scans")
-    ids = [scan.get("scan_id") if isinstance(scan, dict) else None for scan in scans]
-    if len(set(ids)) != len(ids):
-        raise ValueError("Duplicate scan_id in file")
-    return scans
+    return database
+
+
+def read_addon_records(raw: bytes) -> tuple[list[dict], list[dict]]:
+    database = read_addon_database(raw)
+    records = _list(database.get("scans"), "scans")
+    snapshots = _list(database.get("snapshots"), "snapshots")
+    for values, key in ((records, "scan_id"), (snapshots, "snapshot_id")):
+        ids = [r.get(key) if isinstance(r, dict) else None for r in values]
+        if key == "snapshot_id" and any(not isinstance(value, str) or not value for value in ids):
+            raise ValueError("Every snapshot needs a snapshot_id")
+        if len(set(ids)) != len(ids):
+            raise ValueError(f"Duplicate {key} in file")
+    return records, snapshots
+
+
+def read_saved_variables(raw: bytes) -> list[dict]:
+    """Every scan in an account-wide file, including files with snapshots."""
+    return read_addon_records(raw)[0]
 
 
 def _evidence(scan: dict, field: str) -> Any:

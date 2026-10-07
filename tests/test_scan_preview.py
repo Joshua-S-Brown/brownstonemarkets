@@ -236,7 +236,7 @@ def test_cli_subset_guidance_and_unselected_invalid_house_stay_compatible(tmp_pa
     cli.main()
     output = capsys.readouterr().out
     # The other-house scan can never be imported here, so it doesn't block guidance but warns against clearing.
-    assert "1 scan(s) in this file are from another auction house" in output
+    assert "1 record(s) in this file are from another auction house" in output
     assert "remain unimported" not in output and "type /bscan clear" not in output
     # Explicitly selected CLI validation still leaves unrelated scans alone.
 

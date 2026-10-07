@@ -101,6 +101,8 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
     Eligibility, measures, nulls and seller policy live in ADDON-10 (`requirements.md`).
   - Version 8: adds nullable `pass_item_level`, `pass_max_stack_size`, `pass_vendor_sell_copper` (BIGINT) and `pass_fields_json` (VARCHAR) to `scan_items`. Original columns retain first-pass values. `effective_scan_items` uses `coalesce(first, pass)` for each of the three reference fields; zero is present. Provenance JSON is an ordered list of fields supplied by the pass, `[]` for format-4 items needing no pass value, null for all older formats/historical rows. DDL and view replacement are idempotent; schema-7 backup precedes upgrade. No historical rows or hashes are rewritten.
   - Version 9: adds nullable `machine VARCHAR` to `addon_scans`, with no backfill or change to identities, hashes, prices or listings. `ADD COLUMN IF NOT EXISTS` is replayable. The normal schema-8 backup precedes upgrade; older scans keep null, including after duplicate import. Fresh and upgraded scan layouts agree.
+  - Version 10: adds character snapshot parents and slots; the record/storage contract is in
+    *Character snapshots* below and capture/clear rules in ADDON-11. Existing observations are unchanged.
 - **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
 - **Callers.** The app calls it at startup for whichever source is selected (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
 - **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
@@ -147,8 +149,48 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 - `import_inputs` recomputes the inventory, configuration, bytes and known state before any writes. Selected files import independently; later identical scans deduplicate against earlier committed files, while other unexpected duplicate-state changes invalidate that file. Each file then uses the existing reviewed importer and final writer check. This is a sequence of per-file transactions, not one batch transaction; earlier successful collections survive a later failure.
 - Batch selections identify files by full path because scan IDs repeat across files. CLI `--scan` limits matching IDs in every file. The page selects files and imports their matching scans, including partial scans and duplicates; another-house entries remain unimported. `include_duplicates=True` allows an explicitly reviewed duplicate-only file to obtain its own collection; the single-file UI retains its new-only selection contract.
 - Bronze manifests add `machine` (configured local name or parsed drop machine) and `original_file_name`; existing `source`, SHA-256, byte count, scan outcomes and remaining/other-house counts remain. Machine is also added to new silver scan rows and stored `addon_scans`. Byte blobs may be shared; collection manifests never collapse files. Duplicate import preserves the original stored machine and never guesses a historical one.
-- `file_rows` and `latest_rows` provide common CLI/page cleanup evidence. `fully_imported` is true only for a readable nonempty file whose every scan has a matching stored hash and no house mismatch. Ignored names, parse errors, conflicts and other-house scans cannot give cleanup permission.
+- `file_rows` and `latest_rows` provide common CLI/page cleanup evidence. `fully_imported` is true only for a readable nonempty file whose every scan and character snapshot has a matching stored hash and no house mismatch. Ignored names, parse errors, conflicts and other-house scans cannot give cleanup permission.
 - CLI `--preview` is read-only. With a drop folder, ordinary addon import lists every file and imports only those with new scans (or, with `--scan`, those holding the requested IDs), so a repeated run never re-archives imported files; `--input` keeps the explicit single-file path and takes its machine from a drop name, otherwise from `machine`. The page shows file status, per-file scan tables, UTC provenance and each machine's latest-drop state, then refreshes those tables after import.
+
+### Character snapshots (STORY-032)
+
+Capture and clear/session rules live only in requirements.md → ADDON-11. Addon 0.5.0 keeps
+account-wide format 5 with `scans` (unchanged record formats 1–4), `snapshots`, `sessions` and
+`snapshot_sequence`. Each snapshot is a keyed table, with `slots` and `containers` arrays;
+exact links and nullable client values are preserved without variant interpretation yet.
+Length-prefixed character/realm + kind + Unix seconds + persistent sequence identify an event.
+The sequence prevents two bank/logout observations in the same second from overwriting each other;
+latest reads order same-second evidence by its numeric `sequence`, then ID.
+
+`scans.read_addon_records` parses both record lists once; `read_saved_variables` retains its scan-only
+return contract for existing callers. `character_snapshots` validates evidence, canonicalizes content
+for SHA-256, checks character house evidence, queries scoped duplicates and reads latest per-character
+bags/bank independently. The original file's exact bytes remain authoritative bronze evidence.
+
+Migration **10** adds `character_snapshots` (source/ID primary key, full MARKET_KEYS, character
+realm/faction, kind, UTC timestamp, nullable BIGINT gold, machine, collection/file/content hashes,
+original record JSON) and `character_slots` (source/ID/container/slot primary key, nullable BIGINT
+item/count and exact link). Slots belong to the fully scoped parent; no cross-character or price join
+is introduced. Frozen DDL is replayable; existing tables/rows/hashes are unchanged and migration
+backs up the starting database. Preview can query schemas before 10 without upgrading.
+
+`ScanPreview` also retains snapshot records, summaries, known hashes and house mismatches.
+`new_snapshot_ids` drives single-file and drop-file import availability. All matching snapshots
+in each selected file import; scan selections/`--scan` still limit only scans. Reviewed imports
+compare snapshot duplicate state at preflight and under the same writer transaction as scans.
+`scan_inputs` tracks expected snapshot commits across overlapping files, allowing intentional
+same-batch duplicates while refusing unrelated state changes. Conflicts isolate the affected file.
+Both kinds share `_save_collection`/`_load_collection`, one bronze blob and one manifest; manifests
+add snapshot outcomes and full-import status. Snapshot rows/JSON load directly in that transaction;
+there is no separate snapshot silver export. A snapshot-only collection has `no_complete_scan` and
+cannot replace prices. Latest imported bank evidence persists after clearing the game's file.
+
+CLI and page preview tables list snapshots alongside scans; `InputFile.fully_imported` checks both
+kinds, including house mismatches. The page shows a read-only latest-character table scoped by source
+and every market key. Unreadable container totals remain unknown and coverage is visible. Machine
+comes from the existing local configuration/drop-name contract, with the original machine retained
+on deduplication. Windows drop scripts need no change: they copy the whole account file.
+
 
 ## Scan comparison
 

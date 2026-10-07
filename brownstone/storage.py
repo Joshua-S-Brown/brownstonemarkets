@@ -13,7 +13,7 @@ from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 from .item_names import remember_local_catalog_names, remember_observed_names
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -208,8 +208,24 @@ def _migrate_to_9(db) -> None:
     db.execute("ALTER TABLE addon_scans ADD COLUMN IF NOT EXISTS machine VARCHAR")
 
 
+def _migrate_to_10(db) -> None:
+    """Character evidence shares market/source scope, but never supplies auction prices."""
+    db.execute("""CREATE TABLE IF NOT EXISTS character_snapshots (
+        source_id VARCHAR NOT NULL, snapshot_id VARCHAR NOT NULL, snapshot_sha256 VARCHAR NOT NULL,
+        market_id VARCHAR, game_version VARCHAR, region VARCHAR, scope VARCHAR, realm VARCHAR,
+        server_type VARCHAR, faction VARCHAR, environment VARCHAR,
+        character VARCHAR NOT NULL, character_realm VARCHAR NOT NULL, character_faction VARCHAR NOT NULL,
+        kind VARCHAR NOT NULL, captured_at TIMESTAMPTZ NOT NULL, gold_copper BIGINT,
+        machine VARCHAR, collection_id VARCHAR NOT NULL, source_sha256 VARCHAR NOT NULL, record_json VARCHAR NOT NULL,
+        PRIMARY KEY (source_id, snapshot_id))""")
+    db.execute("""CREATE TABLE IF NOT EXISTS character_slots (
+        source_id VARCHAR NOT NULL, snapshot_id VARCHAR NOT NULL, container_id BIGINT NOT NULL,
+        slot BIGINT NOT NULL, item_id BIGINT, count BIGINT, item_link VARCHAR,
+        PRIMARY KEY (source_id, snapshot_id, container_id, slot))""")
+
+
 MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4, 5: _migrate_to_5,
-              6: _migrate_to_6, 7: _migrate_to_7, 8: _migrate_to_8, 9: _migrate_to_9}
+              6: _migrate_to_6, 7: _migrate_to_7, 8: _migrate_to_8, 9: _migrate_to_9, 10: _migrate_to_10}
 
 
 def _has_table(db, name: str) -> bool:

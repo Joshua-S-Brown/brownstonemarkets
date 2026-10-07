@@ -540,3 +540,34 @@ def test_drop_import_page_machine_files_cleanup_and_stale_review(tmp_path, monke
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert any("stale" in e.value for e in at.error)
     assert not at.exception
+
+
+@pytest.mark.parametrize("drop_folder", [False, True])
+def test_character_snapshot_import_page_unknown_bank_and_snapshot_only_files(tmp_path, monkeypatch, drop_folder):
+    from test_character_snapshots import snapshot, write
+    from test_scans import finished_now
+    at, addon = preview_addon(tmp_path, monkeypatch)
+    r = snapshot()
+    r.update(captured_at=finished_now())
+    r.pop("captured_at_utc")
+    path = addon["scan_path"]
+    if drop_folder:
+        folder = tmp_path / "drops"
+        folder.mkdir()
+        addon["drop_folder"] = folder
+        path = folder / "windows-pc-20261007T004900Z-BrownstoneScan.lua"
+    write(path, [r])
+    at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert not at.exception
+    snapshots = next(t.value for t in at.dataframe if "Snapshot ID" in t.value.columns)
+    assert snapshots["Character"].tolist() == ["Alice"] and snapshots["Import state"].tolist() == ["new"]
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert not at.exception and not at.error
+    table = next(t.value for t in at.dataframe if "Bank (UTC)" in t.value.columns)
+    assert table["Bank (UTC)"].tolist() == ["bank unknown"] and table["Gold"].tolist() == [1.2345]
+    if drop_folder:
+        latest = next(t.value for t in at.dataframe if "Latest drop" in t.value.columns)
+        assert latest["Fully imported"].iloc[0]
+    else:
+        assert any(m.value.startswith("Imported character snapshots") for m in at.success) and not at.warning

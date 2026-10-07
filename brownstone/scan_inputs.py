@@ -19,8 +19,13 @@ class InputFile:
 
     @property
     def fully_imported(self) -> bool:
-        return bool(self.preview and self.preview.known and all(self.preview.known)
-                    and not any(self.preview.mismatches))
+        return bool(self.preview and (self.preview.known or self.preview.snapshot_known)
+                    and all(self.preview.known + self.preview.snapshot_known)
+                    and not any(self.preview.mismatches + self.preview.snapshot_mismatches))
+
+    @property
+    def matching_snapshots(self) -> bool:
+        return bool(self.preview and any(not m for m in self.preview.snapshot_mismatches))
 
     @property
     def matching_ids(self) -> list[str]:
@@ -38,7 +43,7 @@ class InputPreview:
     @property
     def new_files(self) -> list[str]:
         # UI selections name files: scan IDs are shared across files and cannot identify a file.
-        return [str(f.path) for f in self.files if f.preview and f.preview.new_ids]
+        return [str(f.path) for f in self.files if f.preview and (f.preview.new_ids or f.preview.new_snapshot_ids)]
 
     def latest(self) -> list[InputFile]:
         machines: dict[str, InputFile] = {}
@@ -97,7 +102,8 @@ def preview_inputs(config: Source, now: datetime | None = None) -> InputPreview:
 def _review_equal(before: InputPreview, current: InputPreview) -> bool:
     def states(preview: InputPreview) -> list:
         return [(f.path, f.machine, f.drop_time, f.error, f.ignored,
-                 (f.preview.configuration, f.preview.raw, f.preview.known) if f.preview else None)
+                 (f.preview.configuration, f.preview.raw, f.preview.known, f.preview.snapshot_known)
+                 if f.preview else None)
                 for f in preview.files]
     return before.configuration == current.configuration and states(before) == states(current)
 
@@ -106,7 +112,7 @@ def import_inputs(config: Source, reviewed: InputPreview, selected: list[str] | 
                   now: datetime | None = None, scan_ids: list[str] | None = None) -> list[dict]:
     """Invalidate changed reviews before writes, then import independent files in inventory order.
 
-    Identical scans in later files deduplicate after earlier files commit. Errors remain per file.
+    Identical records in later files deduplicate after earlier files commit. Errors remain per file.
     A successful collection includes duplicates so every matching file can be archived explicitly.
     """
     now = now or datetime.now(UTC)
@@ -117,23 +123,27 @@ def import_inputs(config: Source, reviewed: InputPreview, selected: list[str] | 
     _validate_selection(current, wanted, scan_ids)
     results = []
     committed: dict[str, dict] = {}
+    snapshot_committed: dict[str, dict] = {}
     for file in current.files:
         if str(file.path) in wanted:
-            result = _import_file(config, file, now, scan_ids, committed)
+            result = _import_file(config, file, now, scan_ids, committed, snapshot_committed)
             results.append(result)
             committed.update(_committed_scans(file, result))
+            snapshot_committed.update({r["snapshot_id"]: {"snapshot_sha256": r["snapshot_sha256"]}
+                                       for r in result.get("manifest", {}).get("snapshots", [])
+                                       if r["outcome"] != "other_house"})
     return results
 
 
 def _default_selection(preview: InputPreview, scan_ids: list[str] | None) -> set[str]:
-    """Unattended runs archive only files with new scans (or the requested IDs), never re-archive the rest."""
+    """Default runs archive files with new records (or requested scans), never re-archive the rest."""
     if scan_ids is None:
         return set(preview.new_files)
     return {str(f.path) for f in preview.files if set(f.matching_ids) & set(scan_ids)}
 
 
 def _validate_selection(preview: InputPreview, wanted: set[str], scan_ids: list[str] | None) -> None:
-    if not wanted <= {str(f.path) for f in preview.files if f.matching_ids}:
+    if not wanted <= {str(f.path) for f in preview.files if f.matching_ids or f.matching_snapshots}:
         raise ValueError("Select only readable matching files from this preview")
     available = {sid for f in preview.files if str(f.path) in wanted for sid in f.matching_ids}
     if scan_ids is not None and not set(scan_ids) <= available:
@@ -150,7 +160,7 @@ def _committed_scans(file: InputFile, result: dict) -> dict[str, dict]:
 
 
 def _import_file(config: Source, file: InputFile, now: datetime, scan_ids: list[str] | None,
-                 committed: dict[str, dict]) -> dict:
+                 committed: dict[str, dict], snapshot_committed: dict[str, dict]) -> dict:
     source = file_source(config, file)
     try:
         refreshed = preview_scans(source, file.path, now)
@@ -160,10 +170,14 @@ def _import_file(config: Source, file: InputFile, now: datetime, scan_ids: list[
                     for s, known in zip(file.preview.summaries, file.preview.known, strict=True)]
         if refreshed.known != expected:
             raise StalePreviewError("Imported scans changed. Preview again")
+        expected_snapshots = [snapshot_committed.get(r["snapshot_id"], known)
+                              for r, known in zip(file.preview.snapshots, file.preview.snapshot_known, strict=True)]
+        if refreshed.snapshot_known != expected_snapshots:
+            raise StalePreviewError("Imported snapshots changed. Preview again")
         ids = file.matching_ids
         if scan_ids is not None:
             ids = [sid for sid in ids if sid in scan_ids]
-        if not ids:
+        if not ids and not file.matching_snapshots:
             return {"file": str(file.path), "machine": file.machine, "status": "skipped"}
         manifest = import_scans(source, file.path, ids, now, reviewed=refreshed, include_duplicates=True)
         return {"file": str(file.path), "machine": file.machine, "status": "imported", "manifest": manifest}

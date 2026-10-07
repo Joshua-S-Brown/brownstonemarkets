@@ -105,6 +105,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   API contracts: [Blizzard generated auction definitions](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua), [Classic item definitions](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_APIDocumentationGenerated/ItemDocumentation.lua). Forever availability is still subject to beta measurement.
   - **Measurement limits:** one full format-3 beta scan (addon 0.3.0 or later; record the exact version) must be imported by 21 October. Compare single-scan 0.2.0 and 0.3.0 files from the same house with similar listing counts: duration at most **2×** baseline, uncompressed bytes per listing at most **4×** baseline. Record actual values, lag/reload time, and availability counts/denominators for every new listing/item field; there is no invented availability threshold. Availability affects evidence, not completion status. Import records these counts (including resolved/base/unresolved links and out-of-range optional values) and duration locally in the per-scan manifest and database. File byte counts are the original uncompressed input, not gzip bronze size. A failed limit leaves beta acceptance pending; remeasure after any change.
 
+
 ### ADDON-10 Market metrics (metrics_version 1, approved 2026-10-06, STORY-024)
 
 The market metrics layer describes observed listed supply, not executed sales, demand, liquidity,
@@ -162,6 +163,63 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   unchanged. Board depth reads stored units/listings; Scan changes reads stored minimum, percentile,
   units and listings, retaining ADDON-08 matching and DATA-02 naming. Name-only listing aggregation
   remains for labels; threshold supply reads listings because its price is caller-selected.
+
+
+### ADDON-11 Character snapshots (STORY-032)
+
+- Addon **0.5.0** writes account-wide `BrownstoneScanDB` format **5** (`SavedVariables`);
+  scan records retain format 4 and formats 1–4 remain importable. `snapshots` records bags/gold on
+  guarded `PLAYER_LOGOUT` (including `/reload`), and bank on guarded `BANKFRAME_OPENED` and
+  `BANKFRAME_CLOSED`. These events and container API behavior remain pending Forever beta checks.
+  Only container/money/identity reads are added: no requests, timers, buying, posting, moving,
+  sorting or mail. Bank readers run only between bank-open and bank-close events.
+- Snapshot evidence is character name, realm, faction, Unix seconds + UTC text, addon version,
+  kind (`bags`/`bank`), triggering event, login time, container API, rejected events and fired-event
+  counts. Gold is nullable integer copper; reported zero is valid. Occupied slots retain container ID,
+  positive slot, nullable item ID/count and exact item-link text. Empty slots are omitted; missing
+  values never become zero. Container IDs follow the client's own bank offset: bags are the keyring
+  and 0 to `NUM_TOTAL_EQUIPPED_BAG_SLOTS` (a modern reagent bag included; `NUM_BAG_SLOTS` where that
+  isn't defined), and the bank is the main bank, the reagent bank and the `NUM_BANKBAGSLOTS` bags after
+  them. `Enum.BagIndex` is not used for IDs, because a reagent-bag name can share the first bank bag's
+  number on Classic-style clients; each snapshot records the layout values it used (`container_layout`)
+  for the beta check. Container sizes remain nullable when
+  unreadable; failed slot reads mark `slots_readable = false`; a zero-sized main bank is treated as
+  inaccessible. Incomplete container coverage is labeled and latest item/slot totals stay unknown rather than asserting an empty inventory.
+- **Clear/session rule:** initial `PLAYER_ENTERING_WORLD(true, false)` records this character's
+  login marker in `sessions`; `(false, true)` retains it across reload. Only the first world entry
+  after the addon loads sets or keeps the marker; later loading screens leave it alone, flags or not.
+  Unknown first signals retain all snapshots, and `/bscan clear` says so instead of claiming a prune. Both `/bscan clear` and
+  `clear all` remove only snapshot records with `captured_at < current login_at` (account-wide),
+  keeping current-session records, including bank records and other characters' records at/after
+  that time. Missing timestamps are retained. Scans keep their existing behavior: written scans
+  clear, unwritten scans refuse unless `clear all`, and active scans/item passes block either clear.
+  The confirmed button uses the same rule. A removed bank record becomes *bank unknown* in game;
+  clearing never deletes Brownstone's latest imported bank evidence or changes its time.
+- IDs contain length-prefixed character/realm, kind, Unix time and a persistent account sequence
+  to distinguish same-second events. Deduplication is per source + snapshot ID; identical canonical
+  content is a no-op, changed content conflicts. Stored parents carry every MARKET_KEYS field,
+  character realm/faction and machine from the configured local input or drop filename (OPS-03),
+  never from SavedVariables. Scope changes refuse ID reuse. Characters are never pooled.
+- Snapshot realm matches configured `scan_evidence.realm`, otherwise a realm-based market's
+  lowercase, hyphenated realm slug; faction matches `scan_evidence.faction`, otherwise the market faction. Auctioneer/zone/label
+  evidence applies to scans only: a character need not stand at an auctioneer to snapshot bags.
+  Forever's generic realm cannot establish server type; verify the source selection manually.
+  **Scope (decided 2026-10-07, product owner):** the addon runs only on characters of the market's
+  own realm and faction, so other-house snapshots are not expected in normal use; if one appears it
+  blocks Fully imported until cleared, like a scan. Neutral-house sources are out of scope for
+  snapshots for now (a character is never neutral, so every snapshot would count as other house).
+- Snapshots use the same bounded read, read-only preview, stale-review checks, per-file transaction,
+  exact-byte bronze collection and drop inventory as scans (ADDON-06, DATA-01, OPS-03). Snapshots-only
+  files are valid; a completely empty file still gets reload guidance. Import guidance counts new
+  snapshots as well as new scans: an import with neither still says *Nothing new*, /reload first. Preview lists each snapshot's
+  character/kind/time/machine and new/duplicate/other-house state. Every matching snapshot in a selected
+  file imports, including with CLI `--scan` (which limits scans only). Other-house snapshots remain
+  unimported. Fully imported requires **every scan and snapshot** to match stored content and house;
+  other-house records or file errors block cleanup. Snapshot evidence never enters auction prices.
+- The addon import page alone shows latest imported bags time/gold and independent latest bank
+  time (or *bank unknown*), distinct item/occupied-slot counts and machine for each character,
+  realm and faction. Missing bank never means empty; unknown slot item IDs keep the distinct-item
+  total missing rather than zero. No holdings use in Today yet.
 
 
 ### Money
@@ -320,7 +378,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   - **Second-machine input rules (STORY-037):** each addon source requires a configured `machine` for its local `scan_path`; labels contain only lowercase ASCII letters, digits and hyphens. Machine is provenance only, never a market key, and is never inferred from file contents. Historical scans retain missing machine values. Optional `drop_folder` belongs only in untracked `config/market.local.toml`; it must not contain `data_dir`. Without it, the single-file import/review flow is unchanged.
   - **Drops:** final names are `<machine>-<UTC YYYYMMDDTHHMMSSZ>-BrownstoneScan.lua`, for example `windows-pc-20261007T004900Z-BrownstoneScan.lua`. The shared naming contract and examples live in `brownstone/drop_contract.json`. Partial, conflict and unrelated names are ignored with reasons; unreadable, truncated and conflicting inputs are reported independently. Brownstone only reads this folder, never writes, renames or deletes there. Each imported file has its own collection manifest with exact archived bytes, machine and original name; identical byte blobs may be reused. House checks, scan-ID/hash conflicts, partial pricing and stale reviews remain per file.
   - **Windows routine:** the manually run PowerShell script and `.cmd` wrapper use an ignored local settings file, refuse while WoW runs or the source is missing, copy through a temporary name, verify SHA-256 and publish without overwriting. Identical bytes to that machine's latest final drop produce “Nothing new”. The SavedVariables file is only read. No installation, scheduler or collection automation is introduced.
-  - **Cleanup:** every file reports whether all its scans are imported; another-house scan or an unreadable/conflicting file prevents that claim. Each machine's latest final drop is shown even if unreadable. The user deletes drops by hand after full import. `/bscan clear` on Windows next session is safe only when that machine's latest drop is fully imported and the user has not played there since it was made. Importing an older drop cannot authorize clearing a later session.
+  - **Cleanup:** every file reports whether all its scans and character snapshots are imported; another-house record or an unreadable/conflicting file prevents that claim. Each machine's latest final drop is shown even if unreadable. The user deletes drops by hand after full import. `/bscan clear` on Windows next session is safe only when that machine's latest drop is fully imported and the user has not played there since it was made. Importing an older drop cannot authorize clearing a later session.
   - Local storage is enough: about 5 MB per beta scan all-in (up to about 10 MB expected for a busier live house), so roughly 5–35 GB a year at 3–10 scans a day. Cloud storage and a home server aren't needed. `data/` must not sit in a live-synced folder such as iCloud Drive, because DuckDB has a single writer.
   - Backups are deferred (product owner, 2026-10-06): STORY-016 is no longer due by 21 October and has no date. Until it is done, migrations still copy the database first (OPS-02), but nothing else protects the raw archive.
 

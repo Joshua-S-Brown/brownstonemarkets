@@ -6,7 +6,7 @@ import json
 import os
 import uuid
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -14,6 +14,7 @@ import duckdb
 import polars as pl
 import pyarrow.parquet as pq
 
+from . import character_snapshots as holdings
 from . import scan_details, scans
 from .analysis import rank
 from .config import ADDON_PROVIDER, MARKET_KEYS, Source
@@ -142,6 +143,17 @@ class ScanPreview:
     # Per scan: why it is from another auction house than this source's market; empty when it matches.
     mismatches: list[list[str]]
 
+    snapshots: list[dict] = field(default_factory=list)
+    snapshot_summaries: list[dict] = field(default_factory=list)
+    snapshot_known: list[dict | None] = field(default_factory=list)
+    snapshot_mismatches: list[list[str]] = field(default_factory=list)
+
+    @property
+    def new_snapshot_ids(self) -> list[str]:
+        return [r["snapshot_id"] for r, known, mismatch in
+                zip(self.snapshots, self.snapshot_known, self.snapshot_mismatches, strict=True)
+                if known is None and not mismatch]
+
     @property
     def new_ids(self) -> list[str]:
         return [s["scan_id"] for s, existing, mismatch in zip(self.summaries, self.known, self.mismatches,
@@ -207,18 +219,24 @@ def preview_scans(config: Source, input_path: Path | None = None, now: datetime 
     if config["provider"] != ADDON_PROVIDER:
         raise ValueError(f"{config['source_id']} is not an addon source")
     raw = _read_scan_bytes(Path(input_path or config["scan_path"]))
-    records = _select_scans(scans.read_saved_variables(raw), None)
+    records, snapshots = scans.read_addon_records(raw)
+    records = _select_scans(records, None, required=not snapshots)
     summaries = _validate_scans(records, now or datetime.now(UTC))
     known = _read_known(config, summaries)
     _check_conflicts(summaries, known)
     mismatches = [scans.check_house(record, config) for record in records]
-    return ScanPreview(raw, preview_configuration(config, input_path), records, summaries, known, mismatches)
+    snapshot_summaries = [holdings.summarize(r, now or datetime.now(UTC)) for r in snapshots]
+    snapshot_known = holdings.states(config, snapshots)
+    holdings.check_conflicts(snapshots, snapshot_known)
+    return ScanPreview(raw, preview_configuration(config, input_path), records, summaries, known, mismatches,
+                       snapshots, snapshot_summaries, snapshot_known,
+                       [holdings.check_house(r, config) for r in snapshots])
 
 
-def _prepare_scans(records: list[dict], config: Source, now: datetime,
-                   scan_ids: Iterable[str] | None) -> tuple[list[dict], list[dict]]:
+def _prepare_scans(records: list[dict], config: Source, now: datetime, scan_ids: Iterable[str] | None,
+                   required: bool = True) -> tuple[list[dict], list[dict]]:
     """Shared UI/CLI selection, then header, house, time and listing validation of the selection."""
-    records = _select_scans(records, scan_ids)
+    records = _select_scans(records, scan_ids, required)
     summaries = _check_scans(records, config, now)
     return records, summaries
 
@@ -226,9 +244,10 @@ def _prepare_scans(records: list[dict], config: Source, now: datetime,
 def _reviewed_preparation(config: Source, path: Path, scan_ids: Iterable[str] | None,
                           now: datetime, reviewed: ScanPreview, include_duplicates: bool = False) -> ScanPreview:
     current = preview_scans(config, path, now)
-    if (current.configuration, current.raw, current.known) != (reviewed.configuration, reviewed.raw, reviewed.known):
+    if (current.configuration, current.raw, current.known, current.snapshot_known) != (
+            reviewed.configuration, reviewed.raw, reviewed.known, reviewed.snapshot_known):
         raise StalePreviewError("Preview is stale: file, source/configuration or imported scans changed. Preview again")
-    records = _select_scans(current.records, scan_ids)
+    records = _select_scans(current.records, scan_ids, required=not current.snapshots)
     ids = {r["scan_id"] for r in records}
     allowed = {s["scan_id"] for s, mismatch in zip(current.summaries, current.mismatches, strict=True)
                if not mismatch} if include_duplicates else set(current.new_ids)
@@ -270,6 +289,8 @@ def _import_reviewed(config: Source, path: Path, now: datetime, preparation: Sca
         db.begin()
         if _known_scans(db, config, reviewed.summaries) != reviewed.known:
             raise StalePreviewError("Imported scans changed. Preview again")
+        if holdings.states(config, reviewed.snapshots, db) != reviewed.snapshot_known:
+            raise StalePreviewError("Imported snapshots changed. Preview again")
         return _save_collection(config, path, now, preparation.raw, scan_ids, preparation, db)
 
 
@@ -285,17 +306,21 @@ def _save_collection(config: Source, path: Path, now: datetime, raw: bytes,
         "bronze_file": bronze_file, "sha256": sha256, "bytes": len(raw), "status": "received",
     }
     try:
-        all_records = preparation.records if preparation else scans.read_saved_variables(raw)
-        records, summaries = _prepare_scans(all_records, config, now, scan_ids)
+        all_records, snapshots = ((preparation.records, preparation.snapshots) if preparation
+                                  else scans.read_addon_records(raw))
+        for record in snapshots:
+            holdings.summarize(record, now)
+        records, summaries = _prepare_scans(all_records, config, now, scan_ids, required=not snapshots)
         if db is None:
             upgrade_database(Path(config["data_dir"]), create=True)
             with duckdb.connect(str(Path(config["data_dir"]) / "brownstone.duckdb")) as connection:
                 connection.begin()
                 _load_collection(connection, config, folders, sid, now, sha256,
-                                 records, summaries, all_records, manifest)
+                                 records, summaries, all_records, manifest, snapshots)
                 connection.commit()
         else:
-            _load_collection(db, config, folders, sid, now, sha256, records, summaries, all_records, manifest)
+            _load_collection(db, config, folders, sid, now, sha256,
+                             records, summaries, all_records, manifest, snapshots)
             db.commit()
     except Exception as error:
         manifest.update(status="failed", error=str(error))
@@ -306,15 +331,19 @@ def _save_collection(config: Source, path: Path, now: datetime, raw: bytes,
 
 
 def _load_collection(db, config: Source, folders: dict[str, Path], sid: str, now: datetime, sha256: str,
-                     records: list[dict], summaries: list[dict], all_records: list[dict], manifest: dict) -> None:
+                     records: list[dict], summaries: list[dict], all_records: list[dict], manifest: dict,
+                     snapshots: list[dict]) -> None:
     _check_conflicts(summaries, _known_scans(db, config, summaries))
+    manifest["snapshots"] = holdings.load(db, config, snapshots, sid, sha256, now)
     remember_local_catalog_names(db)
     results = [_import_scan(db, config, folders["silver"], sid, now, sha256, record, summary)
                for record, summary in zip(records, summaries, strict=True)]
     manifest["scans"] = results
     states = [_file_scan_state(db, config, record) for record in all_records]
     manifest["remaining_unimported"] = states.count("remaining")
-    manifest["other_house"] = states.count("other_house")
+    manifest["other_house"] = states.count("other_house") + sum(
+        r["outcome"] == "other_house" for r in manifest["snapshots"])
+    manifest["fully_imported"] = not manifest["remaining_unimported"] and not manifest["other_house"]
     manifest["already_imported"] = sum(result["outcome"] == "duplicate" for result in results)
     priced = [result for result in results if result["priced"]]
     if priced:
@@ -356,36 +385,42 @@ def new_scans(manifest: dict) -> int:
 def import_guidance(manifest: dict) -> str:
     """What to do in game after an import, for the app and the CLI.
 
-    The game writes scans to the file only on /reload or logout, so a file with nothing new usually means
-    the latest scan is still in game memory: clearing then would lose it. Clearing is suggested only after
-    an import stored something new and no file scans remain unimported. Scans from another auction
-    house can't be imported into this source, so they don't block guidance, but clearing would delete
-    them too. The addon also refuses to clear scans it hasn't written yet.
+    The game writes scans and character snapshots to the file only on /reload or logout, so a file with
+    nothing new usually means the latest scan is still in game memory: clearing then would lose it.
+    Clearing is suggested only after an import stored something new and no file scans remain unimported.
+    Records from another auction house can't be imported into this source, so they don't block guidance,
+    but clearing would delete them too. The addon also refuses to clear scans it hasn't written yet, and
+    keeps the current login's character snapshots (ADDON-11).
     """
+    snapshots = manifest.get("snapshots", [])
     if manifest.get("remaining_unimported", 0):
         return (f"{manifest['remaining_unimported']} scan(s) in this file remain unimported. "
                 "Import the remaining scans before clearing in game. Don't /bscan clear yet.")
-    if not new_scans(manifest):
-        return (f"Nothing new: all {len(manifest['scans'])} scan(s) in this file were imported before. If you "
+    if not new_scans(manifest) and not any(s["outcome"] == "imported" for s in snapshots):
+        found = f"{len(manifest['scans'])} scan(s)" + (f" and {len(snapshots)} snapshot(s)" if snapshots else "")
+        return (f"Nothing new: all {found} in this file were imported before. If you "
                 "scanned since, type /reload in game so the game writes the scan to the file, then import again. "
                 "Don't /bscan clear until it's imported.")
     if manifest.get("other_house", 0):
-        return (f"Everything for this market is saved, but {manifest['other_house']} scan(s) in this file are from "
-                "another auction house and can't be imported into this source. Import them with their own source "
-                "before you /bscan clear, because clearing deletes them too.")
+        return (f"Everything for this market is saved, but {manifest['other_house']} record(s) in this file are "
+                "from another auction house and can't be imported into this source. Import them with their own "
+                "source before you /bscan clear, because clearing deletes them too.")
     return ("Everything in this file is now saved. To keep the next file small, type /bscan clear, then /reload, "
-            "in game.")
+            "in game. Clearing keeps character snapshots from your current login.")
 
 
-def _select_scans(records: list[dict], scan_ids: Iterable[str] | None) -> list[dict]:
-    """The file's scans, or only the requested ones; an unknown scan ID fails the import."""
+def _select_scans(records: list[dict], scan_ids: Iterable[str] | None, required: bool = True) -> list[dict]:
+    """The file's scans, or only the requested ones; an unknown scan ID fails the import.
+
+    An empty selection fails only when ``required``: a file with character snapshots needs no scans.
+    """
     if scan_ids is not None:
         wanted = list(scan_ids)
         unknown = set(wanted) - {record.get("scan_id") for record in records}
         if unknown:
             raise ValueError(f"Scan(s) not in this file: {sorted(unknown)}")
         records = [record for record in records if record.get("scan_id") in wanted]
-    if not records:
+    if not records and required:
         raise ValueError("The file has no scans. The game writes scans to it only on /reload or logout, and "
                          "/bscan clear empties it; take a scan, /reload, then import")
     return records

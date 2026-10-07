@@ -206,7 +206,7 @@ def test_schema9_backup_replay_and_legacy_missing_machine(tmp_path):
     with duckdb.connect(str(path)) as db, duckdb.connect() as fresh:
         ensure_schema(fresh)
         assert db.execute("DESCRIBE addon_scans").fetchall() == fresh.execute("DESCRIBE addon_scans").fetchall()
-        assert schema_version(db) == 9
+        assert schema_version(db) == 10
         assert db.execute("SELECT * EXCLUDE(machine) FROM addon_scans ORDER BY ALL").fetchall() == before
         assert db.execute("SELECT machine FROM addon_scans").fetchall() == [(None,), (None,)]
         MIGRATIONS[9](db)
