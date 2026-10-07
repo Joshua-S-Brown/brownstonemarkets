@@ -41,7 +41,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 **Order:**
 1. STORY-031 item info pass (addon; beta, small)
 2. STORY-032 character snapshots: gold, bags, bank (addon + import; beta)
-3. STORY-037 a second machine's files (implemented, pending review)
+3. STORY-037 a second machine's files (implemented and reviewed; first Windows round trip passed 2026-10-07)
 4. STORY-033 event journal (addon; beta)
 5. STORY-038 Today craft details (Brownstone; works on existing scans)
 6. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
@@ -84,8 +84,9 @@ Acceptance:
 - **Bank** contents can be read only while the bank is open, so they're recorded each time you open (and again when you close) the bank, and the last bank snapshot carries its own time. A character whose bank was never opened has *bank unknown*, never empty.
 - **Reagent bags, keyring or other containers** the client reports are recorded as reported, with their container IDs.
 - **Import:** a new kind of addon record, preserved in bronze like scans (DATA-01), deduplicated by character and time, stored with source and character, never pooled across characters unless a view asks. A new numbered migration.
-- **Clearing** follows the scan routine: the addon keeps snapshots until a clear that refuses ones not yet written to the file.
-- **Offline tests** for each container type, unknown bank, two characters and duplicate import.
+- **One account-wide file** (added 2026-10-07): snapshots go in the existing account-wide `BrownstoneScanDB` (`## SavedVariables`, never `SavedVariablesPerCharacter`), so the Windows drop script (STORY-037) carries every character on that account without changes.
+- **Clearing** follows the scan routine and the session rule in STORY-033: `/bscan clear` removes only snapshots recorded before the current login, and refuses ones not yet written to the file. A cleared file shows *bank unknown* until the bank is opened again; Brownstone keeps using the latest imported bank snapshot, with its own time, so a clear never makes a known bank look empty or unknown there.
+- **Offline tests** for each container type, unknown bank, two characters, duplicate import across overlapping drops, and a clear that keeps the current session's snapshots.
 
 ### STORY-033 — Event journal: what you bought, posted, sold, crafted and mailed
 
@@ -96,10 +97,12 @@ As a gold maker, I want the addon to note each auction, mail, craft and vendor e
 Acceptance:
 - **A journal of raw events** in the addon file: event name, its arguments, UTC and session time, character, and the small amount of context needed to read it later (for example, at the mailbox: each invoice's item, quantity, price and type; at a craft: the recipe and the bag change). Each entry has an ID made from character and time, so journals from different characters and machines never collide.
 - **Covers** auction house purchases, posts, cancels; mailbox invoices (sold, expired, cancelled, outbid), returned items and gold taken; mail sent to and received from your own characters; crafts; vendor buys, sells and repairs; loot and gathering. The event list is a **beta discovery**: register guarded, record which ones the client rejects (as the scan does), and record what fired in each beta test under *Now*.
+- **One account-wide file** (added 2026-10-07): the journal goes in the existing account-wide `BrownstoneScanDB`, like scans and snapshots, so the Windows drop script carries it unchanged. Overlapping drops repeat entries, so import deduplicates by entry ID.
+- **Clearing keeps the current session** (added 2026-10-07): `/bscan clear` removes only records (scans, snapshots, journal entries) from before the current login. Events recorded since login (for example opening the mailbox before typing the command) are never lost, so the Windows routine *log in → clear → reload → play → log out → drop* is safe in any order within the session. Clearing is still safe only when that machine's latest drop is fully imported (OPS-03). Record the rule in `requirements.md`.
 - **Never acts:** the addon only listens. No automatic mail opening, looting, buying, posting or cancelling.
 - **Size limits** measured on the beta for a normal session, recorded in `addon/README.md`.
 - **Import** preserves the journal byte-for-byte (DATA-01) and stores the raw events per character, with a new migration; it doesn't interpret them yet.
-- **Offline tests** with Lua stubs for each event family, and real beta recordings saved as fixtures before 21 October.
+- **Offline tests** with Lua stubs for each event family, a clear after events in the current session (they survive), duplicate entries across two drops, and real beta recordings saved as fixtures before 21 October.
 
 ### STORY-034 — Movement ledger and reconciliation
 
@@ -140,7 +143,7 @@ Acceptance:
 
 ### STORY-037 — A second machine's files
 
-**Implemented, pending review.**
+**Implemented and reviewed.** The first real round trip passed on 2026-10-07: a Windows beta scan went through the drop script and Google Drive and was imported on the Mac as `windows-pc`.
 
 Added 2026-10-06; refined 2026-10-07 for implementation. Decisions are under OPS-03 in `requirements.md`: Google Drive drop folder (installed and signed in on both machines), Windows scans accepted, Brownstone and `data/` only on the Mac, and the Windows PC has the repository cloned.
 

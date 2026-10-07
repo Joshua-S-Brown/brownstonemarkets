@@ -344,6 +344,5 @@ and this repository clone. The rules are OPS-03 in `docs/requirements.md`.
    machine's successful import.
 
 Drive streaming placeholders may be unavailable offline or still syncing. Make files available offline,
-wait for sync, and preview again after any change. A local rename does not guarantee the Mac has
-received the completed file yet. No actual Windows/game/Drive round trip was performed during
-implementation; use the steps above to verify your first real drop before clearing.
+wait for sync, and preview again after any change. A file Drive is still downloading shows *Scan file changed while reading*; wait a minute and preview again. A local rename does not guarantee the Mac has
+received the completed file yet. The first real round trip passed on 2026-10-07.
