@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.6.0"
+local ADDON_VERSION = "0.7.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -761,7 +761,7 @@ local journalEvents = {
     AUCTION_HOUSE_SHOW = "auction", AUCTION_HOUSE_CLOSED = "auction",
     AUCTION_HOUSE_PURCHASE_COMPLETED = "auction", AUCTION_HOUSE_AUCTION_CREATED = "auction",
     AUCTION_HOUSE_AUCTION_CANCELED = "auction", AUCTION_HOUSE_SHOW_ERROR = "auction",
-    AUCTION_OWNED_LIST_UPDATE = "auction", AUCTION_ITEM_LIST_UPDATE = "auction",
+    OWNED_AUCTIONS_UPDATED = "auction", AUCTION_OWNED_LIST_UPDATE = "auction", AUCTION_ITEM_LIST_UPDATE = "auction",
     AUCTION_MULTISELL_START = "auction", AUCTION_MULTISELL_UPDATE = "auction", AUCTION_MULTISELL_FAILURE = "auction",
     MERCHANT_SHOW = "vendor", MERCHANT_CLOSED = "vendor", MERCHANT_UPDATE = "vendor",
     TRADE_SKILL_SHOW = "craft", TRADE_SKILL_CLOSE = "craft", TRADE_SKILL_UPDATE = "craft",
@@ -853,7 +853,7 @@ function journal.add(event, family, arguments, context)
         return
     end
     local entry = journal.entry(event, family, arguments, context)
-    if entry then db.journal[#db.journal + 1] = entry end
+    if entry then db.journal[#db.journal + 1] = entry return true end
 end
 
 function journal.money()
@@ -936,6 +936,40 @@ function journal.inbox(event, arguments)
     if not journal.equal(state, journal.lastInbox) then
         journal.lastInbox = journal.copy(state)
         journal.add(event, "mail", arguments, { inbox = state })
+    end
+end
+
+-- Read cached owned results only on the matching client event; never request a refresh.
+function journal.owned(event, arguments)
+    local state = { auctions = {} }
+    if event == "OWNED_AUCTIONS_UPDATED" then
+        local api = C_AuctionHouse or {}
+        state.api = "C_AuctionHouse"
+        state.counts = journal.read(api.GetNumOwnedAuctions)
+        state.full_results = safe(api.HasFullOwnedAuctionResults)
+        state.sold_status = Enum and Enum.AuctionStatus and Enum.AuctionStatus.Sold
+        local count = state.counts and state.counts[1]
+        if type(count) == "number" then
+            for i = 1, count do
+                state.auctions[i] = { index = i, info = journal.copy(safe(api.GetOwnedAuctionInfo, i)) }
+            end
+        end
+    else
+        state.api = "legacy"
+        state.counts = journal.read(GetNumAuctionItems, "owner")
+        local count = state.counts and state.counts[1]
+        if type(count) == "number" then
+            for i = 1, count do
+                state.auctions[i] = { index = i, info = journal.read(GetAuctionItemInfo, "owner", i),
+                    item_link = safe(GetAuctionItemLink, "owner", i),
+                    time_left = safe(GetAuctionItemTimeLeft, "owner", i) }
+            end
+        end
+    end
+    if not journal.equal(state, journal.lastOwned) then
+        if journal.add(event, "auction", arguments, { owned_auctions = state }) then
+            journal.lastOwned = journal.copy(state)
+        end
     end
 end
 
@@ -1035,6 +1069,8 @@ function journal.observe(event, ...)
         journal.add(event, family, arguments, { before_copper = journal.lastMoney, after_copper = current })
         journal.lastMoney = current
     elseif event == "MAIL_SHOW" or event == "MAIL_INBOX_UPDATE" then journal.inbox(event, arguments)
+    elseif event == "OWNED_AUCTIONS_UPDATED" or event == "AUCTION_OWNED_LIST_UPDATE" then
+        journal.owned(event, arguments)
     else
         if event == "MAIL_SEND_INFO_UPDATE" then journal.draft() end
         journal.add(event, family, arguments)

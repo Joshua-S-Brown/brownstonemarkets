@@ -49,6 +49,10 @@ def render(config):
 
 
 def _show_holdings(config):
+    auctions = journal.active_auction_rows(config)
+    if auctions:
+        st.caption("Latest imported active-auction observation; missing counts are unknown")
+        st.dataframe(auctions, hide_index=True)
     entries = journal.latest_rows(config)
     if entries:
         st.caption("Imported event journal by character and family")

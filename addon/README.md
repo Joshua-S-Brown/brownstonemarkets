@@ -1,4 +1,4 @@
-# Brownstone Scan 0.6.0
+# Brownstone Scan 0.7.0
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -58,7 +58,7 @@ After `/reload` or logout:
 ```
 
 It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
-`snapshot_sequence`, `journal` and `journal_diagnostics`. Addon **0.6.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+`snapshot_sequence`, `journal` and `journal_diagnostics`. Addon **0.7.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
@@ -351,7 +351,7 @@ received the completed file yet. The first real round trip passed on 2026-10-07.
 
 ## Character snapshots: format 5 (STORY-032)
 
-Install **BrownstoneScan 0.6.0 on both the Mac and Windows PC**, replacing the whole installed
+Install **BrownstoneScan 0.7.0 on both the Mac and Windows PC**, replacing the whole installed
 `Interface/AddOns/BrownstoneScan` folder while WoW is closed. The `.toc` remains account-wide
 `## SavedVariables: BrownstoneScanDB`; do not create per-character SavedVariables files.
 Existing scan records remain formats 1–4. Windows copies the same whole account file with the
@@ -385,13 +385,13 @@ appear beside scans in page and CLI previews. All matching snapshots in a select
 
 ### Character snapshots beta checklist — Mac and Windows, pending
 
-Repeat the capture checks on **each machine**, using **0.6.0**, before relying on this evidence.
+Repeat the capture checks on **each machine**, using **0.7.0**, before relying on this evidence.
 Use two characters on the **same account**. Preserve all before/after files privately; do not clear
 unimported evidence. Character data stays private under the same transport rules as scans.
 
 1. **Install and initial login:** with WoW closed, replace the addon folder on the Mac. On Windows,
    use the repository containing these changes (after they have been committed/pushed and pulled)
-   or copy the same 0.6.0 folder directly. Confirm the AddOns version and `/bscan status`. Log in
+   or copy the same 0.7.0 folder directly. Confirm the AddOns version and `/bscan status`. Log in
    afresh after installation, rather than installing only via `/reload`, to establish a login marker.
    Record OS/machine label, addon version, date, character, realm, faction, client version/build and
    `/dump select(4, GetBuildInfo())`. Record every rejected event from status. Check the `.toc` interface
@@ -464,7 +464,7 @@ unimported evidence. Character data stays private under the same transport rules
 
 ## Event journal: format 6 (STORY-033)
 
-Install **0.6.0** on both machines. The account-wide file now also holds `journal` and
+Install **0.7.0** on both machines. The account-wide file now also holds `journal` and
 `journal_diagnostics`; scans keep format 4 and existing snapshots keep their contract.
 The capture, candidate event/hook list, cap and clear rules are
 [ADDON-12](../docs/requirements.md#addon-12-event-journal-story-033). Storage/import contracts
@@ -494,6 +494,30 @@ snapshot/scan tables. Import displays saved counts/latest UTC time per character
 only entries is valid; all matching non-scan records import when the file is selected, even with
 `--scan`. Fully imported includes journal entries. Duplicate-only import still says **Nothing new:
 /reload first**. Follow OPS-03 before clear, then verify current-login entries survived the write.
+
+### Active auctions beta checklist (STORY-040) — by 13 October, Mac and Windows
+
+Install **0.7.0**; format stays **6**. Capture contract is
+[ADDON-12](../docs/requirements.md#addon-12-event-journal-story-033). Owned lists use the existing
+journal/import. The import page shows latest UTC, auction count and client-marked sold count;
+never observed shows *active auctions unknown*. A missing value remains unknown, even if other
+fields loaded; a client-reported empty list has count zero. No request or refresh is issued.
+
+- Before opening the Auctions tab, note whether an owned-update event/list arrives on its own.
+  Open the tab before posting; record the list/count, including zero if empty.
+- Manually post **two small stacks**, note whether the list arrives without the tab, then open
+  the tab again. Compare IDs/items, quantities, raw bid/buyout copper, status/bidder/time left.
+  Reopen with unchanged results and confirm no extra equal-list entry within that load.
+- Cancel one stack manually, note unsolicited updates, and open the tab again. Do not infer a
+  cancellation or expiry from disappearance; preserve the cancel hook and mailbox evidence.
+- After the other stack sells, open the tab **before taking its mail**, record client-marked sold
+  status (including waiting-for-mail if reported). Take mail manually, then open the tab again.
+- Save via `/reload` or logout after each stage. A reload starts a fresh deduplication session.
+  Import copies through the normal addon page; verify latest UTC/count/sold, unknown on a character
+  whose list was never observed, and duplicate-only import on a second pass.
+- Note OS/machine, build, addon version, fired/rejected owned event, raw API/count/status fields,
+  whether results are complete (legacy batch versus total, modern full-results flag), missing values, chat silence, Lua errors and lag. Keep recordings
+  private and preserve small sanitized fixtures **before 21 October**, using the replay workflow below.
 
 ### Event journal beta checklist — Mac and Windows, pending; aim by 13 October
 

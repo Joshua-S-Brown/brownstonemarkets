@@ -202,7 +202,7 @@ def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
                                             lua.table_from({"scan_id": "old-2"})])
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert python_value(g.BrownstoneScanDB) == button_result
-    assert g.BrownstoneScanDB.addon_version == "0.6.0" and g.BrownstoneScanDB.schema_version == 6
+    assert g.BrownstoneScanDB.addon_version == "0.7.0" and g.BrownstoneScanDB.schema_version == 6
 
 
 @pytest.mark.parametrize("ending", [

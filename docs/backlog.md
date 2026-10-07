@@ -191,6 +191,8 @@ Acceptance:
 
 ### STORY-040 — Your active auctions
 
+**Implemented, pending review.**
+
 Added 2026-10-07 (product owner). Must be testable in game by 13 October (*Now*), with STORY-031 to STORY-033. Captures raw evidence only; meaning is STORY-034.
 
 As a gold maker, I want the addon to record my own active auctions whenever the game shows them to me, so that every item can be followed through its whole cycle: crafted or bought, posted, still listed, then sold, expired or cancelled and taken from the mailbox.

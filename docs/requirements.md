@@ -224,7 +224,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
 
 ### ADDON-12 Event journal (STORY-033)
 
-- Addon **0.6.0** writes account-wide file format **6**: the existing scans, snapshots, sessions
+- Addon **0.7.0** writes account-wide file format **6** (STORY-040 extends 0.6.0 without a format bump): the existing scans, snapshots, sessions
   and `snapshot_sequence`, plus `journal`, `journal_diagnostics` and problem counters `journal_errors`. Formats 1–5 stay importable;
   scan records still use format 4. Capture follows Product direction → *Observing your own actions*.
   Only events and `hooksecurefunc` post-hooks record evidence; no economy actions, requests or timers.
@@ -254,6 +254,30 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   and attachments. The `SendMail` post-hook records recipient/subject/body arguments plus the
   **last observed draft**, explicitly marked as such: post-hook APIs may already have cleared it.
   It is evidence for later reconciliation, not a claim of successful delivery or complete attachments.
+- **Active owned auctions (STORY-040):** guarded `OWNED_AUCTIONS_UPDATED` reads
+  `C_AuctionHouse.GetNumOwnedAuctions` and every 1-based `GetOwnedAuctionInfo` table;
+  guarded `AUCTION_OWNED_LIST_UPDATE` reads `GetNumAuctionItems("owner")` and every 1-based
+  `GetAuctionItemInfo("owner", index)` tuple, link and time-left value. Neither reader requests
+  a list; `QueryOwnedAuctions`, `GetOwnerAuctionItems` and refresh/action APIs are never called.
+  Each changed list adds one family `auction` entry with `owned_auctions`: API, counted raw count
+  returns and indexed auctions with raw info. Modern tables retain all returned fields (including
+  itemKey, ID, link, quantity, status, bid/buyout copper, bidder and time left); legacy tuples
+  retain every position and `n`, plus separate link/time-left. No absent value becomes zero.
+  Modern optional `HasFullOwnedAuctionResults` and `Enum.AuctionStatus.Sold` are saved as reported.
+  Equal states are suppressed against the last successfully recorded list this loaded session;
+  reload resets comparison. Shared ID/sequence/cap/clear rules apply unchanged.
+  An observed zero-count list is evidence of empty; never observed means *active auctions unknown*.
+  The import page alone shows each known character's latest observation UTC, reported count and
+  count marked sold (modern saved enum; Classic legacy saleStatus position 16 equals 1).
+  Legacy display uses the reported total when present, otherwise the reported batch count;
+  every available batch row is read, with both count returns preserved. A partial batch cannot
+  establish an empty full list. Missing statuses/read failures, a batch/total mismatch or explicitly
+  incomplete modern results keep sold count unknown. Passive capture cannot fetch uncached pages.
+  Characters are known from scoped imported snapshots/journal entries. Same-second lists use
+  shared sequence to select the latest. This is raw client status, never an inferred sale or expiry.
+  File format stays **6**, storage stays schema **11**, and shared non-scan import counts these
+  entries under `auction`. Event/API support, completeness and arrival without opening the Auctions
+  tab remain beta checks by 13 October; preserve recordings before 21 October.
 - **Spellcasts are crafting evidence only (decided 2026-10-07, product owner):** only
   `UNIT_SPELLCAST_SUCCEEDED` for unit `player` while a trade skill or craft window is observed open is
   recorded. Start, failed and interrupted casts, other units' casts and every spell cast without a
@@ -274,7 +298,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   reported in chat and counted by name in `journal_errors`, without interrupting the game call. Later `ADDON_LOADED` retries unavailable hooks
   for lazily loaded UI modules, without rehooking installed functions. Candidate event/hook lists
   are discovery evidence, **not a promise of beta support**:
-  - Events: `PLAYER_MONEY`, `BAG_UPDATE_DELAYED`, `MAIL_SHOW`, `MAIL_CLOSED`, `MAIL_INBOX_UPDATE`, `MAIL_SEND_INFO_UPDATE`, `MAIL_SEND_SUCCESS`, `MAIL_FAILED`, `AUCTION_HOUSE_SHOW`, `AUCTION_HOUSE_CLOSED`, `AUCTION_HOUSE_PURCHASE_COMPLETED`, `AUCTION_HOUSE_AUCTION_CREATED`, `AUCTION_HOUSE_AUCTION_CANCELED`, `AUCTION_HOUSE_SHOW_ERROR`, `AUCTION_OWNED_LIST_UPDATE`, `AUCTION_ITEM_LIST_UPDATE`, `AUCTION_MULTISELL_START`, `AUCTION_MULTISELL_UPDATE`, `AUCTION_MULTISELL_FAILURE`, `MERCHANT_SHOW`, `MERCHANT_CLOSED`, `MERCHANT_UPDATE`, `TRADE_SKILL_SHOW`, `TRADE_SKILL_CLOSE`, `TRADE_SKILL_UPDATE`, `CRAFT_SHOW`, `CRAFT_CLOSE`, `CRAFT_UPDATE`, `UNIT_SPELLCAST_SUCCEEDED`, `CHAT_MSG_LOOT`, `LOOT_OPENED`, `LOOT_CLOSED`, `LOOT_SLOT_CLEARED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`.
+  - Events: `PLAYER_MONEY`, `BAG_UPDATE_DELAYED`, `MAIL_SHOW`, `MAIL_CLOSED`, `MAIL_INBOX_UPDATE`, `MAIL_SEND_INFO_UPDATE`, `MAIL_SEND_SUCCESS`, `MAIL_FAILED`, `AUCTION_HOUSE_SHOW`, `AUCTION_HOUSE_CLOSED`, `AUCTION_HOUSE_PURCHASE_COMPLETED`, `AUCTION_HOUSE_AUCTION_CREATED`, `AUCTION_HOUSE_AUCTION_CANCELED`, `AUCTION_HOUSE_SHOW_ERROR`, `OWNED_AUCTIONS_UPDATED`, `AUCTION_OWNED_LIST_UPDATE`, `AUCTION_ITEM_LIST_UPDATE`, `AUCTION_MULTISELL_START`, `AUCTION_MULTISELL_UPDATE`, `AUCTION_MULTISELL_FAILURE`, `MERCHANT_SHOW`, `MERCHANT_CLOSED`, `MERCHANT_UPDATE`, `TRADE_SKILL_SHOW`, `TRADE_SKILL_CLOSE`, `TRADE_SKILL_UPDATE`, `CRAFT_SHOW`, `CRAFT_CLOSE`, `CRAFT_UPDATE`, `UNIT_SPELLCAST_SUCCEEDED`, `CHAT_MSG_LOOT`, `LOOT_OPENED`, `LOOT_CLOSED`, `LOOT_SLOT_CLEARED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`.
   - Global hooks: `TakeInboxMoney`, `TakeInboxItem`, `AutoLootMailItem`, `SendMail`, `ReturnInboxItem`, `DeleteInboxItem`, `SetSendMailMoney`, `SetSendMailCOD`, `StartAuction`, `PostAuction`, `PlaceAuctionBid`, `CancelAuction`, `BuyMerchantItem`, `SellCursorItem`, `UseContainerItem`, `RepairAllItems`, `DoTradeSkill`, `DoCraft`.
   - Namespace hooks: `C_AuctionHouse.PostItem`, `C_AuctionHouse.PostCommodity`, `C_AuctionHouse.PlaceBid`, `C_AuctionHouse.CancelAuction`, `C_AuctionHouse.ConfirmCommoditiesPurchase`, `C_Container.UseContainerItem`, `C_TradeSkillUI.CraftRecipe`.
 - **Size cap: 10,000 ordinary journal entries account-wide plus one overflow marker.** Further

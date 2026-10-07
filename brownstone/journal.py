@@ -128,3 +128,59 @@ def outcome_rows(results: list[dict]) -> list[dict]:
     counts = Counter((r["character"], r["family"], r["outcome"]) for r in results if r["record_type"] == "journal")
     return [{"Character": c, "Family": f, "Outcome": o, "Entries": count}
             for (c, f, o), count in sorted(counts.items())]
+
+
+def active_auction_rows(config) -> list[dict]:
+    """Latest raw owned-list observation per known character, within one source and market."""
+    path = Path(config["data_dir"]) / "brownstone.duckdb"
+    if not path.exists():
+        return []
+    characters: dict[tuple, dict] = {}
+    scope = " AND ".join(["source_id=?", *(f"{k}=?" for k in MARKET_KEYS)])
+    params = [config["source_id"], *[config[k] for k in MARKET_KEYS]]
+    with duckdb.connect(str(path), read_only=True) as db:
+        tables = {r[0] for r in db.execute("SELECT table_name FROM information_schema.tables").fetchall()}
+        for table in ("character_snapshots", "character_journal"):
+            if table in tables:
+                for key in db.execute(f"SELECT DISTINCT character, character_realm, character_faction "
+                                      f"FROM {table} WHERE {scope}", params).fetchall():
+                    characters.setdefault(key, {})
+        if "character_journal" in tables:
+            rows = db.execute("SELECT character, character_realm, character_faction, record_json "
+                              f"FROM character_journal WHERE {scope} AND family='auction' "
+                              "AND record_json LIKE '%\"owned_auctions\"%'", params).fetchall()
+            for name, realm, faction, raw in rows:
+                record = json.loads(raw)
+                if "owned_auctions" in record and _observation_order(record) > _observation_order(
+                        characters[name, realm, faction]):
+                    characters[name, realm, faction] = record
+    return [_active_auction_row(key, record) for key, record in sorted(characters.items())]
+
+
+def _observation_order(record: dict) -> tuple:
+    return (record.get("captured_at", -1), record.get("sequence", -1), record.get("entry_id", ""))
+
+
+def _active_auction_row(key: tuple, record: dict) -> dict:
+    state = record.get("owned_auctions", {})
+    counts = state.get("counts") or {}
+    count = counts.get("2", counts.get("1")) if state.get("api") == "legacy" else counts.get("1")
+    moment = (_utc(record["captured_at"], record.get("captured_at_utc"), "captured_at").isoformat()
+              if record else "active auctions unknown")
+    return dict(zip(("Character", "Realm", "Faction"), key, strict=True)) | {
+        "Active auctions (UTC)": moment, "Auctions": count,
+        "Marked sold": _sold_count(state, count)}
+
+
+def _sold_count(state: dict, count) -> int | None:
+    if type(count) is not int or count < 0 or state.get("full_results") is False:
+        return None
+    auctions = state.get("auctions", {})
+    values = list(auctions.values()) if isinstance(auctions, dict) else auctions
+    if len(values) != count:
+        return None
+    statuses = [(a.get("info") or {}).get("16" if state.get("api") == "legacy" else "status") for a in values]
+    sold = 1 if state.get("api") == "legacy" else state.get("sold_status")
+    if count and (sold is None or any(s is None for s in statuses)):
+        return None
+    return sum(s == sold for s in statuses)

@@ -6,8 +6,21 @@ _Last updated 2026-10-07._
 
 ## Implemented
 
+- **Active auctions (STORY-040, implemented, pending review and in-game beta):** addon **0.7.0**
+  passively reads cached modern/legacy owned lists on guarded owned-update events, records changed
+  raw lists in the existing auction journal, and suppresses unchanged lists within each load.
+  Format **6** and schema **11** stay unchanged. Shared import preserves bytes/provenance and counts
+  auction-family entries; the import page shows latest observed UTC/count/client-marked sold per
+  scoped character, or *active auctions unknown*. Offline modern/legacy Lua and import/page tests
+  cover empty/missing values, deduplication, silence, forbidden requests and rejected registration.
+  No real owned-list recording has been supplied. Client API support, full-list delivery, status
+  fields and arrival without opening the Auctions tab remain pending. Legacy cached results can
+  be paged: all available batch rows and reported batch/total counts are preserved, but no reader
+  requests uncached pages. Partial results retain unknown sold counts. Run the active-auctions beta
+  checklist in `addon/README.md` by 13 October; preserve fixtures before 21 October. Rules: ADDON-12.
+
 - **Event journal (STORY-033, implemented and reviewed 2026-10-07, pending in-game measurement):** addon
-  **0.6.0**, account-wide format **6**, guarded event listeners/secure post-hooks, raw arguments,
+  **0.7.0**, account-wide format **6**, guarded event listeners/secure post-hooks, raw arguments,
   shared snapshot sequence, money/bag changes, mailbox states and last-observed send drafts.
   Schema **11** stores scoped raw character journal evidence. Snapshots and entries share non-scan
   preview, stale/conflict checks, batch commits, Fully imported and import guidance. CLI/page
@@ -20,7 +33,7 @@ _Last updated 2026-10-07._
   Real journal recordings have not yet been supplied. Follow `addon/README.md` → Event journal beta
   checklist by 13 October; preserve recordings/fixtures before 21 October. No transaction interpretation.
 
-- **Character snapshots (STORY-032, implemented and reviewed; pending the in-game beta check):** addon **0.6.0** writes
+- **Character snapshots (STORY-032, implemented and reviewed; pending the in-game beta check):** addon **0.7.0** writes
   account-wide file format **6**, preserving scan format 4. Guarded logout/reload and bank open/close
   reads retain gold, occupied slots, raw links and container/event evidence for each character.
   Initial-login markers survive confirmed reloads; clear preserves snapshots from the current login
@@ -100,7 +113,7 @@ _Last updated 2026-10-07._
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
 - **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.23% in the STORY-032 macOS run: 647 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
-- **Scanning addon:** `addon/BrownstoneScan/` is version **0.6.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
+- **Scanning addon:** `addon/BrownstoneScan/` is version **0.7.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
   - **Offline verified:** shipped Lua executes under Lua 5.1 with modern and legacy WoW stubs, including missing/erroring optional APIs, seller fallback, one reference lookup per ID, manual start, timeout and partial close. Delayed/synchronous answers, failed requests/answers, timeout and late events, missing API/rejected event, house close during the pass, pre-pass save and reload-mid-pass import, first-pass preservation and maintenance guards are verified. Resulting scans import; mixed formats 1–4, raw archive bytes, deduplication, variant prices/scope/depth/comparison, migration backup/replay and reference nulls are tested. Lupa is a declared, pinned dev dependency; Python coverage does not measure Lua branches.
   - **Reload and Clear saved scans buttons** sit beside the scan button on the auction house window, with Clear protected like `/bscan clear` and both disabled during a scan; behaviour and decisions are in `addon/README.md` → *Reload and clear controls*.

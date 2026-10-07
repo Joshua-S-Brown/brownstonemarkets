@@ -155,7 +155,7 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 
 ### Character snapshots (STORY-032)
 
-Capture and clear/session rules live in requirements.md → ADDON-11/12. Addon 0.6.0 keeps
+Capture and clear/session rules live in requirements.md → ADDON-11/12. Addon 0.7.0 keeps
 account-wide format 6 with `scans` (unchanged record formats 1–4), `snapshots`, `sessions` and
 `snapshot_sequence`, `journal` and `journal_diagnostics`. Each snapshot is a keyed table, with `slots` and `containers` arrays;
 exact links and nullable client values are preserved without variant interpretation yet.
@@ -203,6 +203,18 @@ Journal records use `entry_id`, `sequence`, `event`, `family`, `arguments`, `cap
 Money adds `before_copper`/`after_copper`; bags add numeric `item_changes` or `baseline_missing`.
 Mail adds `inbox` with counts and message array (index, header/invoice counted tuples, attachment
 info/link); send hooks add a cached `draft` plus `draft_is_last_observed`. Overflow adds `skipped`.
+STORY-040 adds `owned_auctions` to family `auction`: `api`, counted `counts`, `auctions`
+(index + raw `info`; legacy also `item_link`/`time_left`), and nullable modern `full_results`/
+`sold_status`. Modern info is a field-preserving table; legacy info is a tuple with `n`.
+The matching owned-update event reads cached results only; the transient last successfully saved
+list suppresses equal states and resets on reload. Version 0.7.0 retains file format 6/schema 11;
+no new import path, table or migration. API/capture/display rules live in ADDON-12.
+API shape evidence: Blizzard's generated
+[modern owned API documentation](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua)
+uses 1-based owned indexes and nullable fields;
+[Classic auction UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_AuctionUI/Classic/Blizzard_AuctionUI.lua)
+reads batch/total, places saleStatus at tuple position 16, and marks 1 as sold awaiting delivery.
+These reference sources establish API shape, not Forever beta availability.
 `journal_diagnostics` is load-session evidence: rejected events, missing/installed hooks, fired counts.
 `journal_errors` counts guarded observation failures by event/hook; these are reported in chat.
 Unknown values are absent in Lua/nullable in Python; arbitrary argument tuples never become prices.
@@ -210,7 +222,13 @@ The ID uses the snapshot identity encoder and shared sequence. Cap/clear/hook ru
 
 CLI/page use `journal.preview_rows` for per-file character/family counts by state; `latest_rows`
 queries source + all market keys and returns imported family counts/latest time. The page retains
-latest bags/gold and independent bank evidence. `InputFile.fully_imported` checks scans plus all
+latest bags/gold and independent bank evidence. `journal.active_auction_rows` reads scoped raw
+journal/snapshot JSON to establish known characters, selects owned evidence by capture time/shared
+sequence/entry ID, and returns UTC, reported count and client-marked sold count. Missing evidence
+shows `active auctions unknown`; explicit empty shows count zero. Legacy counts preserve batch/total;
+the page uses reported total when present, and a shorter batch keeps sold count unknown. Missing statuses or incomplete
+results retain an unknown sold count. Only the import page calls this projection.
+`InputFile.fully_imported` checks scans plus all
 non-scan known states and house mismatches; `import_guidance` counts all newly saved records.
 Machine comes from OPS-03, stays unchanged on duplicates, and never participates in market joins.
 Windows scripts copy the whole account file unchanged. No other view consumes the journal.
