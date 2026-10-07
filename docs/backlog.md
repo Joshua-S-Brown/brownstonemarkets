@@ -30,6 +30,8 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
   - **Snapshots (STORY-032):** gold and bags written on logout and on `/reload`; bank only after opening the bank; two characters on the same account. With a new character (added 2026-10-07: no spare bags yet), test the backpack, any equipped bags, the main bank and one bank bag slot if you can buy it. That bank bag must appear in the bank snapshots (taken when you open the bank) and never in the logout snapshot of your bags. Whatever you can't test yet moves to *Snapshot coverage* under Later.
   - **Event journal (STORY-033):** buy from the auction house, post, cancel, let one expire, sell one; open the mailbox and take the invoice and the returned item; craft; gather; buy and sell at a vendor; send mail between your own characters. Note which events fired and with what values.
   - **Active auctions (STORY-040):** open the Auctions tab before posting, after posting, after a cancel and after a sale, and note whether the list arrives without opening the tab.
+  - **Professions (STORY-041):** open each profession window (Mining and Engineering on the new character; Tailoring and Enchanting on the druid), learn one new recipe and open the window again, gain a skill point, then log out.
+  - **Who checks (added 2026-10-07, product owner):** the product owner only plays: gathering, crafting, posting, mailing and logging out. Claude checks every session's file with the STORY-042 report and says what is confirmed, missing or wrong. Nobody reads the addon file by hand.
   - **Unconfirmed claims** (`requirements.md` → *Known Forever market facts*): time from a sale to its gold in the mailbox; the deposit charged for a few posts of known vendor price and duration (STORY-035); whether the Black Market vendor exists, where, and its prices (STORY-036); the postage for mail to your own characters, with and without attached items and gold (added 2026-10-06: moving materials to the character with the right profession may cost something per mail).
 
 ## Next
@@ -44,18 +46,21 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 2. STORY-032 character snapshots: gold, bags, bank (addon + import; beta)
 3. STORY-037 a second machine's files (implemented and reviewed; first Windows round trip passed 2026-10-07)
 4. STORY-033 event journal (addon; beta)
-5. STORY-040 your active auctions (addon; beta; must be testable by 13 October)
-6. STORY-038 Today craft details (Brownstone; works on existing scans)
-7. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
-8. STORY-035 auction deposits (needs a beta check)
-9. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-10. STORY-036 vendor price ceilings
-11. STORY-027 removed listings
-12. STORY-015b crafting across professions
-13. STORY-021 item page and charts
-14. STORY-026 scan coverage and rhythm
-15. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-16. STORY-006 replay
+5. STORY-040 your active auctions (addon; beta; implemented and reviewed)
+6. STORY-041 your professions and known recipes (addon; beta; must be testable by 13 October)
+7. STORY-042 beta evidence report (Brownstone CLI; Claude runs it after each play session)
+8. STORY-038 Today craft details (Brownstone; works on existing scans)
+9. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
+10. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
+11. STORY-035 auction deposits (needs a beta check)
+12. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+13. STORY-036 vendor price ceilings
+14. STORY-027 removed listings
+15. STORY-015b crafting across professions
+16. STORY-021 item page and charts
+17. STORY-026 scan coverage and rhythm
+18. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+19. STORY-006 replay
 
 STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
 
@@ -191,7 +196,7 @@ Acceptance:
 
 ### STORY-040 — Your active auctions
 
-**Implemented, pending review.**
+**Implemented and reviewed (2026-10-07); pending the in-game beta check.**
 
 Added 2026-10-07 (product owner). Must be testable in game by 13 October (*Now*), with STORY-031 to STORY-033. Captures raw evidence only; meaning is STORY-034.
 
@@ -209,6 +214,44 @@ Acceptance:
 - **Offline tests** with Lua stubs for the modern and legacy APIs: a list with several auctions including a sold one, an unchanged list (no new entry), a changed list, an empty list, missing values, no request functions ever called, a rejected event, and the import page's latest row and unknown case.
 - **Checklist** in `addon/README.md`: open the Auctions tab before posting, post two small stacks, open it again, cancel one, open it again, and after a sale (before and after taking the mail) open it again. Note whether the list arrived without the tab, and save the recordings as fixtures before 21 October.
 
+### STORY-041 — Your professions and known recipes
+
+Added 2026-10-07 (product owner: "what can I actually do?"). Must be testable in game by 13 October (*Now*). Captures raw evidence only; Today uses it in STORY-043. Takes the capture half of *Known recipes and skill* from Later.
+
+As a gold maker, I want the addon to record each character's level, professions and known recipes, so that Today can later show only crafts that character can actually make.
+
+Acceptance:
+- **Level and skills in every bags snapshot** (STORY-032's logout and `/reload` snapshot): character level, and every skill line the client reports (professions, gathering, secondary skills such as Cooking and First Aid) with its current rank, maximum rank and any skill ID, as reported, with the API used. Which API answers (the legacy `GetNumSkillLines`/`GetSkillLineInfo`, or modern `GetProfessions`/`GetProfessionInfo`) is a **beta check**: read each one that exists, guarded. Missing stays missing, never zero.
+- **Known recipes when you open a profession window:** on the client's trade skill or craft window events (`TRADE_SKILL_SHOW`/`TRADE_SKILL_UPDATE`; `CRAFT_SHOW`/`CRAFT_UPDATE`, which Classic uses for Enchanting), read every row the window lists with read-only APIs: the profession name and rank the window reports, and per row its index, name, type (header or recipe), difficulty, number craftable now, the recipe link and created item link as reported, any recipe or spell ID, minimum and maximum made, and each reagent's item link or ID and count. One record per profession per character, recorded only when it differs from the last one recorded this session (as for the mailbox).
+- **Filtered or collapsed windows are flagged, never changed:** the addon doesn't expand headers, clear filters or open windows. It records which headers are collapsed and any filter state the client reports, and marks the list *possibly incomplete* when any is set. Whether the beta window hides recipes by default is a **beta check**.
+- **Unknown is not none:** a profession whose window was never opened has *known recipes unknown*; a character with no snapshot since 0.8.0 has *skills unknown*.
+- **Never acts, and stays silent:** no crafting, training, learning, window opening or filter changes; nothing in chat in normal play.
+- **Import:** through the shared non-scan import (STORY-033): skills go in the existing snapshot; known-recipe lists as a new snapshot kind or journal entry (implementer's choice, recorded in ADDON-11/12 with why). New storage only through a numbered migration. Bump the addon version; bump the file format only if import needs it (record which).
+- **Seen in Brownstone:** on the addon import page, per character: level, each profession with rank/max, and for each profession the time of the latest known-recipe list and its recipe count, or *unknown*. No other views; matching to catalogs is STORY-043.
+- **Offline tests** with Lua stubs for both skill APIs and both window APIs: several professions, a header row, a collapsed header (flagged), a reagent with a missing link, an unchanged list (no new entry), a changed list after learning a recipe, a missing API, a rejected event, no action or filter functions called, and the import page's rows and unknown cases.
+- **Checklist** in `addon/README.md`, in play terms only (the product owner plays, Claude checks; see *Now*): open each profession window, learn a recipe and reopen it, gain a skill point, log out. Mining and Engineering on one character; Tailoring and Enchanting on the druid.
+
+### STORY-042 — Beta evidence report
+
+Added 2026-10-07 (product owner: "I'll rely on you and scripts to do the testing"). Brownstone only; no addon change. Needed while the beta runs, so the product owner can just play and Claude checks each session's file.
+
+As the product owner, I want one command that checks an addon file and says what was captured, what is missing and what looks wrong, so that I don't have to inspect anything by hand.
+
+Acceptance:
+- **One CLI command** (for example `brownstone beta-report FILE [--previous FILE]`) that only reads its inputs. It never writes to the configured data directory, the game folder or the input file; it writes a Markdown report and the same facts as JSON to a new timestamped folder under `work/beta-reports/` (ignored by Git) and prints the folder path.
+- **File facts:** bytes, SHA-256, addon version, file format, record counts by type, characters, and the time span covered.
+- **Per load session:** rejected events, missing and installed hooks, fired counts and `journal_errors`, from `journal_diagnostics`.
+- **Per character:** snapshots by kind with times, gold, slot counts, level and skills when present; journal entries by family and event with first and last time; latest owned-auction list; latest known-recipe lists when present.
+- **Checks,** each reported as *pass*, *warn* or *fail* with the entry IDs involved:
+  - Required fields present for each record type; entry IDs unique; same ID with different content is a *fail*; sequence strictly increasing per file; times plausible (not in the future, not before the beta).
+  - Money chain: within a load session, each money entry's *before* equals the previous *after*; gold in consecutive snapshots against the summed money changes between them (a difference is a *warn* with the residual, never hidden).
+  - Bag changes between two bags snapshots against their slot difference, per item (residual shown as a *warn*).
+  - An overflow marker or skipped entries is a *fail*.
+  - **Coverage of the beta checklist:** for each checklist under *Now* (snapshots, journal, active auctions, professions), which expected events and hooks were seen in this file and which weren't. Kept as a small table in code, so a new story adds its rows.
+- **Import round trip** on a fresh temporary copy and data directory: preview, import, import again (all duplicates), and the decompressed bronze archive equals the input bytes. Reported as one check.
+- **Compare with an earlier file** (`--previous`): what is new since that file, by character and family, so one play session's additions can be checked on their own.
+- **Offline tests** on synthetic files: a clean file (all pass), a broken money chain, a bag residual, a duplicate ID with different content, an overflow marker, a missing diagnostics table, the round trip, the comparison and a check that nothing outside `work/beta-reports/` is written.
+
 ### STORY-038 — Today craft details
 
 Added 2026-10-06 (product owner feedback on Today). Display of what the plan already calculates; no change to sizing, ranking or Today's rules.
@@ -221,6 +264,19 @@ Acceptance:
 - **Intermediate steps** the catalog route uses (for example thread → bolt → armor) appear as indented steps with their own quantities, so the chain is visible. Nothing beyond the catalog's own routes (cross-profession chains stay STORY-015b).
 - **Unchanged:** the Buy tab's merged list, staleness labels (*stale — inspect only* still shows) and the 10-row limit.
 - **Offline tests:** per-craft materials add up to the craft's cost and to the merged Buy list across crafts; a vendor route; an intermediate step; stale evidence.
+
+### STORY-043 — Today: only what you can make
+
+Added 2026-10-07 (product owner). Depends on STORY-041's beta evidence: which IDs the client reports decides how recipes match catalogs. Takes the Today half of *Known recipes and skill* from Later.
+
+As a gold maker, I want to choose one of my characters on Today and see only crafts that character knows, so that the plan is something I can actually do.
+
+Acceptance:
+- **Choose a character** on Today: *All recipes* (the default, unchanged behaviour) or any character with an imported known-recipe list for this source and market. Kept per source in the existing Today settings.
+- **Matching by IDs only:** a catalog recipe is known when the character's latest list for that profession has the same recipe or spell ID, or failing that the same created item ID and the same reagent item IDs. Never by name. The rule and the IDs used are recorded in `requirements.md` → *Today* with a new `today_version`.
+- **Unknown is shown, not hidden:** a profession whose list is unknown or *possibly incomplete* keeps its crafts, marked *known recipes unknown* or *list may be incomplete*. Only crafts proven unknown are hidden, and the Craft tab counts them under its hidden reasons.
+- **Catalog check:** where a known recipe's reagent counts or yield differ from the catalog, list them under the page (a pointer for CRAFT-08 confirmation). The catalog isn't changed automatically; catalog values still need source evidence.
+- **Offline tests:** a known recipe kept, an unknown one hidden and counted, matching by spell ID and by item and reagents, a name-only match rejected, an unknown and a possibly incomplete profession kept and marked, and a reagent mismatch listed.
 
 ### STORY-039 — Choose and adjust the Today plan
 
@@ -448,7 +504,7 @@ Acceptance:
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
 
 **Your own character's data** (approved 2026-10-06; capture is STORY-032/033 and the ledger STORY-034 in Next). Once those exist:
-- **Known recipes and skill:** the addon reads your profession window, so the board shows only what you can craft (compare STORY-015b's list of your professions). Also checks catalog quantities against the game and flags mismatches (replaces *In-game recipe reader* under *Recipe coverage*).
+- **Known recipes and skill:** moved to Next on 2026-10-07 as STORY-041 (capture) and STORY-043 (Today). Still here: the Action Board filtered to what you can make, and *what can I learn next* from your skill rank and the catalogs' skill levels.
 - **Calibrate removed listings:** your own sales from invoices show how many *removed* listings (STORY-027) were real sales.
 
 **Ledger analytics** (from the 2026-10-06 design notes; each needs STORY-034 and some weeks of your own sales):
