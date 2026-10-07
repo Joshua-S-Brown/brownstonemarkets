@@ -96,19 +96,31 @@ Acceptance:
 
 ### STORY-033 — Event journal: what you bought, posted, sold, crafted and mailed
 
-Added 2026-10-06. Captures raw evidence only; meaning is STORY-034.
+Added 2026-10-06; refined 2026-10-07 for implementation. Captures raw evidence only; meaning is STORY-034. Must be testable in game by 13 October (*Now*).
 
 As a gold maker, I want the addon to note each auction, mail, craft and vendor event as it happens, so that Brownstone can later work out what I bought, sold and made, and at what cost.
 
 Acceptance:
-- **A journal of raw events** in the addon file: event name, its arguments, UTC and session time, character, and the small amount of context needed to read it later (for example, at the mailbox: each invoice's item, quantity, price and type; at a craft: the recipe and the bag change). Each entry has an ID made from character and time, so journals from different characters and machines never collide.
-- **Covers** auction house purchases, posts, cancels; mailbox invoices (sold, expired, cancelled, outbid), returned items and gold taken; mail sent to and received from your own characters; crafts; vendor buys, sells and repairs; loot and gathering. The event list is a **beta discovery**: register guarded, record which ones the client rejects (as the scan does), and record what fired in each beta test under *Now*.
-- **One account-wide file** (added 2026-10-07): the journal goes in the existing account-wide `BrownstoneScanDB`, like scans and snapshots, so the Windows drop script carries it unchanged. Overlapping drops repeat entries, so import deduplicates by entry ID.
-- **Clearing keeps the current session** (added 2026-10-07): `/bscan clear` removes only journal entries from before the current login, using STORY-032's login marker; scans keep their own rule (STORY-032). Events recorded since login (for example opening the mailbox before typing the command) are never lost, so the Windows routine *log in → clear → reload → play → log out → drop* is safe in any order within the session. Clearing is still safe only when that machine's latest drop is fully imported (OPS-03). Record the rule in `requirements.md`.
-- **Never acts:** the addon only listens. No automatic mail opening, looting, buying, posting or cancelling.
-- **Size limits** measured on the beta for a normal session, recorded in `addon/README.md`.
-- **Import** preserves the journal byte-for-byte (DATA-01) and stores the raw events per character, with a new migration; it doesn't interpret them yet.
-- **Offline tests** with Lua stubs for each event family, a clear after events in the current session (they survive), duplicate entries across two drops, and real beta recordings saved as fixtures before 21 October.
+- **A journal of raw entries** in the addon file. Each entry: event or hook name, its arguments as reported (missing stays missing), Unix seconds with UTC text, session time (`GetTime()`), character, realm, faction and addon version. The entry ID is the length-prefixed character and realm (as in snapshots), time and the **same persistent account sequence snapshots use**, so journal entries and snapshots sort together for STORY-034's reconciliation.
+- **Two generic observations** carry most of the meaning, so per-event parsing isn't needed to capture it:
+  - **Money change:** on `PLAYER_MONEY`, copper before and after (integer copper).
+  - **Bag change:** after bags settle (`BAG_UPDATE_DELAYED`), the per-item count change across carried bags since the last observation (item ID → signed count), with which windows were open (bank, mailbox, merchant, auction house, trade skill, loot). Baseline taken at login and `/reload`; no entry when nothing changed.
+  Crafts, loot, gathering, vendor trades and mail taken show up as these changes next to the event that caused them.
+- **Context read at the moment** (read-only APIs):
+  - **Mailbox:** on opening and on each inbox change, every message header (sender, subject, money, COD, item count, days left, read flag) and, for auction mail, the invoice (type, item, other player, bid, buyout, deposit, cut). Record an inbox state only when it differs from the last one recorded this session, to keep the file small.
+  - **Your own actions:** observe the functions you call (secure post-hooks: taking mail money and items, sending mail with its recipient, money and attached items, posting, bidding or buying out, cancelling, vendor buying, selling and repairing, crafting) and record their arguments. The addon never calls these itself.
+  - **Own events only:** spellcasts and loot from `player` only; other players' loot lines in a group are not recorded.
+- **Covers** auction house purchases, posts and cancels; mailbox invoices (sold, expired, cancelled, outbid), returned items and gold taken; mail sent and received; crafts; vendor buys, sells and repairs; loot and gathering. The event and hook list is a **beta discovery**: register guarded, record which ones the client rejects (as the scan does), and record what fired in each beta test under *Now*.
+- **Bounded size:** a cap on journal entries (a value recorded in the rule). At the cap the addon stops adding entries, keeps one overflow marker with the number it skipped, and says so in chat; it never drops entries silently. A normal session's size is measured on the beta and recorded in `addon/README.md`.
+- **One account-wide file** (added 2026-10-07): the journal goes in the existing account-wide `BrownstoneScanDB`, like scans and snapshots, so the Windows drop script carries it unchanged. The file format goes up; every older format stays importable. Overlapping drops repeat entries, so import deduplicates by entry ID; the same ID with different content is a conflict.
+- **Clearing keeps the current session** (added 2026-10-07): `/bscan clear` removes only journal entries from before the current login, using STORY-032's login marker and the same prune (unknown login keeps everything); scans keep their own rule (ADDON-11). Events recorded since login (for example opening the mailbox before typing the command) are never lost, so the Windows routine *log in → clear → reload → play → log out → drop* is safe in any order within the session. Clearing is still safe only when that machine's latest drop is fully imported (OPS-03).
+- **Never acts, and stays silent:** the addon only listens and reads (`requirements.md` → *Observing your own actions*). No automatic mail opening, taking, looting, buying, posting, cancelling or crafting; hooks only observe calls you made. Logging prints nothing to chat in normal play; only problems (a rejected event, the size cap) are reported.
+- **Import:**
+  - Snapshots and journal entries share **one path for non-scan records** (preview state, stale-review check, conflicts, Fully imported, import guidance counting new records), generalized from STORY-032's snapshot fields rather than a third parallel set.
+  - Preserved byte-for-byte in the same bronze collection (DATA-01); stored raw per character with source, full market identity and machine, through a new numbered migration. Not interpreted yet.
+  - Preview (page and CLI) shows, per file and character, journal entry counts as new, duplicate or other house, by event family; not one row per entry.
+  - **Seen in Brownstone:** on the addon import page, per character, the number of imported entries by family and the latest entry time. No other views.
+- **Offline tests** with Lua stubs for each event family and hook, money and bag changes (including no-change), mailbox state deduplication, the size cap and its overflow marker, a clear after events in the current session (they survive), duplicate and conflicting entries across two drops, older file formats, the migration, CLI and the import page. Real beta recordings are saved as fixtures before 21 October (the in-game checklist in `addon/README.md` says how).
 
 ### STORY-034 — Movement ledger and reconciliation
 
