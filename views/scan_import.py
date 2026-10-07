@@ -1,7 +1,7 @@
 """Explicit addon preview, selection and reviewed import controls."""
 import streamlit as st
 
-from brownstone import character_snapshots, journal
+from brownstone import character_snapshots, journal, professions
 from brownstone.pipeline import import_guidance, import_scans, preview_configuration, preview_scans
 from brownstone.scan_inputs import (
     CLEAR_REMINDER,
@@ -49,6 +49,10 @@ def render(config):
 
 
 def _show_holdings(config):
+    skills = professions.latest_rows(config)
+    if skills:
+        st.caption("Latest imported level, skills and listed recipes; missing values are unknown")
+        st.dataframe(skills, hide_index=True)
     auctions = journal.active_auction_rows(config)
     if auctions:
         st.caption("Latest imported active-auction observation; missing counts are unknown")

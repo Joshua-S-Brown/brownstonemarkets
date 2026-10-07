@@ -171,7 +171,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   scan records retain format 4 and formats 1–4 remain importable. `snapshots` records bags/gold on
   guarded `PLAYER_LOGOUT` (including `/reload`), and bank on guarded `BANKFRAME_OPENED` and
   `BANKFRAME_CLOSED`. These events and container API behavior remain pending Forever beta checks.
-  Only container/money/identity reads are added: no requests, timers, buying, posting, moving,
+  Only container/money/identity/level/skill reads are added: no requests, timers, buying, posting, moving,
   sorting or mail. Bank readers run only between bank-open and bank-close events.
 - Snapshot evidence is character name, realm, faction, Unix seconds + UTC text, addon version,
   kind (`bags`/`bank`), triggering event, login time, container API, rejected events and fired-event
@@ -185,6 +185,16 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   for the beta check. Container sizes remain nullable when
   unreadable; failed slot reads mark `slots_readable = false`; a zero-sized main bank is treated as
   inaccessible. Incomplete container coverage is labeled and latest item/slot totals stay unknown rather than asserting an empty inventory.
+- **Level and skills (STORY-041, addon 0.8.0):** every bags snapshot also reads nullable
+  `UnitLevel("player")` and both available guarded skill surfaces: `GetNumSkillLines`/
+  `GetSkillLineInfo` and `GetProfessions`/`GetProfessionInfo`. Keep API provenance, counted raw
+  tuples (including nil positions), row indexes, names, header state, rank/max and reported IDs.
+  Missing APIs/returns stay absent; an older snapshot or unreadable skills remains *skills unknown*.
+  A collapsed or unreadable legacy skill header hides lines, so `skills.legacy.possibly_incomplete`
+  is set and the import page shows *possibly incomplete*; the addon never expands it.
+  The addon import page alone displays latest bags level and skill ranks/max per character;
+  it never infers a profession or catalog match from a name. Beta must confirm skill API shapes,
+  IDs, gathering/secondary coverage and logout/reload readability.
 - **Clear/session rule:** initial `PLAYER_ENTERING_WORLD(true, false)` records this character's
   login marker in `sessions`; `(false, true)` retains it across reload. Only the first world entry
   after the addon loads sets or keeps the marker; later loading screens leave it alone, flags or not.
@@ -224,7 +234,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
 
 ### ADDON-12 Event journal (STORY-033)
 
-- Addon **0.7.0** writes account-wide file format **6** (STORY-040 extends 0.6.0 without a format bump): the existing scans, snapshots, sessions
+- Addon **0.8.0** writes account-wide file format **6** (STORY-040/041 extend 0.6.0 without a format bump): the existing scans, snapshots, sessions
   and `snapshot_sequence`, plus `journal`, `journal_diagnostics` and problem counters `journal_errors`. Formats 1–5 stay importable;
   scan records still use format 4. Capture follows Product direction → *Observing your own actions*.
   Only events and `hooksecurefunc` post-hooks record evidence; no economy actions, requests or timers.
@@ -278,6 +288,33 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   File format stays **6**, storage stays schema **11**, and shared non-scan import counts these
   entries under `auction`. Event/API support, completeness and arrival without opening the Auctions
   tab remain beta checks by 13 October; preserve recordings before 21 October.
+- **Known recipes (STORY-041):** guarded `TRADE_SKILL_SHOW`/`TRADE_SKILL_UPDATE` and
+  `CRAFT_SHOW`/`CRAFT_UPDATE` read the corresponding available `GetTradeSkill*`/`GetCraft*`
+  window APIs. Each changed profession list adds one family `craft` journal entry with
+  `known_recipes`; comparison is per character/profession against its last successfully recorded
+  state this loaded session. It resets on reload and uses the shared identity/sequence/cap/clear.
+  The comparison ignores craftable counts (the row field and its raw `info` position), which change
+  with every craft or bag change; saved lists still carry them (decided 2026-10-07 at review, to keep
+  one craft session from saving a full list per craft). An update is read only while that window
+  (trade skill or craft, tracked separately) has been shown and not closed: a closed window reports
+  a placeholder name (Classic: `UNKNOWN`). Opening a window whose list is unchanged still journals a
+  plain window-open entry, as before 0.8.0.
+  Preserve window profession name/rank/max, reported row count, every indexed header/recipe's raw
+  info, name/type/difficulty, craftable count, expansion state, recipe/output links and reported
+  link IDs, min/max made and every reagent's raw info/link/ID/count. Unavailable values stay missing.
+  Preserve reported subclass/inventory filter states (including index 0, All) and makeable/skill-up
+  filters and available text/level filters. Mark `possibly_incomplete` for active restrictions,
+  collapsed/unknown header expansion,
+  missing row type or unreadable row count. Never open windows, expand headers, change filters,
+  train, learn or craft. Missing filter APIs cannot prove completeness; the flag describes observed
+  restrictions, not a guarantee of a complete learned catalog. Capture is silent in normal play.
+  A window never observed remains *known recipes unknown*. The import page alone shows the latest
+  list UTC and listed non-header recipe count per profession, with the incompleteness flag;
+  unreadable counts/rows remain unknown. Matching/learned-recipe interpretation is STORY-043.
+  Journal was chosen instead of a new snapshot kind to reuse change-only lists and the bounded
+  existing non-scan lifecycle. Addon is **0.8.0**; format remains **6**, schema remains **11**:
+  existing raw JSON stores the added payloads without a migration. Forever event/API support,
+  default hidden recipes, ID meaning and UI completeness remain beta checks by 13 October.
 - **Spellcasts are crafting evidence only (decided 2026-10-07, product owner):** only
   `UNIT_SPELLCAST_SUCCEEDED` for unit `player` while a trade skill or craft window is observed open is
   recorded. Start, failed and interrupted casts, other units' casts and every spell cast without a
@@ -287,9 +324,11 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   bag change still are. `CHAT_MSG_LOOT` requires argument 12 equal to the
   player's readable GUID; ambiguous/missing sender identity is omitted. Loot-window events are
   the player's own window.
-- **Refresh events are counted, not journalled:** `MERCHANT_UPDATE`, `TRADE_SKILL_UPDATE`,
-  `CRAFT_UPDATE` and `AUCTION_ITEM_LIST_UPDATE` carry no arguments and fire often (the last also
+- **Ordinary refresh events are counted, not journalled:** `MERCHANT_UPDATE` and
+  `AUCTION_ITEM_LIST_UPDATE` carry no arguments and fire often (the last also
   during the addon's own scan), so they only add to `journal_diagnostics.fired_events`.
+  Profession refresh events are also counted
+  and now record changed lists under STORY-041; they do not append unchanged generic refresh entries.
   Container-use hooks log only while the merchant is observed open (possible selling), without
   asserting a sale. Other hooks log arguments regardless of success; events/deltas supply context.
 - Every event registration is guarded independently. Hooks install only for existing functions,

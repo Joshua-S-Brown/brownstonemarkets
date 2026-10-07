@@ -8,6 +8,7 @@ from pathlib import Path
 import duckdb
 
 from . import character_snapshots as holdings
+from . import professions
 from .config import MARKET_KEYS
 from .freshness import FUTURE_TOLERANCE_HOURS
 from .scans import _utc
@@ -46,6 +47,7 @@ def summarize(record: dict, now: datetime) -> dict:
     if session is not None and (type(session) not in (float, int) or not 0 <= session < float("inf")):
         raise ValueError("Journal session_time must be finite and nonnegative, or missing")
     _validate_payload(record)
+    professions.validate_recipes(record)
     return {"record_id": record["entry_id"], "record_sha256": content_hash(record),
             "character": record["character"], "realm": record["realm"], "faction": record["faction"],
             "family": record["family"], "captured_at": moment.isoformat()}

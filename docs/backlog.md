@@ -216,6 +216,10 @@ Acceptance:
 
 ### STORY-041 — Your professions and known recipes
 
+**Implemented (2026-10-07); pending the in-game beta check.** Contracts and implementation choices
+live in [ADDON-11/12](requirements.md#addon-11-character-snapshots-story-032); play checklist in
+[addon/README.md](../addon/README.md#professions-beta-checklist-story-041--by-13-october-mac-and-windows).
+
 Added 2026-10-07 (product owner: "what can I actually do?"). Must be testable in game by 13 October (*Now*). Captures raw evidence only; Today uses it in STORY-043. Takes the capture half of *Known recipes and skill* from Later.
 
 As a gold maker, I want the addon to record each character's level, professions and known recipes, so that Today can later show only crafts that character can actually make.

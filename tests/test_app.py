@@ -637,3 +637,38 @@ def test_active_auctions_import_page_latest_and_unknown(tmp_path, monkeypatch, d
     assert table["Active auctions (UTC)"].iloc[0].endswith("+00:00")
     assert table["Active auctions (UTC)"].iloc[1] == "active auctions unknown"
     assert table["Auctions"].isna().iloc[1] and table["Marked sold"].isna().iloc[1]
+
+
+@pytest.mark.parametrize("drop_folder", [False, True])
+def test_professions_import_page_rows_and_unknown(tmp_path, monkeypatch, drop_folder):
+    from test_character_snapshots import snapshot
+    from test_journal import write
+    from test_professions import recipes
+    from test_scans import finished_now
+
+    r = recipes()
+    r.update(captured_at=finished_now())
+    r.pop("captured_at_utc")
+    alice = snapshot(level=22, skills={"legacy": {"rows": [
+        {"name": "Engineering", "rank": 20, "max_rank": 75}, {"name": "Mining", "rank": 55, "max_rank": 75}]}})
+    bob = snapshot("bob", character="Bob")
+    for s in (alice, bob):
+        s.update(captured_at=finished_now())
+        s.pop("captured_at_utc")
+    at, addon = preview_addon(tmp_path, monkeypatch)
+    path = addon["scan_path"]
+    if drop_folder:
+        folder = tmp_path / "profession-drops"
+        folder.mkdir()
+        addon["drop_folder"] = folder
+        path = folder / "windows-pc-20261007T004900Z-BrownstoneScan.lua"
+    write(path, [r], [alice, bob])
+    at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert not at.exception and not at.error
+    table = next(t.value for t in at.dataframe if "Known recipes (UTC)" in t.value.columns)
+    assert table["Character"].tolist() == ["Alice", "Alice", "Bob"]
+    assert table["Listed recipes"].iloc[0] == 1 and table["Rank"].iloc[0] == 20
+    assert table["Known recipes (UTC)"].iloc[1] == "known recipes unknown"
+    assert table["Skills"].iloc[2] == "skills unknown" and table["Level"].isna().iloc[2]

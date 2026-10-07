@@ -8,6 +8,7 @@ from typing import Any
 
 import duckdb
 
+from . import professions
 from .config import MARKET_KEYS
 from .freshness import FUTURE_TOLERANCE_HOURS
 from .money import to_gold
@@ -15,6 +16,9 @@ from .scans import _list, _utc
 
 
 def content_hash(record: dict) -> str:
+    if "skills" in record:
+        from .journal import _typed
+        record = record | {"skills": _typed(record["skills"])}
     return hashlib.sha256(json.dumps(record, sort_keys=True, ensure_ascii=False,
                                     separators=(",", ":")).encode()).hexdigest()
 
@@ -37,6 +41,7 @@ def summarize(record: dict, now: datetime) -> dict:
         raise ValueError("Snapshot captured in the future; check the computer's clock")
     _integer(record.get("gold_copper"), "gold_copper")
     _integer(record.get("sequence"), "sequence", 1)
+    professions.validate_skills(record)
     slots = _list(record.get("slots"), "snapshot slots")
     _validate_slots(slots)
     containers = _list(record.get("containers"), "snapshot containers")
@@ -146,7 +151,7 @@ def load(db, config: Mapping[str, Any], records: list[dict], collection_id: str,
                    ("snapshot_id", "snapshot_sha256", "character", "kind", "captured_at", "gold_copper")},
                    "character_realm": record["realm"], "character_faction": record["faction"],
                    "machine": config.get("machine"), "collection_id": collection_id,
-                   "source_sha256": file_hash, "record_json": json.dumps(record, ensure_ascii=False, sort_keys=True)}
+                   "source_sha256": file_hash, "record_json": json.dumps(record, ensure_ascii=False)}
             columns = list(row)
             db.execute(f"INSERT INTO character_snapshots ({','.join(columns)}) VALUES "
                        f"({','.join('?' for _ in columns)})", list(row.values()))

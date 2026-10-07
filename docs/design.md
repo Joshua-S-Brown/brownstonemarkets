@@ -155,7 +155,7 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 
 ### Character snapshots (STORY-032)
 
-Capture and clear/session rules live in requirements.md → ADDON-11/12. Addon 0.7.0 keeps
+Capture and clear/session rules live in requirements.md → ADDON-11/12. Addon 0.8.0 keeps
 account-wide format 6 with `scans` (unchanged record formats 1–4), `snapshots`, `sessions` and
 `snapshot_sequence`, `journal` and `journal_diagnostics`. Each snapshot is a keyed table, with `slots` and `containers` arrays;
 exact links and nullable client values are preserved without variant interpretation yet.
@@ -209,6 +209,31 @@ STORY-040 adds `owned_auctions` to family `auction`: `api`, counted `counts`, `a
 The matching owned-update event reads cached results only; the transient last successfully saved
 list suppresses equal states and resets on reload. Version 0.7.0 retains file format 6/schema 11;
 no new import path, table or migration. API/capture/display rules live in ADDON-12.
+STORY-041 adds `level` and `skills` to bags snapshots. `skills.legacy` has API name,
+counted count tuple and rows; `skills.modern` has API name, counted profession indexes and rows.
+Each row keeps its original index, counted `info`, name, rank/max and available ID; legacy headers
+remain in raw evidence. Modern rows are a dense array even when the index tuple has nil holes.
+Legacy rows also keep header expansion, with `possibly_incomplete` on the surface when a header is
+collapsed. The import page reads only the newest bags snapshot per character and newest list per
+character/profession (SQL `QUALIFY` on capture time, then sequence).
+Snapshot hashing retains historical hashes exactly; only the new `skills` subtree uses the journal's
+typed-key canonical encoder, so counted tuples cannot conflate numeric and string keys.
+Stored snapshot JSON retains those tuples without sorting mixed key types.
+`known_recipes` in family `craft` has API prefix, counted profession/count returns, name/rank/max,
+indexed rows with counted raw info, links/link IDs, made tuple/min/max, reagent count tuple and
+reagent rows (raw info/link/ID/count), filter state and `possibly_incomplete`.
+This uses schema 11/raw JSON and format 6 unchanged; the lifecycle has no new adapter or storage path.
+`professions` validates optional display fields and projects scoped latest bags plus latest list per
+profession, ordering by capture time/shared sequence. It shows all observed skill lines rather than
+inventing a profession classification, and keeps absent lists/counts unknown. If both skill surfaces
+report the same name, display deterministically prefers the modern row (which supplies skill IDs),
+labels its API/ID and keeps both originals raw; it never fills one API's holes from the other.
+Only `views/scan_import`
+uses it. Capture/display/unknown rules and the journal choice live in ADDON-11/12.
+Reference tuple shapes and filter index 0 come from Blizzard's
+[Classic trade skill UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua)
+and [Classic craft UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua);
+Forever availability and extra returns require beta evidence, which is retained raw.
 API shape evidence: Blizzard's generated
 [modern owned API documentation](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua)
 uses 1-based owned indexes and nullable fields;

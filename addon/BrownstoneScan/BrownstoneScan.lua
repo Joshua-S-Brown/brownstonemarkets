@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.7.0"
+local ADDON_VERSION = "0.8.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -200,6 +200,7 @@ end
 ---------------------------------------------------------------------------
 -- Character snapshots: event-driven reads only, no requests, timers or item movement.
 ---------------------------------------------------------------------------
+local professions = { open = {}, last = {} }  -- open: trade/craft window shown and not yet closed
 local bankOpen = false
 local sessionKey, loginTime
 local sessionSeen = false  -- the first PLAYER_ENTERING_WORLD since this addon file was loaded
@@ -306,7 +307,11 @@ local function captureCharacter(kind, event)
             reagent_bag_enum = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag } }
     for _, e in ipairs(missingEvents) do snapshot.rejected_events[#snapshot.rejected_events + 1] = e end
     for e, count in pairs(firedEvents) do snapshot.fired_events[e] = count end
-    if kind == "bags" then snapshot.gold_copper = safe(GetMoney) end
+    if kind == "bags" then
+        snapshot.gold_copper = safe(GetMoney)
+        snapshot.level = safe(UnitLevel, "player")
+        snapshot.skills = professions.skills()
+    end
     local api = C_Container or {}
     local canRead = api.GetContainerItemInfo or GetContainerItemInfo or api.GetContainerItemID
         or GetContainerItemID or api.GetContainerItemLink or GetContainerItemLink
@@ -769,8 +774,8 @@ local journalEvents = {
     UNIT_SPELLCAST_SUCCEEDED = "craft", CHAT_MSG_LOOT = "loot", LOOT_OPENED = "loot", LOOT_CLOSED = "loot",
     LOOT_SLOT_CLEARED = "loot", BANKFRAME_OPENED = "bags", BANKFRAME_CLOSED = "bags",
 }
--- Frequent refresh events without arguments are only counted in diagnostics, never journalled.
-local journalCountOnly = { MERCHANT_UPDATE = true, TRADE_SKILL_UPDATE = true, CRAFT_UPDATE = true,
+-- Ordinary refreshes are counted; profession refreshes also save changed lists.
+local journalCountOnly = { MERCHANT_UPDATE = true,
     AUCTION_ITEM_LIST_UPDATE = true }
 local journalHooks = {
     { "TakeInboxMoney", "mail" }, { "TakeInboxItem", "mail" }, { "AutoLootMailItem", "mail" },
@@ -973,6 +978,142 @@ function journal.owned(event, arguments)
     end
 end
 
+-- Read both available skill surfaces; preserve raw tuples and their API provenance.
+function professions.skills()
+    local state = {}
+    if type(GetNumSkillLines) == "function" then
+        local legacy = { api = "GetSkillLineInfo", counts = journal.read(GetNumSkillLines), rows = {} }
+        state.legacy = legacy
+        for i = 1, (legacy.counts and legacy.counts[1] or 0) do
+            local info = journal.read(GetSkillLineInfo, i)
+            legacy.rows[i] = { index = i, info = info, name = info and info[1],
+                is_header = info and info[2], expanded = info and info[3], rank = info and info[4],
+                max_rank = info and info[7], skill_id = info and info[14] }
+            -- A collapsed header hides its skills from the count; flag it, never expand it.
+            local row = legacy.rows[i]
+            if not info or (row.is_header and row.is_header ~= 0 and row.expanded ~= true and row.expanded ~= 1) then
+                legacy.possibly_incomplete = true
+            end
+        end
+    end
+    if type(GetProfessions) == "function" then
+        local modern = { api = "GetProfessionInfo", indexes = journal.read(GetProfessions), rows = {} }
+        state.modern = modern
+        for i = 1, (modern.indexes and modern.indexes.n or 0) do
+            local index = modern.indexes[i]
+            if index then
+                local info = journal.read(GetProfessionInfo, index)
+                modern.rows[#modern.rows + 1] = { index = index, info = info, name = info and info[1],
+                    rank = info and info[3], max_rank = info and info[4], skill_id = info and info[7] }
+            end
+        end
+    end
+    return state
+end
+
+function professions.filters(prefix)
+    local state, incomplete = {}, false
+    for _, suffix in ipairs({ "SubClass", "InvSlot" }) do
+        local count = journal.read(_G[prefix .. (suffix == "SubClass" and "SubClasses" or "InvSlots")])
+        local all = safe(_G[prefix .. suffix .. "Filter"], 0)
+        if count or all ~= nil then
+            local selected = { all = all, names = count }
+            state[suffix] = selected
+            if selected.all == false or selected.all == 0 then incomplete = true end
+            for i = 1, (count and count.n or 0) do
+                selected[i] = { name = count[i], enabled = safe(_G[prefix .. suffix .. "Filter"], i) }
+                if selected.all ~= true and selected.all ~= 1 and
+                    (selected[i].enabled == false or selected[i].enabled == 0) then incomplete = true end
+            end
+        end
+    end
+    for _, suffix in ipairs({ "OnlyShowMakeable", "OnlyShowSkillUps" }) do
+        local value = safe(_G[prefix .. suffix])
+        state[suffix] = value
+        if value == true or (type(value) == "number" and value ~= 0) then incomplete = true end
+    end
+    local name = safe(_G[prefix .. "ItemNameFilter"])
+    state.ItemNameFilter = name
+    if type(name) == "string" and name ~= "" then incomplete = true end
+    state.ItemLevelFilter = journal.read(_G[prefix .. "ItemLevelFilter"])
+    for i = 1, (state.ItemLevelFilter and state.ItemLevelFilter.n or 0) do
+        local level = state.ItemLevelFilter[i]
+        if type(level) == "number" and level > 0 then incomplete = true end
+    end
+    return state, incomplete
+end
+
+function professions.linkID(link, kind)
+    if type(link) == "string" then return tonumber(link:match(kind .. ":(%d+)")) end
+end
+
+function professions.row(prefix, index)
+    local info = journal.read(_G[prefix .. "Info"], index)
+    local craft = prefix == "GetCraft"
+    local kind = info and info[craft and 3 or 2]
+    local link = safe(_G[prefix .. "RecipeLink"], index)
+    local row = { index = index, info = info, name = info and info[1], type = kind,
+        difficulty = kind, craftable = info and info[craft and 4 or 3],
+        expanded = info and info[craft and 5 or 4], recipe_link = link,
+        recipe_id = type(link) == "string" and tonumber(link:match("enchant:(%d+)")) or nil,
+        spell_id = type(link) == "string" and tonumber(link:match("spell:(%d+)")) or nil,
+        item_link = safe(_G[prefix .. "ItemLink"], index),
+        made = journal.read(_G[prefix .. "NumMade"], index),
+        reagent_counts = journal.read(_G[prefix .. "NumReagents"], index), reagents = {} }
+    row.item_id = professions.linkID(row.item_link, "item")
+    row.spell_id = row.spell_id or professions.linkID(link, "enchant") or
+        professions.linkID(row.item_link, "enchant") or professions.linkID(row.item_link, "spell")
+    row.min_made, row.max_made = row.made and row.made[1], row.made and row.made[2]
+    for i = 1, (row.reagent_counts and row.reagent_counts[1] or 0) do
+        local reagent = journal.read(_G[prefix .. "ReagentInfo"], index, i)
+        local itemLink = safe(_G[prefix .. "ReagentItemLink"], index, i)
+        row.reagents[i] = { index = i, info = reagent, item_link = itemLink,
+            item_id = type(itemLink) == "string" and tonumber(itemLink:match("item:(%d+)")) or nil,
+            count = reagent and reagent[3] }
+    end
+    return row
+end
+
+-- Craftable counts change with every craft or bag change; comparing without them saves a new list
+-- only when recipes, ranks, headers or filters change. Saved lists still carry the counts.
+function professions.structure(state)
+    local copy = journal.copy(state)
+    for _, row in pairs(copy.rows) do
+        row.craftable = nil
+        if row.info then row.info[state.api == "GetCraft" and 4 or 3] = nil end
+    end
+    return copy
+end
+
+-- Returns "recorded" when a changed list was saved, "unchanged" when it matched, nil when unreadable.
+function professions.window(event, arguments)
+    local craft = event == "CRAFT_SHOW" or event == "CRAFT_UPDATE"
+    local prefix = craft and "GetCraft" or "GetTradeSkill"
+    local profession = journal.read(_G[craft and "GetCraftDisplaySkillLine" or "GetTradeSkillLine"])
+    if not profession or not profession[1] then return end
+    local state = { api = prefix, profession = profession, name = profession[1], rank = profession[2],
+        max_rank = profession[3], counts = journal.read(_G[craft and "GetNumCrafts" or "GetNumTradeSkills"]),
+        rows = {} }
+    state.filters, state.possibly_incomplete = professions.filters(prefix)
+    if not state.counts or state.counts[1] == nil then state.possibly_incomplete = true end
+    for i = 1, (state.counts and state.counts[1] or 0) do
+        local row = professions.row(prefix, i)
+        state.rows[i] = row
+        if not row.type or (row.type == "header" and (row.expanded ~= true and row.expanded ~= 1)) then
+            state.possibly_incomplete = true
+        end
+    end
+    local identity = characterKey()
+    if not identity then return end
+    local key = identity .. ":" .. state.name
+    local structure = professions.structure(state)
+    if journal.equal(structure, professions.last[key]) then return "unchanged" end
+    if journal.add(event, "craft", arguments, { known_recipes = state }) then
+        professions.last[key] = structure
+        return "recorded"
+    end
+end
+
 function journal.draft()
     local draft = { money_copper = safe(GetSendMailMoney), cod_copper = safe(GetSendMailCOD),
         observed_at = time(), items = {} }
@@ -1056,6 +1197,17 @@ function journal.observe(event, ...)
         if not guid or select(12, ...) ~= guid then return end
     end
     journal.events[event] = (journal.events[event] or 0) + 1
+    if event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_CLOSE" then
+        professions.open.trade = event == "TRADE_SKILL_SHOW"
+    elseif event == "CRAFT_SHOW" or event == "CRAFT_CLOSE" then
+        professions.open.craft = event == "CRAFT_SHOW"
+    elseif event == "TRADE_SKILL_UPDATE" or event == "CRAFT_UPDATE" then
+        -- Closed windows report placeholder names (Classic: "UNKNOWN"); only read an open one.
+        if professions.open[event == "CRAFT_UPDATE" and "craft" or "trade"] then
+            professions.window(event, journal.args(...))
+        end
+        return
+    end
     if journalCountOnly[event] then return end
     local open = { MAIL_SHOW = "mailbox", MERCHANT_SHOW = "merchant", AUCTION_HOUSE_SHOW = "auction_house",
         TRADE_SKILL_SHOW = "trade_skill", CRAFT_SHOW = "trade_skill", LOOT_OPENED = "loot", BANKFRAME_OPENED = "bank" }
@@ -1063,7 +1215,9 @@ function journal.observe(event, ...)
         TRADE_SKILL_CLOSE = "trade_skill", CRAFT_CLOSE = "trade_skill", LOOT_CLOSED = "loot", BANKFRAME_CLOSED = "bank" }
     if open[event] then journal.windows[open[event]] = true end
     local arguments = journal.args(...)
-    if event == "BAG_UPDATE_DELAYED" then journal.bagChange(arguments)
+    if event == "TRADE_SKILL_SHOW" or event == "CRAFT_SHOW" then
+        if professions.window(event, arguments) ~= "recorded" then journal.add(event, family, arguments) end
+    elseif event == "BAG_UPDATE_DELAYED" then journal.bagChange(arguments)
     elseif event == "PLAYER_MONEY" then
         local current = journal.money()
         journal.add(event, family, arguments, { before_copper = journal.lastMoney, after_copper = current })
