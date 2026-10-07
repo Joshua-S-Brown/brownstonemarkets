@@ -8,14 +8,19 @@
 -- logout. See addon/README.md for the format and the measurement checklist.
 
 local ADDON = "BrownstoneScan"
-local SCHEMA_VERSION = 3
-local ADDON_VERSION = "0.3.1"
--- Each listing is saved as one short string in this field order (schema 3), with names stored
+local SCHEMA_VERSION = 4
+local ADDON_VERSION = "0.4.0"
+-- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
 local FLAG_COMPLETE_INFO, FLAG_COMMODITY = 1, 2
 
 local CHUNK = 2000            -- listings read per frame, to avoid freezing the client
+local ITEM_WAIT_LIMIT = 20    -- total pass seconds, including spreading requests across frames
+local ITEM_REQUESTS_PER_FRAME = 200
+local missingEvents = {}
+local itemPass  -- transient queue/pending IDs; observations live only in the saved scan
+
 local START_TIMEOUT = 30      -- seconds to wait for the server to answer the request
 
 local frame = CreateFrame("Frame")
@@ -42,6 +47,7 @@ local function canClearScans(force)
 end
 
 local function clearScans(force)
+    if scan or itemPass then say("Wait for the scan and its item info pass to finish before clearing.") return end
     if not canClearScans(force) then return end
     BrownstoneScanDB.scans = {}
     unsavedScans = 0
@@ -58,7 +64,7 @@ StaticPopupDialogs[CLEAR_POPUP] = {
     hideOnEscape = true,
     preferredIndex = 3,  -- keep clear of the popup slots Blizzard's protected dialogs use
     OnAccept = function(self)
-        if scan then return end
+        if scan or itemPass then return end
         if not canClearScans(false) then return end
         if #BrownstoneScanDB.scans ~= self.data then
             say("Saved scans changed; click Clear saved scans again to review the count.")
@@ -69,13 +75,13 @@ StaticPopupDialogs[CLEAR_POPUP] = {
 }
 
 local function confirmClearScans()
-    if scan or not canClearScans(false) then return end
+    if scan or itemPass or not canClearScans(false) then return end
     local count = #BrownstoneScanDB.scans
     StaticPopup_Show(CLEAR_POPUP, count, nil, count)
 end
 
 local function reloadUI()
-    if not scan then ReloadUI() end
+    if not scan and not itemPass then ReloadUI() end
 end
 
 local function setMaintenanceEnabled(enabled)
@@ -236,8 +242,21 @@ local function textIndex(s, tableName, value)
     return index
 end
 
--- One item-reference observation/lookup attempt per ID per scan. No retries, waits or
--- requests for uncached data: missing values are saved as missing in this observation.
+-- Both passes use the same guarded reader and tuple positions. The initial observation stays intact.
+local function readItemValues(itemID, r)
+    r = r or { item_id = itemID }
+    local info = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+    if type(info) == "function" then
+        local ok, name, link, quality, itemLevel, required, itemType, subtype, stack, equip, icon, sell =
+            pcall(info, itemID)
+        if ok and name then
+            r.item_level, r.max_stack_size, r.vendor_sell_copper = itemLevel, stack, sell
+        end
+    end
+    return r
+end
+
+-- One initial observation per ID, with no explicit load request during listing reads.
 local function recordItem(s, itemID)
     if s.itemSeen[itemID] then return end
     s.itemSeen[itemID] = true
@@ -247,14 +266,7 @@ local function recordItem(s, itemID)
         local ok, id, itemType, subtype, equip, icon, classID, subclassID = pcall(instant, itemID)
         if ok and id then r.class_id, r.subclass_id = classID, subclassID end
     end
-    local info = (C_Item and C_Item.GetItemInfo) or GetItemInfo
-    if type(info) == "function" then
-        local ok, name, link, quality, itemLevel, required, itemType, subtype, stack, equip, icon, sell =
-            pcall(info, itemID)
-        if ok and name then
-            r.item_level, r.max_stack_size, r.vendor_sell_copper = itemLevel, stack, sell
-        end
-    end
+    readItemValues(itemID, r)
     s.items[#s.items + 1] = r
 end
 
@@ -277,6 +289,110 @@ end
 ---------------------------------------------------------------------------
 -- Scan life cycle
 ---------------------------------------------------------------------------
+
+local function endItemPass(status, reason)
+    local p = itemPass
+    if not p then return end
+    local result = p.result
+    result.status, result.reason = status, reason
+    result.duration_seconds = GetTime() - p.started
+    result.timed_out = result.requested - result.received - result.failed
+    itemPass = nil
+    frame:SetScript("OnUpdate", nil)
+    setMaintenanceEnabled(true)
+    if button then button:SetText("Brownstone Scan") button:Enable() end
+    say(("Item info: %d already loaded, %d requested, %d received, %d failed, %d timed out. Type /reload to write the file.")
+        :format(result.cached, result.requested, result.received, result.failed, result.timed_out))
+end
+
+-- Fields this read gains over the first pass (nil when none), and whether none are still missing.
+local function passValues(p, itemID)
+    local r, first, complete = readItemValues(itemID), p.first[itemID], true
+    local gained = false
+    for _, key in ipairs({ "item_level", "max_stack_size", "vendor_sell_copper" }) do
+        if first[key] == nil and r[key] ~= nil then
+            gained = true
+        else
+            complete = complete and first[key] ~= nil
+            r[key] = nil
+        end
+    end
+    return gained and r or nil, complete
+end
+
+local function itemAnswer(itemID, success)
+    local p = itemPass
+    if not p or not p.pending[itemID] then return end
+    if GetTime() - p.started >= ITEM_WAIT_LIMIT then return end
+    p.pending[itemID] = nil
+    if success ~= true then
+        p.result.failed = p.result.failed + 1
+        return
+    end
+    p.result.received = p.result.received + 1
+    local r = passValues(p, itemID)
+    if r then p.result.items[#p.result.items + 1] = r end
+end
+
+local function updateItemPass()
+    local p = itemPass
+    if not p then return end
+    local result = p.result
+    result.duration_seconds = GetTime() - p.started
+    if result.duration_seconds >= ITEM_WAIT_LIMIT then endItemPass("timeout") return end
+    for _ = 1, ITEM_REQUESTS_PER_FRAME do
+        local itemID = p.queue[p.cursor]
+        if not itemID then break end
+        if GetTime() - p.started >= ITEM_WAIT_LIMIT then endItemPass("timeout") return end
+        p.cursor = p.cursor + 1
+        -- Items that loaded during listing reads may never answer a request, so read them first.
+        local r, complete = passValues(p, itemID)
+        if complete then
+            result.cached = result.cached + 1
+            result.items[#result.items + 1] = r
+        else
+            -- Mark before calling: clients may deliver an answer synchronously.
+            p.pending[itemID] = true
+            result.requested = result.requested + 1
+            local ok = pcall(C_Item.RequestLoadItemDataByID, itemID)
+            if not ok and p.pending[itemID] then
+                p.pending[itemID] = nil
+                result.failed = result.failed + 1
+            end
+        end
+    end
+    if button then button:SetText(("Item info %d/%d"):format(result.received + result.failed + result.cached, result.total)) end
+    if p.cursor > #p.queue and result.received + result.failed == result.requested then
+        endItemPass("completed")
+    end
+end
+
+local function beginItemPass(s)
+    local queue, first = {}, {}
+    for _, r in ipairs(s.items or {}) do
+        first[r.item_id] = r
+        if r.item_level == nil or r.max_stack_size == nil or r.vendor_sell_copper == nil then
+            queue[#queue + 1] = r.item_id
+        end
+    end
+    local result = { total = #queue, requested = 0, received = 0, failed = 0, timed_out = 0, cached = 0,
+        wait_limit_seconds = ITEM_WAIT_LIMIT, duration_seconds = 0, status = "running",
+        api = "C_Item.RequestLoadItemDataByID", items = {} }
+    s.item_pass = result
+    itemPass = { result = result, queue = queue, first = first, pending = {}, cursor = 1, started = GetTime() }
+    if #queue == 0 then endItemPass("completed") return end
+    if not C_Item or type(C_Item.RequestLoadItemDataByID) ~= "function" then
+        endItemPass("skipped", "request API missing") return
+    end
+    for _, event in ipairs(missingEvents) do
+        if event == "GET_ITEM_INFO_RECEIVED" then
+            endItemPass("skipped", "GET_ITEM_INFO_RECEIVED registration rejected") return
+        end
+    end
+    setMaintenanceEnabled(false)
+    if button then button:Disable() button:SetText(("Item info 0/%d"):format(#queue)) end
+    frame:SetScript("OnUpdate", updateItemPass)
+end
 
 local function finish(status, reason)
     local s = scan
@@ -302,8 +418,9 @@ local function finish(status, reason)
     end
     BrownstoneScanDB.scans[#BrownstoneScanDB.scans + 1] = s
     unsavedScans = unsavedScans + 1
-    say(("%s: %d of %d listings in %.1fs%s. Type /reload to write the file."):format(
+    say(("%s: %d of %d listings in %.1fs%s. Item info pass follows."):format(
         status, s.listing_count, s.reported_count or 0, s.duration_seconds, reason and (" (" .. reason .. ")") or ""))
+    beginItemPass(s)
 end
 
 local function readChunks()
@@ -377,7 +494,7 @@ local function onTimeout(_, elapsed)
 end
 
 local function startScan()
-    if scan then say("A scan is already running.") return end
+    if scan or itemPass then say("A scan is already running.") return end
     if not ahIsOpen() then say("Open the auction house window first.") return end
     ensureButton()
     local api = detectApi()
@@ -449,6 +566,7 @@ local function startScan()
 end
 
 local function stopScan(status, reason)
+    if itemPass then endItemPass("stopped", reason) return true end
     if not scan then return false end
     scan.errors[#scan.errors + 1] = reason
     finish(status or "stopped", reason)
@@ -462,13 +580,13 @@ end
 -- RegisterEvent throws on an event this client doesn't know (the legacy
 -- AUCTION_ITEM_LIST_UPDATE is missing on Forever), so register one at a time
 -- and record which ones the client rejected.
-local missingEvents = {}
 for _, event in ipairs({
     "ADDON_LOADED",
     "AUCTION_HOUSE_SHOW",
     "AUCTION_HOUSE_CLOSED",
     "REPLICATE_ITEM_LIST_UPDATE",
     "AUCTION_ITEM_LIST_UPDATE",
+    "GET_ITEM_INFO_RECEIVED",
 }) do
     if not pcall(frame.RegisterEvent, frame, event) then
         missingEvents[#missingEvents + 1] = event
@@ -494,10 +612,10 @@ function ensureButton()
     clearButton:SetText("Clear saved scans")
     clearButton:SetPoint("RIGHT", reloadButton, "LEFT", -4, 0)
     clearButton:SetScript("OnClick", confirmClearScans)
-    setMaintenanceEnabled(not scan)
+    setMaintenanceEnabled(not scan and not itemPass)
 end
 
-frame:SetScript("OnEvent", function(_, event, arg1)
+frame:SetScript("OnEvent", function(_, event, arg1, arg2)
     if event == "ADDON_LOADED" then
         if arg1 ~= ADDON then return end
         BrownstoneScanDB = BrownstoneScanDB or {}
@@ -508,7 +626,9 @@ frame:SetScript("OnEvent", function(_, event, arg1)
         ensureButton()
     elseif event == "AUCTION_HOUSE_CLOSED" then
         StaticPopup_Hide(CLEAR_POPUP)
-        stopScan("stopped", "auction house window closed")
+        if scan then stopScan("stopped", "auction house window closed") end
+    elseif event == "GET_ITEM_INFO_RECEIVED" then
+        itemAnswer(arg1, arg2)
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then
         if scan and scan.api == "modern" and scan.phase == "waiting" then
             beginReading()

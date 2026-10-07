@@ -57,13 +57,13 @@ def complete(g, legacy=False):
 
 
 @pytest.mark.parametrize("legacy", [False, True])
-def test_addon_captures_v3_on_both_apis_and_imports(tmp_path, legacy):
+def test_addon_captures_v4_on_both_apis_and_imports(tmp_path, legacy):
     _, g = client(legacy)
     assert g.requests == 0 and len(g.BrownstoneScanDB.scans) == 0
     g.SlashCmdList.BROWNSTONESCAN("start")
     assert g.requests == 1
     record = complete(g, legacy)
-    assert record["schema_version"] == 3 and record["duration_seconds"] == 12.5
+    assert record["schema_version"] == 4 and record["duration_seconds"] == 12.5
     assert record["api"] == ("legacy" if legacy else "modern")
     frame = scans.listing_frame(record)
     assert frame["seller"].to_list() == ["TestOwner-Realm", "TestOwner", "TestOwner-Realm", "TestOwner-Realm", None]
@@ -81,7 +81,7 @@ def test_addon_captures_v3_on_both_apis_and_imports(tmp_path, legacy):
     path = write_scans(tmp_path / "actual-addon.lua", record)
     manifest = import_scans(addon_source(tmp_path / "data", path), now=NOW)
     assert manifest["scans"][0]["availability"]["listing_available"]["seller"] == 4
-    assert g.requests == 1  # no follow-up requests, retries or auction actions
+    assert g.requests == 1  # no additional auction-house requests or auction actions
     # Clearing before /reload is still blocked, protecting scans that are only in memory.
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert len(g.BrownstoneScanDB.scans) == 1
@@ -202,7 +202,7 @@ def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
                                             lua.table_from({"scan_id": "old-2"})])
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert python_value(g.BrownstoneScanDB) == button_result
-    assert g.BrownstoneScanDB.addon_version == "0.3.1" and g.BrownstoneScanDB.schema_version == 3
+    assert g.BrownstoneScanDB.addon_version == "0.4.0" and g.BrownstoneScanDB.schema_version == 4
 
 
 @pytest.mark.parametrize("ending", [
@@ -284,3 +284,217 @@ def test_slash_commands_label_status_stop_help_and_case_still_work():
     assert g.BrownstoneScanDB.label is None
     command("unknown")
     assert "/bscan start | stop | status | label <text> | clear [all]" in g.messages[len(g.messages)]
+
+
+def pass_client(rows=5, rejected=False, legacy=False):
+    lua, g = client(legacy=legacy, rows=rows)
+    # Reload the addon with a client whose reference data is initially uncached.
+    lua.execute('''
+        loaded, itemRequests = {}, {}
+        GetItemInfo = function(id)
+            referenceCalls[id] = (referenceCalls[id] or 0) + 1
+            if not loaded[id] then return nil end
+            return "Loaded", nil, 2, 25, 10, "Armor", "Cloth", 20, nil, nil, 123
+        end
+        C_Item = { GetItemInfo = GetItemInfo, RequestLoadItemDataByID = function(id)
+            itemRequests[id] = (itemRequests[id] or 0) + 1
+        end }
+    ''')
+    if rejected:
+        lua.execute('''
+            originalCreateFrame = CreateFrame
+            CreateFrame = function(...)
+                local f = originalCreateFrame(...)
+                function f:RegisterEvent(event)
+                    if event == "GET_ITEM_INFO_RECEIVED" then error("unknown event") end
+                end
+                return f
+            end
+        ''')
+    lua.execute((ROOT / "addon/BrownstoneScan/BrownstoneScan.lua").read_text())
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "ADDON_LOADED", "BrownstoneScan")
+    g.SlashCmdList.BROWNSTONESCAN("start")
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_ITEM_LIST_UPDATE" if legacy else "REPLICATE_ITEM_LIST_UPDATE")
+    while len(g.BrownstoneScanDB.scans) == 0:
+        g.mainFrame.scripts.OnUpdate(g.mainFrame, 1)
+    return lua, g
+
+
+def advance(g, seconds=1):
+    g.clock += seconds
+    g.mainFrame.scripts.OnUpdate(g.mainFrame, seconds)
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_item_pass_delayed_answers_saved_before_end_close_and_first_values_unchanged(legacy):
+    _, g = pass_client(legacy=legacy)
+    original = python_value(g.BrownstoneScanDB.scans[1])
+    assert original["status"] == "completed" and original["item_pass"]["status"] == "running"
+    assert not g.scanButton.enabled and not g.reloadButton.enabled and not g.clearButton.enabled
+    g.SlashCmdList.BROWNSTONESCAN("clear all")
+    assert "Wait for the scan and its item info pass to finish" in g.messages[len(g.messages)]
+    g.reloadButton.scripts.OnClick()
+    g.clearButton.scripts.OnClick()
+    assert len(g.BrownstoneScanDB.scans) == 1 and g.reloads == 0
+    advance(g)
+    assert dict(g.itemRequests.items()) == {6538: 1, 2589: 1, 999: 1}
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_CLOSED")
+    for item_id in (6538, 2589, 999):
+        advance(g)
+        g.loaded[item_id] = True
+        g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", item_id, True)
+        # duplicate and unsolicited events must not create observations or change counts
+        g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", item_id, True)
+        g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", 123456, True)
+    advance(g)
+    result = python_value(g.BrownstoneScanDB.scans[1])
+    assert result["items"] == original["items"] and result["listings"] == original["listings"]
+    assert result["status"] == "completed" and not scans.summarize(result)["partial"]
+    assert result["item_pass"]["received"] == 3 and result["item_pass"]["status"] == "completed"
+    assert result["item_pass"]["duration_seconds"] == 5
+    assert scan_details.reference_frame(result)["pass_vendor_sell_copper"].to_list() == [123, 123, 123]
+    assert g.mainFrame.scripts.OnUpdate is None and g.reloadButton.enabled and g.clearButton.enabled
+    assert dict(g.itemRequests.items()) == {6538: 1, 2589: 1, 999: 1}
+    assert sum("Item info:" in m for m in g.messages.values()) == 1
+    g.SlashCmdList.BROWNSTONESCAN("clear")
+    assert len(g.BrownstoneScanDB.scans) == 1  # counted as unsaved before pass began
+
+
+def test_item_pass_failure_timeout_late_event_and_saved_running_import(tmp_path):
+    _, g = pass_client()
+    advance(g)
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", 6538, False)
+    g.loaded[2589] = True
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", 2589, True)
+    advance(g)
+    running = python_value(g.BrownstoneScanDB.scans[1])
+    path = write_scans(tmp_path / "reload-mid-pass.lua", running)
+    manifest = import_scans(addon_source(tmp_path / "data", path), now=NOW)
+    assert manifest["scans"][0]["priced"] and manifest["scans"][0]["availability"]["item_pass"]["received"] == 1
+    advance(g, 18)
+    result = python_value(g.BrownstoneScanDB.scans[1])
+    assert result["item_pass"] | {} == {
+        "total": 3, "requested": 3, "received": 1, "failed": 1, "timed_out": 1, "cached": 0,
+        "wait_limit_seconds": 20, "duration_seconds": 20, "status": "timeout",
+        "api": "C_Item.RequestLoadItemDataByID", "items": [
+            {"item_id": 2589, "item_level": 25, "max_stack_size": 20, "vendor_sell_copper": 123}]}
+    g.loaded[999] = True
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", 999, True)
+    assert python_value(g.BrownstoneScanDB.scans[1]) == result
+    assert not scans.summarize(result)["partial"] and g.mainFrame.scripts.OnUpdate is None
+
+
+def test_item_pass_rejected_event_is_recorded_and_skipped():
+    _, g = pass_client(rejected=True)
+    result = python_value(g.BrownstoneScanDB.scans[1])["item_pass"]
+    assert result["status"] == "skipped" and result["requested"] == 0
+    assert result["reason"] == "GET_ITEM_INFO_RECEIVED registration rejected"
+    assert g.mainFrame.scripts.OnUpdate is None and g.reloadButton.enabled
+    g.SlashCmdList.BROWNSTONESCAN("status")
+    assert "GET_ITEM_INFO_RECEIVED" in g.messages[len(g.messages) - 1]
+
+
+def test_item_pass_missing_api_records_reason():
+    _, g = client()
+    g.SlashCmdList.BROWNSTONESCAN("start")
+    result = complete(g)["item_pass"]
+    assert result["status"] == "skipped" and result["reason"] == "request API missing"
+    assert result["total"] == 1 and result["requested"] == 0
+
+
+def test_item_pass_requests_spread_across_frames_and_errors_are_not_retried():
+    lua, g = client(rows=401)
+    for index in range(1, 402):
+        g.listingData[index][17] = index
+    lua.execute('''
+        itemRequests = {}
+        C_Item.GetItemInfo = function() return nil end
+        C_Item.RequestLoadItemDataByID = function(id)
+            itemRequests[id] = (itemRequests[id] or 0) + 1
+            error("request failed")
+        end
+    ''')
+    g.SlashCmdList.BROWNSTONESCAN("start")
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "REPLICATE_ITEM_LIST_UPDATE")
+    g.mainFrame.scripts.OnUpdate(g.mainFrame, 1)
+    advance(g)
+    assert len(g.itemRequests) == 200
+    advance(g)
+    assert len(g.itemRequests) == 400
+    advance(g)
+    result = python_value(g.BrownstoneScanDB.scans[1])["item_pass"]
+    assert result["requested"] == result["failed"] == 401 and result["status"] == "completed"
+    assert set(g.itemRequests.values()) == {1} and g.mainFrame.scripts.OnUpdate is None
+
+
+def test_item_pass_deadline_rejects_answer_before_next_update_and_stop_keeps_scan():
+    _, g = pass_client()
+    advance(g)
+    g.clock = 20
+    g.loaded[2589] = True
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", 2589, True)
+    assert g.BrownstoneScanDB.scans[1].item_pass.received == 0
+    advance(g, 0)
+    assert g.BrownstoneScanDB.scans[1].item_pass.timed_out == 3
+    _, g = pass_client()
+    advance(g)
+    g.SlashCmdList.BROWNSTONESCAN("stop")
+    assert g.BrownstoneScanDB.scans[1].status == "completed"
+    assert g.BrownstoneScanDB.scans[1].item_pass.status == "stopped"
+    assert g.mainFrame.scripts.OnUpdate is None and g.reloadButton.enabled
+
+
+def test_item_pass_synchronous_answers_zero_precedence_and_omitted_fields():
+    lua, g = client()
+    lua.execute('''
+        loaded, itemRequests = {}, {}
+        C_Item.GetItemInfo = function(id)
+            if not loaded[id] then
+                return "Initial", nil, nil, 0, nil, nil, nil, nil, nil, nil, 0
+            end
+            return "Loaded", nil, nil, 50, nil, nil, nil, 20, nil, nil, 100
+        end
+        C_Item.RequestLoadItemDataByID = function(id)
+            itemRequests[id] = (itemRequests[id] or 0) + 1
+            loaded[id] = true
+            mainFrame.scripts.OnEvent(mainFrame, "GET_ITEM_INFO_RECEIVED", id, true)
+        end
+    ''')
+    g.SlashCmdList.BROWNSTONESCAN("start")
+    record = complete(g)
+    assert record["item_pass"]["received"] == 3 and record["item_pass"]["status"] == "completed"
+    assert all(r == {"item_id": r["item_id"], "max_stack_size": 20} for r in record["item_pass"]["items"])
+    assert scan_details.effective_frame(scan_details.reference_frame(record))["vendor_sell_copper"].to_list() == [0] * 3
+    assert set(g.itemRequests.values()) == {1}
+
+
+def test_item_pass_success_without_values_and_no_candidate_scan_terminate():
+    _, g = pass_client()
+    advance(g)
+    for item_id in (6538, 2589, 999):
+        g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", item_id, True)
+    advance(g)
+    result = python_value(g.BrownstoneScanDB.scans[1])["item_pass"]
+    assert result["received"] == 3 and result["items"] == {} and result["status"] == "completed"
+    _, g = client(rows=4)
+    g.SlashCmdList.BROWNSTONESCAN("start")
+    result = complete(g)["item_pass"]
+    assert result["status"] == "completed" and result["total"] == result["requested"] == 0
+
+
+def test_item_pass_reads_items_loaded_during_listing_reads_without_requesting():
+    _, g = pass_client()
+    g.loaded[2589] = True  # answered while listings were read, before the pass listened
+    advance(g)
+    assert dict(g.itemRequests.items()) == {6538: 1, 999: 1}
+    for item_id in (6538, 999):
+        g.mainFrame.scripts.OnEvent(g.mainFrame, "GET_ITEM_INFO_RECEIVED", item_id, False)
+    advance(g)
+    result = python_value(g.BrownstoneScanDB.scans[1])
+    assert result["item_pass"]["status"] == "completed"
+    assert {k: result["item_pass"][k] for k in ("total", "requested", "failed", "cached")} == {
+        "total": 3, "requested": 2, "failed": 2, "cached": 1}
+    assert result["item_pass"]["items"] == [
+        {"item_id": 2589, "item_level": 25, "max_stack_size": 20, "vendor_sell_copper": 123}]
+    assert "1 already loaded, 2 requested" in g.messages[len(g.messages)]
+    assert scan_details.reference_frame(result)["pass_vendor_sell_copper"].to_list() == [None, 123, None]

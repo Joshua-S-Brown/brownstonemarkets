@@ -406,7 +406,7 @@ def _validate_scans(records: list[dict], now: datetime, summaries: list[dict] | 
                              "check the computer's clock")
     for record in records:
         frame = scans.listing_frame(record)
-        items = scan_details.item_frame(record)
+        items = scan_details.reference_frame(record)
         _check_reference_items(frame, items)
         scan_details.duration(record)
     return summaries
@@ -432,8 +432,8 @@ def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha2
     snapshot_id = f"{config['source_id']}:{summary['scan_id']}"
     identity = {**_observation_keys(config), "snapshot_id": snapshot_id}
     listings = scans.listing_frame(record)
-    items = scan_details.item_frame(record)
-    measured = scan_details.availability(listings, items, scans.optional_out_of_range(record))
+    items = scan_details.reference_frame(record)
+    measured = scan_details.availability(listings, items, scans.optional_out_of_range(record), record)
     priced = not summary["partial"] and listings.height > 0
     prices = scans.item_prices(listings) if priced else None
     stem = silver / f"{sid}_{summary['scan_id']}"

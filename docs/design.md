@@ -40,7 +40,7 @@ brownstone/             importable without Streamlit
   markets.py            market identity: MARKET_KEYS, derived market_id, validation, legacy upgrade
   sources.py            HTTP download
   scans.py              BrownstoneScan SavedVariables: parse, validate, house check, unit and item prices
-  scan_details.py       format-3 reference validation and local availability counts
+  scan_details.py       format-3/4 reference/pass validation, effective values and local availability counts
   metrics.py            versioned aggregate calculator, transactional rebuild and scoped readers
   variants.py           conservative link parser and canonical item identity (ADDON-08)
   normalization.py      CSV → validated frame
@@ -78,7 +78,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 | Addon scan | `source_id, scan_id` → `snapshot_id = <source_id>:<scan_id>` | `addon_scans`: status, `partial`, `priced`, times, counts, `nonexact_stacks`, client, house evidence, scan and file SHA-256. Its import manifest lists every scan with an outcome (`imported`, `duplicate`, `partial (not priced)`, `empty`) and counts `already_imported`, `remaining_unimported` (including unselected scans) and `other_house` (file scans from another auction house); `scan_id`, `updated_at` and `analytical_snapshot_id` name the newest complete scan, and status is `no_complete_scan` when there is none |
 | Listing | `source_id, scan_id, listing_index` + market identity | `scan_listings`: `item_id, item_name, quantity, buyout` (whole stack), `unit_buyout` (exact only), `unit_buyout_ceil`, `min_bid, bid, complete_info`, plus nullable ADDON-09 fields and ADDON-08 variant/resolution |
 | Scan metrics | version + source + full market + scan/snapshot + item/variant/state | `scan_metrics`: integer price/count facts and share/coverage numerators; rules in ADDON-10. `metric_key` is canonical JSON of every identity field, preserving nulls without hash/delimiter collisions; primary key enforces uniqueness |
-| Scan item reference | source + scan + item ID + full market identity | `scan_items`: base-item observations from ADDON-09; `_items.parquet` in silver; legacy scans have no reference observations |
+| Scan item reference | source + scan + item ID + full market identity | `scan_items`: first-pass observations, separate pass values and effective-field provenance; `effective_scan_items` resolves references under ADDON-09; `_items.parquet` in silver; legacy scans have no reference observations |
 | Catalog | `game_version, rules_version, catalog_version` | TOML generated from a selection file and one saved page (CRAFT-08). Header: `source_url`, `source_sha256`, `verified_at`. Items: role, Wowhead URL, optional `vendor_price_copper` with `vendor_price_source_url`, `vendor_verified`, `availability`. Recipes: inputs, `output_quantity`, `required_skill`, Wowhead spell URL, `verification_url`, `evidence_sha256`, optional `output_quantity_verified`, `availability` |
 | Recipe selection | file name = catalog name | `config/recipe-selections/<catalog>.toml`: catalog header fields, finished `[[recipes]]` (with optional overrides), `[recipe_defaults]`, `[[items]]` vendor evidence and notes |
 | Recipe source page | SHA-256 | `data/recipe-sources/wowhead/<game>/<profession>/<sha16>.html` + `.json` manifest: page URL, `saved_at`, `archived_at`, original file name |
@@ -97,6 +97,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
     calculation is frozen in the migration. `ensure_schema` then calls `metrics.initialize_metrics`,
     also retried by `upgrade_database` when schema 7 exists without the metrics completion marker.
     Eligibility, measures, nulls and seller policy live in ADDON-10 (`requirements.md`).
+  - Version 8: adds nullable `pass_item_level`, `pass_max_stack_size`, `pass_vendor_sell_copper` (BIGINT) and `pass_fields_json` (VARCHAR) to `scan_items`. Original columns retain first-pass values. `effective_scan_items` uses `coalesce(first, pass)` for each of the three reference fields; zero is present. Provenance JSON is an ordered list of fields supplied by the pass, `[]` for format-4 items needing no pass value, null for all older formats/historical rows. DDL and view replacement are idempotent; schema-7 backup precedes upgrade. No historical rows or hashes are rewritten.
 - **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
 - **Callers.** The app calls it at startup for whichever source is selected (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
 - **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
@@ -105,6 +106,26 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 - **Shared identity.** `MARKET_KEYS` includes the derived ID and all seven market fields, including `environment` (DATA-03). Browse, Opportunities, crafting prices, depth, Scan changes and analytical deduplication use the entire scope. `known_scan` retrieves the stable source/scan key, adapts schema-3 records for read-only preview and checks every market key before returning deduplication state; a scope mismatch refuses key reuse. Source IDs and `<source_id>:<scan_id>` snapshot IDs are unchanged.
 - **Name read contract.** Schema 5 defines the missing-name check (`loaded_item_name`, which also trims) and resolution once in the named SQL views, preserving every base column and replacing only `item_name`. Browse/search and Opportunities query `named_market_snapshots`. Scan changes keeps each scan's own loaded name (price row, then its listings with lexical ties) and falls back to the lookup, then `Item <id>`, retaining all existing source/market/snapshot predicates. The app seeds parsed catalog labels once per session and catalog contents, through `item_names.seed_catalog_names`, and only warns on failure. Numeric-only price and depth readers still use base tables; crafting/depth displays already name items from their own catalogs. Lookup joins on game version/item ID carry labels only and are one-to-one by primary key.
 - **Name writes.** `load_snapshot` and `load_scan` update only candidates from the newly inserted snapshot, inside the caller's transaction. TSM imports and addon collection imports also seed validated local catalogs, including duplicate imports; the app seeds its parsed catalogs when an existing database is ready, so regenerated catalogs become available on rerun. No database is created for a catalog or preview alone. Malformed local catalogs are excluded from seeding and keep the existing UI warnings. Evidence references identify the stored source/snapshot/price or source/scan/listing, or the catalog item's source URL. Winner policy is solely DATA-02.
+
+### Format-4 item pass
+
+The addon appends the finished listing scan before starting its transient request queue. Only
+`item_pass` in that saved table changes afterward; queue/cursor/pending IDs never enter
+SavedVariables. Pass status `running` after an interrupted reload is valid evidence, not a
+resumption request. Capture bounds and lifecycle policy live in ADDON-09; exact saved fields and
+counter semantics live in `addon/README.md`.
+
+`scan_details.item_frame` retains first-pass observations. `pass_frame` validates metadata and
+separate pass rows; `reference_frame` joins within one scan, preserves both sets of values and
+records fields effectively filled by the pass. The pipeline checks all reference IDs against
+this scan's listings before writing. `_items.parquet` contains first-pass, pass and provenance
+columns. `effective_frame` is the in-memory equivalent of `effective_scan_items` (a test compares
+the two); a pass row repeating a first-pass value is rejected; Today reads
+that view with the unchanged source/full-market/scan/snapshot predicate. Other item-level/stack
+readers should use the same view. Format-4 availability adds `item_first_available`,
+`item_pass_added`, `item_effective_available` and pass counters; existing `item_available` remains
+first-pass availability. Formats 1–3 keep their previous availability shape and null provenance.
+Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash deduplication.
 
 ## Scan import preview
 
@@ -173,7 +194,7 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 ## Known design debt
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 91% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 93% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.

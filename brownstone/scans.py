@@ -19,8 +19,8 @@ from . import metrics, scan_details
 from .variants import ITEM_KEYS
 
 # 1: keyed listings. 2: packed listings and distinct names. 3: richer packed listings,
-# indexed text (including full links) and per-scan item reference observations.
-SCAN_SCHEMA_VERSIONS = (1, 2, 3)
+# indexed text (including full links) and per-scan item reference observations. 4: separate item info pass.
+SCAN_SCHEMA_VERSIONS = (1, 2, 3, 4)
 PACKED_FIELDS = ("item_id", "quantity", "buyout", "min_bid", "bid", "flags", "name_index")
 PACKED_FORMAT = ":".join(PACKED_FIELDS)
 PACKED_V3_FIELDS = (*PACKED_FIELDS, *scan_details.EXTRA_FIELDS)
@@ -250,7 +250,8 @@ def listing_frame(scan: dict) -> pl.DataFrame:
     scan_id = scan["scan_id"]
     listings = _list(scan.get("listings"), f"Scan {scan_id} listings")
     try:
-        frame = _packed_listings(scan, listings) if scan.get("schema_version") in (2, 3) else _keyed_listings(listings)
+        frame = (_packed_listings(scan, listings) if scan.get("schema_version") in (2, 3, 4)
+                 else _keyed_listings(listings))
     except (TypeError, pl.exceptions.PolarsError) as error:
         raise ValueError(f"Scan {scan_id}: listing fields must be integer copper and counts: {error}") from error
     except ValueError as error:
@@ -276,7 +277,7 @@ def listing_frame(scan: dict) -> pl.DataFrame:
     if disagree.height:
         raise ValueError(f"Scan {scan_id}: {disagree.height} listings report a unit_buyout that is not "
                          "buyout / quantity")
-    if scan.get("schema_version") != 3:
+    if scan.get("schema_version") not in (3, 4):
         frame = frame.with_columns([pl.lit(None, dtype).alias(key)
                                     for key, dtype in scan_details.LISTING_DETAILS.items()])
     return frame.select(*scan_details.LISTING_DETAILS, "listing_index", "item_id", "item_name", "quantity", "buyout",
@@ -314,14 +315,14 @@ def _packed_listings(scan: dict, listings: list) -> pl.DataFrame:
         pl.when(pl.col("bid") > 0).then(pl.col("bid")).alias("bid"),
         ((pl.col("flags") & FLAG_COMPLETE_INFO) > 0).alias("complete_info"),
     )
-    if scan.get("schema_version") == 3:
+    if scan.get("schema_version") in (3, 4):
         result = result.hstack(scan_details.listing_details(scan, fields))
     return result
 
 
 def _packed_fields(scan: dict, listings: list) -> pl.DataFrame:
     """The packed integer fields as reported; empty optional fields are null."""
-    packed_fields = PACKED_V3_FIELDS if scan.get("schema_version") == 3 else PACKED_FIELDS
+    packed_fields = PACKED_V3_FIELDS if scan.get("schema_version") in (3, 4) else PACKED_FIELDS
     packed_format = ":".join(packed_fields)
     if scan.get("listing_format") != packed_format:
         raise ValueError(f"listing_format {scan.get('listing_format')!r} is not {packed_format!r}")
@@ -337,7 +338,7 @@ def _packed_fields(scan: dict, listings: list) -> pl.DataFrame:
 def optional_out_of_range(scan: dict) -> dict[str, int]:
     """Format 3's reported optional values that import stored as missing; zero for older formats.
     Call after ``listing_frame`` has validated the scan."""
-    if scan.get("schema_version") != 3:
+    if scan.get("schema_version") not in (3, 4):
         return dict.fromkeys(scan_details.OPTIONAL_RANGES, 0)
     return scan_details.out_of_range(_packed_fields(scan, _list(scan.get("listings"), "listings")))
 

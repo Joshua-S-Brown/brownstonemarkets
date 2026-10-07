@@ -13,7 +13,7 @@ from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 from .item_names import remember_local_catalog_names, remember_observed_names
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -190,8 +190,21 @@ def _migrate_to_7(db):
         """)
 
 
+# Frozen first-pass columns stay intact. Effective references are resolved only in this view.
+def _migrate_to_8(db):
+    for field in ("item_level", "max_stack_size", "vendor_sell_copper"):
+        db.execute(f"ALTER TABLE scan_items ADD COLUMN IF NOT EXISTS pass_{field} BIGINT")
+    db.execute("ALTER TABLE scan_items ADD COLUMN IF NOT EXISTS pass_fields_json VARCHAR")
+    db.execute("""CREATE OR REPLACE VIEW effective_scan_items AS
+        SELECT * EXCLUDE (item_level, max_stack_size, vendor_sell_copper),
+        coalesce(item_level, pass_item_level) AS item_level,
+        coalesce(max_stack_size, pass_max_stack_size) AS max_stack_size,
+        coalesce(vendor_sell_copper, pass_vendor_sell_copper) AS vendor_sell_copper
+        FROM scan_items""")
+
+
 MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4, 5: _migrate_to_5,
-              6: _migrate_to_6, 7: _migrate_to_7}
+              6: _migrate_to_6, 7: _migrate_to_7, 8: _migrate_to_8}
 
 
 def _has_table(db, name: str) -> bool:

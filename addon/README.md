@@ -1,12 +1,12 @@
-# Brownstone Scan 0.3.1
+# Brownstone Scan 0.4.0
 
 A **read-only** auction house scanner for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
 ## What it does and doesn't do
 
 - A scan starts only when you click **Brownstone Scan** on the auction house window, or type `/bscan start` while it is open.
-- It never bids, buys, posts or cancels, and never scans on a timer or unattended. Closing the window stops a running scan, keeping the listings read so far and marking the scan `stopped`.
-- It issues one request, `C_AuctionHouse.ReplicateItems()`, which is Blizzard's own full-snapshot call, then reads the result. If the client has only the older Classic API, it falls back to the `QueryAuctionItems` "get all" scan. Each scan records which one it used (`api`).
+- It never bids, buys, posts or cancels, and never scans on a timer or unattended. Closing the window during listing reading saves a `stopped` scan. Once listings have been saved, closing the window leaves its item info pass running.
+- It issues one auction-house request, `C_AuctionHouse.ReplicateItems()`, which is Blizzard's own full-snapshot call, then reads the result. If the client has only the older Classic API, it falls back to the `QueryAuctionItems` "get all" scan. Each scan records which one it used (`api`).
 - It only records what the client reports. Brownstone does all pricing (per-unit division, rounding, market value) after import, so the addon stays small and does as little as possible in game.
 - The server allows one full scan per 15 minutes per account. If nothing comes back within 30 seconds the attempt stops with a throttling message. Attempts that read zero listings are not saved; partial scans with some listings are, marked `stopped`.
 
@@ -26,8 +26,8 @@ I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C
 
 1. Log in on the character for the house you want (Alliance at the Roleplaying house for the launch market) and open the auction house.
 2. Optional: `/bscan label US Roleplaying Alliance` so the scan carries your own description of where it was taken.
-3. Click **Brownstone Scan** (or `/bscan start`). The button shows progress. Leave the window open.
-4. When chat says the scan is finished, click **Reload** (or type `/reload`) to make the game write the file.
+3. Click **Brownstone Scan** (or `/bscan start`). The button shows listing progress, then **Item info answered/total**. Leave the window open to keep the controls visible.
+4. When chat prints the final **Item info** summary, click **Reload** (or type `/reload`) to make the game write the file.
 5. Repeat once at a neutral auction house with `/bscan label neutral`. Wait 15 minutes between scans.
 
 Commands: `/bscan start | stop | status | label <text> | clear [all]`.
@@ -36,7 +36,7 @@ Commands: `/bscan start | stop | status | label <text> | clear [all]`.
 
 ### Reload and clear controls (STORY-029)
 
-Version 0.3.1 adds **Clear saved scans** and **Reload** immediately to the left of **Brownstone Scan**, using the same auction-window parent and standard `UIPanelButtonTemplate`. The scan button keeps its existing position; the row extends left with 4-pixel gaps (Clear 140×22, Reload 70×22). Both new buttons are disabled from scan start until completion or any stop/error/timeout path. Reload calls `ReloadUI()` directly; clearing never automatically reloads, so the user controls when changes are written.
+Version 0.3.1 adds **Clear saved scans** and **Reload** immediately to the left of **Brownstone Scan**, using the same auction-window parent and standard `UIPanelButtonTemplate`. The scan button keeps its existing position; the row extends left with 4-pixel gaps (Clear 140×22, Reload 70×22). Both maintenance buttons are disabled from scan start through the item info pass, including after listing completion; they re-enable when the pass ends or an empty attempt exits. Reload calls `ReloadUI()` directly; clearing never automatically reloads, so the user controls when changes are written.
 
 **Visibility decision:** the controls are available only with the auction house open, like the existing scan button. This keeps one small, contextual row without a persistent screen panel or new commands. For the manual scan → Reload → import → Clear → Reload routine, leave the house open during the import or reopen it afterward; the existing slash commands also work with the house closed.
 
@@ -56,11 +56,11 @@ After `/reload` or logout:
 <Forever folder>/WTF/Account/<ACCOUNT NAME>/SavedVariables/BrownstoneScan.lua
 ```
 
-It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list. Addon 0.3.1 writes the unchanged format 3; scans written by 0.1.0/0.2.0 keep formats 1/2 and still import. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list. Addon 0.4.0 writes format 4; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
-| `schema_version`, `scan_id` | Format version (1, 2 or 3) and a unique ID (UTC start time plus random suffix). |
+| `schema_version`, `scan_id` | Format version (1, 2, 3 or 4) and a unique ID (UTC start time plus random suffix). |
 | `started_at`, `finished_at` (+ `_utc`) | Unix seconds and ISO UTC text. `duration_seconds` is the elapsed game time. |
 | `status`, `stop_reason` | `completed`, or `stopped` with a reason (window closed, timeout, user stop, error). A stopped scan is partial. |
 | `listing_count`, `reported_count` | Listings saved vs the count the server reported. Equal means complete. |
@@ -71,12 +71,12 @@ It holds one table, `BrownstoneScanDB`, with `schema_version` and a `scans` list
 | `house` | Auctioneer NPC name and GUID, zone and subzone. Use these to tell houses apart when `neutral` is undetermined. |
 | `label` | Your `/bscan label` text. It is a note, not a market ID. |
 | `errors` | Messages about anything that went wrong. |
-| `listing_format`, `names` | Formats 2/3: the field order of each listing, and distinct item names. |
-| `sellers`, `level_types`, `links` | Format 3: distinct original strings, indexed per listing; sellers stay local (ADDON-07). |
-| `items` | Format 3: one table per item ID with nullable official reference observations (ADDON-09). |
+| `listing_format`, `names` | Formats 2/3/4: the field order of each listing, and distinct item names. |
+| `sellers`, `level_types`, `links` | Formats 3/4: distinct original strings, indexed per listing; sellers stay local (ADDON-07). |
+| `items` | Formats 3/4: one table per item ID with nullable official reference observations (ADDON-09). |
 | `listings` | One entry per auction, below. |
 
-**Format 3 listings** extend format 2 in this exact order:
+**Format 3/4 listings** extend format 2 in this exact order:
 
 ```text
 item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index
@@ -86,7 +86,91 @@ For example, `"6538:1:500:0:0:1:1:1:4:2:10:1:1"`. The four text indexes point in
 
 `items` is an array of keyed tables: `item_id`, `class_id`, `subclass_id`, `item_level`, `max_stack_size`, `vendor_sell_copper`. Unavailable fields are omitted by Lua and become null in import. These are one lookup attempt per ID per scan, not variant stat summaries. A reported vendor sell price of zero is distinct from missing.
 
-Import stores the new listing fields, raw link, variant identity/resolution, base-item observations and availability counts. Formats 1/2 keep every new field null. Format 1 links survive in the raw archive but are not retrospectively classified. Browse, Opportunities and Scan changes show variant ID/state (`legacy` for formats 1/2); catalog crafting/depth uses only base rows in format 3. See ADDON-08 for exact grouping and legacy behavior.
+### Format-4 item info pass (STORY-031)
+
+The original `items` array and packed listings remain unchanged. Immediately after listings are
+saved in `BrownstoneScanDB.scans`, a separate scan-owned pass requests incomplete item references.
+The capture bounds and lifecycle rules are ADDON-09 in `docs/requirements.md`.
+
+```lua
+item_pass = {
+    total = 0,
+    requested = 0,
+    received = 0,
+    failed = 0,
+    timed_out = 0,
+    cached = 0,
+    wait_limit_seconds = 20,
+    duration_seconds = 0,
+    status = "running",
+    api = "C_Item.RequestLoadItemDataByID",
+    -- reason = "request API missing", -- optional, omitted when not applicable
+    items = {
+        -- { item_id = 2589, item_level = 5, max_stack_size = 20, vendor_sell_copper = 2 },
+    },
+}
+```
+
+- `total`: distinct first-pass IDs lacking at least one of the three reference fields.
+- `requested`: actual request attempts, at most once per ID; exceptions count as failed attempts.
+- `received`: unique successful `GET_ITEM_INFO_RECEIVED` answers for pending requests, even if
+  the guarded info reader still supplies no additional fields.
+- `failed`: request exceptions or unique `success=false` answers. No retries.
+- `timed_out`: attempted requests still unanswered when the pass ends (including explicit stop).
+- `cached`: IDs whose missing fields were all readable when the pass reached them (typically loaded
+  while listings were read, whose answers the pass could not yet hear), recorded without a request.
+  IDs not reached before the deadline are `total - requested - cached`, separate from timed-out requests.
+- `wait_limit_seconds`: the bound chosen by this addon version; `duration_seconds`: elapsed pass
+  time, updated each frame and at termination. Scan `duration_seconds` still measures listing
+  collection; add pass duration when comparing the full wait. A stalled frame can report elapsed
+  duration above the bound; no answer at/after the deadline is accepted.
+- `status`: `running`, `completed`, `timeout`, `skipped`, or `stopped`. This never changes scan
+  `status`, `partial`, listing counts or pricing eligibility. `skipped` records `reason` for a
+  missing request API or rejected event registration; `stopped` is an explicit `/bscan stop`.
+- `api`: the request API name. Answers use `C_Item.GetItemInfo` or global `GetItemInfo`, returns
+  4/8/11. Event registration and reads/requests are guarded with `pcall`.
+- `items`: only IDs gaining at least one value, with `item_id` and available gained fields among
+  `item_level`, `max_stack_size`, `vendor_sell_copper`. Missing and previously reported fields are
+  omitted; import rejects a pass row that repeats a first-pass value. Values are integer references/copper; zero stays reported, never replaced. No links.
+
+Import stores first-pass values and separate `pass_*` columns. `pass_fields_json` lists fields
+actually filled by the pass. The effective view takes a first-pass value when present, including
+zero, otherwise the pass value. Historical provenance remains null. Availability's existing
+`item_available` stays first-pass; format 4 also records `item_first_available`, `item_pass_added`,
+`item_effective_available` (per field), and `item_pass` counters (total/requested/received/failed/timed_out/cached).
+
+Manual `/reload` or logout during the pass still writes the saved scan and values already gathered.
+On next login a persisted `running` pass is retained without resuming requests. Prefer waiting for
+the final summary before reload/import: importing an interrupted scan and later a changed version
+of the same scan ID remains a content conflict under the existing deduplication rule. Reload/Clear
+buttons and even `/bscan clear all` refuse (with a message) while the pass is active; the unsaved-session guard
+remains afterward. Closing and reopening the house does not restart or cancel the pass.
+
+### Format-4 beta checklist — pending
+
+Use the same house with similar listing counts, record the client build and addon **0.4.0**, and
+compare against **0.3.1** (1,192/3,066 items had all three reference values).
+
+1. Record first-pass, pass-added and effective availability for vendor sell price, item level and
+   max stack size, with item denominators; record cached/requested/received/failed/timed_out and unsent IDs.
+   Listing-link availability should be unchanged by the pass. There is no assumed success threshold.
+2. Record listing duration, pass duration and total elapsed wait; check requests arrive across
+   frames, progress advances, one final summary appears, and no repeat or later callback occurs.
+3. Compare original uncompressed single-scan bytes per listing against 0.3.1; record raw bytes and
+   listing counts, not gzip size. Record client lag and `/reload` lag. ADDON-09's older format-3
+   measurement limits remain documented there; do not claim a new format-4 beta result offline.
+4. Close the house during the pass, reopen it and confirm progress/disabled Reload and Clear,
+   including the existing unsaved-scan clear guard after completion. Stop explicitly in another
+   run and confirm scan completion remains intact. Observe timeout counts if answers do not arrive.
+5. In a separate run type `/reload` mid-pass, and separately log out mid-pass. Inspect/import the
+   file: listings are saved, gathered pass values survive, status may be `running`, and no pass
+   resumes after login. Compare hashes/first-pass arrays before and after; record actual event timing.
+6. Import a normal completed format-4 scan, inspect availability and a pass-supplied vendor reference
+   in Today; import again and confirm duplicate. Preserve local beta evidence; keep seller data local.
+
+No game access was available for implementation. These beta measurements remain explicitly pending.
+
+Import stores the new listing fields, raw link, variant identity/resolution, base-item observations and availability counts. Formats 1/2 keep every new field null. Format 1 links survive in the raw archive but are not retrospectively classified. Browse, Opportunities and Scan changes show variant ID/state (`legacy` for formats 1/2); catalog crafting/depth uses only base rows in formats 3/4. See ADDON-08 for exact grouping and legacy behavior.
 
 **Format 2 listings** are one string each, `item_id:quantity:buyout:min_bid:bid:flags:name_index`, for example `"2589:20:700:0:0:1:3"`. Prices are integer copper as the client reported them, and `0` means none (no buyout or no bid). `flags` adds 1 when the client had loaded the item's details (`complete_info`) and 2 when it reports a commodity (Brownstone rejects those scans, since only stack prices are modeled). `name_index` points into the scan's `names` list (1 is the first name), or is `0` when the client hadn't loaded the name. Names are kept per listing because one item ID can carry several random-suffix names ("of the Monkey", "of the Eagle"). About 28 bytes per listing.
 
@@ -98,7 +182,7 @@ A hand-written example is in `tests/fixtures/brownstone_scan_sample.lua`.
 
 ## Measurement checklist
 
-Keep results and SavedVariables files locally. Format 3 files contain seller names and must not be shared, uploaded or sent to an external service (ADDON-07). Availability summaries contain counts only.
+Keep results and SavedVariables files locally. Formats 3/4 can contain seller names and must not be shared, uploaded or sent to an external service (ADDON-07). Availability summaries contain counts only.
 
 | | Roleplaying Alliance | Neutral |
 | --- | --- | --- |
@@ -122,10 +206,10 @@ If the client prints "No auction API found", run `/dump C_AuctionHouse` and `/du
 
 ## Format-3 beta checklist (STORY-023)
 
-Accepted 2026-10-06 (record below). Repeat it for any later scan-format change. Every baseline and candidate measurement must name the exact addon version used (including 0.3.1 if these controls are installed). The format-3 capture contract and ADDON-09 limits are unchanged; do not label 0.3.1 measurements as 0.3.0. Record versions alongside the local aggregate report; older scans do not carry a per-scan addon version, so use the installed version and retained file provenance rather than guessing.
+Accepted 2026-10-06 (record below). Repeat it for any later scan-format change. Every baseline and candidate measurement must name the exact addon version used (including 0.3.1 if these controls are installed). The listing capture contract and original format-3 measurement limits remain in ADDON-09; do not label 0.3.1 measurements as 0.3.0. Record versions alongside the local aggregate report; older scans do not carry a per-scan addon version, so use the installed version and retained file provenance rather than guessing.
 
 1. **Baseline:** using 0.2.0, take one complete scan at the same house, `/reload`, retain a local single-scan file, import it, then `/bscan clear` and `/reload`. If an existing 0.2.0 file has exactly one scan, it can be the baseline. Record build, house, listing count, duration and uncompressed file bytes.
-2. **Update and capture:** copy the current addon over the installed addon, `/reload`, confirm it loads and `/bscan status` works. At least 15 minutes after the preceding scan, click the scan button with the house open. Record lag/errors and finished vs reported count. `/reload`, retain the local single-scan file, then Preview/Import in Brownstone. Confirm completed format 3, official reference data and separate variant rows. Try `/bscan start` on another manually initiated scan; closing the house during reading should save only a partial scan and no prices.
+2. **Update and capture:** copy the current addon over the installed addon, `/reload`, confirm it loads and `/bscan status` works. At least 15 minutes after the preceding scan, click the scan button with the house open. Record lag/errors and finished vs reported count. `/reload`, retain the local single-scan file, then Preview/Import in Brownstone. Confirm the installed format version, official reference data and separate variant rows. Try `/bscan start` on another manually initiated scan; closing the house during reading should save only a partial scan and no prices.
 3. **Availability and limits:** run the local summary below against baseline/candidate files. Record each available/total count, including sellers, links, required-level type (the raw `level_types` values), all five item-reference fields, unresolved links and `listing_out_of_range`. Record reload lag. Compare duration and bytes per listing against ADDON-09's limits; missing remains null, and reported zero quality/level/vendor values remain zero.
 4. **Variant tooltips/links:** look for Willow Robe (6538) Monkey/Bear/Eagle and Primal Wraps (15010) Whale/Bear, or equivalent currently listed suffix gear. Compare tooltips for different suffixes and multiple listings of the same suffix. Inspect actual payloads: observed bonus IDs are listed in ADDON-08; the traditional suffix field was empty. Confirm different stats have different stored keys/prices, while identical stat modifications with different viewer/context/modifier-28 provenance retain the same key. Check Linen Cloth as a plain base item. Record any unexpected fields or equal keys with different stats before relying on those prices.
 5. **Preserve:** re-import the same file and confirm duplicates. Retain the files and measurement record locally; only after a successful import, `/bscan clear` and `/reload`. A complete format-3 beta import, accepted timing/size results and tooltip confirmation are required to close STORY-023.
@@ -164,14 +248,18 @@ for filename in sys.argv[1:]:
               "duration_seconds": scan_details.duration(record), "file_bytes": len(raw),
               "bytes_per_listing": len(raw) / summary["listing_count"],
               "availability": scan_details.availability(scans.listing_frame(record),
-                                                         scan_details.item_frame(record),
-                                                         scans.optional_out_of_range(record))}
+                                                         scan_details.reference_frame(record),
+                                                         scans.optional_out_of_range(record), record)}
+    result["pass_duration_seconds"] = record.get("item_pass", {}).get("duration_seconds", 0)
+    result["full_duration_seconds"] = (result["duration_seconds"] + result["pass_duration_seconds"]
+                                       if result["duration_seconds"] is not None else None)
     results.append(result)
     print(json.dumps(result, indent=2))
 if len(results) == 2:
     old, new = results
     if old["duration_seconds"] and new["duration_seconds"] is not None:
-        print("Duration ratio:", new["duration_seconds"] / old["duration_seconds"])
+        print("Listing duration ratio:", new["duration_seconds"] / old["duration_seconds"])
+        print("Full duration ratio:", new["full_duration_seconds"] / old["full_duration_seconds"])
     print("Bytes/listing ratio:", new["bytes_per_listing"] / old["bytes_per_listing"])
 PY
 ```

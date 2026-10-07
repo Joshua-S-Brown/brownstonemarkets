@@ -191,7 +191,7 @@ def test_schema6_backup_frozen_ddl_backfill_replay_and_layout(tmp_path):
     backup = path.with_name("brownstone.v6.backup.duckdb")
     assert hashlib.sha256(backup.read_bytes()).hexdigest() == digest
     with duckdb.connect(str(path)) as db, duckdb.connect() as fresh:
-        assert schema_version(db) == 7
+        assert schema_version(db) == 8
         assert db.execute("SELECT count(*) FROM scan_metrics").fetchone() == (5,)
         assert all(db.execute(f"SELECT * FROM {table} ORDER BY ALL").fetchall() == rows
                    for table, rows in observations.items())

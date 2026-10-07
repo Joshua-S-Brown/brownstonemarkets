@@ -22,7 +22,7 @@ def read_today_evidence(db, config, snapshot_id, item_ids):
         ladders.setdefault(item_id, []).append((quantity, buyout, unit))
     base_metrics = {row['item_id']: row for row in metrics if row['variant_id'] is None
                     and row['variant_state'] in (None, 'base')}
-    vendor_rows = db.execute(f"SELECT item_id, vendor_sell_copper FROM scan_items WHERE {predicate} "
+    vendor_rows = db.execute(f"SELECT item_id, vendor_sell_copper FROM effective_scan_items WHERE {predicate} "
                              "AND snapshot_id=? AND scan_id=? AND vendor_sell_copper>0",
                              [*parameters, snapshot_id, scan[0]]).fetchall()
     return observations, ladders, base_metrics, dict(vendor_rows)

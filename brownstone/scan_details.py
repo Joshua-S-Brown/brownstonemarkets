@@ -1,4 +1,5 @@
-"""Format-3 reference observations and capture-availability measurements (local only)."""
+"""Format-3/4 reference observations and capture-availability measurements (local only)."""
+import json
 import math
 from typing import Any
 
@@ -61,7 +62,7 @@ def out_of_range(fields: pl.DataFrame) -> dict[str, int]:
 
 def item_frame(scan: dict) -> pl.DataFrame:
     """One nullable observation per item per scan; no historical/cache backfill."""
-    rows = scan.get("items", []) if scan.get("schema_version") == 3 else []
+    rows = scan.get("items", []) if scan.get("schema_version") in (3, 4) else []
     if rows == {}:
         rows = []
     if not isinstance(rows, list) or any(not isinstance(r, dict) for r in rows):
@@ -90,12 +91,91 @@ def duration(scan: dict) -> float | None:
 
 
 def availability(listings: pl.DataFrame, items: pl.DataFrame,
-                 rejected: dict[str, int] | None = None) -> dict[str, Any]:
-    """Only counts leave capture analysis; never seller values or links."""
-    return {"listing_total": listings.height, "item_total": items.height,
+                 rejected: dict[str, int] | None = None, scan: dict | None = None) -> dict[str, Any]:
+    """Only counts leave capture analysis; never seller values or links.
+
+    With ``scan``, ``items`` must be that scan's ``reference_frame`` (which validated its pass)."""
+    result = {"listing_total": listings.height, "item_total": items.height,
             "listing_out_of_range": rejected or dict.fromkeys(OPTIONAL_RANGES, 0),
             "listing_available": {k: listings[k].drop_nulls().len()
                                   for k in LISTING_DETAILS if k not in ("variant_id", "variant_state")},
             "item_available": {k: items[k].drop_nulls().len() for k in ITEM_SCHEMA if k != "item_id"},
             "variant_states": {state: listings.filter(pl.col("variant_state") == state).height
                                for state in ("base", "variant", "unresolved")}}
+    if scan is not None:
+        result.update(pass_availability(scan, items))
+    return result
+
+
+PASS_FIELDS = ("item_level", "max_stack_size", "vendor_sell_copper")
+PASS_COUNTS = ("total", "requested", "received", "failed", "timed_out", "cached")
+PASS_STATUSES = ("running", "completed", "timeout", "skipped", "stopped")
+
+
+def _pass_metadata(scan: dict) -> dict:
+    value = scan.get("item_pass")
+    if not isinstance(value, dict):
+        raise ValueError("item_pass must be a table")
+    if any(type(value.get(k)) is not int or value[k] < 0 for k in PASS_COUNTS):
+        raise ValueError("item_pass counts must be nonnegative integers")
+    for key in ("wait_limit_seconds", "duration_seconds"):
+        number: Any = value.get(key)
+        if type(number) not in (int, float) or not math.isfinite(number) or number < 0:
+            raise ValueError(f"item_pass {key} must be finite and nonnegative")
+    if value.get("status") not in PASS_STATUSES or value.get("api") != "C_Item.RequestLoadItemDataByID":
+        raise ValueError("invalid item_pass status or api")
+    if value.get("reason") is not None and not isinstance(value["reason"], str):
+        raise ValueError("item_pass reason must be text")
+    answered = sum(value[k] for k in ("received", "failed", "timed_out"))
+    if answered > value["requested"] or value["requested"] + value["cached"] > value["total"]:
+        raise ValueError("inconsistent item_pass counts")
+    if value["status"] != "running" and answered != value["requested"]:
+        raise ValueError("finished item_pass has unanswered requests")
+    return value
+
+
+def pass_frame(scan: dict) -> pl.DataFrame:
+    """Validate separate pass observations; membership is checked against this scan's listings."""
+    if scan.get("schema_version") != 4:
+        return pl.DataFrame(schema={k: ITEM_SCHEMA[k] for k in ("item_id", *PASS_FIELDS)})
+    metadata = _pass_metadata(scan)
+    rows = metadata.get("items")
+    # item_frame validates the row shapes and values; only pass-specific rules follow.
+    frame = item_frame({"schema_version": 3, "items": rows})
+    if any(set(r) - {"item_id", *PASS_FIELDS} for r in rows or []):
+        raise ValueError("unknown item_pass item field")
+    frame = frame.select("item_id", *PASS_FIELDS)
+    if frame.filter(pl.all_horizontal([pl.col(k).is_null() for k in PASS_FIELDS])).height:
+        raise ValueError("item_pass observation must add a value")
+    if frame.height > metadata["received"] + metadata["cached"]:
+        raise ValueError("item_pass observations exceed received and cached counts")
+    return frame
+
+
+def reference_frame(scan: dict) -> pl.DataFrame:
+    """First-pass values plus separate raw pass fields and per-field effective provenance."""
+    first, later = item_frame(scan), pass_frame(scan)
+    result = first.join(later.rename({k: f"pass_{k}" for k in PASS_FIELDS}), on="item_id", how="full", coalesce=True)
+    # The pass reports only fields the first pass lacked; a reported zero is present.
+    if result.filter(pl.any_horizontal([pl.col(k).is_not_null() & pl.col(f"pass_{k}").is_not_null()
+                                        for k in PASS_FIELDS])).height:
+        raise ValueError("item_pass observation repeats a first-pass value")
+    fields = [[k for k in PASS_FIELDS if row[f"pass_{k}"] is not None] for row in result.iter_rows(named=True)]
+    provenance = [json.dumps(keys) if scan.get("schema_version") == 4 else None for keys in fields]
+    return result.with_columns(pl.Series("pass_fields_json", provenance, dtype=pl.String))
+
+
+def effective_frame(items: pl.DataFrame) -> pl.DataFrame:
+    """In-memory twin of storage's ``effective_scan_items`` view; tests keep the two in step."""
+    return items.with_columns([pl.coalesce(k, f"pass_{k}").alias(k) for k in PASS_FIELDS])
+
+
+def pass_availability(scan: dict, references: pl.DataFrame) -> dict[str, Any]:
+    if scan.get("schema_version") != 4:
+        return {}
+    metadata = scan["item_pass"]  # validated by reference_frame
+    first = {k: references[k].drop_nulls().len() for k in ITEM_SCHEMA if k != "item_id"}
+    resolved = effective_frame(references)
+    effective = {k: resolved[k].drop_nulls().len() for k in first}
+    return {"item_first_available": first, "item_pass_added": {k: effective[k] - first[k] for k in first},
+            "item_effective_available": effective, "item_pass": {k: metadata[k] for k in PASS_COUNTS}}
