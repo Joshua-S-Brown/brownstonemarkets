@@ -79,7 +79,7 @@ def test_source_config():
 
 def test_forever_market_needs_no_realm_and_neutral_houses_cost_more():
     shared = dict(data_dir=Path("data"), max_age_hours=24, auction_cut=.05, min_discount=.2, top_n=20)
-    forever = dict(source_id="my-forever-scans", provider="addon", scan_path="BrownstoneScan.lua",
+    forever = dict(source_id="my-forever-scans", provider="addon", machine="mac", scan_path="BrownstoneScan.lua",
                    game_version="forever", environment="live", region="us", scope="house", server_type="roleplaying")
     alliance = build_source(shared, {**forever, "faction": "alliance"})
     assert alliance["market_id"] == "forever-us-roleplaying-alliance"

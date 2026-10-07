@@ -11,7 +11,7 @@ from test_scans import FINISHED, NOW, addon_source, listing, packed, scan, write
 from brownstone import scan_details, scans
 from brownstone.markets import MARKET_KEYS
 from brownstone.pipeline import import_scans, preview_scans
-from brownstone.storage import MIGRATIONS, ensure_schema, schema_version, upgrade_database
+from brownstone.storage import MIGRATIONS, SCHEMA_VERSION, ensure_schema, schema_version, upgrade_database
 from brownstone.today import build_today
 from brownstone.today_data import read_today_evidence
 from brownstone.today_settings import TodaySettings
@@ -143,7 +143,7 @@ def test_migration8_backup_replay_layout_and_historical_null_provenance(tmp_path
     assert upgrade_database(tmp_path)
     assert (tmp_path / "brownstone.v7.backup.duckdb").read_bytes() == raw
     with duckdb.connect(str(path)) as db, duckdb.connect() as fresh:
-        assert schema_version(db) == 8
+        assert schema_version(db) == SCHEMA_VERSION
         assert db.execute("SELECT * FROM scan_items").fetchall() == [(*before[0], None, None, None, None)]
         MIGRATIONS[8](db)
         MIGRATIONS[8](db)

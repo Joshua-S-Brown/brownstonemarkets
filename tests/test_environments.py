@@ -266,7 +266,7 @@ def test_cli_migrates_v3_and_reimports_only_duplicates(tmp_path, monkeypatch, ca
     cfg.parent.mkdir()
     cfg.write_text(
         'data_dir = "data"\nmax_age_hours = 24\nauction_cut = 0.05\nmin_discount = 0.2\ntop_n = 20\n'
-        '[[sources]]\nsource_id = "my-scans"\nprovider = "addon"\ngame_version = "forever"\n'
+        '[[sources]]\nsource_id = "my-scans"\nprovider = "addon"\nmachine = "mac"\ngame_version = "forever"\n'
         'environment = "beta"\nregion = "us"\nscope = "house"\nserver_type = "roleplaying"\nfaction = "alliance"\n'
         f'scan_path = "{path}"\n')
     monkeypatch.setattr("brownstone.cli.import_scans",

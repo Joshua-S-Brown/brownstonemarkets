@@ -224,19 +224,22 @@ def _prepare_scans(records: list[dict], config: Source, now: datetime,
 
 
 def _reviewed_preparation(config: Source, path: Path, scan_ids: Iterable[str] | None,
-                          now: datetime, reviewed: ScanPreview) -> ScanPreview:
+                          now: datetime, reviewed: ScanPreview, include_duplicates: bool = False) -> ScanPreview:
     current = preview_scans(config, path, now)
     if (current.configuration, current.raw, current.known) != (reviewed.configuration, reviewed.raw, reviewed.known):
         raise StalePreviewError("Preview is stale: file, source/configuration or imported scans changed. Preview again")
     records = _select_scans(current.records, scan_ids)
     ids = {r["scan_id"] for r in records}
-    if not ids <= set(current.new_ids):
+    allowed = {s["scan_id"] for s, mismatch in zip(current.summaries, current.mismatches, strict=True)
+               if not mismatch} if include_duplicates else set(current.new_ids)
+    if not ids <= allowed:
         raise StalePreviewError("Select only new scans from this preview. Preview again")
     return current
 
 
 def import_scans(config: Source, input_path: Path | None = None, scan_ids: Iterable[str] | None = None,
-                 now: datetime | None = None, reviewed: ScanPreview | None = None) -> dict:
+                 now: datetime | None = None, reviewed: ScanPreview | None = None,
+                 include_duplicates: bool = False) -> dict:
     """Import BrownstoneScan SavedVariables for an addon source; returns the collection manifest.
 
     Reads ``input_path`` or the configured ``scan_path`` and never writes to it. Every scan must match
@@ -251,7 +254,7 @@ def import_scans(config: Source, input_path: Path | None = None, scan_ids: Itera
     now = now or datetime.now(UTC)
     if reviewed:
         # A stale review fails before even an archive directory or failure manifest is created.
-        preparation = _reviewed_preparation(config, path, scan_ids, now, reviewed)
+        preparation = _reviewed_preparation(config, path, scan_ids, now, reviewed, include_duplicates)
         return _import_reviewed(config, path, now, preparation, reviewed, scan_ids)
     return _save_collection(config, path, now, _read_scan_bytes(path), scan_ids)
 
@@ -278,6 +281,7 @@ def _save_collection(config: Source, path: Path, now: datetime, raw: bytes,
     bronze_file = _bronze_copy(folders["bronze"], sid, raw, sha256)
     manifest: dict = {
         "snapshot_id": sid, **_identity(config), "collected_at": now.isoformat(), "source": str(path.resolve()),
+        "machine": config.get("machine"), "original_file_name": path.name,
         "bronze_file": bronze_file, "sha256": sha256, "bytes": len(raw), "status": "received",
     }
     try:
@@ -455,7 +459,7 @@ def _import_scan(db, config: Source, silver: Path, sid: str, now: datetime, sha2
                     availability_json=json.dumps(measured, sort_keys=True) if record["schema_version"] >= 3 else None,
                     priced=priced, nonexact_stacks=scans.nonexact_stacks(listings),
                     item_count=prices.height if prices is not None else None, source_sha256=sha256,
-                    collection_id=sid, collected_at=now)
+                    collection_id=sid, collected_at=now, machine=config.get("machine"))
     scan_path = Path(f"{stem}_scan.parquet")
     pq.write_table(pl.DataFrame([scan_row]).with_columns(pl.col(pl.Null).cast(pl.String)).to_arrow(), scan_path)
     load_scan(db, scan_path, Path(f"{stem}_listings.parquet"), prices_path, items_path)

@@ -2,17 +2,22 @@
 import streamlit as st
 
 from brownstone.pipeline import import_guidance, import_scans, preview_configuration, preview_scans
+from brownstone.scan_inputs import (
+    CLEAR_REMINDER,
+    file_rows,
+    import_inputs,
+    latest_rows,
+    preview_inputs,
+)
 
 _STATE = ("scan_import_preview", "scan_import_selection", "scan_import_result")
 
 
 def render(config):
-    identity = preview_configuration(config)
-    # One active review only: switching away and back cannot resurrect an old selection or result.
-    if st.session_state.get("scan_import_identity") != identity:
-        for key in _STATE:
-            st.session_state.pop(key, None)
-        st.session_state["scan_import_identity"] = identity
+    if config.get("drop_folder"):
+        _render_inputs(config)
+        return
+    _reset_identity(config)
     if st.button("Preview addon scans", help=f"Reads {config['scan_path']}", width="stretch"):
         for key in _STATE:
             st.session_state.pop(key, None)
@@ -27,7 +32,7 @@ def render(config):
     preview = st.session_state.get("scan_import_preview")
     if preview is None:
         return
-    _show_preview(preview)
+    _show_preview(preview, config.get("machine"))
     if not preview.new_ids:
         st.warning("Nothing new for this source: every scan was imported before or is from another auction "
                    "house. If you scanned since, type /reload in game and Preview again. Don't /bscan clear "
@@ -39,8 +44,9 @@ def render(config):
         st.button("Import addon scan", type="primary", width="stretch", on_click=_import, args=(config, preview))
 
 
-def _show_preview(preview):
+def _show_preview(preview, machine=None, drop_time=None):
     st.dataframe([{
+        "Machine": machine, "Drop (UTC)": str(drop_time or ""),
         "Scan ID": summary["scan_id"],
         "Started (UTC)": summary["started_at"].strftime("%Y-%m-%d %H:%M:%S UTC"),
         "Finished (UTC)": summary["finished_at"].strftime("%Y-%m-%d %H:%M:%S UTC"),
@@ -71,3 +77,52 @@ def _import(config, preview):
     else:
         result = ("warning", f"No complete scan among the imported scans, so prices are unchanged. {outcomes}.")
     st.session_state["scan_import_result"] = [result, ("info", import_guidance(manifest))]
+
+
+def _render_inputs(config):
+    _reset_identity(config)
+    if st.button("Preview addon scans", width="stretch"):
+        for key in _STATE:
+            st.session_state.pop(key, None)
+        st.session_state["scan_import_preview"] = preview_inputs(config)
+    for kind, message in st.session_state.pop("scan_import_result", []):
+        getattr(st, kind)(message)
+    preview = st.session_state.get("scan_import_preview")
+    if preview is None:
+        return
+    st.dataframe(file_rows(preview), hide_index=True)
+    for file in preview.files:
+        if file.preview:
+            st.caption(f"{file.path.name} — machine: {file.machine}; drop UTC: {file.drop_time or 'local file'}")
+            _show_preview(file.preview, file.machine, file.drop_time)
+    st.dataframe(latest_rows(preview), hide_index=True)
+    st.info(CLEAR_REMINDER)
+    choices = [str(f.path) for f in preview.files if f.matching_ids]
+    if choices:
+        selected = st.multiselect("Files to import (each archived separately)", choices,
+                                  default=preview.new_files, key="scan_import_selection")
+        if selected:
+            st.button("Import addon scan", type="primary", width="stretch", on_click=_import_inputs,
+                      args=(config, preview))
+
+
+def _import_inputs(config, preview):
+    st.session_state.pop("scan_import_preview", None)
+    try:
+        results = import_inputs(config, preview, st.session_state.get("scan_import_selection", []))
+        messages = [("error" if r["status"] == "error" else "success",
+                     f"{r['file']}: {r.get('error', r['status'])}") for r in results]
+        # Fresh read after import supplies per-file and latest-machine cleanup evidence.
+        st.session_state["scan_import_preview"] = preview_inputs(config)
+        st.session_state["scan_import_result"] = messages
+    except Exception as error:
+        st.session_state["scan_import_result"] = [("error", f"Import failed: {error}. Preview again.")]
+
+
+def _reset_identity(config):
+    identity = preview_configuration(config)
+    # One active review only: switching away and back cannot resurrect an old selection or result.
+    if st.session_state.get("scan_import_identity") != identity:
+        for key in _STATE:
+            st.session_state.pop(key, None)
+        st.session_state["scan_import_identity"] = identity

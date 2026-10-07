@@ -26,7 +26,7 @@ EVIDENCE = {"faction": "Alliance", "zone": "Stormwind City"}
 
 def addon_source(data_dir, scan_path=FIXTURE, **overrides):
     shared = dict(data_dir=data_dir, max_age_hours=24, auction_cut=.05, min_discount=.2, top_n=20)
-    entry = dict(source_id="my-scans", provider="addon", scan_path=scan_path, game_version="forever",
+    entry = dict(source_id="my-scans", provider="addon", machine="mac", scan_path=scan_path, game_version="forever",
                  environment="live",
                  region="us", scope="house", server_type="roleplaying", faction="alliance",
                  rules_version="forever-beta-1.60", scan_evidence=dict(EVIDENCE))
@@ -335,7 +335,8 @@ def test_cli_refuses_disabled_sources_and_imports_enabled_ones(tmp_path, monkeyp
     config.parent.mkdir()
     old = write_scans(tmp_path / "scan.lua", scan("cli", int(datetime.now(UTC).timestamp()) - 60, [listing(1, 1, 50)]))
     body = ('data_dir = "data"\nmax_age_hours = 1000000\nauction_cut = 0.05\nmin_discount = 0.2\ntop_n = 20\n'
-            '[[sources]]\nsource_id = "mine"\nprovider = "addon"\nenabled = {enabled}\nscan_path = "scan.lua"\n'
+            '[[sources]]\nsource_id = "mine"\nprovider = "addon"\n'
+            'machine = "mac"\nenabled = {enabled}\nscan_path = "scan.lua"\n'
             'game_version = "forever"\nenvironment = "live"\n'
             'region = "us"\nscope = "house"\nserver_type = "normal"\nfaction = "alliance"\n')
     config.write_text(body.format(enabled="false"))
@@ -355,7 +356,8 @@ def test_local_overrides_keep_personal_settings_out_of_the_tracked_config(tmp_pa
     tracked = tmp_path / "config/market.toml"
     local = tracked.with_name(LOCAL_OVERRIDES)
     tracked.write_text('data_dir = "data"\nmax_age_hours = 24\nauction_cut = 0.05\nmin_discount = 0.2\ntop_n = 20\n'
-                       '[[sources]]\nsource_id = "mine"\nprovider = "addon"\nenabled = false\n'
+                       '[[sources]]\nsource_id = "mine"\nprovider = "addon"\n'
+            'machine = "mac"\nenabled = false\n'
                        'scan_path = "data/inbox/BrownstoneScan.lua"\ngame_version = "forever"\nenvironment = "live"\n'
                        'region = "us"\n'
                        'scope = "house"\nserver_type = "normal"\nfaction = "alliance"\n')

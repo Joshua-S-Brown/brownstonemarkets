@@ -1,0 +1,41 @@
+{
+  "machine_pattern": "^[a-z0-9-]+$",
+  "file_pattern": "^([a-z0-9-]+)-([0-9]{8}T[0-9]{6}Z)-BrownstoneScan[.]lua$",
+  "time_format": "yyyyMMddTHHmmssZ",
+  "examples": [
+    {
+      "name": "windows-pc-20261007T004900Z-BrownstoneScan.lua",
+      "valid": true
+    },
+    {
+      "name": "pc2-20260230T004900Z-BrownstoneScan.lua",
+      "valid": false
+    },
+    {
+      "name": "PC-20261007T004900Z-BrownstoneScan.lua",
+      "valid": false
+    },
+    {
+      "name": "pc_2-20261007T004900Z-BrownstoneScan.lua",
+      "valid": false
+    },
+    {
+      "name": "pc-20261007T004900Z-BrownstoneScan (1).lua",
+      "valid": false
+    },
+    {
+      "name": "pc-20261007T004900Z-BrownstoneScan.lua.partial",
+      "valid": false
+    },
+    {
+      "name": "notes.txt",
+      "valid": false
+    },
+    {
+      "name": "pc-20261007T004900Z-BrownstoneScan.lua\n",
+      "valid": false
+    }
+  ],
+  "python_time_format": "%Y%m%dT%H%M%SZ",
+  "file_template": "{machine}-{time}-BrownstoneScan.lua"
+}

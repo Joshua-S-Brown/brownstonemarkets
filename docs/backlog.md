@@ -41,7 +41,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 **Order:**
 1. STORY-031 item info pass (addon; beta, small)
 2. STORY-032 character snapshots: gold, bags, bank (addon + import; beta)
-3. STORY-037 a second machine's files (both machines are played in the beta; next to implement)
+3. STORY-037 a second machine's files (implemented, pending review)
 4. STORY-033 event journal (addon; beta)
 5. STORY-038 Today craft details (Brownstone; works on existing scans)
 6. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
@@ -139,6 +139,8 @@ Acceptance:
 - **Limited stock** (if the vendor has any) is noted, since vendor stock is otherwise *not modeled*.
 
 ### STORY-037 — A second machine's files
+
+**Implemented, pending review.**
 
 Added 2026-10-06; refined 2026-10-07 for implementation. Decisions are under OPS-03 in `requirements.md`: Google Drive drop folder (installed and signed in on both machines), Windows scans accepted, Brownstone and `data/` only on the Mac, and the Windows PC has the repository cloned.
 

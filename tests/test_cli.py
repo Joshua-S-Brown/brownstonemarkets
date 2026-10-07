@@ -87,6 +87,7 @@ def test_tsm_collection_uses_the_first_enabled_source_by_default(tmp_path, monke
 @pytest.mark.parametrize("enabled, args, message", [
     ("true", ["--source", "missing"], "Unknown source: missing"),
     ("true", ["--source", "on", "--scan", "x"], "--scan applies only to addon sources"),
+    ("true", ["--preview"], "--preview applies only to addon sources"),
     ("false", [], "No enabled source"),
 ])
 def test_cli_rejects_unknown_sources_and_misplaced_scan_flags(tmp_path, monkeypatch, capsys, enabled, args, message):
@@ -101,7 +102,8 @@ def test_cli_says_when_a_file_has_no_complete_scan(tmp_path, monkeypatch, capsys
     config.parent.mkdir()
     write_scans(tmp_path / "scan.lua", scan("cut-short", int(datetime.now(UTC).timestamp()) - 60, [],
                                             status="stopped", reported=10))
-    config.write_text(SHARED + '[[sources]]\nsource_id = "mine"\nprovider = "addon"\nscan_path = "scan.lua"\n'
+    config.write_text(SHARED + '[[sources]]\nsource_id = "mine"\nprovider = "addon"\n'
+                      'machine = "mac"\nscan_path = "scan.lua"\n'
                       'game_version = "forever"\nenvironment = "live"\n'
                       'region = "us"\nscope = "house"\nserver_type = "normal"\n'
                       'faction = "alliance"\n', encoding="utf-8")

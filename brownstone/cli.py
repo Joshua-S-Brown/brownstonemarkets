@@ -3,9 +3,10 @@ import sys
 from pathlib import Path
 
 from .config import ADDON_PROVIDER, LOCAL_OVERRIDES, Source, read_sources
-from .pipeline import import_guidance, import_scans, run
+from .pipeline import import_guidance, import_scans, preview_scans, run
 from .recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR
 from .recipe_import import archive_page, load_selection, prepare_catalog
+from .scan_inputs import CLEAR_REMINDER, file_rows, import_inputs, input_source, latest_rows, preview_inputs
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -52,21 +53,22 @@ def main() -> None:
                         help="Configured source_id to collect (defaults to the first enabled source)")
     parser.add_argument("--scan", action="append", dest="scans", metavar="SCAN_ID",
                         help="Addon sources: import only this scan from the file (repeatable)")
+    parser.add_argument("--preview", action="store_true", help="Read-only addon preview and drop cleanup status")
     args = parser.parse_args()
     try:
         config = _select_source(args)
         if config["provider"] == ADDON_PROVIDER:
-            manifest = import_scans(config, args.input, args.scans)
+            _addon_command(config, args)
+            return
         else:
             if args.scans:
                 raise ValueError("--scan applies only to addon sources")
+            if args.preview:
+                raise ValueError("--preview applies only to addon sources")
             result, output = run(config, args.input)
     except Exception as error:
         print(f"Pipeline failed: {error}", file=sys.stderr)
         sys.exit(1)
-    if config["provider"] == ADDON_PROVIDER:
-        _report_scans(config, manifest)
-        return
     print(result.select("rank", "item_id", "item_name", "buy_gold", "discount", "net_spread_gold"))
     print(f"Saved {result.height} screening candidates to {output}")
 
@@ -97,3 +99,41 @@ def _report_scans(config: Source, manifest: dict) -> None:
     else:
         print("No complete scan among the imported scans; prices are unchanged")
     print(import_guidance(manifest))
+
+
+def _addon_command(config: Source, args: argparse.Namespace) -> None:
+    if config.get("drop_folder") and args.input is None:
+        preview = preview_inputs(config)
+        _report_inputs(preview)
+        if not args.preview:
+            for result in import_inputs(config, preview, scan_ids=args.scans):
+                print(f"File {result['file']}: {result['status']}")
+                if "manifest" in result:
+                    _report_scans(config, result["manifest"])
+                if "error" in result:
+                    print(result["error"], file=sys.stderr)
+            _report_inputs(preview_inputs(config))
+        return
+    if args.input is not None:
+        config = input_source(config, args.input)
+    if args.preview:
+        single = preview_scans(config, args.input)
+        for summary, known, mismatch in zip(single.summaries, single.known, single.mismatches, strict=True):
+            state = "duplicate" if known else "other house" if mismatch else "new"
+            print(f"{config.get('machine', 'missing')} {summary['scan_id']}: {state}")
+        return
+    _report_scans(config, import_scans(config, args.input, args.scans))
+
+
+def _report_inputs(preview) -> None:
+    for row in file_rows(preview):
+        print(row)
+    for file in preview.files:
+        if file.preview:
+            for summary, known, mismatch in zip(file.preview.summaries, file.preview.known,
+                                                file.preview.mismatches, strict=True):
+                state = "duplicate" if known else "other house" if mismatch else "new"
+                print(f"  {file.machine} {summary['scan_id']}: {state}")
+    for row in latest_rows(preview):
+        print(row)
+    print(CLEAR_REMINDER)

@@ -182,7 +182,7 @@ A hand-written example is in `tests/fixtures/brownstone_scan_sample.lua`.
 
 ## Measurement checklist
 
-Keep results and SavedVariables files locally. Formats 3/4 can contain seller names and must not be shared, uploaded or sent to an external service (ADDON-07). Availability summaries contain counts only.
+Keep results and SavedVariables files locally. Formats 3/4 can contain seller names and must not be shared, published or sent to external processing (ADDON-07; OPS-03 permits the private Drive drop transport). Availability summaries contain counts only.
 
 | | Roleplaying Alliance | Neutral |
 | --- | --- | --- |
@@ -273,3 +273,77 @@ PY
 | Scan/reload lag, errors; button and slash command | No scan errors and no client error reports. Lag was not timed; none was noticed. Scan, Reload and Clear were used through the buttons. `/bscan start` without the button and closing the house mid-scan were not exercised in game (both are covered offline). |
 | Different suffix tooltips separated; same stats/provenance variants equivalent | Willow Robe (6538): 20 suffixes, each its own key; *of Intellect* and *of Magic* at 12,900 copper versus 500 for the rest, matching the in-game listings. Primal Wraps (15010): 14 suffixes, each its own key. No key holds two names of the same item (3,589 item/key pairs). The same name appears under several keys only for different enchants (for example Battering Hammer of Healing with enchant 723) or bonus IDs (*of the Physician*, 12748/12749; not tooltip-compared). Links differing only in modifier 28 share a key. |
 | Plain item base; missing/unsupported links unresolved | Linen Cloth (2589): 601 listings, all base. 72,259 base, 7,920 variant and 7,940 unresolved listings, including the 6,060 without a loaded link. |
+
+
+## Windows scans to the Mac (STORY-037)
+
+Brownstone and its `data/` folder stay on the Mac. Windows needs only WoW, Google Drive for desktop
+and this repository clone. The rules are OPS-03 in `docs/requirements.md`.
+
+1. Close WoW. In the Windows repository folder, run `git pull` to get the current addon and scripts.
+   Copy the whole `addon/BrownstoneScan` folder into your game's
+   `_classic_beta_/Interface/AddOns/` folder. You should see
+   `Interface/AddOns/BrownstoneScan/BrownstoneScan.toc`, not another nested BrownstoneScan folder.
+   Replace the installed addon files when you update the repository. Start the game and confirm
+   BrownstoneScan is enabled on the character selection screen.
+2. Install Google Drive for desktop from Google's website and sign in to the same account on
+   both machines. Create a dedicated folder such as `BrownstoneDrops` inside My Drive. Use the
+   folder visible in File Explorer on Windows and Finder on the Mac. Mark this folder **Available
+   offline** on both machines, and wait for Drive to finish syncing. Never put Brownstone's
+   database or `data/` folder there. Keep the folder private.
+3. In `tools/windows/`, copy `drop-settings.example.json` to `drop-settings.local.json`. Enable
+   **File name extensions** in File Explorer so the name does not end in `.json.txt`. Open the
+   copy in Notepad and fill in all three values:
+   - `saved_variables`: the full path to your account's
+     `_classic_beta_/WTF/Account/ACCOUNT/SavedVariables/BrownstoneScan.lua`.
+   - `drop_folder`: the full local Windows path to the dedicated Google Drive folder.
+   - `machine`: a stable label such as `windows-pc`, using lowercase letters, digits and hyphens.
+   In JSON, use two backslashes for each Windows path separator, as in the example, or use `/`.
+   Save the file. It is ignored by Git because these paths can identify your account. No Python,
+   Pester or extra packages are needed for the Windows script.
+4. On the Mac, add these lines to your existing untracked `config/market.local.toml`. Merge into
+   the existing source table instead of creating a second copy of that table:
+
+   ```toml
+   [sources.forever-us-normal-alliance-addon]
+   enabled = true
+   machine = "mac"
+   scan_path = "/PATH/TO/WTF/Account/ACCOUNT/SavedVariables/BrownstoneScan.lua"
+   drop_folder = "/PATH/TO/Google Drive/My Drive/BrownstoneDrops"
+   ```
+
+   Use the real local paths only in this file, especially if the Drive path contains your email.
+   Keep the existing house evidence settings; Windows and Mac scans must match the selected house.
+5. After a Windows scan finishes (including its item pass), **log out and close WoW**. Double-click
+   `tools/windows/drop-scans.cmd`. Its window stays open so you can read the result. A successful
+   run prints **Verified drop** with a filename such as
+   `windows-pc-20261007T004900Z-BrownstoneScan.lua`. **Nothing new** means it did not copy anything
+   because the bytes match the latest drop for that machine. Errors require correction and another
+   run; they never authorize clearing. The script only reads your SavedVariables file.
+6. Wait for Drive to finish syncing, then on the Mac click **Preview addon scans**. Find the file,
+   its `windows-pc` label, UTC drop time, and scans marked New or Already imported. Partial copies,
+   conflict copies and unrelated files show an ignored reason. A syncing/offline or malformed file
+   shows its own error; other readable files can still be imported. Choose the files to import and
+   click **Import addon scan**. Each file becomes its own exact-byte archived collection.
+7. Check **Fully imported** for that file and the **Latest drop** row for `windows-pc`. Both must
+   be true. Another-house scans require import into the appropriate source before clearing. For
+   a command-line check on the Mac, run:
+
+   ```bash
+   .venv/bin/python -m brownstone --source forever-us-normal-alliance-addon --preview
+   ```
+
+   Ordinary CLI import archives only files with new scans; `--scan ID` limits IDs and `--input FILE` reads one file (a drop keeps its machine). To archive a duplicate-only file, select it on the page.
+   Re-preview should mark imported scans Already imported/duplicate. Only after the latest drop
+   is fully imported, and only if you have not played on Windows since making that drop, use
+   `/bscan clear` on Windows next session, then `/reload`. If you played since, log out, make and
+   import another drop first. Never clear solely because the copy script said Nothing new.
+8. You may delete fully imported drops by hand in Drive to save space; Brownstone never removes
+   them. Keep the latest drop until after the next-session clear check. Bronze on the Mac preserves
+   the exact bytes. Do not delete partial/error/other-house drops on the strength of an older
+   machine's successful import.
+
+Drive streaming placeholders may be unavailable offline or still syncing. Make files available offline,
+wait for sync, and preview again after any change. A local rename does not guarantee the Mac has
+received the completed file yet. No actual Windows/game/Drive round trip was performed during
+implementation; use the steps above to verify your first real drop before clearing.

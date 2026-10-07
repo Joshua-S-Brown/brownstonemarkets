@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 
 from . import markets
+from .drop_files import validate_machine
 from .markets import MARKET_KEYS
 from .scans import EVIDENCE_FIELDS
 
@@ -42,6 +43,8 @@ class Source(TypedDict):
     allow_missing_updated_at: NotRequired[bool]
     source_url: NotRequired[str]  # HTTPS download; every provider except "addon".
     scan_path: NotRequired[Path]  # provider "addon": the local SavedVariables file to import.
+    machine: NotRequired[str]  # Configured provenance only, never market identity.
+    drop_folder: NotRequired[Path]  # Optional read-only inbox, local override only.
     scan_evidence: NotRequired[dict[str, str]]  # provider "addon": values each scan must match.
 
 
@@ -90,6 +93,7 @@ def _validate_feed(source: dict) -> None:
         if not source.get("scan_path"):
             raise ValueError(f"{label}: an addon source needs scan_path, the SavedVariables file to import")
         source["scan_path"] = Path(source["scan_path"])
+        _validate_addon_inputs(source)
         evidence = source.setdefault("scan_evidence", {})
         unknown = set(evidence) - set(EVIDENCE_FIELDS)
         if unknown:
@@ -97,10 +101,22 @@ def _validate_feed(source: dict) -> None:
         if not all(isinstance(value, str) and value for value in evidence.values()):
             raise ValueError(f"{label}: scan_evidence values must be non-empty text")
         return
-    if "scan_path" in source or "scan_evidence" in source:
+    if {"scan_path", "scan_evidence", "machine", "drop_folder"} & source.keys():
         raise ValueError(f"{label}: scan_path and scan_evidence are for addon sources only")
     if not str(source.get("source_url", "")).startswith("https://"):
         raise ValueError(f"{label}: source_url must use HTTPS")
+
+
+def _validate_addon_inputs(source: dict) -> None:
+    if "machine" not in source:
+        raise ValueError("addon input requires machine for the local scan_path")
+    validate_machine(source["machine"])
+    if "drop_folder" in source:
+        if not source["drop_folder"]:
+            raise ValueError("drop_folder requires a non-empty path and machine for the local scan_path")
+        source["drop_folder"] = Path(source["drop_folder"])
+        if Path(source["data_dir"]).resolve().is_relative_to(source["drop_folder"].resolve()):
+            raise ValueError("data_dir must be outside the read-only drop_folder")
 
 
 LOCAL_OVERRIDES = "market.local.toml"  # Next to market.toml; ignored by Git.
@@ -117,6 +133,8 @@ def read_sources(path: Path, local: Path | None = None) -> list[Source]:
     with path.open("rb") as file:
         raw = tomllib.load(file)
     entries = raw.pop("sources", None) or [{}]
+    if "drop_folder" in raw or any("drop_folder" in entry for entry in entries):
+        raise ValueError("drop_folder belongs only in market.local.toml")
     if local is not None and local.exists():
         with local.open("rb") as file:
             overrides = tomllib.load(file).get("sources", {})
@@ -133,8 +151,9 @@ def read_sources(path: Path, local: Path | None = None) -> list[Source]:
     root = path.parent.parent
     raw["data_dir"] = (root / raw.get("data_dir", "data")).resolve()
     for entry in entries:
-        if isinstance(entry.get("scan_path"), str):
-            entry["scan_path"] = (root / entry["scan_path"]).resolve()
+        for key in ("scan_path", "drop_folder"):
+            if isinstance(entry.get(key), str):
+                entry[key] = (root / entry[key]).resolve()
     sources = [build_source(raw, entry) for entry in entries]
     if len({source["source_id"] for source in sources}) != len(sources):
         raise ValueError("Source IDs must be unique")

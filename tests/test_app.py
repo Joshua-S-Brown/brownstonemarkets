@@ -506,3 +506,37 @@ def test_addon_source_upgrades_an_existing_older_database_on_load(tmp_path, monk
     assert not at.exception and any("upgraded" in t.value for t in at.toast)
     with duckdb.connect(str(data / "brownstone.duckdb"), read_only=True) as db:
         assert schema_version(db) == SCHEMA_VERSION
+
+
+def test_drop_import_page_machine_files_cleanup_and_stale_review(tmp_path, monkeypatch):
+    from test_scans import finished_now, listing, scan, write_scans
+    at, addon = preview_addon(tmp_path, monkeypatch)
+    folder = tmp_path / "drop"
+    folder.mkdir()
+    addon.update(machine="mac", drop_folder=folder)
+    win = write_scans(folder / "windows-pc-20261007T004900Z-BrownstoneScan.lua",
+                      scan("win", finished_now(), [listing(2, 1, 80)]))
+    (folder / "copy.partial").write_bytes(b"partial")
+    at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    files = next(t.value for t in at.dataframe if "File" in t.value.columns)
+    assert set(files["Machine"].dropna()) == {"mac", "windows-pc"}
+    assert any("Partial copy" in status for status in files["Status"])
+    latest = next(t.value for t in at.dataframe if "Latest drop" in t.value.columns)
+    assert not latest["Fully imported"].iloc[0]
+    assert any("haven't played" in i.value for i in at.info)
+    selection = next(w for w in at.multiselect if w.label.startswith("Files to import"))
+    selection.set_value([]).run()
+    assert not any(b.label == "Import addon scan" for b in at.button)
+    selection.set_value([str(win)]).run()
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    latest = next(t.value for t in at.dataframe if "Latest drop" in t.value.columns)
+    assert latest["Fully imported"].iloc[0]
+    assert any(str(win) in s.value for s in at.success)
+    # Duplicate files remain selectable explicitly to preserve a collection, default excludes them.
+    selection = next(w for w in at.multiselect if w.label.startswith("Files to import"))
+    selection.set_value([str(addon["scan_path"])]).run()
+    addon["scan_path"].write_bytes(addon["scan_path"].read_bytes() + b"\n")
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert any("stale" in e.value for e in at.error)
+    assert not at.exception

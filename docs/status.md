@@ -2,9 +2,11 @@
 
 Current implemented state, limitations and how to verify. History lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-06._
+_Last updated 2026-10-07._
 
 ## Implemented
+
+- **Second-machine files (STORY-037, implemented pending review):** configured machine provenance, optional local-only read-only Drive inbox, independent per-file previews/imports and exact-byte collections, ignored/error reasons, latest-drop/full-import cleanup evidence, CLI `--preview` and file selection in the import page. Schema 9 adds nullable scan machine; historical rows stay missing. Windows has a manual PowerShell script, double-click wrapper and ignored settings file with an example. Setup is in `addon/README.md`; rules are OPS-03 and contracts are in `design.md`. Actual Windows/game/Drive round trip remains pending.
 
 - **Ingestion:** TSM CSV → bronze/silver/DuckDB/gold with manifests, validation and analytical deduplication. Sources: Mankrik Alliance Classic Era (development stand-in), plus Retail Area 52 and US commodities (regression only).
 - **Addon scan import (STORY-010):** a `provider = "addon"` source imports BrownstoneScan SavedVariables through **Preview addon scans** → select new scans → **Import addon scan** (STORY-014), or `python -m brownstone --source <id> [--input file] [--scan ID]`. Rules ADDON-01 to ADDON-06 in `requirements.md`.
@@ -66,7 +68,7 @@ _Last updated 2026-10-06._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (94.97% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.19% today) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.4.0**, writing scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented, pending review and beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -106,7 +108,7 @@ _Last updated 2026-10-06._
 git diff --check
 ```
 
-Expected: 573 tests pass, offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 604 tests pass and one explicit PowerShell-unavailable skip on this Mac; 605 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 
@@ -231,3 +233,25 @@ The greedy plan is affordable, not a global optimum. Below-vendor evidence is an
 restricted to base/legacy identities with an observed scan vendor-sell reference. Missing reference
 prices are omitted. Sales speed, stockpile, volatility, character inventory/recipes, cross-profession
 routes and automated actions remain outside STORY-025 (see backlog → Today, later versions).
+
+
+STORY-037 verification: `tests/test_scan_inputs.py` covers shared naming examples, machine/local-only config,
+read-only previews, two-machine same-market imports, per-file archives, partial pricing, duplicate/conflicting
+IDs, ignored/unreadable/truncated/other-house files, latest-drop cleanup, stale reviews and schema-9
+backup/replay/legacy nulls. CLI preview/subsets and explicit input remain covered; `tests/test_app.py`
+exercises file selection, machine/UTC rows, ignored files, fresh cleanup evidence and stale import rejection.
+`tests/test_windows_drop.py` invokes the shipped PowerShell harness with disposable files where available;
+macOS visibly skips it, and Windows CI runs it. The harness tests shared names, byte equality, no-op duplicates,
+process/missing/invalid guards, hash failure and no-overwrite collisions without Pester.
+
+On copies under ignored `work/story-037/`, migration 8→9 preserves 10 scans, 825,631 listings, 81,757 prices,
+12,135 item references, 46,739 metrics and 39,299 item names. All historical machines remain null;
+the schema-8 backup equals the original copied database byte-for-byte, and migration replay is idempotent.
+A copied 0.4.0 beta file named `windows-pc-20261007T004900Z-BrownstoneScan.lua` previews as duplicate
+`20261007T004900Z-9dc790`, fully imported; preview leaves the copied database unchanged. The originals
+remain unchanged: database SHA-256 `46dc059c0f8bdf4cc2a0ef2e55531d4d0915845f58bf148e2d00030c4f7ea425`;
+input SHA-256 `a576e621c93eaae2eab2f6153f284b54984c2455088c308164df774a8cfa9632`.
+Real Drive folder, real SavedVariables and original `data/` were never written for these checks.
+Drive streaming/offline files and sync delays can cause retryable file errors; naming completion only
+protects the local copy, not remote sync ordering. Preview memory and repeated parsing grow with retained
+files; manual cleanup is necessary. Successful files commit independently of failed files.

@@ -19,4 +19,4 @@ jobs:
       - run: python -m mypy
       # Streamlit is in the lock file, so the UI test runs instead of skipping.
       # Coverage report; fails below the fail_under floor in pyproject.toml.
-      - run: python -m pytest -p no:cacheprovider --cov
+      - run: python -m pytest -p no:cacheprovider --cov -ra

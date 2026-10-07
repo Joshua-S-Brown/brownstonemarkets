@@ -54,6 +54,7 @@ scope = "region"
 [[sources]]
 source_id = "forever-us-normal-alliance-addon"
 provider = "addon"
+machine = "mac"  # Provenance for scan_path; override locally if this machine has another name.
 enabled = false  # Enable it, and set scan_path, in config/market.local.toml (untracked).
 label = "Forever beta US Normal Alliance — my scans (addon)"
 # Placeholder. The game's own file contains your account folder name, so keep the real path in

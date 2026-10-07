@@ -21,6 +21,9 @@ brownstone = "brownstone.cli:main"
 [tool.setuptools.packages.find]
 include = ["brownstone*"]
 
+[tool.setuptools.package-data]
+brownstone = ["drop_contract.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

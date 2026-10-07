@@ -19,3 +19,6 @@ htmlcov/
 
 # Today preferences (one file per source, plus a save's temporary file) remain local even with a custom data directory.
 today-settings.*.local.json*
+
+# Windows drop script settings contain personal SavedVariables and Drive paths.
+tools/windows/drop-settings.local.json

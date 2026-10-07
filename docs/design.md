@@ -40,6 +40,8 @@ brownstone/             importable without Streamlit
   markets.py            market identity: MARKET_KEYS, derived market_id, validation, legacy upgrade
   sources.py            HTTP download
   scans.py              BrownstoneScan SavedVariables: parse, validate, house check, unit and item prices
+  drop_files.py          shared Windows/Python naming contract and machine validation
+  scan_inputs.py         independent input files, reviewed batch import and cleanup evidence
   scan_details.py       format-3/4 reference/pass validation, effective values and local availability counts
   metrics.py            versioned aggregate calculator, transactional rebuild and scoped readers
   variants.py           conservative link parser and canonical item identity (ADDON-08)
@@ -98,6 +100,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
     also retried by `upgrade_database` when schema 7 exists without the metrics completion marker.
     Eligibility, measures, nulls and seller policy live in ADDON-10 (`requirements.md`).
   - Version 8: adds nullable `pass_item_level`, `pass_max_stack_size`, `pass_vendor_sell_copper` (BIGINT) and `pass_fields_json` (VARCHAR) to `scan_items`. Original columns retain first-pass values. `effective_scan_items` uses `coalesce(first, pass)` for each of the three reference fields; zero is present. Provenance JSON is an ordered list of fields supplied by the pass, `[]` for format-4 items needing no pass value, null for all older formats/historical rows. DDL and view replacement are idempotent; schema-7 backup precedes upgrade. No historical rows or hashes are rewritten.
+  - Version 9: adds nullable `machine VARCHAR` to `addon_scans`, with no backfill or change to identities, hashes, prices or listings. `ADD COLUMN IF NOT EXISTS` is replayable. The normal schema-8 backup precedes upgrade; older scans keep null, including after duplicate import. Fresh and upgraded scan layouts agree.
 - **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
 - **Callers.** The app calls it at startup for whichever source is selected (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
 - **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
@@ -135,6 +138,17 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 - `_save_collection` preserves raw bytes and manifests, and `_load_collection` shares transactional deduplication and per-scan import with the CLI. `_file_scan_state` classifies every file scan after loading as saved (same ID and hash), `other_house` or remaining, without validating unselected scans; an unusable entry counts as remaining. `import_guidance` uses those counts to protect subsets and warn about other-house scans.
 - `views/scan_import.render` owns one active review and selection in Streamlit session state. Configuration/source switches discard both; changing to a TSM source also invalidates the active addon identity. Each Preview click clears prior state before reading. Import runs in the button's `on_click` callback and stores its messages for the rerun, so the result replaces the reviewed table. Errors discard the review and require another click. `app.py` orchestrates these controls and keeps TSM refresh unchanged.
 - Bronze/silver/database together are still not atomic; normal import-write failures retain a failed manifest for diagnosis. Best-effort file-read detection cannot prevent every concurrent game write (ADDON-06).
+
+### Multiple input files (STORY-037)
+
+- `Source.machine` is required for addon inputs, validated by `drop_files.validate_machine`. `Source.drop_folder` is optional and accepted by `read_sources` only through local overrides; both paths resolve relative to the project. The configured data directory cannot be inside the drop folder. Rules and cleanup decisions are OPS-03.
+- `brownstone/drop_contract.json` is the single naming/pattern source consumed by Python and PowerShell, including UTC format strings, filename template, and shared valid/invalid examples. The JSON is included as Python package data. The PowerShell harness runs without Pester through pytest where PowerShell exists; macOS reports an explicit skip, Windows CI executes it.
+- `scan_inputs.InputFile` holds path, machine, UTC drop time, per-file `ScanPreview`, error or ignored reason. `InputPreview` includes the full inventory and resolved configuration. `preview_inputs` opens no ignored file, writes nothing, and isolates read/validation/conflict errors. `latest()` includes unreadable final drops so an older successful drop cannot be mistaken for the latest one.
+- `import_inputs` recomputes the inventory, configuration, bytes and known state before any writes. Selected files import independently; later identical scans deduplicate against earlier committed files, while other unexpected duplicate-state changes invalidate that file. Each file then uses the existing reviewed importer and final writer check. This is a sequence of per-file transactions, not one batch transaction; earlier successful collections survive a later failure.
+- Batch selections identify files by full path because scan IDs repeat across files. CLI `--scan` limits matching IDs in every file. The page selects files and imports their matching scans, including partial scans and duplicates; another-house entries remain unimported. `include_duplicates=True` allows an explicitly reviewed duplicate-only file to obtain its own collection; the single-file UI retains its new-only selection contract.
+- Bronze manifests add `machine` (configured local name or parsed drop machine) and `original_file_name`; existing `source`, SHA-256, byte count, scan outcomes and remaining/other-house counts remain. Machine is also added to new silver scan rows and stored `addon_scans`. Byte blobs may be shared; collection manifests never collapse files. Duplicate import preserves the original stored machine and never guesses a historical one.
+- `file_rows` and `latest_rows` provide common CLI/page cleanup evidence. `fully_imported` is true only for a readable nonempty file whose every scan has a matching stored hash and no house mismatch. Ignored names, parse errors, conflicts and other-house scans cannot give cleanup permission.
+- CLI `--preview` is read-only. With a drop folder, ordinary addon import lists every file and imports only those with new scans (or, with `--scan`, those holding the requested IDs), so a repeated run never re-archives imported files; `--input` keeps the explicit single-file path and takes its machine from a drop name, otherwise from `machine`. The page shows file status, per-file scan tables, UTC provenance and each machine's latest-drop state, then refreshes those tables after import.
 
 ## Scan comparison
 
@@ -192,6 +206,8 @@ No change to crafting, the Action Board or the views should be needed. If one is
 Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `brownstone/` and `launch.py`) and pytest with a branch-coverage floor run locally and in CI; configuration is in `pyproject.toml`. `Source` is a `TypedDict`, so mypy checks config key names wherever a function is annotated with it.
 
 ## Known design debt
+
+- Batch preflight and per-file reviewed imports parse files repeatedly and retain their bytes in memory. Large retained drop folders increase preview cost; manual cleanup bounds it. Rename completion is local only and cannot guarantee Google Drive's remote visibility or offline availability.
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
 - **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 93% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.

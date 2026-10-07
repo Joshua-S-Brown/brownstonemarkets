@@ -13,7 +13,7 @@ from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 from .item_names import remember_local_catalog_names, remember_observed_names
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -203,8 +203,13 @@ def _migrate_to_8(db):
         FROM scan_items""")
 
 
+def _migrate_to_9(db) -> None:
+    """Machine is nullable provenance; historical scans are never guessed or backfilled."""
+    db.execute("ALTER TABLE addon_scans ADD COLUMN IF NOT EXISTS machine VARCHAR")
+
+
 MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4, 5: _migrate_to_5,
-              6: _migrate_to_6, 7: _migrate_to_7, 8: _migrate_to_8}
+              6: _migrate_to_6, 7: _migrate_to_7, 8: _migrate_to_8, 9: _migrate_to_9}
 
 
 def _has_table(db, name: str) -> bool:
