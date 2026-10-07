@@ -25,10 +25,11 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - **Widen the Forever catalogs** (manual, on the Recipe catalogs page): the rest of Tailoring, then the professions you plan to level at launch. The board and Today's *Craft* list only cover catalog recipes, so this is what gives them something to show.
 - **If any yield is more than 1** (now unlikely: Wowhead's "(2)" is an effect number, not a count; see `requirements.md` → CRAFT-08), *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
 - **Prepare a beta character for the character-data tests** (added 2026-10-06): level one **gathering** profession (Mining or Herbalism) and one **crafting** profession that uses it, far enough to gather, craft, post, sell, let something expire and cancel. Keep a little gold to buy and vendor with. This is what STORY-032 and STORY-033 are tested on.
-- **Test the new addon builds in game** once STORY-031 to STORY-033 are ready (aim: by 13 October, leaving a week of beta). Each run records what actually happened, so it can be preserved as a test fixture before the beta closes:
+- **Test the new addon builds in game** once STORY-031 to STORY-033 and STORY-040 are ready (aim: by 13 October, leaving a week of beta). Each run records what actually happened, so it can be preserved as a test fixture before the beta closes:
   - **Item info pass (STORY-031):** after a scan, how many items still lack vendor price, item level and stack size, against the 0.3.1 numbers.
   - **Snapshots (STORY-032):** gold and bags written on logout and on `/reload`; bank only after opening the bank; two characters on the same account. With a new character (added 2026-10-07: no spare bags yet), test the backpack, any equipped bags, the main bank and one bank bag slot if you can buy it. That bank bag must appear in the bank snapshots (taken when you open the bank) and never in the logout snapshot of your bags. Whatever you can't test yet moves to *Snapshot coverage* under Later.
   - **Event journal (STORY-033):** buy from the auction house, post, cancel, let one expire, sell one; open the mailbox and take the invoice and the returned item; craft; gather; buy and sell at a vendor; send mail between your own characters. Note which events fired and with what values.
+  - **Active auctions (STORY-040):** open the Auctions tab before posting, after posting, after a cancel and after a sale, and note whether the list arrives without opening the tab.
   - **Unconfirmed claims** (`requirements.md` → *Known Forever market facts*): time from a sale to its gold in the mailbox; the deposit charged for a few posts of known vendor price and duration (STORY-035); whether the Black Market vendor exists, where, and its prices (STORY-036); the postage for mail to your own characters, with and without attached items and gold (added 2026-10-06: moving materials to the character with the right profession may cost something per mail).
 
 ## Next
@@ -43,17 +44,18 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 2. STORY-032 character snapshots: gold, bags, bank (addon + import; beta)
 3. STORY-037 a second machine's files (implemented and reviewed; first Windows round trip passed 2026-10-07)
 4. STORY-033 event journal (addon; beta)
-5. STORY-038 Today craft details (Brownstone; works on existing scans)
-6. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
-7. STORY-035 auction deposits (needs a beta check)
-8. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-9. STORY-036 vendor price ceilings
-10. STORY-027 removed listings
-11. STORY-015b crafting across professions
-12. STORY-021 item page and charts
-13. STORY-026 scan coverage and rhythm
-14. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-15. STORY-006 replay
+5. STORY-040 your active auctions (addon; beta; must be testable by 13 October)
+6. STORY-038 Today craft details (Brownstone; works on existing scans)
+7. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
+8. STORY-035 auction deposits (needs a beta check)
+9. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+10. STORY-036 vendor price ceilings
+11. STORY-027 removed listings
+12. STORY-015b crafting across professions
+13. STORY-021 item page and charts
+14. STORY-026 scan coverage and rhythm
+15. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+16. STORY-006 replay
 
 STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
 
@@ -63,7 +65,7 @@ STORY-030 and STORY-025 are implemented and pending review; review them alongsid
 
 ### STORY-031 — Item info pass after a scan
 
-**Implemented, pending review and beta measurement.** Added 2026-10-06; final rule in `requirements.md` → ADDON-09.
+**Implemented and reviewed (2026-10-06); pending beta measurement.** Added 2026-10-06; final rule in `requirements.md` → ADDON-09.
 
 As a gold maker, I want each scan to carry vendor price, item level and stack size for every item listed, so that *Below vendor* and deposits (STORY-035) have item references for more than a third of items. Listing links and variant identity are unchanged by this pass.
 
@@ -186,6 +188,24 @@ Acceptance:
 - **Docs:** Windows setup in `addon/README.md` (installing the addon from the repository, Drive for desktop, the script's settings, and the routine: log out → run the script → import on the Mac → clear in game next session); the rules in `requirements.md`; contracts in `design.md`; current state in `status.md`.
 - **Offline tests:** naming and ignored files, machine validation, two machines' scans of the same house in one market, duplicate and conflicting scan IDs across files, an unreadable drop beside a good one, other-house drops, clean-up status, the migration (backup, replay, missing machine for older scans), CLI and the import page. The script's tests run where PowerShell is available (Windows CI) and are skipped elsewhere, with the skip visible.
 - **Moved out:** the mail cross-check between characters on different machines needs the event journal; it is now part of STORY-034.
+
+### STORY-040 — Your active auctions
+
+Added 2026-10-07 (product owner). Must be testable in game by 13 October (*Now*), with STORY-031 to STORY-033. Captures raw evidence only; meaning is STORY-034.
+
+As a gold maker, I want the addon to record my own active auctions whenever the game shows them to me, so that every item can be followed through its whole cycle: crafted or bought, posted, still listed, then sold, expired or cancelled and taken from the mailbox.
+
+Why: the journal (STORY-033) records the post and cancel calls and the mailbox invoices, but not what is actually listed. A post call is an attempt, not proof; the owned list confirms it, shows what is still up between sessions, and shows sold auctions waiting for their mail.
+
+Acceptance:
+- **Read when the client reports the list, never requested.** On the client's owned-auctions update (`OWNED_AUCTIONS_UPDATED` with `C_AuctionHouse` on Forever; `AUCTION_OWNED_LIST_UPDATE` with the legacy API on the Classic stand-in), read the complete list with read-only APIs. The addon never calls `C_AuctionHouse.QueryOwnedAuctions`, `GetOwnerAuctionItems` or any other request: the game's own UI asks for the list when you open the Auctions tab (or post or cancel). Whether it arrives without opening the tab is a **beta check**. Register guarded, like every journal event.
+- **One journal entry per changed list,** family `auction`, in the existing journal (same ID, sequence, cap and clear rules as ADDON-12): the API used, the count the client reported, and per auction every value it returns as reported (auction ID, item ID, item link, quantity, status such as sold and waiting for mail, time left, bid, buyout, bidder). Missing stays missing, never zero; money in integer copper. Record a list only when it differs from the last one recorded this session, as for the mailbox.
+- **Empty is not unknown:** a list the client reported with zero auctions is recorded (you have nothing listed). A character whose list was never observed has *active auctions unknown*, never none.
+- **Never acts, and stays silent:** no posting, cancelling, bidding or requests; nothing in chat in normal play.
+- **Import:** no new storage path or migration; entries go through STORY-033's shared non-scan import and are counted by family in the preview. The addon version goes up; the file format goes up only if import needs it (record which in ADDON-12).
+- **Seen in Brownstone:** on the addon import page, per character, the latest observed active-auction list: time (UTC), number of auctions, and how many the client marked sold, or *active auctions unknown*. No other views; interpretation is STORY-034.
+- **Offline tests** with Lua stubs for the modern and legacy APIs: a list with several auctions including a sold one, an unchanged list (no new entry), a changed list, an empty list, missing values, no request functions ever called, a rejected event, and the import page's latest row and unknown case.
+- **Checklist** in `addon/README.md`: open the Auctions tab before posting, post two small stacks, open it again, cancel one, open it again, and after a sale (before and after taking the mail) open it again. Note whether the list arrived without the tab, and save the recordings as fixtures before 21 October.
 
 ### STORY-038 — Today craft details
 
@@ -442,7 +462,7 @@ Acceptance:
 - **Demand waves as the population levels:** leveling gear, bags and profession-leveling materials first, end-game consumables later. Show each wave from consistent scans instead of guessing from guides (*Market timing* above).
 - **Spread across many markets:** prefer several modest, steady markets over one contested one, for example a cap on how much of one market's supply Today plans to add. Needs sales speed (STORY-027, then the ledger).
 - **Average cost and procurement:** what each item in inventory cost on average, and buying below that average to drive it down. Decide whether *Cost basis* (FIFO lots, under *Ledger analytics*) also shows a weighted average, and combine it with *Market timing*'s cheapest-to-buy windows.
-- **Your own postings:** each active auction with when it was posted, at what price against the lowest at the time, and what sold, when (day and hour) and how fast. The journal (STORY-033) records posts and invoices. Consider whether STORY-032 should also record your own active auctions whenever the auction house is open, as a check; that must be decided before the beta closes.
+- **Your own postings:** each active auction with when it was posted, at what price against the lowest at the time, and what sold, when (day and hour) and how fast. The journal (STORY-033) records posts and invoices, and STORY-040 records the active auctions themselves (decided 2026-10-07).
 - **Mail between your own characters:** count postage as a cost in the ledger (STORY-034), and when a plan moves materials to the character with the right profession, include that postage. The amount is a beta check under *Now*.
 
 **Deferred** (2026-10-06, from the same notes; revisit only with new evidence or a decision):
