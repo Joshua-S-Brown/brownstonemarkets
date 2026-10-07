@@ -237,21 +237,28 @@ Acceptance:
 
 ### STORY-042 — Beta evidence report
 
-Added 2026-10-07 (product owner: "I'll rely on you and scripts to do the testing"). Brownstone only; no addon change. Needed while the beta runs, so the product owner can just play and Claude checks each session's file.
+**Implemented (2026-10-07); pending review and real format-5/6 beta evidence.** Run instructions and
+current limits are in [status.md](status.md#beta-evidence-report-story-042); module boundaries and
+load-session inference are in [design.md](design.md#beta-evidence-report-story-042).
+
+Added 2026-10-07 (product owner: "I'll rely on you and scripts to do the testing"). Brownstone only; no addon change. Needed while the beta runs, so the product owner can just play and Claude checks each session's file. **Refined 2026-10-07 for implementation** (after the STORY-041 review); aim to have it working by 13 October.
 
 As the product owner, I want one command that checks an addon file and says what was captured, what is missing and what looks wrong, so that I don't have to inspect anything by hand.
 
 Acceptance:
-- **One CLI command** (for example `brownstone beta-report FILE [--previous FILE]`) that only reads its inputs. It never writes to the configured data directory, the game folder or the input file; it writes a Markdown report and the same facts as JSON to a new timestamped folder under `work/beta-reports/` (ignored by Git) and prints the folder path.
-- **File facts:** bytes, SHA-256, addon version, file format, record counts by type, characters, and the time span covered.
+- **One CLI command** (for example `brownstone beta-report FILE [--previous FILE]`, added to the existing `brownstone/cli.py`) that only reads its inputs. It never writes to the configured data directory, the game folder or the input file; it writes a Markdown report and the same facts as JSON to a new timestamped folder under `work/beta-reports/` (ignored by Git) and prints the folder path.
+- **Same reader as import:** the file is parsed and each record validated with the existing import code (`pipeline`, `addon_records`, `character_snapshots`, `journal`, `professions`), never a second parser. A record the importer would refuse becomes a *fail* naming the record and the importer's message; the report still covers everything else. A file that can't be parsed at all still gets a report with its file facts and one *fail*.
+- **File facts:** bytes, SHA-256, addon version, file format, record counts by type, characters, and the time span covered. **Size:** approximate serialized bytes by record type (scans, snapshots, journal by family) and journal entries and bytes per load session, so growth from normal play is visible.
 - **Per load session:** rejected events, missing and installed hooks, fired counts and `journal_errors`, from `journal_diagnostics`.
 - **Per character:** snapshots by kind with times, gold, slot counts, level and skills when present; journal entries by family and event with first and last time; latest owned-auction list; latest known-recipe lists when present.
 - **Checks,** each reported as *pass*, *warn* or *fail* with the entry IDs involved:
-  - Required fields present for each record type; entry IDs unique; same ID with different content is a *fail*; sequence strictly increasing per file; times plausible (not in the future, not before the beta).
+  - Required fields present for each record type; entry IDs unique; same ID with different content is a *fail*; sequence strictly increasing per file; times plausible (not in the future, not before the beta start in `requirements.md` → *Product direction*, 17 September 2026).
   - Money chain: within a load session, each money entry's *before* equals the previous *after*; gold in consecutive snapshots against the summed money changes between them (a difference is a *warn* with the residual, never hidden).
   - Bag changes between two bags snapshots against their slot difference, per item (residual shown as a *warn*).
   - An overflow marker or skipped entries is a *fail*.
+  - **Professions (from the STORY-041 review):** each bags snapshot from addon 0.8.0 or later without `level` or without any skill surface is a *warn*; which skill API answered (legacy, modern or both). Per known-recipe list: profession, listed recipe count, and `possibly_incomplete` with its cause (filter, collapsed header, missing row type or count). A list whose profession name is missing, empty or `UNKNOWN` is a *fail*. More than 5 lists for one profession in one load session is a *warn* (lists should be saved only when recipes, rank, headers or filters change, not per craft).
   - **Coverage of the beta checklist:** for each checklist under *Now* (snapshots, journal, active auctions, professions), which expected events and hooks were seen in this file and which weren't. Kept as a small table in code, so a new story adds its rows.
+- **Result:** the console prints the folder path and one line of totals (pass, warn, fail). Exit code 0 when nothing fails, 1 when any check fails, 2 when the input can't be read. The report carries no listing seller names (ADDON-07); scan records appear only as counts and times.
 - **Import round trip** on a fresh temporary copy and data directory: preview, import, import again (all duplicates), and the decompressed bronze archive equals the input bytes. Reported as one check.
 - **Compare with an earlier file** (`--previous`): what is new since that file, by character and family, so one play session's additions can be checked on their own.
 - **Offline tests** on synthetic files: a clean file (all pass), a broken money chain, a bag residual, a duplicate ID with different content, an overflow marker, a missing diagnostics table, the round trip, the comparison and a check that nothing outside `work/beta-reports/` is written.

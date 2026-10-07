@@ -152,9 +152,7 @@ def read_addon_database(raw: bytes) -> dict:
 
 def read_addon_records(raw: bytes) -> tuple[list[dict], list[dict]]:
     database = read_addon_database(raw)
-    records = _list(database.get("scans"), "scans")
-    snapshots = _list(database.get("snapshots"), "snapshots")
-    journal = _list(database.get("journal"), "journal")
+    records, snapshots, journal = addon_record_lists(database)
     for values, key in ((records, "scan_id"), (snapshots, "snapshot_id"), (journal, "entry_id")):
         ids = [r.get(key) if isinstance(r, dict) else None for r in values]
         if key != "scan_id" and any(not isinstance(value, str) or not value for value in ids):
@@ -162,6 +160,19 @@ def read_addon_records(raw: bytes) -> tuple[list[dict], list[dict]]:
         if len(set(ids)) != len(ids):
             raise ValueError(f"Duplicate {key} in file")
     return records, snapshots + journal
+
+
+def addon_record_lists(database: dict) -> tuple[list[dict], list[dict], list[dict]]:
+    """Shared list extraction; evidence reports validate records independently after this step."""
+    records = addon_record_list(database, "scans")
+    snapshots = addon_record_list(database, "snapshots")
+    journal = addon_record_list(database, "journal")
+    return records, snapshots, journal
+
+
+def addon_record_list(database: dict, kind: str) -> list[dict]:
+    """Extract one import list so a report can continue after another list is malformed."""
+    return _list(database.get(kind), kind)
 
 
 def read_saved_variables(raw: bytes) -> list[dict]:

@@ -6,6 +6,11 @@ _Last updated 2026-10-07._
 
 ## Implemented
 
+- **Beta evidence report (STORY-042):** Brownstone-only CLI produces private Markdown/JSON evidence
+  under ignored `work/beta-reports/`, with shared import validation, isolated exact-byte import
+  round trip, diagnostics/coverage, character summaries, integer residuals and optional prior-file
+  comparison. No addon, live data or input writes. Usage and limits: [below](#beta-evidence-report-story-042).
+
 - **Active auctions (STORY-040, implemented, pending review and in-game beta):** addon **0.7.0**
   passively reads cached modern/legacy owned lists on guarded owned-update events, records changed
   raw lists in the existing auction journal, and suppresses unchanged lists within each load.
@@ -111,7 +116,7 @@ _Last updated 2026-10-07._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.23% in the STORY-032 macOS run: 647 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.79% in the current macOS run: 763 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.7.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -151,7 +156,7 @@ _Last updated 2026-10-07._
 git diff --check
 ```
 
-Expected: 604 tests pass and one explicit PowerShell-unavailable skip on this Mac; 605 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 763 tests pass and one explicit PowerShell-unavailable skip on this Mac; 764 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 
@@ -298,3 +303,44 @@ Real Drive folder, real SavedVariables and original `data/` were never written f
 Drive streaming/offline files and sync delays can cause retryable file errors; naming completion only
 protects the local copy, not remote sync ordering. Preview memory and repeated parsing grow with retained
 files; manual cleanup is necessary. Successful files commit independently of failed files.
+
+
+## Beta evidence report (STORY-042)
+
+After logout or `/reload` has finished writing, run from the repository:
+
+```bash
+.venv/bin/python -m brownstone beta-report "/path/to/BrownstoneScan.lua" --source forever-us-normal-alliance-addon
+# For additions since a retained earlier file, append:
+# --previous "/path/to/earlier/BrownstoneScan.lua"
+```
+
+The command prints an absolute report folder followed by pass/warn/fail totals. Send Claude the
+folder's `report.md` (and `report.json` for structured checking); these omit listing sellers. Keep
+raw SavedVariables private under ADDON-07. Exit 0 permits warnings, exit 1 means a check failed,
+exit 2 means an input could not be read. Reports do not import the session into your real database
+or authorize clearing the addon: use the existing import/cleanup workflow separately.
+
+`tests/test_beta_report.py` covers clean evidence, shared readers/formats 1–6, refused records and
+malformed lists continuing independently, required fields/IDs/sequences/time bounds, money chains,
+gold and bag residuals with missing/incomplete baselines, overflow/skipped counts, diagnostics and
+error counters, level/skill surfaces and profession names/frequency/incomplete causes, inferred
+loads, coverage, exact bronze round trips, comparisons/conflicts, seller/bidder exclusion, exit
+codes, unique folders and absence of writes outside report/temporary directories.
+
+Current limits: load boundaries are inferred, historical diagnostics are unavailable, and journal
+error counters cannot be assigned to loads. Checklist observation does not prove an action
+succeeded or establish invoice semantics. Serialized sizes are approximations. Real files on this
+machine currently provide formats 1–4 only, including two Windows drops; genuine format-5/6
+snapshot/journal/profession evidence remains pending play. Synthetic formats 5/6 exercise the full
+report/import path offline. Details of module boundaries and reconciliation are in
+[design.md](design.md#beta-evidence-report-story-042).
+
+Current real-file verification: 16 copied inputs (genuine formats 1–4, two Windows drops and the
+game-file backup), with a fresh temporary copy of `data/`. All 13 nonempty files pass the exact-byte
+import round trip. Three cleared files fail with the importer's no-scans/reload guidance; all files
+have the same 20 expected warnings for missing diagnostics and character-checklist capture in
+older formats. Totals: 112 pass, 320 warn, 3 fail; end-to-end run 55.998 seconds. All 171 original
+file hashes and the complete fresh data copy are unchanged. Private per-file results, timings and
+every warning/failure are in ignored `work/beta-reports/verification/real-results.json`; no genuine
+format-5/6 in-game recording is claimed.

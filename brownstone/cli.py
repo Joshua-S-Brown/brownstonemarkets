@@ -46,6 +46,9 @@ def main() -> None:
     if sys.argv[1:2] == ["recipes"]:
         recipes_main(sys.argv[2:])
         return
+    if sys.argv[1:2] == ["beta-report"]:
+        beta_report_main(sys.argv[2:])
+        return
     parser = argparse.ArgumentParser(description="Collect TSM snapshots or import BrownstoneScan addon scans")
     parser.add_argument("--config", type=Path, default=ROOT / "config/market.toml")
     parser.add_argument("--input", type=Path,
@@ -72,6 +75,26 @@ def main() -> None:
         sys.exit(1)
     print(result.select("rank", "item_id", "item_name", "buy_gold", "discount", "net_spread_gold"))
     print(f"Saved {result.height} screening candidates to {output}")
+
+
+def beta_report_main(argv: list[str]) -> None:
+    """Check a play-session file without writing to configured data or game files."""
+    from .beta_report import create_report
+    parser = argparse.ArgumentParser(prog="brownstone beta-report", description=beta_report_main.__doc__)
+    parser.add_argument("file", type=Path)
+    parser.add_argument("--previous", type=Path)
+    parser.add_argument("--config", type=Path, default=ROOT / "config/market.toml")
+    parser.add_argument("--source", help="Addon source for isolated round-trip house checks")
+    args = parser.parse_args(argv)
+    sources = read_sources(args.config, args.config.with_name(LOCAL_OVERRIDES))
+    matches = [s for s in sources if s["provider"] == ADDON_PROVIDER and
+               (s["source_id"] == args.source if args.source else s["enabled"])]
+    if len(matches) != 1:
+        parser.error("Select one configured addon source with --source")
+    folder, report, code = create_report(args.file, matches[0], ROOT / "work/beta-reports", args.previous)
+    print(folder)
+    print(", ".join(f"{report['totals'][status]} {status}" for status in ("pass", "warn", "fail")))
+    sys.exit(code)
 
 
 def _select_source(args: argparse.Namespace) -> Source:

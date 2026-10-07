@@ -402,3 +402,48 @@ provenance appears once above the tabs; freshness stays outside collapsed contro
 Offline fixtures in `test_today.py`, `test_today_data.py` and `test_today_view.py` cover this contract
 without discovering local catalogs. Performance verification uses a copied database with current
 local catalog selections; aggregate measurements and limitations are in `status.md`.
+
+
+## Beta evidence report (STORY-042)
+
+`cli.beta_report_main` selects one configured addon source and routes to `beta_report.create_report`.
+The configured source supplies authoritative market/house identity for the import check; its data
+directory is never opened by the report. `beta_report` uses the pipeline's bounded byte reader and
+`scans.read_addon_database` plus the extracted `addon_record_list` helper shared with import. It
+validates records independently through `pipeline._validate_scans` or the existing snapshot/journal
+summarizers (which also validate professions), so a refused record cannot hide other evidence.
+`beta_evidence` contains pure checks and the small `COVERAGE` table; `views.beta_report` renders
+Markdown and uses `money.to_gold`. No Streamlit dependency, schema change or addon change.
+
+The only persistent writes are a unique UTC timestamp/UUID folder under ignored `work/beta-reports/`,
+containing `report.md` and `report.json`. The JSON keeps every check and entry ID; the Markdown is a
+compact reading copy (repeated passes collapse to counts, ID lists are cut at 10, coverage is one table)
+so a long play session stays small enough to send for review. Preview, import and duplicate re-import use an exact-byte
+input copy and fresh data directory inside `TemporaryDirectory`; bronze is decompressed and checked
+against the original bytes. The complete file must import into the selected house, including all
+records; empty or other-house files fail this check with the importer's explanation. Unreadable or
+changing inputs get exit 2, failed checks exit 1, passes/warnings exit 0.
+
+Loads are **inferred**, not an addon-provided identity. Shared account sequence orders snapshots and
+journal entries; a logout snapshot closes a load, identity/login changes and decreasing session
+uptime start one. `GetTime` can persist across reload, so it is not a unique load marker. Missing
+logout/boundary evidence can merge loads; records with missing sequences fail the sequence check.
+Only the latest `journal_diagnostics` exists in the file; earlier inferred loads have null diagnostics.
+`journal_errors` is persistent account-wide evidence, not a reliable per-load counter. Neither
+missing historical diagnostics nor ambiguous boundaries can be reconstructed without an addon
+contract change, which is outside this story.
+
+Money chains compare each before value with the previous after within an inferred load. Consecutive
+bags snapshots reconcile gold against signed integer-copper money deltas and per-item slot-unit
+changes against signed journal bag deltas, using capture time/shared sequence intervals, separately
+for full character/realm/faction identity. Unknown readings/baselines warn instead of inventing zeros.
+Residuals are evidence gaps, not classified transactions or ledger balances.
+
+Size estimates are compact typed JSON UTF-8 sizes, explicitly approximate rather than Lua byte
+offsets. Scan output is a strict projection of IDs, times and listing counts; owned-list output keeps
+only numeric evidence, excluding bidder/owner names. No raw listings, mail arguments or recipe raw
+payloads leave the report. Previous-file comparison uses importer canonical record hashes and
+source-local type/ID identities, reports additions by full character identity and family (snapshot
+kind for snapshots), and fails changed content for an existing ID. Coverage rows list alternative
+events/hooks, seen/unseen names and installed hooks: observation confirms capture only, not success
+of an economic action, a sale/expiry invoice's meaning, complete containers or full recipe coverage.
