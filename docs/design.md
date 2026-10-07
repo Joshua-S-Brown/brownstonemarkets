@@ -103,6 +103,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
   - Version 9: adds nullable `machine VARCHAR` to `addon_scans`, with no backfill or change to identities, hashes, prices or listings. `ADD COLUMN IF NOT EXISTS` is replayable. The normal schema-8 backup precedes upgrade; older scans keep null, including after duplicate import. Fresh and upgraded scan layouts agree.
   - Version 10: adds character snapshot parents and slots; the record/storage contract is in
     *Character snapshots* below and capture/clear rules in ADDON-11. Existing observations are unchanged.
+  - Version 11: adds raw scoped `character_journal`; contracts are below. Existing tables stay unchanged.
 - **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
 - **Callers.** The app calls it at startup for whichever source is selected (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
 - **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
@@ -154,9 +155,9 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 
 ### Character snapshots (STORY-032)
 
-Capture and clear/session rules live only in requirements.md → ADDON-11. Addon 0.5.0 keeps
-account-wide format 5 with `scans` (unchanged record formats 1–4), `snapshots`, `sessions` and
-`snapshot_sequence`. Each snapshot is a keyed table, with `slots` and `containers` arrays;
+Capture and clear/session rules live in requirements.md → ADDON-11/12. Addon 0.6.0 keeps
+account-wide format 6 with `scans` (unchanged record formats 1–4), `snapshots`, `sessions` and
+`snapshot_sequence`, `journal` and `journal_diagnostics`. Each snapshot is a keyed table, with `slots` and `containers` arrays;
 exact links and nullable client values are preserved without variant interpretation yet.
 Length-prefixed character/realm + kind + Unix seconds + persistent sequence identify an event.
 The sequence prevents two bank/logout observations in the same second from overwriting each other;
@@ -174,22 +175,45 @@ item/count and exact link). Slots belong to the fully scoped parent; no cross-ch
 is introduced. Frozen DDL is replayable; existing tables/rows/hashes are unchanged and migration
 backs up the starting database. Preview can query schemas before 10 without upgrading.
 
-`ScanPreview` also retains snapshot records, summaries, known hashes and house mismatches.
-`new_snapshot_ids` drives single-file and drop-file import availability. All matching snapshots
-in each selected file import; scan selections/`--scan` still limit only scans. Reviewed imports
-compare snapshot duplicate state at preflight and under the same writer transaction as scans.
-`scan_inputs` tracks expected snapshot commits across overlapping files, allowing intentional
-same-batch duplicates while refusing unrelated state changes. Conflicts isolate the affected file.
-Both kinds share `_save_collection`/`_load_collection`, one bronze blob and one manifest; manifests
-add snapshot outcomes and full-import status. Snapshot rows/JSON load directly in that transaction;
-there is no separate snapshot silver export. A snapshot-only collection has `no_complete_scan` and
-cannot replace prices. Latest imported bank evidence persists after clearing the game's file.
+`ScanPreview.non_scans`, `non_scan_summaries`, `non_scan_known`, `non_scan_mismatches` are the
+single state for both snapshots and journal entries; known state uses `record_sha256` for both.
+`new_record_ids` drives import availability.
+Snapshot-only properties are read-only compatibility projections, never parallel state.
+`addon_records` dispatches validation/storage by record type, while sharing house, hash/conflict,
+preview/review, transaction and outcome logic. Scan selection/`--scan` limits only scans; every
+matching non-scan record in each selected file imports. `scan_inputs` tracks expected commits by
+(type, ID) across overlapping drops and refuses unrelated state changes. The final writer check
+compares the same non-scan known state before archiving. Conflicts isolate the affected file.
 
-CLI and page preview tables list snapshots alongside scans; `InputFile.fully_imported` checks both
-kinds, including house mismatches. The page shows a read-only latest-character table scoped by source
-and every market key. Unreadable container totals remain unknown and coverage is visible. Machine
-comes from the existing local configuration/drop-name contract, with the original machine retained
-on deduplication. Windows drop scripts need no change: they copy the whole account file.
+Migration **11** adds `character_journal`, source/entry-ID primary key, full MARKET_KEYS,
+character/character realm/faction, event family, UTC capture time, machine, collection ID, source
+file hash, canonical content hash and raw `record_json`. JSON stringifies Lua numeric keys;
+canonical SHA-256 uses sorted typed-key pairs recursively to preserve nil-hole tuple tables with `n`
+and distinguish numeric keys from string keys.
+Snapshot canonical hashes are unchanged. Preview of older schemas reads unknown journal state
+without migrating. Upgrades back up the starting schema; replayable DDL changes no historical rows.
+Journal rows load directly with snapshots/scans inside the collection transaction; no journal silver
+export or interpretation. Exact bytes are preserved in the shared bronze blob. The manifest's
+`non_scan_records` is the common outcome list (`record_type`, `record_id`, `record_sha256`, outcome,
+summary); `snapshots` remains a derived compatibility projection for historical consumers.
+A collection without priced scans cannot replace prices. Latest imported bank evidence persists.
+
+Journal records use `entry_id`, `sequence`, `event`, `family`, `arguments`, `captured_at`,
+`captured_at_utc`, `session_time`, character/realm/faction, addon version, login marker and `windows`.
+Money adds `before_copper`/`after_copper`; bags add numeric `item_changes` or `baseline_missing`.
+Mail adds `inbox` with counts and message array (index, header/invoice counted tuples, attachment
+info/link); send hooks add a cached `draft` plus `draft_is_last_observed`. Overflow adds `skipped`.
+`journal_diagnostics` is load-session evidence: rejected events, missing/installed hooks, fired counts.
+`journal_errors` counts guarded observation failures by event/hook; these are reported in chat.
+Unknown values are absent in Lua/nullable in Python; arbitrary argument tuples never become prices.
+The ID uses the snapshot identity encoder and shared sequence. Cap/clear/hook rules are ADDON-12.
+
+CLI/page use `journal.preview_rows` for per-file character/family counts by state; `latest_rows`
+queries source + all market keys and returns imported family counts/latest time. The page retains
+latest bags/gold and independent bank evidence. `InputFile.fully_imported` checks scans plus all
+non-scan known states and house mismatches; `import_guidance` counts all newly saved records.
+Machine comes from OPS-03, stays unchanged on duplicates, and never participates in market joins.
+Windows scripts copy the whole account file unchanged. No other view consumes the journal.
 
 
 ## Scan comparison

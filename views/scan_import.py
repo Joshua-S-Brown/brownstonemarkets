@@ -1,7 +1,7 @@
 """Explicit addon preview, selection and reviewed import controls."""
 import streamlit as st
 
-from brownstone import character_snapshots
+from brownstone import character_snapshots, journal
 from brownstone.pipeline import import_guidance, import_scans, preview_configuration, preview_scans
 from brownstone.scan_inputs import (
     CLEAR_REMINDER,
@@ -35,20 +35,24 @@ def render(config):
     if preview is None:
         return
     _show_preview(preview, config.get("machine"))
-    if not preview.new_ids and not preview.new_snapshot_ids:
-        st.warning("Nothing new for this source: every scan was imported before or is from another auction "
+    if not preview.new_ids and not preview.new_record_ids:
+        st.warning("Nothing new for this source: every record was imported before or is from another auction "
                    "house. If you scanned since, type /reload in game and Preview again. Don't /bscan clear "
                    "until the new scan is imported.")
         return
     selected = st.multiselect("New scans to import", preview.new_ids, default=preview.new_ids,
                               key="scan_import_selection")
-    if selected or preview.new_snapshot_ids:
-        if preview.new_snapshot_ids:
-            st.caption("All new matching character snapshots in this file will also be imported.")
+    if selected or preview.new_record_ids:
+        if preview.new_record_ids:
+            st.caption("All new matching character records in this file will also be imported.")
         st.button("Import addon scan", type="primary", width="stretch", on_click=_import, args=(config, preview))
 
 
 def _show_holdings(config):
+    entries = journal.latest_rows(config)
+    if entries:
+        st.caption("Imported event journal by character and family")
+        st.dataframe(entries, hide_index=True)
     holdings = character_snapshots.latest_rows(config)
     if holdings:
         st.caption("Latest imported character snapshots (gold in gold; bank has its own observation time)")
@@ -56,11 +60,14 @@ def _show_holdings(config):
 
 
 def _show_preview(preview, machine=None, drop_time=None):
+    entries = journal.preview_rows(preview, machine)
+    if entries:
+        st.dataframe(entries, hide_index=True)
     if preview.snapshots:
         st.dataframe(character_snapshots.preview_rows(preview, machine), hide_index=True)
-        reasons = [reason for reasons in preview.snapshot_mismatches for reason in reasons]
-        if reasons:
-            st.caption("Other house: " + "; ".join(reasons))
+    reasons = [reason for reasons in preview.non_scan_mismatches for reason in reasons]
+    if reasons:
+        st.caption("Other house: " + "; ".join(reasons))
     st.dataframe([{
         "Machine": machine, "Drop (UTC)": str(drop_time or ""),
         "Scan ID": summary["scan_id"],
@@ -88,11 +95,14 @@ def _import(config, preview):
                                                             "retrying. Your previous snapshot remains available.")]
         return
     outcomes = "; ".join([f"{s['scan_id']} {s['status']}: {s['outcome']}" for s in manifest["scans"]] +
-                         [f"Snapshot {s['snapshot_id']}: {s['outcome']}" for s in manifest.get("snapshots", [])])
+                         [f"{s['record_type']} {s['record_id']}: {s['outcome']}"
+                          for s in manifest.get("snapshots", [])] +
+                         [f"Journal {r['Character']} {r['Family']}: {r['Entries']} {r['Outcome']}"
+                          for r in journal.outcome_rows(manifest.get("non_scan_records", []))])
     if manifest["status"] == "complete":
         result = ("success", f"Imported. Collection prices come from scan {manifest['scan_id']}. {outcomes}.")
     elif not manifest["scans"]:
-        result = ("success", f"Imported character snapshots; prices are unchanged. {outcomes}.")
+        result = ("success", f"Imported character records; prices are unchanged. {outcomes}.")
     else:
         result = ("warning", f"No complete scan among the imported scans, so prices are unchanged. {outcomes}.")
     st.session_state["scan_import_result"] = [result, ("info", import_guidance(manifest))]
@@ -116,7 +126,7 @@ def _render_inputs(config):
             _show_preview(file.preview, file.machine, file.drop_time)
     st.dataframe(latest_rows(preview), hide_index=True)
     st.info(CLEAR_REMINDER)
-    choices = [str(f.path) for f in preview.files if f.matching_ids or f.matching_snapshots]
+    choices = [str(f.path) for f in preview.files if f.matching_ids or f.matching_records]
     if choices:
         selected = st.multiselect("Files to import (each archived separately)", choices,
                                   default=preview.new_files, key="scan_import_selection")

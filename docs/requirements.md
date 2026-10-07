@@ -167,7 +167,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
 
 ### ADDON-11 Character snapshots (STORY-032)
 
-- Addon **0.5.0** writes account-wide `BrownstoneScanDB` format **5** (`SavedVariables`);
+- Introduced in addon **0.5.0** with account-wide `BrownstoneScanDB` format **5** (`SavedVariables`); ADDON-12 extends the current file to format 6;
   scan records retain format 4 and formats 1–4 remain importable. `snapshots` records bags/gold on
   guarded `PLAYER_LOGOUT` (including `/reload`), and bank on guarded `BANKFRAME_OPENED` and
   `BANKFRAME_CLOSED`. These events and container API behavior remain pending Forever beta checks.
@@ -220,6 +220,86 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   time (or *bank unknown*), distinct item/occupied-slot counts and machine for each character,
   realm and faction. Missing bank never means empty; unknown slot item IDs keep the distinct-item
   total missing rather than zero. No holdings use in Today yet.
+
+
+### ADDON-12 Event journal (STORY-033)
+
+- Addon **0.6.0** writes account-wide file format **6**: the existing scans, snapshots, sessions
+  and `snapshot_sequence`, plus `journal`, `journal_diagnostics` and problem counters `journal_errors`. Formats 1–5 stay importable;
+  scan records still use format 4. Capture follows Product direction → *Observing your own actions*.
+  Only events and `hooksecurefunc` post-hooks record evidence; no economy actions, requests or timers.
+  Normal journal capture is silent. Unavailable identity and the cap are problems reported in chat.
+  Rejected events and missing/rejected hooks are reported as **one summary line per load** with their
+  counts (the candidate list spans old and new clients, so some are always missing); `/bscan status`
+  lists the names. Explicit status/clear commands retain their manual messages.
+- Each raw entry records `entry_id`, event/hook name, family, positional arguments with explicit
+  `n` (nil holes/trailing nil remain absent), character, realm, faction, Unix seconds + UTC text,
+  nullable `GetTime()` session seconds, addon version, login time, and observed window states.
+  Missing/unsupported values stay missing; an explicitly reported zero remains evidence, never a
+  substitute for an unknown value. Table arguments are copied to depth 8; non-serializable values
+  are omitted while retaining positions/count. No arguments are interpreted as transaction results.
+  ID is length-prefixed character/realm + `:journal:` + Unix seconds + the **same persistent account
+  sequence snapshots increment**. Each observation has its own ID, even within one second.
+- At login/reload, money and carried-bag counts establish transient baselines. `PLAYER_MONEY`
+  records nullable before/after integer copper. `BAG_UPDATE_DELAYED` records signed per-item carried
+  count differences after settling, with bank/mailbox/merchant/auction house/trade skill/loot context;
+  no unchanged-bag entry. Incomplete reads invalidate the baseline and record `baseline_missing`,
+  never guessed zeros/deltas. A later complete read reestablishes it before differences resume.
+  Window booleans are based on observed open/close events; absent means not observed, not closed.
+- Mail open/inbox changes read `GetInboxNumItems`, every header and invoice, and available attachment
+  info/links (an attachment is kept when any of its values is reported, so an item the client
+  hasn't loaded yet keeps its ID and count without a name). Header/invoice tuples retain their full positional return values and counts. Capture
+  never opens a message or takes anything. Equal inbox states are suppressed within the loaded
+  session; reload resets this transient comparison. `MAIL_SEND_INFO_UPDATE` reads draft money/COD
+  and attachments. The `SendMail` post-hook records recipient/subject/body arguments plus the
+  **last observed draft**, explicitly marked as such: post-hook APIs may already have cleared it.
+  It is evidence for later reconciliation, not a claim of successful delivery or complete attachments.
+- **Spellcasts are crafting evidence only (decided 2026-10-07, product owner):** only
+  `UNIT_SPELLCAST_SUCCEEDED` for unit `player` while a trade skill or craft window is observed open is
+  recorded. Start, failed and interrupted casts, other units' casts and every spell cast without a
+  crafting window open (combat, gathering, travel) are not registered or not recorded: they are not
+  economy evidence and would fill the cap. Gathering shows up through loot events and bag changes.
+  A craft that finishes after its window was closed is not recorded as a spellcast; its hook call and
+  bag change still are. `CHAT_MSG_LOOT` requires argument 12 equal to the
+  player's readable GUID; ambiguous/missing sender identity is omitted. Loot-window events are
+  the player's own window.
+- **Refresh events are counted, not journalled:** `MERCHANT_UPDATE`, `TRADE_SKILL_UPDATE`,
+  `CRAFT_UPDATE` and `AUCTION_ITEM_LIST_UPDATE` carry no arguments and fire often (the last also
+  during the addon's own scan), so they only add to `journal_diagnostics.fired_events`.
+  Container-use hooks log only while the merchant is observed open (possible selling), without
+  asserting a sale. Other hooks log arguments regardless of success; events/deltas supply context.
+- Every event registration is guarded independently. Hooks install only for existing functions,
+  with guarded `hooksecurefunc`; missing/rejected names and installed names are saved in diagnostics,
+  together with rejected events and fired counts. Unexpected observation errors are guarded,
+  reported in chat and counted by name in `journal_errors`, without interrupting the game call. Later `ADDON_LOADED` retries unavailable hooks
+  for lazily loaded UI modules, without rehooking installed functions. Candidate event/hook lists
+  are discovery evidence, **not a promise of beta support**:
+  - Events: `PLAYER_MONEY`, `BAG_UPDATE_DELAYED`, `MAIL_SHOW`, `MAIL_CLOSED`, `MAIL_INBOX_UPDATE`, `MAIL_SEND_INFO_UPDATE`, `MAIL_SEND_SUCCESS`, `MAIL_FAILED`, `AUCTION_HOUSE_SHOW`, `AUCTION_HOUSE_CLOSED`, `AUCTION_HOUSE_PURCHASE_COMPLETED`, `AUCTION_HOUSE_AUCTION_CREATED`, `AUCTION_HOUSE_AUCTION_CANCELED`, `AUCTION_HOUSE_SHOW_ERROR`, `AUCTION_OWNED_LIST_UPDATE`, `AUCTION_ITEM_LIST_UPDATE`, `AUCTION_MULTISELL_START`, `AUCTION_MULTISELL_UPDATE`, `AUCTION_MULTISELL_FAILURE`, `MERCHANT_SHOW`, `MERCHANT_CLOSED`, `MERCHANT_UPDATE`, `TRADE_SKILL_SHOW`, `TRADE_SKILL_CLOSE`, `TRADE_SKILL_UPDATE`, `CRAFT_SHOW`, `CRAFT_CLOSE`, `CRAFT_UPDATE`, `UNIT_SPELLCAST_SUCCEEDED`, `CHAT_MSG_LOOT`, `LOOT_OPENED`, `LOOT_CLOSED`, `LOOT_SLOT_CLEARED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`.
+  - Global hooks: `TakeInboxMoney`, `TakeInboxItem`, `AutoLootMailItem`, `SendMail`, `ReturnInboxItem`, `DeleteInboxItem`, `SetSendMailMoney`, `SetSendMailCOD`, `StartAuction`, `PostAuction`, `PlaceAuctionBid`, `CancelAuction`, `BuyMerchantItem`, `SellCursorItem`, `UseContainerItem`, `RepairAllItems`, `DoTradeSkill`, `DoCraft`.
+  - Namespace hooks: `C_AuctionHouse.PostItem`, `C_AuctionHouse.PostCommodity`, `C_AuctionHouse.PlaceBid`, `C_AuctionHouse.CancelAuction`, `C_AuctionHouse.ConfirmCommoditiesPurchase`, `C_Container.UseContainerItem`, `C_TradeSkillUI.CraftRecipe`.
+- **Size cap: 10,000 ordinary journal entries account-wide plus one overflow marker.** Further
+  attempts add to `skipped` and report the cap once per loaded session when first reached. Existing
+  entries are never silently evicted. Updating the single `JOURNAL_OVERFLOW` marker gives it a fresh
+  shared sequence/ID; previously imported markers remain immutable historical evidence and cannot
+  conflict with a later drop. Skipped counts in successive marker versions are cumulative, not additive.
+  This is an entry-count bound, not a byte bound (mailboxes and argument strings vary in size).
+  Normal-session bytes, counts, reload time and observed overflow behavior remain a beta measurement.
+- **Clear:** reuse ADDON-11's account-wide login marker and prune: both clear commands/button keep
+  entries at/after the current login and entries with missing timestamps; unknown login keeps all.
+  Old overflow markers follow the same rule. Removing old entries makes space; current-session
+  entries/overflow survive a clear and confirmed reload. Scan clear protections remain unchanged.
+  OPS-03 latest-drop Fully imported is still required before cleanup.
+- Snapshots and entries share one non-scan lifecycle: validation adapters, preview summaries, known
+  hashes, house checks, stale-review checks, conflicts, transactional load, expected batch commits,
+  Fully imported and guidance. Deduplication is source + record type + ID; same ID/different canonical
+  content or market conflicts. Character realm/faction checks reuse ADDON-11; machine comes from
+  configuration/drop name only. Bronze preserves exact original bytes beside scans. Entries never
+  supply prices or holdings interpretations. CLI `--scan` still limits scans only.
+- Per-file CLI/page preview groups journal counts by character/realm/faction and event family into
+  new/duplicate/other-house counts. The import page alone shows scoped imported counts and latest
+  entry time by character/family. Every record must match house/content for Fully imported; any
+  file error or other-house record blocks cleanup. If no scans, snapshots or entries were newly
+  saved, guidance remains **Nothing new: /reload first**, before any clear suggestion.
 
 
 ### Money

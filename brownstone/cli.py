@@ -2,7 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import character_snapshots
+from . import character_snapshots, journal
 from .config import ADDON_PROVIDER, LOCAL_OVERRIDES, Source, read_sources
 from .pipeline import import_guidance, import_scans, preview_scans, run
 from .recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR
@@ -94,6 +94,8 @@ def _select_source(args: argparse.Namespace) -> Source:
 def _report_scans(config: Source, manifest: dict) -> None:
     for snapshot in manifest.get("snapshots", []):
         print(f"Snapshot {snapshot['snapshot_id']}: {snapshot['outcome']}")
+    for row in journal.outcome_rows(manifest.get("non_scan_records", [])):
+        print(f"Journal {row['Character']} {row['Family']}: {row['Entries']} {row['Outcome']}")
     for scan in manifest["scans"]:
         print(f"Scan {scan['scan_id']}: {scan['status']}, {scan['listing_count']:,} listings, {scan['outcome']}")
     if manifest["status"] == "complete":
@@ -124,8 +126,7 @@ def _addon_command(config: Source, args: argparse.Namespace) -> None:
         for summary, known, mismatch in zip(single.summaries, single.known, single.mismatches, strict=True):
             state = "duplicate" if known else "other house" if mismatch else "new"
             print(f"{config.get('machine', 'missing')} {summary['scan_id']}: {state}")
-        for row in character_snapshots.preview_rows(single, config.get("machine")):
-            print(row)
+        _report_character_records(single, config.get("machine"))
         return
     _report_scans(config, import_scans(config, args.input, args.scans))
 
@@ -135,8 +136,7 @@ def _report_inputs(preview) -> None:
         print(row)
     for file in preview.files:
         if file.preview:
-            for row in character_snapshots.preview_rows(file.preview, file.machine):
-                print(row)
+            _report_character_records(file.preview, file.machine)
             for summary, known, mismatch in zip(file.preview.summaries, file.preview.known,
                                                 file.preview.mismatches, strict=True):
                 state = "duplicate" if known else "other house" if mismatch else "new"
@@ -144,3 +144,8 @@ def _report_inputs(preview) -> None:
     for row in latest_rows(preview):
         print(row)
     print(CLEAR_REMINDER)
+
+
+def _report_character_records(preview, machine) -> None:
+    for row in journal.preview_rows(preview, machine) + character_snapshots.preview_rows(preview, machine):
+        print(row)

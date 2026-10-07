@@ -14,8 +14,7 @@ import duckdb
 import polars as pl
 import pyarrow.parquet as pq
 
-from . import character_snapshots as holdings
-from . import scan_details, scans
+from . import addon_records, scan_details, scans
 from .analysis import rank
 from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import FUTURE_TOLERANCE_HOURS
@@ -143,16 +142,40 @@ class ScanPreview:
     # Per scan: why it is from another auction house than this source's market; empty when it matches.
     mismatches: list[list[str]]
 
-    snapshots: list[dict] = field(default_factory=list)
-    snapshot_summaries: list[dict] = field(default_factory=list)
-    snapshot_known: list[dict | None] = field(default_factory=list)
-    snapshot_mismatches: list[list[str]] = field(default_factory=list)
+    non_scans: list[dict] = field(default_factory=list)
+    non_scan_summaries: list[dict] = field(default_factory=list)
+    non_scan_known: list[dict | None] = field(default_factory=list)
+    non_scan_mismatches: list[list[str]] = field(default_factory=list)
 
     @property
-    def new_snapshot_ids(self) -> list[str]:
-        return [r["snapshot_id"] for r, known, mismatch in
-                zip(self.snapshots, self.snapshot_known, self.snapshot_mismatches, strict=True)
+    def new_record_ids(self) -> list[str]:
+        return [addon_records.record_id(r) for r, known, mismatch in
+                zip(self.non_scans, self.non_scan_known, self.non_scan_mismatches, strict=True)
                 if known is None and not mismatch]
+
+    def _snapshots(self, values):
+        return [v for r, v in zip(self.non_scans, values, strict=True) if "snapshot_id" in r]
+
+    @property
+    def snapshots(self):
+        return self._snapshots(self.non_scans)
+
+    @property
+    def snapshot_summaries(self):
+        return self._snapshots(self.non_scan_summaries)
+
+    @property
+    def snapshot_known(self):
+        return self._snapshots(self.non_scan_known)
+
+    @property
+    def snapshot_mismatches(self):
+        return self._snapshots(self.non_scan_mismatches)
+
+    @property
+    def new_snapshot_ids(self):
+        return [r["snapshot_id"] for r, k, m in zip(self.snapshots, self.snapshot_known,
+                                                   self.snapshot_mismatches, strict=True) if not k and not m]
 
     @property
     def new_ids(self) -> list[str]:
@@ -219,18 +242,18 @@ def preview_scans(config: Source, input_path: Path | None = None, now: datetime 
     if config["provider"] != ADDON_PROVIDER:
         raise ValueError(f"{config['source_id']} is not an addon source")
     raw = _read_scan_bytes(Path(input_path or config["scan_path"]))
-    records, snapshots = scans.read_addon_records(raw)
-    records = _select_scans(records, None, required=not snapshots)
+    records, non_scans = scans.read_addon_records(raw)
+    records = _select_scans(records, None, required=not non_scans)
     summaries = _validate_scans(records, now or datetime.now(UTC))
     known = _read_known(config, summaries)
     _check_conflicts(summaries, known)
     mismatches = [scans.check_house(record, config) for record in records]
-    snapshot_summaries = [holdings.summarize(r, now or datetime.now(UTC)) for r in snapshots]
-    snapshot_known = holdings.states(config, snapshots)
-    holdings.check_conflicts(snapshots, snapshot_known)
+    non_scan_summaries = [addon_records.summarize(r, now or datetime.now(UTC)) for r in non_scans]
+    non_scan_known = addon_records.states(config, non_scans)
+    addon_records.check_conflicts(non_scans, non_scan_known)
     return ScanPreview(raw, preview_configuration(config, input_path), records, summaries, known, mismatches,
-                       snapshots, snapshot_summaries, snapshot_known,
-                       [holdings.check_house(r, config) for r in snapshots])
+                       non_scans, non_scan_summaries, non_scan_known,
+                       [addon_records.check_house(r, config) for r in non_scans])
 
 
 def _prepare_scans(records: list[dict], config: Source, now: datetime, scan_ids: Iterable[str] | None,
@@ -244,10 +267,10 @@ def _prepare_scans(records: list[dict], config: Source, now: datetime, scan_ids:
 def _reviewed_preparation(config: Source, path: Path, scan_ids: Iterable[str] | None,
                           now: datetime, reviewed: ScanPreview, include_duplicates: bool = False) -> ScanPreview:
     current = preview_scans(config, path, now)
-    if (current.configuration, current.raw, current.known, current.snapshot_known) != (
-            reviewed.configuration, reviewed.raw, reviewed.known, reviewed.snapshot_known):
+    if (current.configuration, current.raw, current.known, current.non_scan_known) != (
+            reviewed.configuration, reviewed.raw, reviewed.known, reviewed.non_scan_known):
         raise StalePreviewError("Preview is stale: file, source/configuration or imported scans changed. Preview again")
-    records = _select_scans(current.records, scan_ids, required=not current.snapshots)
+    records = _select_scans(current.records, scan_ids, required=not current.non_scans)
     ids = {r["scan_id"] for r in records}
     allowed = {s["scan_id"] for s, mismatch in zip(current.summaries, current.mismatches, strict=True)
                if not mismatch} if include_duplicates else set(current.new_ids)
@@ -289,8 +312,8 @@ def _import_reviewed(config: Source, path: Path, now: datetime, preparation: Sca
         db.begin()
         if _known_scans(db, config, reviewed.summaries) != reviewed.known:
             raise StalePreviewError("Imported scans changed. Preview again")
-        if holdings.states(config, reviewed.snapshots, db) != reviewed.snapshot_known:
-            raise StalePreviewError("Imported snapshots changed. Preview again")
+        if addon_records.states(config, reviewed.non_scans, db) != reviewed.non_scan_known:
+            raise StalePreviewError("Imported non-scan records changed. Preview again")
         return _save_collection(config, path, now, preparation.raw, scan_ids, preparation, db)
 
 
@@ -306,21 +329,21 @@ def _save_collection(config: Source, path: Path, now: datetime, raw: bytes,
         "bronze_file": bronze_file, "sha256": sha256, "bytes": len(raw), "status": "received",
     }
     try:
-        all_records, snapshots = ((preparation.records, preparation.snapshots) if preparation
+        all_records, non_scans = ((preparation.records, preparation.non_scans) if preparation
                                   else scans.read_addon_records(raw))
-        for record in snapshots:
-            holdings.summarize(record, now)
-        records, summaries = _prepare_scans(all_records, config, now, scan_ids, required=not snapshots)
+        for record in non_scans:
+            addon_records.summarize(record, now)
+        records, summaries = _prepare_scans(all_records, config, now, scan_ids, required=not non_scans)
         if db is None:
             upgrade_database(Path(config["data_dir"]), create=True)
             with duckdb.connect(str(Path(config["data_dir"]) / "brownstone.duckdb")) as connection:
                 connection.begin()
                 _load_collection(connection, config, folders, sid, now, sha256,
-                                 records, summaries, all_records, manifest, snapshots)
+                                 records, summaries, all_records, manifest, non_scans)
                 connection.commit()
         else:
             _load_collection(db, config, folders, sid, now, sha256,
-                             records, summaries, all_records, manifest, snapshots)
+                             records, summaries, all_records, manifest, non_scans)
             db.commit()
     except Exception as error:
         manifest.update(status="failed", error=str(error))
@@ -332,9 +355,10 @@ def _save_collection(config: Source, path: Path, now: datetime, raw: bytes,
 
 def _load_collection(db, config: Source, folders: dict[str, Path], sid: str, now: datetime, sha256: str,
                      records: list[dict], summaries: list[dict], all_records: list[dict], manifest: dict,
-                     snapshots: list[dict]) -> None:
+                     non_scans: list[dict]) -> None:
     _check_conflicts(summaries, _known_scans(db, config, summaries))
-    manifest["snapshots"] = holdings.load(db, config, snapshots, sid, sha256, now)
+    manifest["non_scan_records"] = addon_records.load(db, config, non_scans, sid, sha256, now)
+    manifest["snapshots"] = [r for r in manifest["non_scan_records"] if r["record_type"] == "snapshot"]
     remember_local_catalog_names(db)
     results = [_import_scan(db, config, folders["silver"], sid, now, sha256, record, summary)
                for record, summary in zip(records, summaries, strict=True)]
@@ -342,7 +366,7 @@ def _load_collection(db, config: Source, folders: dict[str, Path], sid: str, now
     states = [_file_scan_state(db, config, record) for record in all_records]
     manifest["remaining_unimported"] = states.count("remaining")
     manifest["other_house"] = states.count("other_house") + sum(
-        r["outcome"] == "other_house" for r in manifest["snapshots"])
+        r["outcome"] == "other_house" for r in manifest["non_scan_records"])
     manifest["fully_imported"] = not manifest["remaining_unimported"] and not manifest["other_house"]
     manifest["already_imported"] = sum(result["outcome"] == "duplicate" for result in results)
     priced = [result for result in results if result["priced"]]
@@ -385,19 +409,21 @@ def new_scans(manifest: dict) -> int:
 def import_guidance(manifest: dict) -> str:
     """What to do in game after an import, for the app and the CLI.
 
-    The game writes scans and character snapshots to the file only on /reload or logout, so a file with
+    The game writes scans and character records to the file only on /reload or logout, so a file with
     nothing new usually means the latest scan is still in game memory: clearing then would lose it.
     Clearing is suggested only after an import stored something new and no file scans remain unimported.
     Records from another auction house can't be imported into this source, so they don't block guidance,
     but clearing would delete them too. The addon also refuses to clear scans it hasn't written yet, and
-    keeps the current login's character snapshots (ADDON-11).
+    keeps the current login's character records (ADDON-11).
     """
-    snapshots = manifest.get("snapshots", [])
+    non_scans = manifest.get("non_scan_records", manifest.get("snapshots", []))
     if manifest.get("remaining_unimported", 0):
         return (f"{manifest['remaining_unimported']} scan(s) in this file remain unimported. "
                 "Import the remaining scans before clearing in game. Don't /bscan clear yet.")
-    if not new_scans(manifest) and not any(s["outcome"] == "imported" for s in snapshots):
-        found = f"{len(manifest['scans'])} scan(s)" + (f" and {len(snapshots)} snapshot(s)" if snapshots else "")
+    if not new_scans(manifest) and not any(s["outcome"] == "imported" for s in non_scans):
+        found = f"{len(manifest['scans'])} scan(s)" + (f" and {len(non_scans)} " +
+                 ("snapshot(s)" if all(r.get("record_type", "snapshot") == "snapshot" for r in non_scans)
+                  else "record(s)") if non_scans else "")
         return (f"Nothing new: all {found} in this file were imported before. If you "
                 "scanned since, type /reload in game so the game writes the scan to the file, then import again. "
                 "Don't /bscan clear until it's imported.")
@@ -406,13 +432,13 @@ def import_guidance(manifest: dict) -> str:
                 "from another auction house and can't be imported into this source. Import them with their own "
                 "source before you /bscan clear, because clearing deletes them too.")
     return ("Everything in this file is now saved. To keep the next file small, type /bscan clear, then /reload, "
-            "in game. Clearing keeps character snapshots from your current login.")
+            "in game. Clearing keeps character records from your current login.")
 
 
 def _select_scans(records: list[dict], scan_ids: Iterable[str] | None, required: bool = True) -> list[dict]:
     """The file's scans, or only the requested ones; an unknown scan ID fails the import.
 
-    An empty selection fails only when ``required``: a file with character snapshots needs no scans.
+    An empty selection fails only when ``required``: a file with character records needs no scans.
     """
     if scan_ids is not None:
         wanted = list(scan_ids)

@@ -172,7 +172,7 @@ def test_migration_9_backup_idempotent_and_old_file_import(tmp_path):
         db.execute("INSERT INTO schema_info VALUES ('schema_version', '9')")
     assert storage.upgrade_database(tmp_path)
     with duckdb.connect(str(path)) as db:
-        assert storage.schema_version(db) == 10
+        assert storage.schema_version(db) == 11
         storage.MIGRATIONS[10](db)
         assert db.execute("SELECT count(*) FROM character_snapshots").fetchone()[0] == 0
     assert list(tmp_path.glob("brownstone.v9.backup.duckdb"))
@@ -380,7 +380,7 @@ def test_snapshot_import_final_writer_state_recheck_prevents_archive(tmp_path, m
         return [{"snapshot_sha256": "unexpected concurrent import"}] if db is not None else original(source, records)
 
     monkeypatch.setattr(holdings, "states", changed)
-    with pytest.raises(StalePreviewError, match="Imported snapshots changed"):
+    with pytest.raises(StalePreviewError, match="Imported non-scan records changed"):
         pipeline.import_scans(config, now=NOW, reviewed=reviewed)
     assert not list(config["data_dir"].rglob("*.json"))
 

@@ -96,6 +96,8 @@ Acceptance:
 
 ### STORY-033 — Event journal: what you bought, posted, sold, crafted and mailed
 
+**Implemented and reviewed (2026-10-07); pending the in-game beta check.** Spellcasts narrowed to successful crafts at review (ADDON-12).
+
 Added 2026-10-06; refined 2026-10-07 for implementation. Captures raw evidence only; meaning is STORY-034. Must be testable in game by 13 October (*Now*).
 
 As a gold maker, I want the addon to note each auction, mail, craft and vendor event as it happens, so that Brownstone can later work out what I bought, sold and made, and at what cost.

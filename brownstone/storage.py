@@ -13,7 +13,7 @@ from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 from .item_names import remember_local_catalog_names, remember_observed_names
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 # Each migration is frozen once released: a fresh database replays them all, so it ends up
 # identical to an upgraded one. Columns stay nullable because v0.1 databases (schema copied
@@ -224,8 +224,21 @@ def _migrate_to_10(db) -> None:
         PRIMARY KEY (source_id, snapshot_id, container_id, slot))""")
 
 
+def _migrate_to_11(db) -> None:
+    """Raw economy journal; no interpretation or price projection."""
+    db.execute("""CREATE TABLE IF NOT EXISTS character_journal (
+        source_id VARCHAR NOT NULL, entry_id VARCHAR NOT NULL, record_sha256 VARCHAR NOT NULL,
+        market_id VARCHAR, game_version VARCHAR, region VARCHAR, scope VARCHAR, realm VARCHAR,
+        server_type VARCHAR, faction VARCHAR, environment VARCHAR,
+        character VARCHAR NOT NULL, character_realm VARCHAR NOT NULL, character_faction VARCHAR NOT NULL,
+        family VARCHAR NOT NULL, captured_at TIMESTAMPTZ NOT NULL,
+        machine VARCHAR, collection_id VARCHAR NOT NULL, source_sha256 VARCHAR NOT NULL, record_json VARCHAR NOT NULL,
+        PRIMARY KEY (source_id, entry_id))""")
+
+
 MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4, 5: _migrate_to_5,
-              6: _migrate_to_6, 7: _migrate_to_7, 8: _migrate_to_8, 9: _migrate_to_9, 10: _migrate_to_10}
+              6: _migrate_to_6, 7: _migrate_to_7, 8: _migrate_to_8, 9: _migrate_to_9, 10: _migrate_to_10,
+              11: _migrate_to_11}
 
 
 def _has_table(db, name: str) -> bool:

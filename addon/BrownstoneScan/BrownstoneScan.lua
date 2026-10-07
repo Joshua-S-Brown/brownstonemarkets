@@ -8,9 +8,9 @@
 -- logout. See addon/README.md for the format and the measurement checklist.
 
 local ADDON = "BrownstoneScan"
-local SCHEMA_VERSION = 5
+local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.5.0"
+local ADDON_VERSION = "0.6.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -47,7 +47,7 @@ local function canClearScans(force)
     return true
 end
 
-local clearSnapshots
+local clearSnapshots, clearJournal
 
 local function clearScans(force)
     if scan or itemPass then say("Wait for the scan and its item info pass to finish before clearing.") return end
@@ -55,6 +55,12 @@ local function clearScans(force)
     BrownstoneScanDB.scans = {}
     unsavedScans = 0
     local removed = clearSnapshots()
+    local entriesRemoved = clearJournal()
+    if entriesRemoved then
+        say(("%d journal entries from before this login cleared; current login entries kept."):format(entriesRemoved))
+    else
+        say("Login time unknown; every journal entry kept.")
+    end
     if removed then
         say(("Saved scans cleared, and %d character snapshot(s) from before this login; this login's are kept "
             .. "(written at the next /reload)."):format(removed))
@@ -66,7 +72,7 @@ end
 
 local CLEAR_POPUP = "BROWNSTONESCAN_CLEAR_SAVED"
 StaticPopupDialogs[CLEAR_POPUP] = {
-    text = "Delete %d saved Brownstone scan(s) and snapshots older than this login? Import them into Brownstone first. Reload afterward to write the change.",
+    text = "Delete %d saved Brownstone scan(s), snapshots and journal entries older than this login? Import them into Brownstone first. Reload afterward to write the change.",
     button1 = "Clear saved scans",
     button2 = CANCEL,
     timeout = 0,
@@ -743,9 +749,318 @@ end
 -- Events
 ---------------------------------------------------------------------------
 
+---------------------------------------------------------------------------
+-- Economy journal. Event-driven read APIs and secure post-hooks only.
+---------------------------------------------------------------------------
+local journal = { cap = 10000, windows = {}, hooks = {}, missing = {}, events = {}, lastInbox = nil }
+local journalRejected = 0  -- events this client rejected, reported once with the missing hooks
+local journalEvents = {
+    PLAYER_MONEY = "money", BAG_UPDATE_DELAYED = "bags",
+    MAIL_SHOW = "mail", MAIL_CLOSED = "mail", MAIL_INBOX_UPDATE = "mail",
+    MAIL_SEND_INFO_UPDATE = "mail", MAIL_SEND_SUCCESS = "mail", MAIL_FAILED = "mail",
+    AUCTION_HOUSE_SHOW = "auction", AUCTION_HOUSE_CLOSED = "auction",
+    AUCTION_HOUSE_PURCHASE_COMPLETED = "auction", AUCTION_HOUSE_AUCTION_CREATED = "auction",
+    AUCTION_HOUSE_AUCTION_CANCELED = "auction", AUCTION_HOUSE_SHOW_ERROR = "auction",
+    AUCTION_OWNED_LIST_UPDATE = "auction", AUCTION_ITEM_LIST_UPDATE = "auction",
+    AUCTION_MULTISELL_START = "auction", AUCTION_MULTISELL_UPDATE = "auction", AUCTION_MULTISELL_FAILURE = "auction",
+    MERCHANT_SHOW = "vendor", MERCHANT_CLOSED = "vendor", MERCHANT_UPDATE = "vendor",
+    TRADE_SKILL_SHOW = "craft", TRADE_SKILL_CLOSE = "craft", TRADE_SKILL_UPDATE = "craft",
+    CRAFT_SHOW = "craft", CRAFT_CLOSE = "craft", CRAFT_UPDATE = "craft",
+    UNIT_SPELLCAST_SUCCEEDED = "craft", CHAT_MSG_LOOT = "loot", LOOT_OPENED = "loot", LOOT_CLOSED = "loot",
+    LOOT_SLOT_CLEARED = "loot", BANKFRAME_OPENED = "bags", BANKFRAME_CLOSED = "bags",
+}
+-- Frequent refresh events without arguments are only counted in diagnostics, never journalled.
+local journalCountOnly = { MERCHANT_UPDATE = true, TRADE_SKILL_UPDATE = true, CRAFT_UPDATE = true,
+    AUCTION_ITEM_LIST_UPDATE = true }
+local journalHooks = {
+    { "TakeInboxMoney", "mail" }, { "TakeInboxItem", "mail" }, { "AutoLootMailItem", "mail" },
+    { "SendMail", "mail" }, { "ReturnInboxItem", "mail" }, { "DeleteInboxItem", "mail" },
+    { "SetSendMailMoney", "mail" }, { "SetSendMailCOD", "mail" },
+    { "StartAuction", "auction" }, { "PostAuction", "auction" }, { "PlaceAuctionBid", "auction" },
+    { "CancelAuction", "auction" }, { "BuyMerchantItem", "vendor" }, { "SellCursorItem", "vendor" },
+    { "UseContainerItem", "vendor" }, { "RepairAllItems", "vendor" },
+    { "DoTradeSkill", "craft" }, { "DoCraft", "craft" },
+    { "PostItem", "auction", "C_AuctionHouse" }, { "PostCommodity", "auction", "C_AuctionHouse" },
+    { "PlaceBid", "auction", "C_AuctionHouse" }, { "CancelAuction", "auction", "C_AuctionHouse" },
+    { "ConfirmCommoditiesPurchase", "auction", "C_AuctionHouse" },
+    { "UseContainerItem", "vendor", "C_Container" }, { "CraftRecipe", "craft", "C_TradeSkillUI" },
+}
+
+-- Explicit count preserves nil holes and trailing nils. Tables are copied, never retained by reference.
+function journal.copy(value, depth)
+    local kind = type(value)
+    if kind == "string" or kind == "boolean" then return value end
+    if kind == "number" and value == value and value ~= math.huge and value ~= -math.huge then return value end
+    if kind ~= "table" or (depth or 0) >= 8 then return nil end
+    local copied = {}
+    for k, v in pairs(value) do
+        if type(k) == "string" or (type(k) == "number" and k ~= math.huge and k ~= -math.huge) then
+            copied[k] = journal.copy(v, (depth or 0) + 1)
+        end
+    end
+    return copied
+end
+
+function journal.args(...)
+    local values = { n = select("#", ...) }
+    for i = 1, values.n do
+        local value = select(i, ...)
+        values[i] = journal.copy(value)
+    end
+    return values
+end
+
+function journal.entry(event, family, arguments, context)
+    local db = BrownstoneScanDB
+    if not db or not db.journal then return nil end
+    local key, name, realm = characterKey()
+    local faction = safe(UnitFactionGroup, "player")
+    if not key or not faction then say("Character identity unavailable; journal event rejected: " .. event) return nil end
+    db.snapshot_sequence = (db.snapshot_sequence or 0) + 1
+    local now = time()
+    local entry = { entry_id = key .. ":journal:" .. now .. ":" .. db.snapshot_sequence,
+        sequence = db.snapshot_sequence, character = name, realm = realm, faction = faction,
+        captured_at = now, captured_at_utc = utc(now), session_time = journal.copy(safe(GetTime)), login_at = loginTime,
+        addon_version = ADDON_VERSION, event = event, family = family, arguments = arguments or { n = 0 },
+        windows = journal.copy(journal.windows) }
+    for k, v in pairs(context or {}) do entry[k] = v end
+    return entry
+end
+
+function journal.findOverflow()
+    journal.overflowIndex = nil
+    for i, entry in ipairs(BrownstoneScanDB.journal) do
+        if entry.event == "JOURNAL_OVERFLOW" then journal.overflowIndex = i end
+    end
+end
+
+function journal.add(event, family, arguments, context)
+    local db = BrownstoneScanDB
+    if not db or not db.journal then return end
+    local ordinaryCount = #db.journal - (journal.overflowIndex and 1 or 0)
+    if ordinaryCount >= journal.cap then
+        local previous = journal.overflowIndex and db.journal[journal.overflowIndex]
+        local skipped = previous and (previous.skipped or 0) + 1 or 1
+        local marker = journal.entry("JOURNAL_OVERFLOW", "system", nil, { skipped = skipped })
+        if not marker then return end
+        -- Fresh ID makes each previously imported marker immutable historical evidence.
+        journal.overflowIndex = journal.overflowIndex or #db.journal + 1
+        db.journal[journal.overflowIndex] = marker
+        if not journal.capReported then
+            journal.capReported = true
+            say("Journal cap (10000 entries) reached; further entries counted in one overflow marker. Reload and import.")
+        end
+        return
+    end
+    local entry = journal.entry(event, family, arguments, context)
+    if entry then db.journal[#db.journal + 1] = entry end
+end
+
+function journal.money()
+    local value = safe(GetMoney)
+    if type(value) == "number" and value >= 0 and value < math.huge and value % 1 == 0 then return value end
+    return nil
+end
+
+function journal.bags()
+    local counts = {}
+    local api = C_Container or {}
+    local readable = api.GetContainerItemInfo or GetContainerItemInfo or api.GetContainerItemID or GetContainerItemID
+    if not readable then return nil end
+    for _, id in ipairs(containerIDs("bags")) do
+        local size = safe(api.GetContainerNumSlots or GetContainerNumSlots, id)
+        if type(size) ~= "number" or size < 0 or size >= math.huge or size % 1 ~= 0 then return nil end
+        for slot = 1, size do
+            local item, failed = readSlot(id, slot)
+            if failed or (item and (type(item.item_id) ~= "number" or type(item.count) ~= "number"
+                or item.item_id <= 0 or item.item_id % 1 ~= 0 or item.count <= 0 or item.count % 1 ~= 0)) then return nil end
+            if item then counts[item.item_id] = (counts[item.item_id] or 0) + item.count end
+        end
+    end
+    return counts
+end
+
+function journal.bagChange(arguments)
+    local current, previous = journal.bags(), journal.lastBags
+    journal.lastBags = current
+    if not current or not previous then
+        journal.add("BAG_UPDATE_DELAYED", "bags", arguments, { baseline_missing = true })
+        return
+    end
+    local changes = {}
+    for id, count in pairs(current) do
+        if count ~= (previous[id] or 0) then changes[id] = count - (previous[id] or 0) end
+    end
+    for id, count in pairs(previous) do if not current[id] then changes[id] = -count end end
+    if next(changes) then journal.add("BAG_UPDATE_DELAYED", "bags", arguments, { item_changes = changes }) end
+end
+
+function journal.read(fn, ...)
+    if type(fn) ~= "function" then return nil end
+    local values = journal.args(pcall(fn, ...))
+    if not values[1] then return nil end
+    local result = { n = values.n - 1 }
+    for i = 2, values.n do result[i - 1] = values[i] end
+    return result
+end
+
+-- An uncached item has no name yet but can still report its ID and count.
+function journal.present(values)
+    if not values then return false end
+    for i = 1, values.n do if values[i] ~= nil then return true end end
+    return false
+end
+
+function journal.equal(a, b)
+    if type(a) ~= type(b) then return false end
+    if type(a) ~= "table" then return a == b end
+    for k, v in pairs(a) do if not journal.equal(v, b[k]) then return false end end
+    for k in pairs(b) do if a[k] == nil then return false end end
+    return true
+end
+
+function journal.inbox(event, arguments)
+    local state = { counts = journal.read(GetInboxNumItems), messages = {} }
+    local count = state.counts and state.counts[1]
+    if type(count) == "number" then
+        for i = 1, count do
+            state.messages[i] = { index = i, header = journal.read(GetInboxHeaderInfo, i),
+                invoice = journal.read(GetInboxInvoiceInfo, i), items = {} }
+            for slot = 1, (ATTACHMENTS_MAX_RECEIVE or 16) do
+                local item = journal.read(GetInboxItem, i, slot)
+                if journal.present(item) then state.messages[i].items[slot] = {
+                    info = item, link = safe(GetInboxItemLink, i, slot) } end
+            end
+        end
+    end
+    if not journal.equal(state, journal.lastInbox) then
+        journal.lastInbox = journal.copy(state)
+        journal.add(event, "mail", arguments, { inbox = state })
+    end
+end
+
+function journal.draft()
+    local draft = { money_copper = safe(GetSendMailMoney), cod_copper = safe(GetSendMailCOD),
+        observed_at = time(), items = {} }
+    for i = 1, (ATTACHMENTS_MAX_SEND or 12) do
+        local item = journal.read(GetSendMailItem, i)
+        if journal.present(item) then draft.items[i] = { info = item, link = safe(GetSendMailItemLink, i) } end
+    end
+    journal.lastDraft = draft
+end
+
+function journal.protect(fn, label, ...)
+    local ok, problem = pcall(fn, ...)
+    if not ok then
+        local db = BrownstoneScanDB
+        if db then
+            db.journal_errors = db.journal_errors or {}
+            db.journal_errors[label] = (db.journal_errors[label] or 0) + 1
+        end
+        say("Journal observation rejected: " .. label .. ": " .. tostring(problem))
+    end
+end
+
+function journal.hook(name, family, label, ...)
+    -- Container use is an economy action only at a merchant; elsewhere it can equip/use items.
+    if name == "UseContainerItem" and not journal.windows.merchant then return end
+    local context = { hook = true }
+    if name == "SendMail" then
+        context.draft = journal.copy(journal.lastDraft)
+        context.draft_is_last_observed = true
+    end
+    journal.add(label, family, journal.args(...), context)
+end
+
+function journal.installHooks()
+    local db = BrownstoneScanDB
+    if not db then return end
+    local newlyMissing = 0
+    for _, spec in ipairs(journalHooks) do
+        local name, family, namespace = spec[1], spec[2], spec[3]
+        local target = _G
+        if namespace then target = _G[namespace] end
+        local label = namespace and namespace .. "." .. name or name
+        if not journal.hooks[label] then
+            local callback = function(...)
+                journal.protect(journal.hook, label, name, family, label, ...)
+            end
+            local ok = type(target) == "table" and type(target[name]) == "function" and
+                type(hooksecurefunc) == "function" and pcall(hooksecurefunc, target, name, callback)
+            if ok then journal.hooks[label] = true
+            elseif not journal.missing[label] then
+                journal.missing[label] = true
+                newlyMissing = newlyMissing + 1
+            end
+        end
+    end
+    db.journal_diagnostics = { rejected_events = journal.copy(missingEvents), missing_hooks = {},
+        installed_hooks = journal.copy(journal.hooks), fired_events = journal.events }
+    for label in pairs(journal.missing) do
+        if not journal.hooks[label] then db.journal_diagnostics.missing_hooks[#db.journal_diagnostics.missing_hooks + 1] = label end
+    end
+    table.sort(db.journal_diagnostics.missing_hooks)
+    -- Candidates span old and new clients, so some are always missing: one line, details in /bscan status.
+    if newlyMissing > 0 or journalRejected > 0 then
+        say(("Journal: %d event(s) and %d hook(s) unavailable on this client; /bscan status lists them.")
+            :format(journalRejected, newlyMissing))
+        journalRejected = 0
+    end
+end
+
+function journal.observe(event, ...)
+    if not BrownstoneScanDB or not BrownstoneScanDB.journal then return end
+    local family = journalEvents[event]
+    if not family then return end
+    -- Only the player's own casts while a crafting window is open: combat and other spells are not economy evidence.
+    if event == "UNIT_SPELLCAST_SUCCEEDED" and (select(1, ...) ~= "player" or not journal.windows.trade_skill) then
+        return
+    end
+    -- CHAT_MSG_LOOT arg 12 is the sender GUID. Without positive player identity, omit it.
+    if event == "CHAT_MSG_LOOT" then
+        local guid = safe(UnitGUID, "player")
+        if not guid or select(12, ...) ~= guid then return end
+    end
+    journal.events[event] = (journal.events[event] or 0) + 1
+    if journalCountOnly[event] then return end
+    local open = { MAIL_SHOW = "mailbox", MERCHANT_SHOW = "merchant", AUCTION_HOUSE_SHOW = "auction_house",
+        TRADE_SKILL_SHOW = "trade_skill", CRAFT_SHOW = "trade_skill", LOOT_OPENED = "loot", BANKFRAME_OPENED = "bank" }
+    local close = { MAIL_CLOSED = "mailbox", MERCHANT_CLOSED = "merchant", AUCTION_HOUSE_CLOSED = "auction_house",
+        TRADE_SKILL_CLOSE = "trade_skill", CRAFT_CLOSE = "trade_skill", LOOT_CLOSED = "loot", BANKFRAME_CLOSED = "bank" }
+    if open[event] then journal.windows[open[event]] = true end
+    local arguments = journal.args(...)
+    if event == "BAG_UPDATE_DELAYED" then journal.bagChange(arguments)
+    elseif event == "PLAYER_MONEY" then
+        local current = journal.money()
+        journal.add(event, family, arguments, { before_copper = journal.lastMoney, after_copper = current })
+        journal.lastMoney = current
+    elseif event == "MAIL_SHOW" or event == "MAIL_INBOX_UPDATE" then journal.inbox(event, arguments)
+    else
+        if event == "MAIL_SEND_INFO_UPDATE" then journal.draft() end
+        journal.add(event, family, arguments)
+    end
+    if close[event] then journal.windows[close[event]] = false end
+end
+
+function journal.clear()
+    if not loginTime then return end
+    local kept = {}
+    for _, entry in ipairs(BrownstoneScanDB.journal) do
+        if not entry.captured_at or entry.captured_at >= loginTime then kept[#kept + 1] = entry end
+    end
+    local removed = #BrownstoneScanDB.journal - #kept
+    BrownstoneScanDB.journal = kept
+    journal.findOverflow()
+    journal.capReported = nil
+    return removed
+end
+
+clearJournal = journal.clear
+
 -- RegisterEvent throws on an event this client doesn't know (the legacy
 -- AUCTION_ITEM_LIST_UPDATE is missing on Forever), so register one at a time
 -- and record which ones the client rejected.
+local attempted = {}
 for _, event in ipairs({
     "ADDON_LOADED",
     "AUCTION_HOUSE_SHOW",
@@ -758,8 +1073,17 @@ for _, event in ipairs({
     "BANKFRAME_OPENED",
     "BANKFRAME_CLOSED",
 }) do
+    attempted[event] = true
     if not pcall(frame.RegisterEvent, frame, event) then
         missingEvents[#missingEvents + 1] = event
+    end
+end
+
+-- Events the scan already registered are observed by the journal through the same frame.
+for event in pairs(journalEvents) do
+    if not attempted[event] and not pcall(frame.RegisterEvent, frame, event) then
+        missingEvents[#missingEvents + 1] = event
+        journalRejected = journalRejected + 1
     end
 end
 
@@ -785,22 +1109,28 @@ function ensureButton()
     setMaintenanceEnabled(not scan and not itemPass)
 end
 
-frame:SetScript("OnEvent", function(_, event, arg1, arg2)
+frame:SetScript("OnEvent", function(_, event, ...)
+    local arg1, arg2 = ...
+    journal.protect(journal.observe, event, event, ...)
     if event == "ADDON_LOADED" then
-        if arg1 ~= ADDON then return end
+        if arg1 ~= ADDON then journal.installHooks() return end
         BrownstoneScanDB = BrownstoneScanDB or {}
         BrownstoneScanDB.schema_version = SCHEMA_VERSION
         BrownstoneScanDB.addon_version = ADDON_VERSION
         BrownstoneScanDB.scans = BrownstoneScanDB.scans or {}
         BrownstoneScanDB.snapshots = BrownstoneScanDB.snapshots or {}
         BrownstoneScanDB.sessions = BrownstoneScanDB.sessions or {}
+        BrownstoneScanDB.journal = BrownstoneScanDB.journal or {}
+        journal.findOverflow()
+        journal.installHooks()
     elseif event == "PLAYER_ENTERING_WORLD" then
         firedEvents[event] = (firedEvents[event] or 0) + 1
         -- Only the first world entry after loading (login or /reload) sets the login marker; later
         -- loading screens, including clients that pass no flags, leave it alone.
-        if not sessionSeen or arg1 or arg2 then
+        if not sessionSeen or characterKey() ~= sessionKey then
             sessionSeen = true
             startSession(arg1, arg2)
+            journal.lastMoney, journal.lastBags = journal.money(), journal.bags()
         end
     elseif event == "PLAYER_LOGOUT" then
         firedEvents[event] = (firedEvents[event] or 0) + 1
@@ -850,6 +1180,8 @@ SlashCmdList["BROWNSTONESCAN"] = function(msg)
         local n = #BrownstoneScanDB.scans
         local last = BrownstoneScanDB.scans[n]
         characterStatus()
+        say(("%d journal entries; cap %d; missing hooks: %s"):format(#BrownstoneScanDB.journal, journal.cap,
+            table.concat(BrownstoneScanDB.journal_diagnostics.missing_hooks, ", ")))
         say(("Events the client rejected: %s."):format(#missingEvents > 0 and table.concat(missingEvents, ", ") or "none"))
         say(("%d saved scan(s). API: %s. Last: %s."):format(n, tostring(detectApi()),
             last and (last.scan_id .. " " .. last.status .. ", " .. (last.listing_count or 0) .. " listings") or "none"))

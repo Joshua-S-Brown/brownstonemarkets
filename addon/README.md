@@ -1,6 +1,6 @@
-# Brownstone Scan 0.5.0
+# Brownstone Scan 0.6.0
 
-A **read-only** auction house scanner and character snapshot recorder for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
+A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
 ## What it does and doesn't do
 
@@ -33,7 +33,7 @@ I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C
 Commands: `/bscan start | stop | status | label <text> | clear [all]`.
 
 **Keep the file small, in this order:** scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. The addon keeps every scan until you clear it, and each import reads the whole file. `/bscan clear` refuses while a scan from this session hasn't been written to the file yet (`/bscan clear all` overrides that). Follow the full-import and latest-machine checks under OPS-03 before clearing;
-character snapshots follow ADDON-11 and keep the current login across `/reload`.
+character snapshots and journal entries follow ADDON-11/12 and keep the current login across `/reload`.
 
 ### Reload and clear controls (STORY-029)
 
@@ -41,7 +41,7 @@ Version 0.3.1 adds **Clear saved scans** and **Reload** immediately to the left 
 
 **Visibility decision:** the controls are available only with the auction house open, like the existing scan button. This keeps one small, contextual row without a persistent screen panel or new commands. For the manual scan → Reload → import → Clear → Reload routine, leave the house open during the import or reopen it afterward; the existing slash commands also work with the house closed.
 
-**Clear decision:** the button shares the protected `/bscan clear` logic and never uses the `all` override. Unsaved session scans refuse immediately with reload/import guidance. Otherwise a standard `StaticPopupDialogs` / `StaticPopup_Show` confirmation names the saved-scan count and reminds you to import into Brownstone first. Cancel or Escape changes nothing; there is no timeout or automatic acceptance. Zero scans still get confirmation, matching the command's harmless empty clear. Accept clears `BrownstoneScanDB.scans` and prunes snapshots under ADDON-11, preserves the label/metadata, and prints the existing next-reload reminder. Slash commands retain their existing behaviour, including immediate protected clear and the explicit `clear all` override.
+**Clear decision:** the button shares the protected `/bscan clear` logic and never uses the `all` override. Unsaved session scans refuse immediately with reload/import guidance. Otherwise a standard `StaticPopupDialogs` / `StaticPopup_Show` confirmation names the saved-scan count and reminds you to import into Brownstone first. Cancel or Escape changes nothing; there is no timeout or automatic acceptance. Zero scans still get confirmation, matching the command's harmless empty clear. Accept clears `BrownstoneScanDB.scans` and prunes snapshots/journal under ADDON-11/12, preserves the label/metadata, and prints the existing next-reload reminder. Slash commands retain their existing behaviour, including immediate protected clear and the explicit `clear all` override.
 
 **Pending-confirmation decision:** starting a scan or closing the house dismisses the popup with `StaticPopup_Hide`. The callbacks also refuse during a scan and recheck unsaved scans and the confirmed count at acceptance, protecting against state changes after the dialog opened. If the count changed, click Clear again to review it.
 
@@ -57,8 +57,8 @@ After `/reload` or logout:
 <Forever folder>/WTF/Account/<ACCOUNT NAME>/SavedVariables/BrownstoneScan.lua
 ```
 
-It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions` and
-`snapshot_sequence`. Addon **0.5.0** writes file format **5** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
+`snapshot_sequence`, `journal` and `journal_diagnostics`. Addon **0.6.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
@@ -351,7 +351,7 @@ received the completed file yet. The first real round trip passed on 2026-10-07.
 
 ## Character snapshots: format 5 (STORY-032)
 
-Install **BrownstoneScan 0.5.0 on both the Mac and Windows PC**, replacing the whole installed
+Install **BrownstoneScan 0.6.0 on both the Mac and Windows PC**, replacing the whole installed
 `Interface/AddOns/BrownstoneScan` folder while WoW is closed. The `.toc` remains account-wide
 `## SavedVariables: BrownstoneScanDB`; do not create per-character SavedVariables files.
 Existing scan records remain formats 1–4. Windows copies the same whole account file with the
@@ -365,7 +365,7 @@ The added file fields are:
 | `snapshots` | Array of independent bags or bank observations, including snapshots without scans. |
 | `snapshot_id`, `sequence` | Length-prefixed character/realm + kind + Unix seconds + persistent account sequence; numeric order for same-second observations. |
 | `character`, `realm`, `faction`, `kind` | Exact character/realm strings, player faction, `bags` or `bank`. |
-| `captured_at`, `captured_at_utc`, `addon_version`, `client` | Unix seconds, UTC text, **0.5.0**, client build evidence. |
+| `captured_at`, `captured_at_utc`, `addon_version`, `client` | Unix seconds, UTC text, current addon version, client build evidence. |
 | `gold_copper` | Bags only: nullable integer copper from `GetMoney`; a reported zero remains zero. |
 | `slots` | Occupied slots: `container_id`, `slot`, nullable `item_id`, `count`, exact `item_link`. |
 | `containers` | Reported container IDs, nullable sizes, `slots_readable = false` on reader errors; unknown never means empty. |
@@ -385,13 +385,13 @@ appear beside scans in page and CLI previews. All matching snapshots in a select
 
 ### Character snapshots beta checklist — Mac and Windows, pending
 
-Repeat the capture checks on **each machine**, using **0.5.0**, before relying on this evidence.
+Repeat the capture checks on **each machine**, using **0.6.0**, before relying on this evidence.
 Use two characters on the **same account**. Preserve all before/after files privately; do not clear
 unimported evidence. Character data stays private under the same transport rules as scans.
 
 1. **Install and initial login:** with WoW closed, replace the addon folder on the Mac. On Windows,
    use the repository containing these changes (after they have been committed/pushed and pulled)
-   or copy the same 0.5.0 folder directly. Confirm the AddOns version and `/bscan status`. Log in
+   or copy the same 0.6.0 folder directly. Confirm the AddOns version and `/bscan status`. Log in
    afresh after installation, rather than installing only via `/reload`, to establish a login marker.
    Record OS/machine label, addon version, date, character, realm, faction, client version/build and
    `/dump select(4, GetBuildInfo())`. Record every rejected event from status. Check the `.toc` interface
@@ -461,3 +461,92 @@ unimported evidence. Character data stays private under the same transport rules
     expected versus stored copper/item/slot/link values, bank open/close availability, snapshot IDs,
     preview/import outcomes, machine/drop UTC, timing/lag and Lua errors. State failures explicitly;
     offline stubs cannot confirm these Forever beta behaviors. Keep raw files private for diagnosis.
+
+## Event journal: format 6 (STORY-033)
+
+Install **0.6.0** on both machines. The account-wide file now also holds `journal` and
+`journal_diagnostics`; scans keep format 4 and existing snapshots keep their contract.
+The capture, candidate event/hook list, cap and clear rules are
+[ADDON-12](../docs/requirements.md#addon-12-event-journal-story-033). Storage/import contracts
+are in [design.md](../docs/design.md#character-snapshots).
+
+Each journal entry has `entry_id`, the shared `sequence`, `event`, `family`, `arguments` (`n`
+counts all arguments, including missing positions), capture Unix/UTC time, nullable session time,
+character/realm/faction, addon version, login marker and observed `windows`. Money adds
+`before_copper`/`after_copper`; settled bags add `item_changes` (item ID → signed count) or
+`baseline_missing`. Mail states contain `inbox.counts`, message index, counted raw header/invoice
+returns and attachment info/link. A send hook includes its recipient/subject/body arguments and
+`draft_is_last_observed` plus the last observed draft's money/COD/items/time. This draft may be
+missing or stale: a post-hook runs after the game function, which may already clear the draft.
+Do not read a hook as success or invent values where the client returned none.
+
+`journal_diagnostics` holds this load's rejected events, missing/installed hooks and fired counts.
+`journal_errors` counts observation failures reported in chat; these do not interrupt a game call.
+A hook can become installed after a UI addon loads; missing diagnostics refresh then. Routine
+logging is silent; explicit `/bscan status` reports journal count/cap and missing hooks. The addon
+never performs an economy action or opens/takes mail. Window flags mean observed event state;
+an absent flag is unknown. Inbox comparisons and bag/money baselines reset on addon reload.
+The single overflow marker has `event = JOURNAL_OVERFLOW`, cumulative `skipped` and a fresh ID
+on each update. Compare versions rather than summing their skipped counts.
+
+Preview lists one journal row per character/family with new/duplicate/other-house counts, alongside
+snapshot/scan tables. Import displays saved counts/latest UTC time per character/family. A file with
+only entries is valid; all matching non-scan records import when the file is selected, even with
+`--scan`. Fully imported includes journal entries. Duplicate-only import still says **Nothing new:
+/reload first**. Follow OPS-03 before clear, then verify current-login entries survived the write.
+
+### Event journal beta checklist — Mac and Windows, pending; aim by 13 October
+
+Use a new character with one gathering profession and one crafting profession that uses it, a
+little gold, and a second character on the **same account/realm/faction** for mail. Start a fresh
+login so the login marker is known. Repeat on each machine. Keep recordings private and do not
+clear evidence until the latest drop is fully imported. Enable Lua error reporting through the
+client's settings or `/console scriptErrors 1`; record errors, including errors that interrupt a
+hook or event handler. Do not change the candidate list simply to hide rejected/missing APIs.
+
+For **every row below**, note OS/machine, build/interface/addon version, character/realm/faction,
+action/time, journal IDs and shared sequences, events fired **and rejected**, missing/installed
+hooks and actual hook arguments (including nil positions), before/after copper and bags, open
+windows, mailbox counts/headers/invoices/attachments where relevant, Lua errors and lag.
+Save a file before/after each family using `/reload` or logout; note journal/overflow counts,
+file bytes and reload duration. Record unavailable values explicitly, never as zero.
+
+| Family | Manual actions in game | Evidence to compare in the file |
+| --- | --- | --- |
+| Baselines/money/bags | Login, `/reload`, wait without changes, split a stack, move it, then acquire/remove one item and spend/receive a few copper. Open/close the bank. | PLAYER_MONEY before/after; BAG_UPDATE_DELAYED deltas across carried bags; no entry for a split/move or unchanged totals; windows; missing-baseline evidence if unreadable; snapshots/journal interleaved sequences. |
+| Auction | Buy a cheap item; post two small stacks, cancel one, allow one short auction to expire, and arrange for an actual player to buy another. Bid and get outbid if practical. | Global or C_AuctionHouse hook names/arguments, purchase/post/cancel events, deposits and money changes, bag changes, owned-list events. Identify hook attempts versus actual success; preserve rejected/missing event/function names. Sold/expired/cancelled/outbid evidence arrives by mail, not inferred from a missing auction. |
+| Mail/invoices/returns | Open the mailbox, refresh unchanged inbox, manually open sold/expired/cancelled/outbid mail, take gold and returned items, close/reopen. | One state per changed inbox; every header: sender, subject, money, COD, days, item count, read flag; invoice type/item/other player/bid/buyout/deposit/cut; attachment info/link; take hooks and money/bag deltas. Opening marks read and can legitimately change the state. Nil invoice fields stay missing. |
+| Send/receive mail | Attach a small item and a little gold; send to your other character. Also exercise COD if affordable. Log into recipient; receive/take the mail manually. | MAIL_SEND_INFO_UPDATE draft money/COD/attachments/time, SendMail recipient arguments and last-observed draft, success/failure events, sender gold/bag changes; recipient headers and take hooks/deltas. Check whether draft APIs update before send and whether they clear afterward. Never assume successful delivery from the post-hook. |
+| Craft | Open the crafting window, make one inexpensive recipe (and a short batch), then close it. If possible interrupt/fail one craft, and close the window during a batch. Cast a combat spell afterwards. | DoTradeSkill/DoCraft/C_TradeSkillUI.CraftRecipe arguments, one UNIT_SPELLCAST_SUCCEEDED per successful craft while the window was open (none for the interrupted craft, combat spells or other units), consumed/created item deltas and window context. Note whether batch crafts after closing the window still finish. Check quantities against the actual recipe without interpreting journal transactions yet. |
+| Vendor | Buy one cheap reagent, sell one expendable item, repair damaged gear if available; close merchant. | BuyMerchantItem/SellCursorItem/global or C_Container.UseContainerItem/RepairAllItems arguments, merchant events, money/bag changes. Container use outside a merchant should not log as a sale; post-hook does not assert success. |
+| Gathering/loot | Gather one node/herb, loot one mob, then join a group where someone else loots. Close the loot window. | Own loot-window events, bag gains and CHAT_MSG_LOOT raw arguments (gathering casts are not recorded); argument 12 must match own GUID. Other/ambiguous loot chat is omitted. Record if Forever omits that GUID; bag/window evidence should still capture own gains. |
+| Clear/transport | Open mailbox before clear; `/reload`, import, clear and `/reload` within this login. Then logout/drop/import, fresh login/clear. | Current-login IDs/content survive both clear forms and the button; old records prune only with known login. Confirm no false fully-imported state, exact bronze bytes, machine, overlapping-drop duplicates and entry counts. Unknown login keeps all. Existing scan clear protections still work. |
+| Cap/size | Measure a normal 30–60 minute economy session with the above actions. For cap testing use a separate disposable SavedVariables copy populated with offline stub records, never your only recording. Add a few manual economy actions at the cap, reload/drop twice. | Count and bytes before/after, CPU/lag/reload time; one overflow marker, cumulative skipped increment and changing ID; one problem message; earlier entries untouched. Current-login marker survives clear; old-session prune creates space. Restore the normal file only with WoW closed after preserving/importing the test copy. |
+
+**Measurements pending:** no real 0.6.0 journal recording has been supplied. Fill a private
+measurement row per family and a normal-session row (elapsed minutes, entries by family, file
+bytes, bytes attributable to journal, skipped count, reload seconds, build, machine, errors).
+Record actual API support and failures before 21 October; offline tests do not establish beta support.
+
+### Preserve a real recording as a replay fixture before 21 October
+
+1. `/reload` or log out and **close WoW**; wait for writing to finish. Copy the entire account
+   SavedVariables file, unchanged, to an immutable private path such as
+   `data/inbox/event-journal/mac-20261013T180000Z-BrownstoneScan.lua`. Windows uses the existing drop
+   script; retain the dropped file locally too. Never edit the original game file to make it pass.
+2. Record SHA-256 and bytes (`shasum -a 256 <private-copy>` and `wc -c <private-copy>` on Mac;
+   `Get-FileHash -Algorithm SHA256 <private-copy>` on Windows). Keep the action/measurement log next
+   to this private copy with the build, expected changes, actual hook arguments and error text.
+3. Treat that immutable file as the **real replay fixture**: point an addon source at its copy and
+   an isolated `work/` data directory, preview and import twice with the CLI. Compare family counts,
+   raw JSON, IDs, scope, first-import versus duplicate outcomes and exact decompressed bronze bytes.
+   Repeat with two overlapping recordings to check duplicates; do not import altered same-ID content.
+4. For a committed regression test, select the smallest representative entries per family using
+   `scans.read_addon_records(copy.read_bytes())`, plus related snapshots, and the actual assertions
+   from the action log. Keep a private provenance note mapping them to raw-file hash/entry IDs.
+   Anonymize character/realm/recipient/body/link identifiers in a **derived** fixture only, regenerate
+   its length-prefixed IDs consistently, and label it derived from the measured recording. Retain
+   the unchanged recording privately. Add it under `tests/fixtures/` with a replay test in
+   `tests/test_journal.py`; never commit the full raw account file, private log or personal paths.
+5. Run `.venv/bin/pytest --cov`, `.venv/bin/ruff check .`, `.venv/bin/mypy` and `git diff --check`.
+   Record results and measurements here; real-recording acceptance stays pending until this is done.

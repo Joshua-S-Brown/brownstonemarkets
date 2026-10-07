@@ -145,7 +145,7 @@ def read_addon_database(raw: bytes) -> dict:
     database = parse_lua(text).get("BrownstoneScanDB")
     if not isinstance(database, dict):
         raise ValueError("No BrownstoneScanDB table in this file")
-    if database.get("schema_version") not in (*SCAN_SCHEMA_VERSIONS, 5):
+    if database.get("schema_version") not in (*SCAN_SCHEMA_VERSIONS, 5, 6):
         raise ValueError(f"Unsupported BrownstoneScanDB schema_version {database.get('schema_version')!r}")
     return database
 
@@ -154,13 +154,14 @@ def read_addon_records(raw: bytes) -> tuple[list[dict], list[dict]]:
     database = read_addon_database(raw)
     records = _list(database.get("scans"), "scans")
     snapshots = _list(database.get("snapshots"), "snapshots")
-    for values, key in ((records, "scan_id"), (snapshots, "snapshot_id")):
+    journal = _list(database.get("journal"), "journal")
+    for values, key in ((records, "scan_id"), (snapshots, "snapshot_id"), (journal, "entry_id")):
         ids = [r.get(key) if isinstance(r, dict) else None for r in values]
-        if key == "snapshot_id" and any(not isinstance(value, str) or not value for value in ids):
-            raise ValueError("Every snapshot needs a snapshot_id")
+        if key != "scan_id" and any(not isinstance(value, str) or not value for value in ids):
+            raise ValueError(f"Every record needs a {key}")
         if len(set(ids)) != len(ids):
             raise ValueError(f"Duplicate {key} in file")
-    return records, snapshots
+    return records, snapshots + journal
 
 
 def read_saved_variables(raw: bytes) -> list[dict]:
