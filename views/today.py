@@ -1,10 +1,12 @@
 """Today settings and evidence tables; calculations live in brownstone.today."""
+import hashlib
+import json
 from datetime import UTC, datetime
 
 import streamlit as st
 
 from brownstone.money import format_money, parse_money, to_gold
-from brownstone.today import build_today
+from brownstone.today import build_today, craft_details
 from brownstone.today_data import read_today_evidence
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
@@ -87,7 +89,7 @@ def _evidence(row):
     return {"State": "stale — inspect only" if row["stale"] else "potential gain"}
 
 
-def _table(rows, rest, decisions, key):
+def _table(rows, rest, decisions, key, *, selection_key=None):
     evidence = st.toggle("Show evidence columns", key=f"today-evidence-{key}")
     if rows:
         columns = [*decisions, "State"]
@@ -95,10 +97,15 @@ def _table(rows, rest, decisions, key):
             columns.extend(name for name in rows[0] if name not in columns)
         displayed = [{name: row[name] for name in columns} for row in rows]
         gold = [name for name in columns if name.endswith("(g)")]
-        st.dataframe(displayed, hide_index=True, width="stretch", column_config=gold_columns(*gold))
+        options = ({"key": selection_key, "on_select": "rerun", "selection_mode": "single-row"}
+                   if selection_key else {})
+        event = st.dataframe(displayed, hide_index=True, width="stretch",
+                             column_config=gold_columns(*gold), **options)
+        selected = event.selection.rows if selection_key else []
     else:
         st.info("No rows clear these settings with the available evidence.")
     st.caption(f"{rest} more rows outside this list's 10-row limit.")
+    return selected if rows else []
 
 
 def _tables(result, names):
@@ -106,9 +113,13 @@ def _tables(result, names):
     craft = [_craft_row(row, sells[row["output_item_id"]]) for row in result["craft"]]
     craft_tab, buy_tab, sell_tab, vendor_tab = st.tabs(["Craft", "Buy", "Sell", "Below vendor"])
     with craft_tab:
-        _table(craft, result["remaining"]["craft"],
+        selected = _table(craft, result["remaining"]["craft"],
                ["Item", "Profession", "Batch", "Limited by", "Material cost (g)", "Batch profit (g)",
-                "Profit per craft (g)", "Thin"], "craft")
+                "Profit per craft (g)", "Thin"], "craft", selection_key=_selection_key(result))
+        if selected:
+            _craft_details(result["craft"][selected[0]])
+        elif craft:
+            st.caption("Select a craft row to see its materials and catalog craft steps.")
         hidden = "; ".join(f"{reason}: {count}" for reason, count in sorted(result["hidden"].items()))
         st.caption("Hidden recipes: " + (hidden or "0"))
     with buy_tab:
@@ -155,3 +166,38 @@ def _sell_row(row):
             "Undercut unit (g)": to_gold(row["undercut_copper"]),
             "Profit at undercut for batch (g)": to_gold(row["undercut_batch_profit_copper"]),
             "Thin": row["thin"], **_evidence(row)}
+
+
+def _selection_key(result):
+    # Stable across clock ticks/evidence toggles; any plan content or provenance change resets selection.
+    plan = {key: value for key, value in result.items() if key != "freshness"}
+    digest = hashlib.sha256(json.dumps(plan, sort_keys=True, default=str).encode()).hexdigest()
+    key = f"today-craft-{digest}"
+    previous = st.session_state.get("today-craft-selection-key")
+    if previous and previous != key:
+        st.session_state.pop(previous, None)
+    st.session_state["today-craft-selection-key"] = key
+    return key
+
+
+def _craft_details(row):
+    details = craft_details(row)
+    st.markdown(f"**Materials for {row['output_name']} · {row['batch_size']} crafts**")
+    materials = [{"Material": r["item_name"], "Item ID": r["item_id"],
+                  "Route": "vendor" if r["method"] == "vendor" else "auction house",
+                  "Required units": r["quantity"], "Purchased units": r["purchased_units"],
+                  "Cost (g)": to_gold(r["cost_copper"]),
+                  "Highest unit price (g)": to_gold(r["highest_unit_copper"]), **_evidence(r)}
+                 for r in details["materials"]]
+    st.dataframe(materials, hide_index=True, width="stretch",
+                 column_config=gold_columns("Cost (g)", "Highest unit price (g)"))
+    st.caption(f"Batch material cost: {format_money(row['batch_cost_copper'])}. "
+               "All materials shown; whole-stack surplus has no revenue credit. Vendor stock is unknown.")
+    if details["intermediate_steps"]:
+        st.caption("Chosen catalog craft steps (indented by depth; costs are included in the materials above).")
+        lines = [f"{row['output_name']}: {row['batch_size']} crafts"]
+        for step in details["intermediate_steps"]:
+            state = _evidence(step)["State"]
+            lines.append(f"{'    ' * step['depth']}↳ {step['item_name']}: {step['crafts']} crafts → "
+                         f"{step['quantity']} units · {state}")
+        st.text("\n".join(lines))

@@ -127,6 +127,8 @@ def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, au
         catalog = catalog_for_row(selected, row)
         recipe = catalog["recipes_by_id"][row["recipe_id"]]
         rows.append({**row, "output_quantity": recipe["output_quantity"],
+                     "material_names": {p["item_id"]: catalog["items_by_id"][p["item_id"]]["name"]
+                                        for p in row["shopping_choices"]},
                      "recipe_source": recipe["source_url"], "catalog_version": catalog["catalog_version"],
                      "availability": recipe.get("availability", "available"),
                      "evidence_notes": _notes(catalog, recipe, row)})
@@ -257,3 +259,20 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
             "freshness": freshness, "listing_evidence_available": ladders is not None,
             "minimum_gain_copper": settings.minimum_gain, "today_version": TODAY_VERSION,
             "shopping_total_copper": sum(row["cost_copper"] for row in shopping)}
+
+
+def craft_details(row):
+    """Project a selected batch's reserved purchases and retained route; never quote again.
+
+    Materials are complete (including Buy's hidden tail), with integer copper costs.
+    Intermediate steps are quantities only: their base costs already belong to materials.
+    """
+    evidence = {key: row[key] for key in ("stale", "actionable")}
+    fields = ("item_id", "method", "quantity", "purchased_units", "cost_copper", "highest_unit_copper")
+    materials = [{**{key: purchase[key] for key in fields},
+                  "item_name": row["material_names"][purchase["item_id"]], **evidence}
+                 for purchase in row["purchases"]]
+    steps = [{**step, "quantity": step["quantity"] * row["batch_size"],
+              "crafts": step["crafts"] * row["batch_size"], **evidence}
+             for step in row["intermediate_steps"]]
+    return {"materials": materials, "intermediate_steps": steps}

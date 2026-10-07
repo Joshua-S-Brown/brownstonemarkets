@@ -387,7 +387,13 @@ variant state. No schema changes or migrations are needed.
 `build_today` takes catalogs, scoped evidence, `TodaySettings` and the caller's clock. It returns
 four capped lists (`craft`, `buy`, `sell`, `below_vendor`), mutually exclusive hidden reason counts,
 remaining counts, complete shopping cost, freshness and Today version. Craft rows retain board
-routes and recipe/catalog provenance. Prefix units/buyouts support whole-stack quotes with binary
+routes and recipe/catalog provenance. Recipe evaluation retains `intermediate_steps` for chosen
+`craft` branches only, with catalog recipe/item IDs, names, per-execution quantities, craft counts
+and depth. `craft_details(row)` projects complete materials from the selected row's existing
+`purchases` (no listing quotes), using that catalog's material names, and scales retained intermediate
+steps by batch size. Copper costs remain integers; step costs are already in the purchased leaves.
+Both detail lists retain stale/actionable state. Materials include the merged Buy list's hidden tail.
+Prefix units/buyouts support whole-stack quotes with binary
 search for the affordable bound; the most profitable size is then chosen among the bound and each size just
 before an input needs another listing. Each selection reserves funds and listing offsets. No per-unit expansion or per-recipe SQL.
 Selection rounds re-size remaining candidates against the same remaining resources. Duplicate
@@ -398,6 +404,10 @@ directory), and reports invalid or failed reads/writes without hiding the tables
 form in an expander and puts the four lists in tabs. Each table projects decision columns plus State
 by default; an evidence toggle reveals its other columns without changing result values. Shared
 provenance appears once above the tabs; freshness stays outside collapsed controls (UI-01).
+The Craft dataframe supports single-row selection, initially empty. Its widget key fingerprints
+plan contents and provenance (excluding continuously changing freshness age), so a changed plan
+clears selection. Selected materials appear beneath it, followed by indented catalog craft steps
+(STORY-038); detail materials are complete rather than capped at Buy's 10 displayed rows.
 
 Offline fixtures in `test_today.py`, `test_today_data.py` and `test_today_view.py` cover this contract
 without discovering local catalogs. Performance verification uses a copied database with current

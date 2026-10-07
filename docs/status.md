@@ -93,6 +93,12 @@ _Last updated 2026-10-07._
   the rest; hidden recipes show reasons. Stale data stays inspectable with a warning and every row
   non-actionable. TSM labels listing-dependent evidence unavailable. Rules and decisions are in
   `requirements.md` → Today v1; contracts are in `design.md` → Today contracts.
+- **Today craft details (STORY-038, implemented and reviewed):** selecting a Craft row shows
+  its complete reserved material purchases, required/purchased units, route, cost and highest unit
+  price, plus indented chosen catalog intermediate steps and batch quantities. No row starts selected;
+  changed plan contents/provenance clear selection. Materials reconcile exactly in copper with the
+  craft and full merged shopping cost, including Buy's hidden tail; stale details remain inspect-only.
+  Today version, sizing, ranking and merged Buy output are unchanged.
 - **Scan changes (STORY-018):** compare any two distinct eligible addon scans of the selected source and market; defaults to the newest two scan IDs. Displays per-unit prices, listing/unit counts, changes, separate new/vanished lists, compatible-catalog item filtering, UTC finish times, gap and freshness. Missing listings, no buyout and no market value have distinct labels. Eligibility and display rules are in UI-06 (`requirements.md`). Market scope includes environment (DATA-03).
 - **Market depth (STORY-019):** Crafting shows output listing/unit counts and a direct-input depth summary on each board row, and the same counts in recipe inputs and shopping lists. Counts come from the exact priced scan. Missing listings and unavailable depth have distinct labels; depth is display-only (CRAFT-09 in `requirements.md`).
 - **Interface:**
@@ -127,7 +133,7 @@ _Last updated 2026-10-07._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.79% in the current macOS run: 763 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.81% in the current macOS run: 779 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.9.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -167,7 +173,7 @@ _Last updated 2026-10-07._
 git diff --check
 ```
 
-Expected: 763 tests pass and one explicit PowerShell-unavailable skip on this Mac; 764 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 779 tests pass and one explicit PowerShell-unavailable skip on this Mac; 780 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 
@@ -355,3 +361,14 @@ older formats. Totals: 112 pass, 320 warn, 3 fail; end-to-end run 55.998 seconds
 file hashes and the complete fresh data copy are unchanged. Private per-file results, timings and
 every warning/failure are in ignored `work/beta-reports/verification/real-results.json`; no genuine
 format-5/6 in-game recording is claimed.
+
+STORY-038 real-data check (2026-10-07, read-only existing database): Forever beta Normal Alliance,
+source `forever-us-normal-alliance-addon`, scan `20261007T185956Z-a4a84f`, existing saved settings
+25g / scaled 1% with 10s floor / cap 5. Today selects 9 crafts; all reserved details reconcile to
+249,991c shopping total. Barbaric Bracers (`forever-leatherworking`, recipe 23399), batch 5,
+costs 111,728c: Ruined Leather Scraps 2,400 required / 2,409 purchased / 31,404c; Cured Heavy Hide
+10 / 17 / 35,649c; Raptor Hide 5 / 18 / 5,310c; Small Lustrous Pearl 20 / 20 / 19,399c;
+Large Fang 20 / 20 / 19,966c. All five routes are auction purchases. Highest unit prices are
+17c, 2,097c, 295c, 1,099c and 1,000c respectively. The retained catalog chain is Heavy Leather
+40 crafts/units → Medium Leather 200 → Light Leather 800, at depths 1/2/3. Evidence was fresh
+at 21:45 UTC. No database migration, import or settings write was needed.

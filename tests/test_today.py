@@ -319,3 +319,90 @@ def test_final_profit_order_survives_budget_resizing_and_hidden_tail():
     assert [r["batch_profit_copper"] for r in result["craft"]] == [160, 100]
     assert [r["batch_size"] for r in result["craft"]] == [1, 5]
     assert result["hidden"] == {"below minimum gain": 1}
+
+
+def test_craft_details_reserved_costs_reconcile_across_crafts_and_vendor(monkeypatch):
+    from brownstone.today import craft_details
+
+    second = output_catalog(4, 'second')
+    second['items_by_id'][1]['name'] = 'Second catalog material'
+    result = plan(catalogs=[catalog(), second],
+                  observations={1: {'min_buyout': 10, 'market_value': 20},
+                                3: {'min_buyout': 200}, 4: {'min_buyout': 200}},
+                  settings=TodaySettings(1000, 1, 'fixed', max_crafts=1),
+                  listings={1: [(3, 30, 10), (4, 80, 20)]})
+    def fail(*args, **kwargs):
+        raise AssertionError('Details must not re-quote listings')
+    monkeypatch.setattr(Ladder, 'quote', fail)
+    totals = {}
+    for craft in result['craft']:
+        details = craft_details(craft)
+        assert sum(r['cost_copper'] for r in details['materials']) == craft['batch_cost_copper']
+        assert not details['intermediate_steps']
+        expected_name = 'Fixture 1' if craft['catalog_id'] == 'fixture' else 'Second catalog material'
+        assert details['materials'][0]['item_name'] == expected_name
+        vendor = next(r for r in details['materials'] if r['method'] == 'vendor')
+        assert (vendor['quantity'], vendor['purchased_units'], vendor['cost_copper'],
+                vendor['highest_unit_copper']) == (1, 1, 10, 10)
+        for r in details['materials']:
+            assert type(r['cost_copper']) is int
+            key = (r['item_id'], r['method'])
+            entry = totals.setdefault(key, {'quantity': 0, 'purchased_units': 0, 'cost_copper': 0,
+                                           'highest_unit_copper': 0})
+            for field in ('quantity', 'purchased_units', 'cost_copper'):
+                entry[field] += r[field]
+            entry['highest_unit_copper'] = max(entry['highest_unit_copper'], r['highest_unit_copper'])
+    for buy in result['buy']:
+        assert totals[(buy['item_id'], buy['method'])] == {field: buy[field] for field in totals[(1, 'buy')]}
+    assert [craft_details(r)['materials'][0]['cost_copper'] for r in result['craft']] == [30, 80]
+    assert result['today_version'] == 1
+
+
+def chain_catalog():
+    c = catalog()
+    for item_id in (5, 6):
+        c['items_by_id'][item_id] = {'item_id': item_id, 'name': f'Intermediate {item_id}',
+                                   'role': 'intermediate', 'source_url': 'https://example.com/item'}
+    for recipe_id, output, inputs in [(50, 5, [(6, 2)]), (60, 6, [(1, 3)])]:
+        c['recipes_by_id'][recipe_id] = {**c['recipes_by_id'][30], 'recipe_id': recipe_id,
+                                       'output_item_id': output,
+                                       'inputs': [{'item_id': i, 'quantity': q} for i, q in inputs]}
+        c['recipe_for_output'][output] = recipe_id
+    c['recipes_by_id'][30]['inputs'] = [{'item_id': 5, 'quantity': 2}, {'item_id': 2, 'quantity': 1}]
+    c['items'] = list(c['items_by_id'].values())
+    c['recipes'] = list(c['recipes_by_id'].values())
+    return c
+
+
+def test_craft_details_nested_chosen_catalog_steps_and_bought_intermediate():
+    from brownstone.today import craft_details
+
+    args = {'catalogs': [chain_catalog()], 'settings': TodaySettings(10000, 1, 'fixed', max_crafts=2),
+            'listings': {1: [(30, 300, 10)]}}
+    craft = plan(**args)['craft'][0]
+    details = craft_details(craft)
+    assert [(r['item_id'], r['quantity'], r['crafts'], r['depth'])
+            for r in details['intermediate_steps']] == [(5, 4, 4, 1), (6, 8, 8, 2)]
+    assert details['materials'][0]['quantity'] == 24
+    assert details['materials'][0]['purchased_units'] == 30
+    assert sum(r['cost_copper'] for r in details['materials']) == craft['batch_cost_copper'] == 320
+    # A cheaper bought intermediate stops the chain, even though catalog recipes exist for it.
+    result = plan(**{**args, 'observations': {1: {'min_buyout': 10}, 5: {'min_buyout': 1},
+                                            3: {'min_buyout': 200}}, 'listings': {5: [(4, 4, 1)]}})
+    details = craft_details(next(r for r in result['craft'] if r['output_item_id'] == 3))
+    assert not details['intermediate_steps']
+    assert {r['item_id'] for r in details['materials']} == {2, 5}
+
+
+def test_craft_details_stale_and_full_material_tail():
+    from brownstone.today import craft_details
+
+    c = catalog()
+    for i in range(10, 22):
+        c['items_by_id'][i] = {**c['items_by_id'][2], 'item_id': i, 'name': f'Vendor {i}'}
+    c['recipes_by_id'][30]['inputs'] = [{'item_id': i, 'quantity': 1} for i in range(10, 22)]
+    result = plan(catalogs=[c], snapshot={**SNAPSHOT, 'updated_at': (NOW - timedelta(hours=25)).isoformat()})
+    details = craft_details(result['craft'][0])
+    assert len(details['materials']) == 12 and len(result['buy']) == 10 and result['remaining']['buy'] == 2
+    assert all(r['stale'] and not r['actionable'] for r in details['materials'])
+    assert sum(r['cost_copper'] for r in details['materials']) == result['shopping_total_copper'] == 600

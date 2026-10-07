@@ -198,6 +198,28 @@ def _cost_row(item_id: int, quantity: int, route: Route) -> dict:
             "total_cost_copper": cost * quantity if cost is not None else None}
 
 
+def _intermediate_steps(catalog: dict, prices: dict[int, int], recipe_id: int,
+                        quantity: int = 1, depth: int = 1, trail: tuple[int, ...] = ()) -> list[dict]:
+    """Retain only craft branches chosen by the same catalog-local cost routing."""
+    steps = []
+    recipe = catalog["recipes_by_id"][recipe_id]
+    for ingredient in recipe["inputs"]:
+        item_id = ingredient["item_id"]
+        route = _cheapest_route(catalog, prices, item_id, trail + (recipe_id,))
+        if route[1] != "craft":
+            continue
+        nested_id = catalog["recipe_for_output"][item_id]
+        units = ingredient["quantity"] * quantity
+        made = catalog["recipes_by_id"][nested_id]["output_quantity"]
+        if units % made:
+            raise ValueError("Fractional craft counts are not supported")
+        steps.append({"item_id": item_id, "item_name": catalog["items_by_id"][item_id]["name"],
+                      "recipe_id": nested_id, "quantity": units, "crafts": units // made, "depth": depth})
+        steps.extend(_intermediate_steps(catalog, prices, nested_id, units // made, depth + 1,
+                                         trail + (recipe_id,)))
+    return steps
+
+
 def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05,
                     sale_prices: dict[int, int] | None = None) -> dict:
     """Cost a recipe, choosing the cheaper valid buy or craft path for intermediates.
@@ -241,6 +263,7 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
         "sale_price_copper": sale if valid_sale else None,
         "net_revenue_copper": net_revenue, "profit_copper": profit,
         "choices": choices,
+        "intermediate_steps": _intermediate_steps(catalog, prices, recipe_id),
         "shopping_list": dict(sorted(shopping.items())),
         "shopping_choices": shopping_choices,
         "expanded_materials": material_plan(catalog, recipe_id),

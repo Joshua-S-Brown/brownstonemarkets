@@ -50,7 +50,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 6. STORY-041 your professions and known recipes (addon; beta; must be testable by 13 October)
 7. STORY-042 beta evidence report (Brownstone CLI; Claude runs it after each play session)
 8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
-9. STORY-038 Today craft details (Brownstone; works on existing scans)
+9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
 11. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
 12. STORY-035 auction deposits (needs a beta check)
@@ -282,6 +282,8 @@ Acceptance:
 - **Docs:** `addon/README.md` gets a short *Panel* section (replacing the visibility decision) and an in-game check written as play actions only: click the minimap button, open and close the panel, drag the button and reload, press each button once. `requirements.md` records the panel as a convenience view with the existing guards; `status.md` describes the current state.
 
 ### STORY-038 — Today craft details
+
+**Implemented and reviewed (2026-10-07).** Row selection checked in a live browser on the Forever beta scan.
 
 Added 2026-10-06 (product owner feedback on Today). Display of what the plan already calculates; no change to sizing, ranking or Today's rules.
 

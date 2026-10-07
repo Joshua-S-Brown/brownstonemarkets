@@ -215,3 +215,49 @@ def test_crafting_groups_unsupported_recipes_and_explanations(tmp_path, monkeypa
     assert any(c.startswith('Policy ') and 'SHA-256' in c for c in visible)
     assert any(c.startswith('Price age unknown:') for c in visible)
     assert not any('Depth counts' in c or 'Margin = ' in c or 'Selected catalogs' in c for c in visible)
+
+
+def select_craft(at):
+    key = at.session_state['today-craft-selection-key']
+    at.session_state[key] = {'selection': {'rows': [0], 'columns': [], 'cells': []}}
+    return at.run()
+
+
+def test_today_craft_selection_details_and_plan_change_reset(tmp_path, monkeypatch):
+    at, _, _ = app(tmp_path, monkeypatch)
+    assert len(at.tabs[0].dataframe) == 1  # No selection by default.
+    key = at.session_state['today-craft-selection-key']
+    assert at.tabs[0].dataframe[0].proto.selection_mode
+    select_craft(at)
+    assert not at.exception and len(at.tabs[0].dataframe) == 2
+    details = at.tabs[0].dataframe[1].value
+    assert list(details['Route']) == ['auction house', 'vendor']
+    assert list(details['Required units']) == [10, 5]
+    assert details['Cost (g)'].sum() == at.tabs[0].dataframe[0].value['Material cost (g)'][0]
+    buy = at.tabs[1].dataframe[0].value.copy()
+    widget(at.toggle, 'Show evidence columns').set_value(True).run()
+    assert at.session_state['today-craft-selection-key'] == key
+    select_craft(at)
+    assert len(at.tabs[0].dataframe) == 2
+    assert at.tabs[1].dataframe[0].value.equals(buy)
+    widget(at.number_input, 'Most crafts per item').set_value(2)
+    widget(at.button, 'Save Today settings').click().run()
+    assert not at.exception and at.session_state['today-craft-selection-key'] != key
+    assert len(at.tabs[0].dataframe) == 1
+    assert key not in at.session_state
+
+
+def test_today_selected_stale_craft_details_and_indented_steps(tmp_path, monkeypatch):
+    from test_today import chain_catalog
+
+    at, _, _ = app(tmp_path, monkeypatch, stale=True)
+    monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs',
+                        lambda *args: [{'name': 'chain', 'catalog': chain_catalog()}])
+    at.run()
+    select_craft(at)
+    assert not at.exception and len(at.tabs[0].dataframe) == 2
+    assert set(at.tabs[0].dataframe[1].value['State']) == {'stale — inspect only'}
+    steps = at.text[0].value.splitlines()
+    assert steps[1].startswith('    ↳ Intermediate 5: 10 crafts → 10 units')
+    assert steps[2].startswith('        ↳ Intermediate 6: 20 crafts → 20 units')
+    assert all('stale — inspect only' in line for line in steps[1:])
