@@ -1,6 +1,6 @@
 -- Brownstone Scan: read-only auction house scan (STORY-023).
 --
--- A scan starts only from the "Brownstone Scan" button or "/bscan start" while
+-- A scan starts only from an auction-house/panel button or "/bscan start" while
 -- the auction house window is open. The addon only reads listings. It never
 -- bids, buys, posts or cancels, and never scans on a timer or on its own.
 --
@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.8.0"
+local ADDON_VERSION = "0.9.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -26,6 +26,7 @@ local START_TIMEOUT = 30      -- seconds to wait for the server to answer the re
 
 local frame = CreateFrame("Frame")
 local button, reloadButton, clearButton
+local panel = {}  -- convenience UI only; no capture or timer
 local ensureButton
 local scan  -- the scan in progress, or nil
 -- Scans finished since login or the last /reload. They are only in memory until the game writes the
@@ -68,6 +69,7 @@ local function clearScans(force)
         say("Saved scans cleared. This login's time is unknown, so every character snapshot was kept "
             .. "(written at the next /reload).")
     end
+    if panel.refresh then panel.refresh() end
 end
 
 local CLEAR_POPUP = "BROWNSTONESCAN_CLEAR_SAVED"
@@ -101,9 +103,10 @@ local function reloadUI()
 end
 
 local function setMaintenanceEnabled(enabled)
-    for _, control in ipairs({ reloadButton, clearButton }) do
+    for _, control in pairs({ reloadButton, clearButton, panel.reload, panel.clear }) do
         if enabled then control:Enable() else control:Disable() end
     end
+    if panel.syncStart then panel.syncStart(enabled) end
 end
 
 local function utc(t)
@@ -1299,6 +1302,153 @@ function ensureButton()
     setMaintenanceEnabled(not scan and not itemPass)
 end
 
+-- The panel shares the existing actions and lifecycle gates. Status is refreshed on
+-- open/actions (including confirmed clear), never by a polling timer.
+local function printStatus()
+    local n = #BrownstoneScanDB.scans
+    local last = BrownstoneScanDB.scans[n]
+    characterStatus()
+    say(("%d journal entries; cap %d; missing hooks: %s"):format(#BrownstoneScanDB.journal, journal.cap,
+        table.concat(BrownstoneScanDB.journal_diagnostics.missing_hooks, ", ")))
+    say(("Events the client rejected: %s."):format(#missingEvents > 0 and table.concat(missingEvents, ", ") or "none"))
+    say(("%d saved scan(s). API: %s. Last: %s."):format(n, tostring(detectApi()),
+        last and (last.scan_id .. " " .. last.status .. ", " .. (last.listing_count or 0) .. " listings") or "none"))
+end
+
+function panel.syncStart(enabled)
+    if not panel.start then return end
+    -- Auction events can arrive before Blizzard's frame has been shown/hidden.
+    local open = panel.houseOpen
+    if open == nil then open = ahIsOpen() end
+    if enabled and open then panel.start:Enable() else panel.start:Disable() end
+end
+
+function panel.refresh()
+    if not panel.window then return end
+    local db = BrownstoneScanDB
+    panel.status:SetText(("Saved scans in file: %d\nSession scans not written: %d\nCharacter snapshots: %d\nLogin time: %s")
+        :format(#db.scans - unsavedScans, unsavedScans, #db.snapshots,
+            loginTime and "known" or "unknown (Clear keeps all journal/snapshots)"))
+    local count, skipped = 0, nil
+    for _, entry in ipairs(db.journal) do
+        if entry.event == "JOURNAL_OVERFLOW" then skipped = entry.skipped else count = count + 1 end
+    end
+    panel.journal:SetText(("Journal entries: %d / 10,000%s"):format(count,
+        skipped and ("; skipped: " .. skipped) or ""))
+    if count >= 8000 then panel.journal:SetTextColor(1, 0.65, 0) else panel.journal:SetTextColor(1, 1, 1) end
+    setMaintenanceEnabled(not scan and not itemPass)
+end
+
+local function panelText(parent, y, height)
+    local text = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    text:SetPoint("TOPLEFT", parent, "TOPLEFT", 16, y)
+    text:SetSize(328, height)
+    text:SetJustifyH("LEFT")
+    text:SetJustifyV("TOP")
+    return text
+end
+
+local function panelButton(name, label, x, y, action)
+    local control = CreateFrame("Button", name, panel.window, "UIPanelButtonTemplate")
+    control:SetSize(158, 24)
+    control:SetPoint("TOPLEFT", panel.window, "TOPLEFT", x, y)
+    control:SetText(label)
+    control:SetScript("OnClick", function() action() panel.refresh() end)
+    return control
+end
+
+local function createPanel()
+    local window = CreateFrame("Frame", "BrownstoneScanPanel", UIParent, "BasicFrameTemplateWithInset")
+    panel.window = window
+    window:SetSize(360, 330)
+    window:SetFrameStrata("HIGH")  -- below StaticPopup (DIALOG), so the Clear confirmation stays on top
+    window:SetPoint("CENTER")
+    window:SetMovable(true)
+    window:SetClampedToScreen(true)
+    window:EnableMouse(true)
+    window:RegisterForDrag("LeftButton")
+    window:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    window:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    window:SetScript("OnShow", panel.refresh)
+    window.TitleText:SetText("Brownstone Scan")
+    table.insert(UISpecialFrames, "BrownstoneScanPanel")
+    panel.status = panelText(window, -38, 72)
+    panel.journal = panelText(window, -114, 32)
+    panel.reload = panelButton("BrownstonePanelReload", "Reload", 16, -150, reloadUI)
+    panel.clear = panelButton("BrownstonePanelClear", "Clear saved data", 186, -150, confirmClearScans)
+    panel.chat = panelButton("BrownstonePanelStatus", "Status", 16, -180, printStatus)
+    panel.start = panelButton("BrownstonePanelStart", "Start scan", 186, -180, startScan)
+    panel.routine = panelText(window, -218, 96)
+    panel.routine:SetText("1. Play. 2. Reload (or log out) so the game writes the file. "
+        .. "3. Import on the computer. 4. Clear, then Reload. Clear keeps this login's journal and snapshots; "
+        .. "they import again harmlessly as duplicates.")
+    window:Hide()
+end
+
+function panel.toggle()
+    if not panel.window then createPanel() end
+    if panel.window:IsShown() then panel.window:Hide() else panel.window:Show() end
+end
+
+function panel.positionIcon()
+    local angle = math.rad(BrownstoneScanDB.ui.minimap_angle)
+    panel.icon:ClearAllPoints()
+    panel.icon:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * 80, math.sin(angle) * 80)
+end
+
+function panel.dragIcon()
+    local x, y = GetCursorPosition()
+    local centerX, centerY = Minimap:GetCenter()
+    local scale = Minimap:GetEffectiveScale()
+    BrownstoneScanDB.ui.minimap_angle = math.deg(math.atan2(y / scale - centerY, x / scale - centerX)) % 360
+    panel.positionIcon()
+end
+
+function panel.createIcon()
+    local db = BrownstoneScanDB
+    db.ui = type(db.ui) == "table" and db.ui or {}
+    local angle = db.ui.minimap_angle
+    if type(angle) ~= "number" or angle ~= angle or angle == math.huge or angle == -math.huge then angle = 225 end
+    db.ui.minimap_angle = angle % 360
+    local icon = CreateFrame("Button", "BrownstoneScanMinimapButton", Minimap)
+    panel.icon = icon
+    icon:SetSize(32, 32)
+    icon:SetFrameStrata("MEDIUM")
+    icon:RegisterForClicks("LeftButtonUp")
+    icon:RegisterForDrag("LeftButton")
+    icon:SetNormalTexture("Interface\\Icons\\INV_Misc_Coin_01")
+    icon:GetNormalTexture():SetTexCoord(0.05, 0.95, 0.05, 0.95)
+    icon:GetNormalTexture():SetPoint("TOPLEFT", icon, "TOPLEFT", 6, -6)
+    icon:GetNormalTexture():SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -6, 6)
+    icon:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+    local border = icon:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetSize(54, 54)
+    border:SetPoint("TOPLEFT")
+    icon:SetScript("OnClick", panel.toggle)
+    icon:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine("Brownstone Scan")
+        GameTooltip:AddLine("Click: open panel. Drag: move", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    icon:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    icon:SetScript("OnDragStart", function(self)
+        GameTooltip:Hide()
+        -- This update exists only for the player's active drag; it never captures or runs controls.
+        self:SetScript("OnUpdate", panel.dragIcon)
+    end)
+    icon:SetScript("OnHide", function(self)
+        self:SetScript("OnUpdate", nil)
+        GameTooltip:Hide()
+    end)
+    icon:SetScript("OnDragStop", function(self)
+        panel.dragIcon()
+        self:SetScript("OnUpdate", nil)
+    end)
+    panel.positionIcon()
+end
+
 frame:SetScript("OnEvent", function(_, event, ...)
     local arg1, arg2 = ...
     journal.protect(journal.observe, event, event, ...)
@@ -1313,6 +1463,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
         BrownstoneScanDB.journal = BrownstoneScanDB.journal or {}
         journal.findOverflow()
         journal.installHooks()
+        panel.createIcon()
     elseif event == "PLAYER_ENTERING_WORLD" then
         firedEvents[event] = (firedEvents[event] or 0) + 1
         -- Only the first world entry after loading (login or /reload) sets the login marker; later
@@ -1334,10 +1485,14 @@ frame:SetScript("OnEvent", function(_, event, ...)
         captureCharacter("bank", event)
         bankOpen = false
     elseif event == "AUCTION_HOUSE_SHOW" then
+        panel.houseOpen = true
         ensureButton()
+        setMaintenanceEnabled(not scan and not itemPass)
     elseif event == "AUCTION_HOUSE_CLOSED" then
+        panel.houseOpen = false
         StaticPopup_Hide(CLEAR_POPUP)
         if scan then stopScan("stopped", "auction house window closed") end
+        setMaintenanceEnabled(not scan and not itemPass)
     elseif event == "GET_ITEM_INFO_RECEIVED" then
         itemAnswer(arg1, arg2)
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then
@@ -1366,18 +1521,13 @@ SlashCmdList["BROWNSTONESCAN"] = function(msg)
     elseif cmd == "label" then
         BrownstoneScanDB.label = (rest ~= "") and rest or nil
         say("Label for future scans: " .. tostring(BrownstoneScanDB.label))
+    elseif cmd == "panel" then
+        panel.toggle()
     elseif cmd == "status" then
-        local n = #BrownstoneScanDB.scans
-        local last = BrownstoneScanDB.scans[n]
-        characterStatus()
-        say(("%d journal entries; cap %d; missing hooks: %s"):format(#BrownstoneScanDB.journal, journal.cap,
-            table.concat(BrownstoneScanDB.journal_diagnostics.missing_hooks, ", ")))
-        say(("Events the client rejected: %s."):format(#missingEvents > 0 and table.concat(missingEvents, ", ") or "none"))
-        say(("%d saved scan(s). API: %s. Last: %s."):format(n, tostring(detectApi()),
-            last and (last.scan_id .. " " .. last.status .. ", " .. (last.listing_count or 0) .. " listings") or "none"))
+        printStatus()
     elseif cmd == "clear" then
         clearScans(rest:lower() == "all")
     else
-        say("/bscan start | stop | status | label <text> | clear [all]")
+        say("/bscan start | stop | status | panel | label <text> | clear [all]")
     end
 end

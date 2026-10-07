@@ -202,7 +202,7 @@ def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
                                             lua.table_from({"scan_id": "old-2"})])
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert python_value(g.BrownstoneScanDB) == button_result
-    assert g.BrownstoneScanDB.addon_version == "0.8.0" and g.BrownstoneScanDB.schema_version == 6
+    assert g.BrownstoneScanDB.addon_version == "0.9.0" and g.BrownstoneScanDB.schema_version == 6
 
 
 @pytest.mark.parametrize("ending", [
@@ -210,6 +210,7 @@ def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
 ])
 def test_maintenance_buttons_disabled_until_every_scan_exit(ending):
     lua, g = client(legacy=ending == "legacy_throttled", rows=0 if ending == "zero" else 5)
+    g.SlashCmdList.BROWNSTONESCAN("panel")
     g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
     if ending == "not_ready":
         lua.execute("C_AuctionHouse.IsThrottledMessageSystemReady = function() return false end")
@@ -220,6 +221,8 @@ def test_maintenance_buttons_disabled_until_every_scan_exit(ending):
     g.scanButton.Click(g.scanButton)
     if ending not in {"not_ready", "error", "legacy_throttled"}:
         assert not g.reloadButton.enabled and not g.clearButton.enabled
+        assert not g.BrownstonePanelReload.enabled and not g.BrownstonePanelClear.enabled
+        assert not g.BrownstonePanelStart.enabled
         # Also invoke callbacks directly to verify guards beyond client disabled state.
         g.reloadButton.scripts.OnClick()
         g.clearButton.scripts.OnClick()
@@ -233,6 +236,8 @@ def test_maintenance_buttons_disabled_until_every_scan_exit(ending):
         else:
             g.mainFrame.scripts.OnUpdate(g.mainFrame, 31)
     assert g.reloadButton.enabled and g.clearButton.enabled
+    assert g.BrownstonePanelReload.enabled and g.BrownstonePanelClear.enabled
+    assert g.BrownstonePanelStart.enabled == (ending != "closed")
     g.reloadButton.Click(g.reloadButton)
     assert g.reloads == 1
 
@@ -283,7 +288,7 @@ def test_slash_commands_label_status_stop_help_and_case_still_work():
     command("label")
     assert g.BrownstoneScanDB.label is None
     command("unknown")
-    assert "/bscan start | stop | status | label <text> | clear [all]" in g.messages[len(g.messages)]
+    assert "/bscan start | stop | status | panel | label <text> | clear [all]" in g.messages[len(g.messages)]
 
 
 def pass_client(rows=5, rejected=False, legacy=False):
@@ -498,3 +503,171 @@ def test_item_pass_reads_items_loaded_during_listing_reads_without_requesting():
         {"item_id": 2589, "item_level": 25, "max_stack_size": 20, "vendor_sell_copper": 123}]
     assert "1 already loaded, 2 requested" in g.messages[len(g.messages)]
     assert scan_details.reference_frame(result)["pass_vendor_sell_copper"].to_list() == [None, 123, None]
+
+
+
+def test_panel_toggle_movement_escape_tooltip_and_no_capture():
+    lua, g = client()
+    before = python_value(g.BrownstoneScanDB)
+    icon = g.BrownstoneScanMinimapButton
+    assert icon.width == icon.height == 32 and lua.eval("BrownstoneScanMinimapButton.parent == Minimap")
+    icon.scripts.OnEnter(icon)
+    assert list(g.GameTooltip.lines.values()) == ["Brownstone Scan", "Click: open panel. Drag: move"]
+    icon.scripts.OnLeave()
+    assert not g.GameTooltip.shown
+    icon.Click(icon)
+    window = g.BrownstoneScanPanel
+    assert window.IsShown(window) and window.movable and window.clamped
+    assert window.template == "BasicFrameTemplateWithInset" and window.TitleText.text == "Brownstone Scan"
+    assert "BrownstoneScanPanel" in g.UISpecialFrames.values()  # client's Escape-close registry
+    window.scripts.OnDragStart(window)
+    assert window.moving
+    window.scripts.OnDragStop(window)
+    assert not window.moving
+    window.CloseButton.Click()
+    assert not window.IsShown(window)
+    g.SlashCmdList.BROWNSTONESCAN("panel")
+    assert window.IsShown(window)
+    g.SlashCmdList.BROWNSTONESCAN("panel")
+    assert not window.IsShown(window)
+    assert python_value(g.BrownstoneScanDB) == before
+    assert g.requests == 0 and g.mainFrame.scripts.OnUpdate is None
+    assert "1. Play. 2. Reload (or log out)" in window.fontStrings[3].text
+    assert "duplicates." in window.fontStrings[3].text
+
+
+def test_minimap_drag_angle_restored_after_reload():
+    lua, g = client()
+    icon = g.BrownstoneScanMinimapButton
+    assert g.BrownstoneScanDB.ui.minimap_angle == 225
+    icon.scripts.OnDragStart(icon)
+    assert icon.scripts.OnUpdate is not None
+    g.cursorX, g.cursorY = 200, 360  # scale 2: cursor is directly above minimap center
+    icon.scripts.OnUpdate(icon, 0.1)
+    icon.scripts.OnDragStop(icon)
+    assert icon.scripts.OnUpdate is None
+    assert g.BrownstoneScanDB.ui.minimap_angle == pytest.approx(90)
+    assert icon.point[4] == pytest.approx(0, abs=1e-10) and icon.point[5] == pytest.approx(80)
+    before = python_value(g.BrownstoneScanDB)
+    lua.execute((ROOT / "addon/BrownstoneScan/BrownstoneScan.lua").read_text())
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "ADDON_LOADED", "BrownstoneScan")
+    assert g.BrownstoneScanDB.ui.minimap_angle == 90
+    assert g.BrownstoneScanMinimapButton.point[5] == pytest.approx(80)
+    assert python_value(g.BrownstoneScanDB) == before
+    restored = g.BrownstoneScanMinimapButton
+    restored.scripts.OnDragStart(restored)
+    restored.Hide(restored)
+    assert restored.scripts.OnUpdate is None  # hiding minimap controls ends active drag updates
+
+
+@pytest.mark.parametrize("bad_angle", ['"invalid"', '0/0', 'math.huge'])
+def test_minimap_invalid_angle_uses_default(bad_angle):
+    lua, g = client()
+    lua.execute(f"BrownstoneScanDB.ui.minimap_angle = {bad_angle}")
+    lua.execute((ROOT / "addon/BrownstoneScan/BrownstoneScan.lua").read_text())
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "ADDON_LOADED", "BrownstoneScan")
+    assert g.BrownstoneScanDB.ui.minimap_angle == 225
+
+
+def test_panel_status_counts_threshold_overflow_login_and_chat():
+    lua, g = client()
+    g.BrownstoneScanDB.scans[1] = lua.table_from(dict(scan_id="saved", status="complete"))
+    g.BrownstoneScanDB.snapshots[1] = lua.table_from(
+        dict(snapshot_id="old", character="Example Auctioneer", realm="Beta"))
+    lua.execute('for i = 1, 7999 do BrownstoneScanDB.journal[i] = { event = "TEST" } end')
+    g.SlashCmdList.BROWNSTONESCAN("panel")
+    status, journal = g.BrownstoneScanPanel.fontStrings[1], g.BrownstoneScanPanel.fontStrings[2]
+    assert "Saved scans in file: 1" in status.text and "Session scans not written: 0" in status.text
+    assert "Character snapshots: 1" in status.text and "unknown (Clear keeps all" in status.text
+    assert journal.text == "Journal entries: 7999 / 10,000" and journal.color[2] == 1
+    lua.execute('BrownstoneScanDB.journal[8000] = { event = "TEST" }; '
+                'BrownstoneScanDB.journal[8001] = { event = "JOURNAL_OVERFLOW", skipped = 37 }')
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "PLAYER_ENTERING_WORLD", True, False)
+    g.BrownstonePanelStatus.Click(g.BrownstonePanelStatus)
+    assert "Login time: known" in status.text
+    assert journal.text == "Journal entries: 8000 / 10,000; skipped: 37" and journal.color[2] == 0.65
+    panel_chat = list(g.messages.values())[-5:]
+    g.SlashCmdList.BROWNSTONESCAN("status")
+    assert list(g.messages.values())[-5:] == panel_chat
+    lua.execute('BrownstoneScanDB.journal = {}')
+    g.BrownstonePanelStatus.Click(g.BrownstonePanelStatus)
+    assert journal.color[2] == 1 and journal.text == "Journal entries: 0 / 10,000"
+
+
+def test_panel_reload_and_confirmed_clear_share_existing_controls():
+    lua, g = client()
+    g.AuctionHouseFrame.shown = False
+    g.SlashCmdList.BROWNSTONESCAN("panel")
+    assert g.BrownstonePanelReload.enabled and g.BrownstonePanelClear.enabled
+    g.BrownstonePanelReload.Click(g.BrownstonePanelReload)
+    assert g.reloads == 1
+    g.BrownstoneScanDB.scans[1] = lua.table_from(dict(scan_id="saved"))
+    g.BrownstonePanelClear.Click(g.BrownstonePanelClear)
+    assert g.popup.which == "BROWNSTONESCAN_CLEAR_SAVED" and g.popup.data == 1
+    before = python_value(g.BrownstoneScanDB)
+    g.popup.Cancel(g.popup)
+    assert python_value(g.BrownstoneScanDB) == before
+    g.BrownstonePanelClear.Click(g.BrownstonePanelClear)
+    g.popup.Accept(g.popup)
+    assert len(g.BrownstoneScanDB.scans) == 0
+    assert "Saved scans in file: 0" in g.BrownstoneScanPanel.fontStrings[1].text
+    assert g.BrownstoneScanDB.ui.minimap_angle == 225 and g.reloads == 1
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_panel_start_and_maintenance_sync_scan_item_pass_and_unsaved(legacy):
+    lua, g = client(legacy)
+    lua.execute("C_Item = C_Item or {}; C_Item.RequestLoadItemDataByID = function() end")
+    g.AuctionHouseFrame.shown = False
+    g.SlashCmdList.BROWNSTONESCAN("panel")
+    start, reload, clear = g.BrownstonePanelStart, g.BrownstonePanelReload, g.BrownstonePanelClear
+    assert not start.enabled
+    start.Click(start)
+    start.scripts.OnClick()  # same start guard even if called despite disabled state
+    assert g.requests == 0
+    g.AuctionHouseFrame.shown = True
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    assert start.enabled
+    start.Click(start)
+    assert g.requests == 1
+    assert not start.enabled and not reload.enabled and not clear.enabled
+    assert reload.enabled == g.reloadButton.enabled and clear.enabled == g.clearButton.enabled
+    reload.scripts.OnClick()
+    clear.scripts.OnClick()
+    start.scripts.OnClick()
+    assert g.reloads == 0 and g.popup is None and g.requests == 1
+    event = "AUCTION_ITEM_LIST_UPDATE" if legacy else "REPLICATE_ITEM_LIST_UPDATE"
+    g.mainFrame.scripts.OnEvent(g.mainFrame, event)
+    g.mainFrame.scripts.OnUpdate(g.mainFrame, 1)
+    assert not g.scanButton.enabled and not start.enabled  # item pass
+    g.AuctionHouseFrame.shown = False
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_CLOSED")
+    assert not reload.enabled and not clear.enabled and not start.enabled
+    reload.scripts.OnClick()
+    clear.scripts.OnClick()
+    assert g.reloads == 0 and g.popup is None
+    g.clock = 30
+    g.mainFrame.scripts.OnUpdate(g.mainFrame, 1)
+    assert reload.enabled == g.reloadButton.enabled and clear.enabled == g.clearButton.enabled
+    assert not start.enabled  # pass ended, but house closed
+    clear.Click(clear)
+    assert g.popup is None and len(g.BrownstoneScanDB.scans) == 1
+    assert any("nothing was cleared" in m for m in g.messages.values())
+    status = g.BrownstoneScanPanel.fontStrings[1].text
+    assert "Saved scans in file: 0" in status and "Session scans not written: 1" in status
+    g.AuctionHouseFrame.shown = True
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    assert start.enabled == g.scanButton.enabled
+
+
+def test_panel_start_tracks_auction_events_before_client_frame_visibility():
+    _, g = client()
+    g.AuctionHouseFrame.shown = False
+    g.SlashCmdList.BROWNSTONESCAN("panel")
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    assert g.BrownstonePanelStart.enabled
+    g.AuctionHouseFrame.shown = True
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_CLOSED")
+    assert not g.BrownstonePanelStart.enabled
+    g.BrownstonePanelStatus.Click(g.BrownstonePanelStatus)
+    assert not g.BrownstonePanelStart.enabled

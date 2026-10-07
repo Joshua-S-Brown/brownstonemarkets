@@ -1,10 +1,10 @@
-# Brownstone Scan 0.8.0
+# Brownstone Scan 0.9.0
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
 ## What it does and doesn't do
 
-- A scan starts only when you click **Brownstone Scan** on the auction house window, or type `/bscan start` while it is open.
+- A scan starts only when you click **Brownstone Scan** on the auction house window, **Start scan** in the panel, or type `/bscan start` while the house is open.
 - It never bids, buys, posts or cancels, and never scans on a timer or unattended. Closing the window during listing reading saves a `stopped` scan. Once listings have been saved, closing the window leaves its item info pass running.
 - It issues one auction-house request, `C_AuctionHouse.ReplicateItems()`, which is Blizzard's own full-snapshot call, then reads the result. If the client has only the older Classic API, it falls back to the `QueryAuctionItems` "get all" scan. Each scan records which one it used (`api`).
 - It only records what the client reports. Brownstone does all pricing (per-unit division, rounding, market value) after import, so the addon stays small and does as little as possible in game.
@@ -30,7 +30,7 @@ I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C
 4. When chat prints the final **Item info** summary, click **Reload** (or type `/reload`) to make the game write the file.
 5. Repeat once at a neutral auction house with `/bscan label neutral`. Wait 15 minutes between scans.
 
-Commands: `/bscan start | stop | status | label <text> | clear [all]`.
+Commands: `/bscan start | stop | status | panel | label <text> | clear [all]`.
 
 **Keep the file small, in this order:** scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. The addon keeps every scan until you clear it, and each import reads the whole file. `/bscan clear` refuses while a scan from this session hasn't been written to the file yet (`/bscan clear all` overrides that). Follow the full-import and latest-machine checks under OPS-03 before clearing;
 character snapshots and journal entries follow ADDON-11/12 and keep the current login across `/reload`.
@@ -39,7 +39,7 @@ character snapshots and journal entries follow ADDON-11/12 and keep the current 
 
 Version 0.3.1 adds **Clear saved scans** and **Reload** immediately to the left of **Brownstone Scan**, using the same auction-window parent and standard `UIPanelButtonTemplate`. The scan button keeps its existing position; the row extends left with 4-pixel gaps (Clear 140×22, Reload 70×22). Both maintenance buttons are disabled from scan start through the item info pass, including after listing completion; they re-enable when the pass ends or an empty attempt exits. Reload calls `ReloadUI()` directly; clearing never automatically reloads, so the user controls when changes are written.
 
-**Visibility decision:** the controls are available only with the auction house open, like the existing scan button. This keeps one small, contextual row without a persistent screen panel or new commands. For the manual scan → Reload → import → Clear → Reload routine, leave the house open during the import or reopen it afterward; the existing slash commands also work with the house closed.
+**Visibility:** the auction-house row stays in place. The [Panel](#panel-story-044) also makes maintenance controls available with the house closed.
 
 **Clear decision:** the button shares the protected `/bscan clear` logic and never uses the `all` override. Unsaved session scans refuse immediately with reload/import guidance. Otherwise a standard `StaticPopupDialogs` / `StaticPopup_Show` confirmation names the saved-scan count and reminds you to import into Brownstone first. Cancel or Escape changes nothing; there is no timeout or automatic acceptance. Zero scans still get confirmation, matching the command's harmless empty clear. Accept clears `BrownstoneScanDB.scans` and prunes snapshots/journal under ADDON-11/12, preserves the label/metadata, and prints the existing next-reload reminder. Slash commands retain their existing behaviour, including immediate protected clear and the explicit `clear all` override.
 
@@ -48,6 +48,35 @@ Version 0.3.1 adds **Clear saved scans** and **Reload** immediately to the left 
 **Beta check passed 2026-10-06** (build 1.60.1.70235): interface **16001** matches the client; the three-button row sits above the auction window without overlap; Reload writes the file, and Clear refused while a just-finished scan was unsaved. Chat confirmations are hard to see at small window sizes. Escape on the popup was not separately exercised in game. The standard popup contract is visible in the [Classic client UI source](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_StaticPopup/StaticPopup.lua).
 
 **Updating the addon:** copy the new `BrownstoneScan` folder over the old one and `/reload`. Scans saved by an older version stay in their format and still import.
+
+### Panel (STORY-044)
+
+Version **0.9.0** adds a coin button on the minimap edge. Left-click it (or type
+`/bscan panel`) to toggle a small movable Brownstone Scan window; Escape or its close
+button closes it. Drag the minimap button around the edge; its angle is restored
+from `BrownstoneScanDB.ui.minimap_angle` after reload. The window's position is not saved.
+
+The panel shows saved and unwritten session scan counts, character snapshot count,
+journal count/cap (amber from 8,000), overflow skipped count and login-time availability.
+Status refreshes on opening and after panel actions, including accepted Clear; press
+**Status** to refresh it and print the existing `/bscan status` chat output. **Reload**,
+**Clear saved data** and **Start scan** call the existing controls, with their existing
+guards and confirmation. Start is available only with the house open. The panel's
+routine is a reminder; opening it captures nothing and never performs an action for you.
+The authoritative convenience-view contract is in [ADDON-13](../docs/requirements.md#addon-13-brownstone-panel-story-044);
+capture and clear rules remain in ADDON-11/12 and the controls above.
+
+**In-game check (pending):**
+
+1. Click the minimap coin to open the panel; close it with Escape, open it again,
+   and close it with the window's close button.
+2. Open it with `/bscan panel`, move the window, then close and reopen it with the minimap button.
+3. Drag the minimap coin to another edge position and `/reload`; open the panel again.
+4. With the house closed, press **Status**, then **Reload** once. Open the panel again.
+5. After importing the latest file on the computer, press **Clear saved data** once,
+   accept its confirmation, then Reload.
+6. Open the house and panel; press **Start scan** once. Leave the house open through
+   the item info pass; watch the scan and maintenance buttons disable, then re-enable.
 
 ## Where the data goes
 
@@ -58,7 +87,7 @@ After `/reload` or logout:
 ```
 
 It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
-`snapshot_sequence`, `journal` and `journal_diagnostics`. Addon **0.8.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.9.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |

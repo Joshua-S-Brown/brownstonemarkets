@@ -6,6 +6,17 @@ _Last updated 2026-10-07._
 
 ## Implemented
 
+- **Brownstone panel (STORY-044, implemented; pending in-game beta check):** addon **0.9.0**
+  adds a draggable minimap coin and `/bscan panel`, opening a movable Escape-closeable
+  panel with status, existing guarded actions and the manual routine. Only the minimap
+  angle is saved in `ui`; formats **6/4** stay unchanged. Offline Lua tests cover controls,
+  scan/item-pass disabled states, counts/cap warning, angle restoration and no capture on
+  open. A Brownstone regression proves UI state leaves preview/import/report evidence unchanged
+  while retaining exact-byte provenance. Usage/check: `addon/README.md` → Panel; contract:
+  [ADDON-13](requirements.md#addon-13-brownstone-panel-story-044). Client layout, drag and
+  Escape behavior still need the play check. The icon assumes the stock circular minimap;
+  custom minimap shapes/resizing may affect placement (`/bscan panel` remains available).
+
 - **Beta evidence report (STORY-042):** Brownstone-only CLI produces private Markdown/JSON evidence
   under ignored `work/beta-reports/`, with shared import validation, isolated exact-byte import
   round trip, diagnostics/coverage, character summaries, integer residuals and optional prior-file

@@ -365,6 +365,22 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   saved, guidance remains **Nothing new: /reload first**, before any clear suggestion.
 
 
+### ADDON-13 Brownstone panel (STORY-044)
+
+Addon **0.9.0** adds a minimap button and `/bscan panel` toggle for a movable,
+Escape-closeable convenience view of status and the manual play → Reload → import →
+Clear → Reload routine. It captures nothing new. Reload, confirmed Clear, Start scan
+and chat Status reuse the existing functions; maintenance/scan disabled states share
+`setMaintenanceEnabled` and auction-house visibility. All existing guards and
+ADDON-11/12 capture, cap and clear rules remain authoritative and unchanged.
+The auction-house row and existing slash commands remain available.
+
+Only `BrownstoneScanDB.ui` is new saved state: numeric `minimap_angle`, restored on
+load. File format **6**, scan format **4** and record fields stay unchanged. Brownstone
+preview, import and beta-report ignore UI state as evidence while preserving the
+whole original file's bytes/provenance. No third-party Lua library or automatic action
+is added. Panel usage and the pending play check are in `addon/README.md` → Panel.
+
 ### Money
 - **MONEY-01:** store and calculate integer copper only. 1g = 100s = 10,000c.
 - **MONEY-02:** display gold. Tables show decimal gold with four places, so one copper is exact and columns sort numerically. Headline figures and prose use `4g 50s 97c`.

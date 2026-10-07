@@ -395,3 +395,39 @@ def test_markdown_collapses_repeated_passes_and_caps_ids():
     assert "(+" in text and "bulk0, " not in text.split("## Facts")[1]
     assert '"records": ' in text and "| money | PLAYER_MONEY |" in text
     assert len(text) < 30_000
+
+
+def test_format6_ui_is_ignored_by_preview_import_and_beta_report(tmp_path):
+    """UI state changes bytes/provenance only, never records or report evidence."""
+    import gzip
+
+    from brownstone.pipeline import import_scans, preview_scans
+
+    db = database()
+    db["scans"] = [scan("scan", FINISHED, [listing(2589, 2, 100)])]
+    path = write(tmp_path, db)
+    config = addon_source(tmp_path / "data", path)
+    baseline = preview_scans(config, now=NOW)
+    _, before, before_code = beta_report.create_report(path, config, tmp_path / "reports", now=NOW)
+    first = import_scans(config, now=NOW, reviewed=baseline)
+    assert first["fully_imported"]
+    db["ui"] = {"minimap_angle": 90}
+    write(tmp_path, db)
+    changed = preview_scans(config, now=NOW)
+    assert changed.records == baseline.records and changed.summaries == baseline.summaries
+    assert changed.non_scans == baseline.non_scans and changed.non_scan_summaries == baseline.non_scan_summaries
+    assert not changed.new_ids and not changed.new_record_ids
+    second = import_scans(config, now=NOW, reviewed=changed, include_duplicates=True)
+    assert second["fully_imported"] and second["sha256"] != first["sha256"]
+    archive = config["data_dir"] / "bronze/my-scans" / second["bronze_file"]
+    assert gzip.decompress(archive.read_bytes()) == path.read_bytes()
+    _, after, after_code = beta_report.create_report(path, config, tmp_path / "reports", now=NOW)
+    assert before_code == after_code == 0
+    assert before["file"]["bytes"] != after["file"]["bytes"]
+    assert before["file"]["sha256"] != after["file"]["sha256"]
+    # Exact file size/hash and elapsed reporting time must reflect the new raw bytes.
+    for report in (before, after):
+        report.pop("runtime_seconds")
+        report["file"].pop("bytes")
+        report["file"].pop("sha256")
+    assert after == before
