@@ -12,6 +12,8 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - Blizzard's API publishes no Forever auction data, and TSM has no Forever data.
   - Existing Forever price sites are fed by players' addon scans. Forever addons reportedly use the modern `C_AuctionHouse` API, which has Retail-style commodities.
   - Forever reuses Classic item IDs: 2,323 of the 2,927 items priced in the 2026-10-04 beta scan are also priced on Classic Era Mankrik under the same IDs. Prices differ (see STORY-012), so this allows explicit comparison, never joining (DATA-03).
+  - **Unconfirmed claims** (from outside design notes, 2026-10-06; not evidence, never built on until checked in game, checklist under *Now* in `backlog.md`): a Black Market vendor sells a fixed list of scarce materials at fixed prices (claimed 50g each, Pyrite 5g); a sold auction's gold arrives by mail about 2 minutes after the sale; auction scans are throttled beyond `ReplicateItems`' 15 minutes; the event names for purchases, crafts, posts and mail match Retail's.
+  - **Measured, contradicting those notes:** the notes assumed Retail-style commodities (per-unit price tiers) and a seller on every listing. The beta reports neither (ADDON-02, ADDON-07).
   - Sources: [Wikipedia](https://en.wikipedia.org/wiki/World_of_Warcraft:_Forever), [AHledger](https://ahledger.com/wow-forever/auction-house), [WowGuide realms](https://wowguide.net/en/guides/wow-forever-realms-rulesets), [Blizzard API forum: Classic Era auction 404s](https://us.forums.blizzard.com/en/blizzard/t/404-for-all-classic-era-namespace-auction-house-endpoints/54307), [WOW4E_AH_Trader](https://github.com/1nd1v1d/WOW4E_AH_Trader).
 - **Development stand-in:** Mankrik Alliance, Classic Era (TSM public realm CSV). Classic is used to build and prove the product, not as the end market. Switching to Forever must be a configuration and catalog change: add a source whose market fields describe the Forever house and whose `rules_version` matches a Forever catalog. It must not require code changes.
 - **Retail:** not a product requirement (decided 2026-10-04). Retail sources remain configured only as an ingestion regression check, because they exercise regional scope and upstream timestamps that Classic lacks. No feature work targets Retail. They may be removed when they stop earning their keep.
@@ -22,6 +24,8 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - **Access rules:** a third-party source is used only through an official export or API whose terms allow it, never by scraping.
   - **Removability:** if an optional source disappears, Brownstone keeps working on the baseline.
 - **Addon (decided 2026-10-04, SPIKE-008): build it.** A read-only addon, `addon/BrownstoneScan/`, scans only after a click or slash command at the auction house and never buys, posts, cancels or scans unattended.
+  - **Your own character's data (decided 2026-10-06, product owner):** the addon may also *read* your own characters' gold, bags, bank, mailbox (including auction invoices and returns), your own auctions, crafts and vendor purchases and sales, and record them locally for Brownstone (STORY-032, STORY-033). It still never acts: every buy, post, craft, mail and cancel stays a manual click by you. Recording happens on game events you trigger by playing (opening the bank or mailbox, logging out), never on a timer. Why: profit, sell-through and cost basis can't be measured from listings alone; only your own sales and holdings show them.
+  - **Deferred (2026-10-06):** an in-game plan or to-do list written by Brownstone into the addon folder (`PlanData.lua`). Reading Today on a second screen covers it for now, and it would make Brownstone write into the game folder.
   - **Evidence:** on the Forever beta (client 1.60.1, build 70205), one scan of the Alliance Normal-server house in Stormwind used `C_AuctionHouse.ReplicateItems` and saved 101,485 listings in about 10.6 s, in a 24 MB SavedVariables file. A second scan three minutes later got no reply, as the documented 15-minute account-wide throttle predicts. The client has no legacy auction event.
   - **Not measured:** the Roleplaying house (not yet available in the beta), a neutral house (out of reach for now), and whether a slash command alone is accepted without the button click. The button worked.
   - **Scan format STORY-010 ingests:** `BrownstoneScanDB` with a list of scans, each with its own `schema_version`; fields are documented in `addon/README.md`, with a sample at `tests/fixtures/brownstone_scan_sample.lua`. Schema 1 (addon 0.1.0) writes one keyed table per listing. Schema 2 (addon 0.2.0, decided 2026-10-04 to keep the addon light and the file small) writes one `item_id:quantity:buyout:min_bid:bid:flags:name_index` string per listing and each scan's distinct names once; it drops `link` and `unit_buyout`, which Brownstone never used. Both import to identical listings and prices. Format 3 (addon 0.3.0) adds indexed sellers, level types and full links, richer listings and one item-reference observation per ID per scan (ADDON-09). A file may hold all three formats. Each scan has a `scan_id`, UTC start and finish, `status` (`completed` or `stopped`), `listing_count` against `reported_count`, client build, region, realm, player faction, auctioneer and zone, and a free-text `label`. Import treats these as evidence of which house it is, never as a market (ADDON-01).
@@ -92,6 +96,8 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   | `item_id` | Observed listing ID |
   | `class_id`, `subclass_id` | `C_Item.GetItemInfoInstant(itemID)` or global `GetItemInfoInstant`, returns 6 and 7; official numeric class IDs, never name-derived categories |
   | `item_level`, `max_stack_size`, `vendor_sell_copper` | `C_Item.GetItemInfo(itemID)` or global `GetItemInfo`, returns 4, 8 and 11. Base-item observations, not variant tooltip stats; vendor price is per item in integer copper, including a reported zero |
+
+  - **Amendment approved 2026-10-06 (STORY-031, applies once implemented):** the beta left most item references empty (vendor price, item level and stack size for 1,192 of 3,066 items; no link for 6,060 of 88,119 listings), because the client hadn't loaded those items. After reading listings, the addon may ask the client to load each item still missing and record the answers that arrive within a bounded wait, once per scan. It stays read-only and manual; values that never arrive stay missing, never guessed.
 
   API contracts: [Blizzard generated auction definitions](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua), [Classic item definitions](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_APIDocumentationGenerated/ItemDocumentation.lua). Forever availability is still subject to beta measurement.
   - **Measurement limits:** one full format-3 beta scan (addon 0.3.0 or later; record the exact version) must be imported by 21 October. Compare single-scan 0.2.0 and 0.3.0 files from the same house with similar listing counts: duration at most **2×** baseline, uncompressed bytes per listing at most **4×** baseline. Record actual values, lag/reload time, and availability counts/denominators for every new listing/item field; there is no invented availability threshold. Availability affects evidence, not completion status. Import records these counts (including resolved/base/unresolved links and out-of-range optional values) and duration locally in the per-scan manifest and database. File byte counts are the original uncompressed input, not gzip bronze size. A failed limit leaves beta acceptance pending; remeasure after any change.
@@ -263,17 +269,34 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   undercut and no undercut-profit estimate. Profit at undercut uses the selected batch costs and auction
   cut; it can be negative. **Thin** means **fewer than 3 listings**, or the largest stack holds **at least
   half** of listed units. No claim about demand, sales speed, deposits, or actual sales is made.
-- **Evidence and honesty:** every displayed row carries source, market, snapshot/scan, evidence time and
-  time basis, and stale state. DATA-05's configured freshness limit applies unchanged: stale/future rows
+- **Evidence and honesty:** source, market, snapshot/scan, evidence time and time basis appear once
+  on the page rather than on every row. A single rules/provenance caption names Today version, cautious
+  output price, auction cut and that evidence; the page context and DATA-05 freshness captions remain.
+  Every table keeps a visible State column, including **stale — inspect only** for stale/future evidence.
+  DATA-05's configured freshness limit applies unchanged: stale/future rows
   remain inspectable but are **never actionable**, and the page shows a banner. No missing/zero price
   becomes a recommendation. TSM has **not available for this source** for individual listings, thin,
-  undercuts, cheap-now and below-vendor evidence. Its batches use cautious aggregate purchase estimates,
+  undercuts, cheap-now and below-vendor evidence; so does an addon snapshot without eligible scan
+  metrics (STORY-030 keeps this notice tied to missing listing evidence, not to the provider). TSM batches use cautious aggregate purchase estimates,
   gold and cap only. Base/null-legacy compatibility follows ADDON-08; all storage reads retain full
   source/market/snapshot identity and catalog compatibility retains `rules_version`.
 
 
 ### Interface
-- **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** after the read-only preview (addon sources; ADDON-06) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden. The sidebar lists experiences WoW Forever first, then Classic Era, then Retail, whatever order `market.toml` uses, so Forever opens by default. The shared sidebar experience choice resolves its source and market together when there is one enabled source for that experience. If there are several, an explicit sidebar source choice is required; sources are never merged. Every view follows the selection, including Recipe catalogs. Each page names the selected experience, source and market under its title, and the sidebar shows them too.
+- **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** after the read-only preview (addon sources; ADDON-06) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden. The sidebar lists experiences WoW Forever first, then Classic Era, then Retail, whatever order `market.toml` uses, so Forever opens by default. The shared sidebar experience choice resolves its source and market together when there is one enabled source for that experience. If there are several, an explicit sidebar source choice is required; sources are never merged. Every view follows the selection, including Recipe catalogs. Each page names the selected experience, source and market under its title. The sidebar contains navigation and collection actions; source ID, label, market ID, feed type and the `market.toml` hint stay in a collapsed **Source details** expander (STORY-030).
+  - **Today layout (STORY-030):** one visible settings summary (gold available, minimum batch gain,
+    most crafts per item) and the existing Save-only form in a **Today settings** expander, automatically
+    expanded when gold is 0c or the settings file is unreadable. An expander keeps the existing form in
+    ordinary page flow with fewer controls than a popover. **Craft**, **Buy**, **Sell** and **Below vendor**
+    are tabs, each keeping its remaining-row count; Craft keeps hidden reasons and Buy the whole-list
+    total. Decision columns come first, followed by the always-visible State. A default-off **Show evidence
+    columns** toggle per tab reveals the remaining columns in the same table, avoiding duplicate tables.
+    Shared provenance stays on the page; missing values stay blank and freshness warnings stay visible.
+  - **Crafting layout (STORY-030):** compatible catalog captions stay in collapsed **Catalogs on this
+    board (N)**; coverage, depth meaning, margin and label explanations in collapsed **How to read this
+    board**. Unsupported rows keep their board labels and collect into one collapsed **N recipes could
+    not be evaluated** table (output, profession, catalog, reason). One board provenance caption remains
+    visible, as do DATA-05 freshness captions and warnings. Recipe details retain their existing behavior.
 - **UI-02:** Browse market finds items regardless of price or discount. Categories are not inferred from names or commodity status.
 - **UI-03:** the discount screen (Opportunities) explains when a source cannot support it, for example Classic historical values being zero. Its spread is integer copper: the reference price after the auction cut rounds down, as in CRAFT-07. Search filters the ranked list without renumbering it.
 - **UI-04:** Crafting has no catalog selector. Incompatible catalogs for the selected game version remain inspectable without pricing; their catalog and source `rules_version` mismatch is explained. If none is compatible, the view explains this and offers navigation to Recipe catalogs. Recipe catalogs shows the sidebar experience's catalogs and has no game-version switch of its own (decided 2026-10-04); an experience without catalogs (Retail) says so.
@@ -288,6 +311,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   - The app upgrades at startup and the pipeline before writing, so read-only views never see an outdated schema.
   - Manifests written before a change are read through an upgrade adapter; they are never edited.
 - **OPS-03 One home machine** (decided 2026-10-05): Brownstone, its `data/` folder and all addon scanning run on the Mac. The Windows desktop doesn't scan for now, which keeps one scan file and one writer; scanning on a second machine needs its own decision first (importing a second file). Windows stays a supported, CI-tested platform (OPS-01).
+  - **Revisited 2026-10-06 (product owner):** with character data (STORY-032/033), characters played on Windows produce their own logs. Direction: Brownstone and `data/` stay on the Mac as the only database writer; each machine's addon file is a separate input, tagged by machine, copied write-once into a drop folder the Mac imports from. The contract is STORY-037; until it is done, only the Mac's file is imported.
   - Local storage is enough: about 5 MB per beta scan all-in (up to about 10 MB expected for a busier live house), so roughly 5–35 GB a year at 3–10 scans a day. Cloud storage and a home server aren't needed. `data/` must not sit in a live-synced folder such as iCloud Drive, because DuckDB has a single writer.
   - Backups are deferred (product owner, 2026-10-06): STORY-016 is no longer due by 21 October and has no date. Until it is done, migrations still copy the database first (OPS-02), but nothing else protects the raw archive.
 
@@ -301,7 +325,9 @@ Demand, sale likelihood, deposits, vendor stock, reputation discounts, recipe qu
 - Classic regional demand integration (Classic demand context, under Later in `backlog.md`).
 - Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011a).
 - Where backups go and how often (STORY-016; the timing is decided under OPS-03), historical retention and scheduling.
-- Whether the addon may read your own character's data beyond the auction house: your auctions, sold-auction mail, bags, bank and known recipes (*Your own character's data*, Later in `backlog.md`).
+- The movement ledger's contract: which recorded events become which movements, and how lots and cost basis are assigned (STORY-034).
+- How a second machine's files reach the Mac, and from which folder (STORY-037).
+- Whether to model the Black Market vendor and its prices, once confirmed in game (STORY-036).
 - Whether to add AI narration, which model runs it and what data may leave this machine (*AI narration*, Later in `backlog.md`).
 - Whether to remove the Retail regression sources. SPIKE-008 found Forever listings are per-stack, not Retail-style per-unit commodities, so the Retail commodity feed is not a close test of Forever's model.
 

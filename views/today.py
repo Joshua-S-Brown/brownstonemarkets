@@ -12,11 +12,20 @@ from views.common import gold_columns, load_latest, read_db, show_context, show_
 
 def _settings(config):
     path = settings_path(config["data_dir"], config["source_id"])
+    unreadable = False
     try:
         saved = load_settings(path)
     except (ValueError, TypeError, OSError) as error:
         st.warning(f"Could not read Today settings: {error}. Defaults are shown; save to replace this file.")
         saved = TodaySettings()
+        unreadable = True
+    summary = st.empty()
+    with st.expander("Today settings", expanded=unreadable or saved.gold_copper == 0):
+        st.caption("One funded plan · whole auction stacks are bought; surplus is shown · sales speed is unknown")
+        return _settings_form(config, path, saved, summary)
+
+
+def _settings_form(config, path, saved, summary):
     with st.form(f"today-settings-{config['source_id']}"):
         gold = st.text_input("Gold available", value=format_money(saved.gold_copper))
         mode = st.selectbox("Minimum gain mode", ["scaled", "fixed"], index=["scaled", "fixed"].index(saved.mode))
@@ -35,8 +44,9 @@ def _settings(config):
         else:
             saved = entered
             st.success("Today settings saved locally.")
-    st.caption(f"Minimum batch gain: {format_money(saved.minimum_gain)} · one funded plan · "
-               "whole auction stacks are bought; surplus is shown · sales speed is unknown")
+    summary.caption(f"Gold available: {format_money(saved.gold_copper)} · "
+                    f"Minimum batch gain: {format_money(saved.minimum_gain)} · "
+                    f"Most crafts per item: {saved.max_crafts}")
     if not saved.gold_copper:
         st.info("Enter the gold you have available to size the plan. Use explicit units, for example 12g 50s.")
     return saved
@@ -64,24 +74,28 @@ def render(config, catalogs):
         st.info("Individual listings, thin markets, cheap now, undercuts and below-vendor listings: "
                 "not available for this source. Batches use funds and the per-item cap; costs are aggregate estimates.")
     names = {i: item["name"] for c in catalogs for i, item in c["items_by_id"].items()}
+    freshness = result["freshness"]
     st.caption(f"Today rules v{result['today_version']} · cautious output price · "
                f"{config['auction_cut']:.0%} auction cut · source {config['source_id']} · "
-               f"snapshot {sid} · scan {manifest.get('scan_id', 'not available for this source')}")
+               f"market {config['market_id']} · snapshot {sid} · "
+               f"scan {manifest.get('scan_id', 'not available for this source')} · "
+               f"evidence {freshness['observed_at']} (UTC) · time basis {freshness['basis']}")
     _tables(result, names)
 
 
 def _evidence(row):
-    return {"State": "stale — inspect only" if row["stale"] else "potential gain",
-            "Evidence time (UTC)": str(row["observed_at"]), "Time basis": row["time_basis"],
-            "Source": row["source_id"],
-            "Scan / snapshot": row["scan_id"] or row["snapshot_id"]}
+    return {"State": "stale — inspect only" if row["stale"] else "potential gain"}
 
 
-def _table(title, rows, rest):
-    st.markdown(f"#### {title}")
+def _table(rows, rest, decisions, key):
+    evidence = st.toggle("Show evidence columns", key=f"today-evidence-{key}")
     if rows:
-        gold = [key for key in rows[0] if key.endswith("(g)")]
-        st.dataframe(rows, hide_index=True, width="stretch", column_config=gold_columns(*gold))
+        columns = [*decisions, "State"]
+        if evidence:
+            columns.extend(name for name in rows[0] if name not in columns)
+        displayed = [{name: row[name] for name in columns} for row in rows]
+        gold = [name for name in columns if name.endswith("(g)")]
+        st.dataframe(displayed, hide_index=True, width="stretch", column_config=gold_columns(*gold))
     else:
         st.info("No rows clear these settings with the available evidence.")
     st.caption(f"{rest} more rows outside this list's 10-row limit.")
@@ -90,24 +104,37 @@ def _table(title, rows, rest):
 def _tables(result, names):
     sells = {r["output_item_id"]: r for r in result["sell"]}
     craft = [_craft_row(row, sells[row["output_item_id"]]) for row in result["craft"]]
-    _table("1. Craft today", craft, result["remaining"]["craft"])
-    hidden = "; ".join(f"{reason}: {count}" for reason, count in sorted(result["hidden"].items()))
-    st.caption("Hidden recipes: " + (hidden or "0"))
-    buy = [{"Material": names.get(r["item_id"], f"Item {r['item_id']}"), "Item ID": r["item_id"],
-            "Route": r["method"], "Required units": r["quantity"], "Purchased units": r["purchased_units"],
-            "Cost (g)": to_gold(r["cost_copper"]), "Highest unit price (g)": to_gold(r["highest_unit_copper"]),
-            "Scan p25 (g)": to_gold(r["p25_copper"]), "Cheap now": r["cheap_now"], **_evidence(r)}
-           for r in result["buy"]]
-    _table("2. Buy for these crafts", buy, result["remaining"]["buy"])
-    st.caption(f"Whole shopping list: {format_money(result['shopping_total_copper'])}. "
-               "Cheap now means average paid is strictly below scan p25; informational only. Vendor stock is unknown.")
-    _table("3. Sell", [_sell_row(row) for row in result["sell"]], result["remaining"]["sell"])
-    with st.expander("Below vendor price — independent aside, not part of the craft budget"):
-        _table("Below vendor price", [{"Item": names.get(r["item_id"], f"Item {r['item_id']}"),
-                "Item ID": r["item_id"], "Listings": r["listings"], "Units": r["purchased_units"],
-                "Cost (g)": to_gold(r["cost_copper"]), "Vendor pays per unit (g)": to_gold(r["vendor_sell_copper"]),
-                "Highest listing unit (g)": to_gold(r["highest_unit_copper"]), "Gain (g)": to_gold(r["gain_copper"]),
-                **_evidence(r)} for r in result["below_vendor"]], result["remaining"]["below_vendor"])
+    craft_tab, buy_tab, sell_tab, vendor_tab = st.tabs(["Craft", "Buy", "Sell", "Below vendor"])
+    with craft_tab:
+        _table(craft, result["remaining"]["craft"],
+               ["Item", "Profession", "Batch", "Limited by", "Material cost (g)", "Batch profit (g)",
+                "Profit per craft (g)", "Thin"], "craft")
+        hidden = "; ".join(f"{reason}: {count}" for reason, count in sorted(result["hidden"].items()))
+        st.caption("Hidden recipes: " + (hidden or "0"))
+    with buy_tab:
+        buy = [{"Material": names.get(r["item_id"], f"Item {r['item_id']}"), "Item ID": r["item_id"],
+                "Route": r["method"], "Required units": r["quantity"], "Purchased units": r["purchased_units"],
+                "Cost (g)": to_gold(r["cost_copper"]), "Highest unit price (g)": to_gold(r["highest_unit_copper"]),
+                "Scan p25 (g)": to_gold(r["p25_copper"]), "Cheap now": r["cheap_now"], **_evidence(r)}
+               for r in result["buy"]]
+        _table(buy, result["remaining"]["buy"],
+               ["Material", "Route", "Required units", "Purchased units", "Cost (g)",
+                "Highest unit price (g)", "Cheap now"], "buy")
+        st.caption(f"Whole shopping list: {format_money(result['shopping_total_copper'])}. "
+                   "Cheap now means average paid is strictly below scan p25; informational only. "
+                   "Vendor stock is unknown.")
+    with sell_tab:
+        _table([_sell_row(row) for row in result["sell"]], result["remaining"]["sell"],
+               ["Output", "Batch", "Lowest competing unit (g)", "Listings", "Units", "Undercut unit (g)",
+                "Profit at undercut for batch (g)", "Thin"], "sell")
+    with vendor_tab:
+        st.caption("Independent aside, not part of the craft budget.")
+        _table([{"Item": names.get(r["item_id"], f"Item {r['item_id']}"),
+                 "Item ID": r["item_id"], "Listings": r["listings"], "Units": r["purchased_units"],
+                 "Cost (g)": to_gold(r["cost_copper"]), "Vendor pays per unit (g)": to_gold(r["vendor_sell_copper"]),
+                 "Highest listing unit (g)": to_gold(r["highest_unit_copper"]), "Gain (g)": to_gold(r["gain_copper"]),
+                 **_evidence(r)} for r in result["below_vendor"]], result["remaining"]["below_vendor"],
+               ["Item", "Units", "Cost (g)", "Vendor pays per unit (g)", "Gain (g)"], "vendor")
 
 
 def _craft_row(row, sell):

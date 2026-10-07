@@ -24,6 +24,12 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result by hand in `config/recipe-selections/forever-tailoring.toml` with the date, then regenerate on the Recipe catalogs page. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
 - **Widen the Forever catalogs** (manual, on the Recipe catalogs page): the rest of Tailoring, then the professions you plan to level at launch. The board and Today's *Craft* list only cover catalog recipes, so this is what gives them something to show.
 - **If any yield is more than 1** (now unlikely: Wowhead's "(2)" is an effect number, not a count; see `requirements.md` → CRAFT-08), *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
+- **Prepare a beta character for the character-data tests** (added 2026-10-06): level one **gathering** profession (Mining or Herbalism) and one **crafting** profession that uses it, far enough to gather, craft, post, sell, let something expire and cancel. Keep a little gold to buy and vendor with. This is what STORY-032 and STORY-033 are tested on.
+- **Test the new addon builds in game** once STORY-031 to STORY-033 are ready (aim: by 13 October, leaving a week of beta). Each run records what actually happened, so it can be preserved as a test fixture before the beta closes:
+  - **Item info pass (STORY-031):** after a scan, how many items still lack vendor price, item level and link, against the 0.3.1 numbers.
+  - **Snapshots (STORY-032):** gold and bags written on logout and on `/reload`; bank only after opening the bank; two characters on the same account.
+  - **Event journal (STORY-033):** buy from the auction house, post, cancel, let one expire, sell one; open the mailbox and take the invoice and the returned item; craft; gather; buy and sell at a vendor; send mail between your own characters. Note which events fired and with what values.
+  - **Unconfirmed claims** (`requirements.md` → *Known Forever market facts*): time from a sale to its gold in the mailbox; the deposit charged for a few posts of known vendor price and duration (STORY-035); whether the Black Market vendor exists, where, and its prices (STORY-036).
 
 ## Next
 
@@ -33,16 +39,112 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-030 less text, less scrolling (ad hoc, 2026-10-06: top of the stack)
-2. STORY-025 Today
-3. STORY-027 removed listings
-4. STORY-015b crafting across professions
-5. STORY-021 item page and charts
-6. STORY-026 scan coverage and rhythm
-7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-8. STORY-006 replay
+1. STORY-031 item info pass (addon; beta, small)
+2. STORY-032 character snapshots: gold, bags, bank (addon + import; beta)
+3. STORY-033 event journal (addon; beta)
+4. STORY-035 auction deposits (needs a beta check)
+5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+6. STORY-037 a second machine's files
+7. STORY-036 vendor price ceilings
+8. STORY-027 removed listings
+9. STORY-015b crafting across professions
+10. STORY-021 item page and charts
+11. STORY-026 scan coverage and rhythm
+12. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+13. STORY-006 replay
 
-**Reordered 2026-10-06 (product owner):** Today comes first because it is the first page that answers what to do. STORY-027 and STORY-015b follow because they unblock Today's biggest gaps: sales speed, and chains such as ore → bars → armor (*Today, later versions* under Later). The launch runbook (STORY-020a/b) moved to Later.
+STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
+
+**Reordered 2026-10-06 (product owner, after reviewing outside design notes):** reading your own character's data is approved (`requirements.md` → *Product direction*). Everything that must be captured in game moves to the top, because the beta closes after 21 October and its behaviour (event names, mail contents, deposits) has to be observed there before launch. The addon side records raw evidence first (STORY-032, STORY-033) and Brownstone interprets it later (STORY-034), so nothing is lost if the interpretation is wrong. Earlier: Today came first because it is the first page that answers what to do; STORY-027 and STORY-015b unblock its biggest gaps (sales speed; chains such as ore → bars → armor). The launch runbook (STORY-020a/b) is in Later.
+
+### STORY-031 — Item info pass after a scan
+
+Added 2026-10-06; rule amendment in `requirements.md` → ADDON-09.
+
+As a gold maker, I want each scan to carry vendor price, item level and stack size for every item listed, so that *Below vendor*, deposits (STORY-035) and variant identity work on more than a third of items.
+
+Acceptance:
+- **After reading listings,** the addon asks the client to load each item ID still missing reference fields, listens for the client's item-loaded event, and records the answers that arrive. One request per item, a bounded wait (a value recorded in ADDON-09), a progress message, and the scan is saved even if the wait runs out. The listings already read are never re-read or changed; a separate per-item observation records which values came from the second pass.
+- **Read-only and manual,** like every scan; nothing runs on a timer after the scan finishes.
+- **Measured on the beta** against addon 0.3.1 (1,192 of 3,066 items had a vendor price): availability, extra time and file size, recorded in `addon/README.md`.
+- **Import** accepts the new format version, keeps older formats readable, and tests stay offline (Lua stubs with delayed item info).
+
+### STORY-032 — Character snapshots: gold, bags and bank
+
+Added 2026-10-06.
+
+As a gold maker, I want the addon to record what each of my characters holds, so that Today can count what I already have and the ledger can reconcile what changed between sessions.
+
+Acceptance:
+- **Gold and bags** for the logged-in character are recorded when you log out or `/reload` (the game writes the file right after), with character, realm/server type, faction, UTC time and addon version. Nothing to remember to do by hand. Check on the beta that the logout event still reads bags correctly.
+- **Bank** contents can be read only while the bank is open, so they're recorded each time you open (and again when you close) the bank, and the last bank snapshot carries its own time. A character whose bank was never opened has *bank unknown*, never empty.
+- **Reagent bags, keyring or other containers** the client reports are recorded as reported, with their container IDs.
+- **Import:** a new kind of addon record, preserved in bronze like scans (DATA-01), deduplicated by character and time, stored with source and character, never pooled across characters unless a view asks. A new numbered migration.
+- **Clearing** follows the scan routine: the addon keeps snapshots until a clear that refuses ones not yet written to the file.
+- **Offline tests** for each container type, unknown bank, two characters and duplicate import.
+
+### STORY-033 — Event journal: what you bought, posted, sold, crafted and mailed
+
+Added 2026-10-06. Captures raw evidence only; meaning is STORY-034.
+
+As a gold maker, I want the addon to note each auction, mail, craft and vendor event as it happens, so that Brownstone can later work out what I bought, sold and made, and at what cost.
+
+Acceptance:
+- **A journal of raw events** in the addon file: event name, its arguments, UTC and session time, character, and the small amount of context needed to read it later (for example, at the mailbox: each invoice's item, quantity, price and type; at a craft: the recipe and the bag change). Each entry has an ID made from character and time, so journals from different characters and machines never collide.
+- **Covers** auction house purchases, posts, cancels; mailbox invoices (sold, expired, cancelled, outbid), returned items and gold taken; mail sent to and received from your own characters; crafts; vendor buys, sells and repairs; loot and gathering. The event list is a **beta discovery**: register guarded, record which ones the client rejects (as the scan does), and record what fired in each beta test under *Now*.
+- **Never acts:** the addon only listens. No automatic mail opening, looting, buying, posting or cancelling.
+- **Size limits** measured on the beta for a normal session, recorded in `addon/README.md`.
+- **Import** preserves the journal byte-for-byte (DATA-01) and stores the raw events per character, with a new migration; it doesn't interpret them yet.
+- **Offline tests** with Lua stubs for each event family, and real beta recordings saved as fixtures before 21 October.
+
+### STORY-034 — Movement ledger and reconciliation
+
+Added 2026-10-06. Built in Brownstone from STORY-032/033 evidence; can be finished after the beta closes.
+
+As a gold maker, I want one ledger of every item and gold movement across my characters, so that I can see what I actually made, what sells and what I hold.
+
+Acceptance:
+- **One movement table:** time, character, machine, item or gold, signed quantity, reason (auction buy, post, sale, expiry, cancel, deposit, mail in and out, craft in and out, vendor buy and sell, gathered) and links to the journal entry it came from. Every other view (profit, holdings, sell-through) is derived from it. The rules mapping events to movements are recorded in `requirements.md` with a version, like ADDON-10.
+- **Sales from the mailbox:** an invoice is the only proof of a sale. A listing that vanishes is still only *removed* (STORY-027).
+- **Reconciliation:** between two snapshots of a character, actual change minus recorded movements is the residual. A positive item residual is *gathered or looted*; negative is *used or destroyed*; a gold residual is *other income or spending* (quests, repairs, training), kept apart from trading profit. Residuals are shown, never hidden, so a missing journal shows up.
+- **Integer copper,** all characters kept separate unless summed explicitly, and the 5% (or 15% neutral) cut taken from invoices, not assumed.
+- **Offline tests** from beta fixtures: a full buy → craft → post → sale cycle, an expiry, a mail between characters and a gathering residual.
+
+### STORY-035 — Auction deposits
+
+Added 2026-10-06.
+
+As a gold maker, I want Today's *Sell* list to show the deposit for posting and what an expiry would lose, so that profit at undercut isn't overstated for cheap or slow items.
+
+Acceptance:
+- **Formula from evidence:** the beta tests under *Now* record the deposit for a few posts of known vendor price, stack size and duration. The formula is recorded in `requirements.md` with that evidence; if it can't be confirmed, deposits stay *not modeled*.
+- **Shown, not ranked:** Today's *Sell* shows the deposit for the planned post and the loss if it expires. Ranking stays on batch profit (the deposit is refunded on a sale) until sell-through data exists (STORY-034).
+- Needs the item's vendor price (STORY-031); missing vendor price shows *deposit unknown*, never zero.
+
+### STORY-036 — Vendor price ceilings
+
+Added 2026-10-06. Waits for the in-game check under *Now*.
+
+As a gold maker, I want items a vendor sells at a fixed price to be capped at that price, so that the board never values them above it or suggests buying them for more.
+
+Acceptance:
+- **Vendor items with evidence:** each confirmed vendor item (regular trade goods, and the Black Market vendor's list if it exists) is marked as a vendor item with its price and where it was seen, per CRAFT-08. Unconfirmed claims are never entered.
+- **Buying:** already capped by CRAFT-03's cheapest route; Today's *Buy* never lists an auction purchase above the vendor price.
+- **Selling:** a sale value above the vendor price is capped at it, with a label, and the rule is recorded in `requirements.md`.
+- **Limited stock** (if the vendor has any) is noted, since vendor stock is otherwise *not modeled*.
+
+### STORY-037 — A second machine's files
+
+Added 2026-10-06; direction under OPS-03 in `requirements.md`.
+
+As a gold maker who plays characters on both the Mac and the Windows PC, I want both machines' addon files in Brownstone, so that the ledger covers every character.
+
+Acceptance:
+- **Decide and record** the drop folder: a folder both machines can reach (for example a synced cloud folder), never holding `data/`, since DuckDB must stay off synced folders.
+- **On Windows:** a small documented script copies the addon file after you log out, as a new, never-overwritten, timestamped file named by machine.
+- **On the Mac:** Brownstone previews and imports each dropped file like the local one, tagging every record with its machine. Identical bytes and scan IDs still deduplicate (DATA-01, ADDON-04).
+- **Clearing** on each machine is guided per file, so a file that hasn't been imported is never cleared.
+- **Cross-check:** mail between characters on different machines appears once as sent and once as received; a missing drop shows as an unmatched mail.
 
 STORY-016 (backup) is deferred to Later (product owner, 2026-10-06).
 
@@ -51,6 +153,8 @@ STORY-011a is a bounded research task for any convenient gap. Tailoring yield an
 **Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, deferred to Later; its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
 
 ### STORY-030 — Less text, less scrolling
+
+Implemented, pending review.
 
 Ad hoc, added by the product owner on 2026-10-06 after reviewing Today on real data. Display only: no calculation, ranking, storage, schema or addon change. Stays in Streamlit; a React front end is not planned.
 
@@ -197,7 +301,7 @@ These are grouped by what unblocks them.
 - **Sales speed instead of a fixed cap:** replace *most crafts per item* with how many units of the output disappear between scans. Needs STORY-027 and a few weeks of live scans; label it removed, not sold.
 - **Stockpile:** materials below their own multi-day typical price, worth buying ahead for recipes you craft often, with a holding limit tied to gold available. Needs price history across days (*History chain*), so after launch.
 - **Volatility:** how much an item's typical price swings across scans, shown as a risk note and used to demote unstable crafts. Needs the same history.
-- **Restock:** what you hold in bags and bank, so *Buy* skips it and *Sell* includes it. Needs *Your own character's data* (a decision).
+- **Restock:** what you hold in bags and bank, so *Buy* skips it and *Sell* includes it. Needs STORY-032.
 - **Whole chains:** ore → bars → armor across professions, with the gain at each stage (sell bars or craft on). Needs STORY-015b.
 - **Gold per hour:** if the scaled minimum gain feels wrong in play, try a time-based minimum instead. Decide after using version 1.
 
@@ -213,7 +317,7 @@ These are grouped by what unblocks them.
   3. **Daily brief:** STORY-025 (*Today*) is its rule-based first version on the newest scan. This step adds the timing profile's advice: what to buy now or hold, and what to post now or wait on, each with its coverage.
   4. **Plan ahead** (requested 2026-10-05): next-day planning, not only right now.
      - **When to log in:** suggested sessions that combine your usual play times (STORY-026) with the hours the timing profile marks as best to buy or sell, and how much each session is worth on current evidence.
-     - **Key times and milestones:** a calendar of known events entered by hand, each with its source (weekly reset, maintenance, holidays, patch days, launch-week phases). Their effect on prices is shown only once enough scans cover them.
+     - **Key times and milestones:** a calendar of known events entered by hand, each with its source (weekly reset, maintenance, holidays, patch days, launch-week phases, raid unlocks such as one claimed for 9 December, once sourced). Their effect on prices is shown only once enough scans cover them.
      - **Tomorrow's plan:** what to buy tonight for tomorrow's crafts, and which listings will expire before your next usual session (needs time left, STORY-023).
 
 **History chain** (each step needs the one before):
@@ -251,10 +355,23 @@ Acceptance:
 - **Best use of a material:** for an item such as Linen or Wool Cloth, compare selling it with each craft it feeds, at current prices.
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
 
-**Your own character's data** (suggested 2026-10-05; needs a decision because it reads beyond the auction house, though still read-only):
-- **Your auctions and sold-auction mail:** real sales and prices for your own listings, the only true sales data available. It would calibrate *Removed listings* (STORY-027).
-- **Bags and bank:** what you hold, so Today's *Sell* list includes it and *Buy* skips what you already have.
-- **Known recipes and skill:** limits the board to what you can actually craft (compare STORY-015b's list of your professions).
+**Your own character's data** (approved 2026-10-06; capture is STORY-032/033 and the ledger STORY-034 in Next). Once those exist:
+- **Known recipes and skill:** the addon reads your profession window, so the board shows only what you can craft (compare STORY-015b's list of your professions). Also checks catalog quantities against the game and flags mismatches (replaces *In-game recipe reader* under *Recipe coverage*).
+- **Calibrate removed listings:** your own sales from invoices show how many *removed* listings (STORY-027) were real sales.
+
+**Ledger analytics** (from the 2026-10-06 design notes; each needs STORY-034 and some weeks of your own sales):
+- **Sell-through and fill chance:** for each of your posts, its premium over the lowest price at posting, and whether and when it sold. Start with simple buckets (how often posts at 0–5%, 5–15% … above the lowest sold within their duration); more refined models only once there is enough data.
+- **Gold per minute of auction time:** expected profit net of the auction cut and expected deposit losses, per minute you spend at the auction house. Replaces *Gold per hour* under *Today, later versions* if the scaled minimum gain feels wrong.
+- **Cost basis:** lots per item (gathered, bought, crafted, vendor), first in first out. Two values per lot: what you paid (zero for gathered), for *what did I actually make?*; and what it would sell for now (depth-aware, after the cut, capped at any vendor price), for *craft it or sell it raw?*. Farming judged separately from trading, as gold per hour.
+- **Capital view:** gold across all characters, holdings at market value, gold tied up in listings and mail, and net worth. A **reserve** you set (mount, training, spending) is kept back; Today's *Gold available* could then default to cash minus reserve instead of being typed in.
+- **How well the plan worked:** planned against actual buy and sale prices, how often Today's rows were done, and realized margin per craft.
+
+**Deferred** (2026-10-06, from the same notes; revisit only with new evidence or a decision):
+- **In-game plan list (`PlanData.lua`):** Brownstone would write a plan file into the addon folder for an in-game to-do tab that ticks itself off. Deferred: Today on a second screen covers it, and it would make Brownstone write into the game folder (`requirements.md` → *Product direction*). If revived, the file is written only by Brownstone and read by the addon on `/reload`; it could also carry an "imported through" marker so the addon never clears what Brownstone hasn't imported.
+- **Capital allocation by optimisation (linear programming):** Today's greedy funded plan is honest and affordable. Revisit with sales speed and fill chance.
+- **Disenchanting outputs:** random results conflict with *Not modeled* (variable yields).
+- **Price forecasting with machine learning:** too little history and too much change after launch.
+- **Anomaly alerts** stay the last step of the *History chain*.
 
 **AI narration** (suggested 2026-10-05; after STORY-025; reads ADDON-10 metrics): a plain-language summary of Today and the item page that explains only defined metrics and rule results, cites every number, and never invents one or recommends without explainable features (*Out of scope*). Needs a decision about which model runs it and what data leaves this machine.
 
@@ -266,7 +383,7 @@ Acceptance:
 - **More recipes and professions:** added in the app on the Recipe catalogs page and shown together on the board (`status.md`); routing across professions is STORY-015b.
 - **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*). **Moves to the top of Next if the Bolt of Linen Cloth check finds a yield above 1.**
 - **Skill-up demand map:** from the catalogs' skill levels and quantities, which materials levelling crafters will need at each skill band. A reasoned expectation for stocking up before launch, not a forecast.
-- **In-game recipe reader (optional):** the addon could read the Tailoring window (reagents, `GetTradeSkillNumMade`) and the trainer list (required skill) to confirm Wowhead values automatically. This widens the read-only addon and needs its own decision.
+- **In-game recipe reader:** now part of *Known recipes and skill* under *Your own character's data* (reading your own character's data was approved 2026-10-06).
 
 **Launch runbook** (moved from Next, product owner 2026-10-06): beta and live are separate markets (DATA-03), so launch needs no data migration or cutover rehearsal. Do both parts in the week before 4 November, when the steps are current.
 

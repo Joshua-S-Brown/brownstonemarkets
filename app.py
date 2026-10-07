@@ -62,10 +62,11 @@ with st.sidebar:
         st.info("This experience has several enabled sources. Choose one above.")
         st.stop()
     config = experience_sources[selected]
-    st.caption(f"Source {config['source_id']} · {config.get('label', config['source_id'])}")
-    st.caption(f"Market {config['market_id']} · {config['provider'].upper()} feed"
-               + (" · region-wide commodities" if config["scope"] == "region" else "")
-               + " · edit config/market.toml to change sources")
+    with st.expander("Source details"):
+        st.caption(f"Source {config['source_id']} · {config.get('label', config['source_id'])}")
+        st.caption(f"Market {config['market_id']} · {config['provider'].upper()} feed"
+                   + (" · region-wide commodities" if config["scope"] == "region" else "")
+                   + " · edit config/market.toml to change sources")
     addon = config["provider"] == ADDON_PROVIDER
     refresh = False
     if addon:

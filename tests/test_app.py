@@ -247,7 +247,11 @@ def test_combined_board_duplicate_recipe_selection_uses_own_catalog(tmp_path, mo
     at.run()
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert len(table) == 3 and table.iloc[-1]["Action"] == "unsupported recipe"
-    assert any(w.value.startswith("Runecloth Bag (Alchemy · alchemy) could not be evaluated") for w in at.warning)
+    errors = next(e for e in at.expander if e.label == "1 recipes could not be evaluated")
+    assert not errors.proto.expanded
+    assert list(errors.dataframe[0].value["Output"]) == ["Runecloth Bag"]
+    assert "Recipe cycle" in errors.dataframe[0].value.iloc[0]["Reason"]
+    assert not any("could not be evaluated" in w.value for w in at.warning)
     next(w for w in at.selectbox if w.label == "Recipe").set_value(("alchemy", 18405)).run()
     assert not at.exception
     assert any("This recipe cannot be evaluated: Recipe cycle" in e.value for e in at.error)
@@ -326,25 +330,38 @@ def test_sidebar_experience_resolves_source_and_market_on_every_market_page(tmp_
     assert not at.exception
     assert not any(w.label == "Data source" for w in at.selectbox)
     assert any(f"Source {addon['source_id']}" in c.value for c in at.caption)
-    assert any(f"Market {addon['market_id']}" in c.value for c in at.caption)
+    details = next(e for e in at.sidebar.expander if e.label == "Source details")
+    assert not details.proto.expanded
+    assert any(f"Market {addon['market_id']}" in c.value for c in details.caption)
+    assert not any(c.value.startswith(("Source ", "Market "))
+                   for c in at.sidebar.children.values() if c.type == "caption")
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     assert at.radio[0].value == "Today"
-    at.radio[0].set_value("Crafting").run()
+    context = f"Showing **WoW Forever** · source {addon.get('label', addon['source_id'])} · market {addon['market_id']}"
+    for page in ["Today", "Crafting", "Browse market", "Opportunities", "Recipe catalogs", "Scan changes"]:
+        next(w for w in at.radio if w.label == "View").set_value(page).run()
+        assert not at.exception
+        assert any(c.value == context for c in at.main.caption)
+        details = next(e for e in at.sidebar.expander if e.label == "Source details")
+        assert not details.proto.expanded
+        assert not any(c.value.startswith(("Source ", "Market "))
+                       for c in at.sidebar.children.values() if c.type == "caption")
+    next(w for w in at.radio if w.label == "View").set_value("Crafting").run()
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert {"Alchemy", "Tailoring"} <= set(table["Profession"])
     forever = f"Showing **WoW Forever** · source {addon.get('label', addon['source_id'])} · market {addon['market_id']}"
     assert any(c.value == forever for c in at.caption)  # On the page itself, not only the sidebar.
-    at.radio[0].set_value("Browse market").run()
+    next(w for w in at.radio if w.label == "View").set_value("Browse market").run()
     assert not at.exception
     assert any(c.value == forever for c in at.caption)
     assert any("Runecloth Bag" in list(t.value["Item"]) for t in at.dataframe if "Item" in t.value.columns)
-    at.radio[0].set_value("Opportunities").run()
+    next(w for w in at.radio if w.label == "View").set_value("Opportunities").run()
     assert any(c.value == forever for c in at.caption)
     assert any("cannot run" in i.value for i in at.info)
     next(w for w in at.selectbox if w.label == "Experience").set_value("classic").run()
-    at.radio[0].set_value("Browse market").run()
+    next(w for w in at.radio if w.label == "View").set_value("Browse market").run()
     assert not at.exception
     assert any(c.value.startswith(f"Showing **Classic Era** · source {classic.get('label', classic['source_id'])} · "
                                   f"market {classic['market_id']}") for c in at.caption)

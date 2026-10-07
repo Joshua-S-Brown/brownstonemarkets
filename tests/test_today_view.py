@@ -43,6 +43,11 @@ def test_today_default_settings_save_rejection_and_new_session(tmp_path, monkeyp
     at, _, path = app(tmp_path, monkeypatch)
     assert not at.exception and at.radio[0].value == 'Today'
     assert any('not available for this source' in i.value for i in at.info)
+    assert [tab.label for tab in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor']
+    settings = next(e for e in at.expander if e.label == 'Today settings')
+    assert not settings.proto.expanded and len(settings.text_input) == 2
+    assert any(c.value == 'Gold available: 10g · Minimum batch gain: 1c · Most crafts per item: 5'
+               for c in at.caption)
     assert any('Batch profit (g)' in t.value.columns for t in at.dataframe)
     widget(at.text_input, 'Gold available').set_value('12')
     widget(at.button, 'Save Today settings').click().run()
@@ -69,6 +74,7 @@ def test_today_stale_banner_inspection_and_corrupt_settings(tmp_path, monkeypatc
     at, _, _ = app(tmp_path, monkeypatch, corrupt=True)
     assert not at.exception and any('Could not read Today settings' in w.value for w in at.warning)
     assert widget(at.text_input, 'Gold available').value == '0c'
+    assert next(e for e in at.expander if e.label == 'Today settings').proto.expanded
 
 
 def test_today_reports_calculation_and_persistence_errors(tmp_path, monkeypatch):
@@ -81,3 +87,131 @@ def test_today_reports_calculation_and_persistence_errors(tmp_path, monkeypatch)
     monkeypatch.setattr('views.today.build_today', fail)
     at.run()
     assert any('Unable to build Today' in e.value for e in at.error)
+
+
+def test_today_zero_gold_opens_settings_without_writing(tmp_path, monkeypatch):
+    at, _, path = app(tmp_path, monkeypatch)
+    path.unlink()
+    at.run()
+    assert not at.exception and not path.exists()
+    assert next(e for e in at.expander if e.label == 'Today settings').proto.expanded
+    assert any('Gold available: 0c' in c.value for c in at.caption)
+
+
+def test_today_unsaved_edits_keep_summary_plan_and_file(tmp_path, monkeypatch):
+    at, _, path = app(tmp_path, monkeypatch)
+    before = path.read_bytes()
+    table = at.tabs[0].dataframe[0].value
+    widget(at.text_input, 'Gold available').set_value('99g')
+    at.run()
+    assert path.read_bytes() == before
+    assert at.tabs[0].dataframe[0].value.equals(table)
+    assert any('Gold available: 10g' in c.value for c in at.caption)
+
+
+def listing_evidence_app(tmp_path, monkeypatch, hours):
+    from test_scans import addon_source, listing, scan, write_scans
+
+    from brownstone.pipeline import import_scans
+    source = addon_source(tmp_path / 'addon-data', game_version='classic', realm='mankrik', server_type='',
+                         faction='alliance', rules_version='fixture-v1', max_age_hours=48,
+                         scan_evidence={'faction': 'Alliance'})
+    finish = int((datetime.now(UTC) + timedelta(hours=hours)).timestamp())
+    path = write_scans(tmp_path / 'evidence.lua', scan('evidence', finish,
+                       [listing(1, 2, 20), listing(1, 4, 80), listing(3, 8, 16000)]))
+    source['scan_path'] = path
+    # Import under that clock, then render under the current clock to exercise clock rollback.
+    import_scans(source, path, now=datetime.fromtimestamp(finish + 1, UTC))
+    source['max_age_hours'] = 24
+    save_settings(settings_path(source['data_dir'], source['source_id']), TodaySettings(100000, 1, 'fixed'))
+    monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [source])
+    monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs',
+                        lambda *args: [{'name': 'fixture', 'catalog': catalog()}])
+    original = __import__('views.today', fromlist=['read_today_evidence']).read_today_evidence
+
+    def evidence(db, config, sid, ids):
+        observations, listings, metrics, _ = original(db, config, sid, ids)
+        return observations, listings, metrics, {1: 21}
+
+    monkeypatch.setattr('views.today.read_today_evidence', evidence)
+    return AppTest.from_file(str(ROOT / 'app.py')).run(), source
+
+
+@pytest.mark.parametrize('hours', [0, -25, 1])
+def test_today_all_tabs_decision_columns_evidence_and_stale_state(tmp_path, monkeypatch, hours):
+    at, source = listing_evidence_app(tmp_path, monkeypatch, hours)
+    assert not at.exception
+    assert [t.label for t in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor']
+    columns = [
+        ['Item', 'Profession', 'Batch', 'Limited by', 'Material cost (g)', 'Batch profit (g)',
+         'Profit per craft (g)', 'Thin', 'State'],
+        ['Material', 'Route', 'Required units', 'Purchased units', 'Cost (g)', 'Highest unit price (g)',
+         'Cheap now', 'State'],
+        ['Output', 'Batch', 'Lowest competing unit (g)', 'Listings', 'Units', 'Undercut unit (g)',
+         'Profit at undercut for batch (g)', 'Thin', 'State'],
+        ['Item', 'Units', 'Cost (g)', 'Vendor pays per unit (g)', 'Gain (g)', 'State']]
+    originals = [tab.dataframe[0].value.copy() for tab in at.tabs]
+    for tab, expected in zip(at.tabs, columns, strict=True):
+        assert list(tab.dataframe[0].value.columns) == expected
+        assert any('more rows' in c.value for c in tab.caption)
+        assert set(tab.dataframe[0].value['State']) == ({'stale — inspect only'} if hours else {'potential gain'})
+    assert bool(at.warning) == bool(hours)
+    assert not any('not available for this source' in i.value for i in at.info)
+    assert any('Hidden recipes:' in c.value for c in at.tabs[0].caption)
+    assert any('Whole shopping list:' in c.value and 'Cheap now means' in c.value for c in at.tabs[1].caption)
+    provenance = [c.value for c in at.main.caption if c.value.startswith('Today rules v')]
+    assert len(provenance) == 1
+    assert all(text in provenance[0] for text in [source['source_id'], source['market_id'],
+                                                'snapshot', 'scan evidence', 'UTC', 'time basis upstream scan'])
+    for toggle in at.toggle:
+        toggle.set_value(True)
+    at.run()
+    assert not at.exception
+    for tab, original in zip(at.tabs, originals, strict=True):
+        table = tab.dataframe[0].value
+        assert table[original.columns].equals(original)
+        assert len(table.columns) > len(original.columns)
+        assert not {'Source', 'Scan / snapshot', 'Evidence time (UTC)', 'Time basis'} & set(table.columns)
+    assert {'Catalog', 'Recipe', 'Availability', 'Evidence notes', 'Recipe source'} <= set(
+        at.tabs[0].dataframe[0].value.columns)
+    assert 'Scan p25 (g)' in at.tabs[1].dataframe[0].value.columns
+    assert at.tabs[1].dataframe[0].value['Scan p25 (g)'].isna().sum() == 1  # Vendor evidence remains missing.
+    assert 'Largest stack units' in at.tabs[2].dataframe[0].value.columns
+    assert 'Listings' in at.tabs[3].dataframe[0].value.columns
+
+
+def test_today_addon_without_listing_evidence_says_so(tmp_path, monkeypatch):
+    # An addon snapshot without eligible scan metrics has no listing evidence, like TSM.
+    monkeypatch.setattr('brownstone.today_data.read_scan_metrics', lambda *args: None)
+    at, _ = listing_evidence_app(tmp_path, monkeypatch, 0)
+    assert not at.exception
+    assert any('not available for this source' in i.value for i in at.info)
+    assert not len(at.tabs[3].dataframe)  # No listing ladders, so no below-vendor rows.
+
+
+def test_crafting_groups_unsupported_recipes_and_explanations(tmp_path, monkeypatch):
+    from copy import deepcopy
+
+    at, _, _ = app(tmp_path, monkeypatch)
+    unsupported = deepcopy(catalog())
+    unsupported['recipes_by_id'][30]['inputs'].append({'item_id': 3, 'quantity': 1})
+    unsupported['recipes'] = list(unsupported['recipes_by_id'].values())
+    entries = [{'name': name, 'catalog': deepcopy(unsupported)} for name in ['one', 'two', 'three']]
+    monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs', lambda *args: entries)
+    at.radio[0].set_value('Crafting').run()
+    assert not at.exception
+    errors = next(e for e in at.expander if e.label == '3 recipes could not be evaluated')
+    assert not errors.proto.expanded
+    table = errors.dataframe[0].value
+    assert list(table.columns) == ['Output', 'Profession', 'Catalog', 'Reason']
+    assert list(table['Catalog']) == ['one', 'three', 'two']
+    assert all('Recipe cycle' in reason for reason in table['Reason'])
+    assert not any('could not be evaluated' in w.value for w in at.warning)
+    catalogs = next(e for e in at.expander if e.label == 'Catalogs on this board (3)')
+    how = next(e for e in at.expander if e.label == 'How to read this board')
+    assert not catalogs.proto.expanded and len(catalogs.caption) == 3
+    assert not how.proto.expanded and len(how.caption) == 3
+    visible = [c.value for c in at.main.children.values() if c.type == 'caption']
+    assert any(c.startswith('Policy ') and 'SHA-256' in c for c in visible)
+    assert any(c.startswith('Price age unknown:') for c in visible)
+    assert not any('Depth counts' in c or 'Margin = ' in c or 'Selected catalogs' in c for c in visible)

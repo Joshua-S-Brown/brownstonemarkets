@@ -30,7 +30,7 @@ app.py                  Streamlit entry: sidebar, Refresh, view dispatch
 views/                  Streamlit only; display, no calculations
   common.py             snapshot loading, freshness display, gold columns
   crafting.py           Action Board and recipe explanation
-  today.py              Today settings form, funded plan and scan evidence tables
+  today.py              Collapsible settings, funded plan tabs and optional evidence columns
   catalogs.py           Recipe catalogs page: status, one add-or-update flow (live review, then Save)
   market.py             Browse market and Opportunities
   scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
@@ -134,6 +134,9 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 - `Decimal` handles the auction-cut rounding.
 - `storage.listing_depth` returns listing and unit counts by item for the same analytical snapshot used by `price_observations`. It first checks the scoped `addon_scans` record is complete and priced, then reads `scan_metrics` with the source, full market identity, snapshot ID, scan ID and metrics version. It returns `None` when unavailable, or zero counts for absent requested items. The Crafting view renders these separately from `rank_recipes`; depth never enters calculation or policy inputs (CRAFT-09).
 - Catalog discovery supplies `catalog_id` from the selection-file stem. Standalone catalogs default to a header identity (`game_version:rules_version:profession:catalog_version`); combined inputs must have unique identities. Rows carry `catalog_id`, `recipe_id` and `profession`, and `catalog_for_row` resolves details to the original catalog.
+- The Crafting view groups unsupported-recipe reasons into one collapsed table and separates catalog
+  captions and board explanations into collapsed expanders. Board provenance and freshness remain
+  visible. This changes presentation only; board rows and recipe evaluation still use the same paths.
 - `rank_catalogs` selects compatible catalogs, calls `rank_recipes` separately for each graph, and applies the same shared ranking helper to all rows. `filter_profession` preserves combined ranks. Prices and depth are read once for the union of compatible catalog item IDs, using the same source, full market scope and analytical snapshot. See CRAFT-05 and UI-01/UI-04 in `requirements.md` for behavior.
 - `rank_recipes` checks that the catalog, market and snapshot are compatible, then:
   - evaluates every finished output under both bases
@@ -245,7 +248,10 @@ Selection rounds re-size remaining candidates against the same remaining resourc
 output routes are counted and omitted once an output is selected; sell follows the chosen route,
 and shopping combines item/route purchases. Evidence state is attached to every result row. Settings I/O is separate from pure calculations; the UI writes only
 on Save, to `today_settings.settings_path(data_dir, source_id)` (one file per source in the shared data
-directory), and reports invalid or failed reads/writes without hiding the tables.
+directory), and reports invalid or failed reads/writes without hiding the tables. The view wraps the
+form in an expander and puts the four lists in tabs. Each table projects decision columns plus State
+by default; an evidence toggle reveals its other columns without changing result values. Shared
+provenance appears once above the tabs; freshness stays outside collapsed controls (UI-01).
 
 Offline fixtures in `test_today.py`, `test_today_data.py` and `test_today_view.py` cover this contract
 without discovering local catalogs. Performance verification uses a copied database with current

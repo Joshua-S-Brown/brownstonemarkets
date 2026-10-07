@@ -29,9 +29,11 @@ def render(config, catalogs):
                 f"{config.get('rules_version', 'no rules version')}. "
                 "Add or update a profession on Recipe catalogs.")
         return
-    for catalog in selected:
-        st.caption(f"{catalog['profession'].title()} · catalog {catalog.get('catalog_version', 'unversioned')} · "
-                   f"status {catalog['status']} · {len(catalog['recipes_by_id'])} recipes · {catalog.get('notes', '')}")
+    with st.expander(f"Catalogs on this board ({len(selected)})"):
+        for catalog in selected:
+            st.caption(f"{catalog['profession'].title()} · catalog {catalog.get('catalog_version', 'unversioned')} · "
+                       f"status {catalog['status']} · {len(catalog['recipes_by_id'])} recipes · "
+                       f"{catalog.get('notes', '')}")
 
     manifest, sid, _ = load_latest(config, "Refresh or import a scan for this market to price the catalog.")
     if manifest is None:
@@ -95,25 +97,29 @@ def render(config, catalogs):
 
 def _board(catalogs, config, manifest, sid, board, basis, depth):
     st.markdown("#### Action Board")
-    st.caption("Selected catalogs may cover only part of each profession. Potential craft means positive estimated "
-               "profit; demand and sale likelihood are unknown. Post-launch recipes can't be crafted yet.")
     show_freshness(config, manifest)
-    st.caption("Depth counts all listings and units in the same scan as prices, including listings without a "
-               "buyout. Not listed means zero observed supply; unavailable means this snapshot has no listing "
-               "depth. Direct inputs are shown even when the chosen route crafts them or buys from a vendor. "
-               "Depth does not change costs, labels or ranking.")
+    with st.expander("How to read this board"):
+        st.caption("Selected catalogs may cover only part of each profession. Potential craft means positive estimated "
+                   "profit; demand and sale likelihood are unknown. Post-launch recipes can't be crafted yet.")
+        st.caption("Depth counts all listings and units in the same scan as prices, including listings without a "
+                   "buyout. Not listed means zero observed supply; unavailable means this snapshot has no listing "
+                   "depth. Direct inputs are shown even when the chosen route crafts them or buys from a vendor. "
+                   "Depth does not change costs, labels or ranking.")
+        st.caption("Margin = profit / net revenue. Zero profit is labeled negative margin. Missing prices take "
+                   "precedence over stale data; incomplete rows sort last.")
     other = next(name for name in PRICE_BASES if name != basis)
     rows = [_board_row(catalog_for_row(catalogs, row), row, other, depth) for row in board["rows"]]
     gold = [name for name in rows[0] if name.endswith("(g)")] if rows else []
     st.dataframe(rows, hide_index=True, width="stretch", column_config={
         **gold_columns(*gold), "Margin (%)": st.column_config.NumberColumn(format="%.1f")})
-    for row in board["rows"]:
-        if "error" in row:
-            st.warning(f"{row['output_name']} ({row['profession'].title()} · {row['catalog_id']}) "
-                       f"could not be evaluated: {row['error']}")
-    st.caption(f"Margin = profit / net revenue. Zero profit is labeled negative margin. Missing prices take "
-               f"precedence over stale data; incomplete rows sort last. Policy {board['policy_version']} · "
-               f"snapshot {sid} · source {manifest['source']} · SHA-256 {manifest['sha256'][:12]}…")
+    errors = [{"Output": row["output_name"], "Profession": row["profession"].title(),
+               "Catalog": row["catalog_id"], "Reason": row["error"]}
+              for row in board["rows"] if "error" in row]
+    if errors:
+        with st.expander(f"{len(errors)} recipes could not be evaluated"):
+            st.dataframe(errors, hide_index=True, width="stretch")
+    st.caption(f"Policy {board['policy_version']} · snapshot {sid} · source {manifest['source']} · "
+               f"SHA-256 {manifest['sha256'][:12]}…")
 
 
 def _board_row(catalog, row, other, depth):
