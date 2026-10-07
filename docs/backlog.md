@@ -49,18 +49,19 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 5. STORY-040 your active auctions (addon; beta; implemented and reviewed)
 6. STORY-041 your professions and known recipes (addon; beta; must be testable by 13 October)
 7. STORY-042 beta evidence report (Brownstone CLI; Claude runs it after each play session)
-8. STORY-038 Today craft details (Brownstone; works on existing scans)
-9. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
-10. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
-11. STORY-035 auction deposits (needs a beta check)
-12. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-13. STORY-036 vendor price ceilings
-14. STORY-027 removed listings
-15. STORY-015b crafting across professions
-16. STORY-021 item page and charts
-17. STORY-026 scan coverage and rhythm
-18. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-19. STORY-006 replay
+8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
+9. STORY-038 Today craft details (Brownstone; works on existing scans)
+10. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
+11. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
+12. STORY-035 auction deposits (needs a beta check)
+13. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+14. STORY-036 vendor price ceilings
+15. STORY-027 removed listings
+16. STORY-015b crafting across professions
+17. STORY-021 item page and charts
+18. STORY-026 scan coverage and rhythm
+19. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+20. STORY-006 replay
 
 STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
 
@@ -262,6 +263,23 @@ Acceptance:
 - **Import round trip** on a fresh temporary copy and data directory: preview, import, import again (all duplicates), and the decompressed bronze archive equals the input bytes. Reported as one check.
 - **Compare with an earlier file** (`--previous`): what is new since that file, by character and family, so one play session's additions can be checked on their own.
 - **Offline tests** on synthetic files: a clean file (all pass), a broken money chain, a bag residual, a duplicate ID with different content, an overflow marker, a missing diagnostics table, the round trip, the comparison and a check that nothing outside `work/beta-reports/` is written.
+
+### STORY-044 — Brownstone panel from a minimap button
+
+Added 2026-10-07 (product owner: "it would be a lot easier to just hit those as needed", wanted before the next play session). Addon only, plus one Brownstone regression test. **Reverses the STORY-029 visibility decision** (`addon/README.md` → *Reload and clear controls*: controls only with the auction house open, no persistent panel); the auction-house button row stays as it is.
+
+As the product owner, I want a minimap button that opens a small panel with the Brownstone buttons and the routine written on it, so that I don't have to remember slash commands or open the auction house to reload and clear.
+
+Acceptance:
+- **Minimap button:** a small round button on the minimap edge, made with the client's own frame API (no third-party library such as LibDBIcon). Left-click toggles the panel; the tooltip says "Brownstone Scan" and "Click: open panel. Drag: move". Dragging moves it around the minimap edge; its angle is saved in a new `BrownstoneScanDB.ui` table (`minimap_angle`, a number). `/bscan panel` also toggles the panel, so it works if another addon hides minimap buttons.
+- **Panel:** a small movable window (Escape closes it) with a title, a status block, the buttons and the routine. It is a convenience view only: it captures nothing new and never clicks anything itself.
+  - **Status**, refreshed when the panel opens and after each panel action: saved scans in the file and how many from this session aren't written yet; character snapshots; journal entries as `N / 10,000`, highlighted from 8,000, with the skipped count when the overflow marker exists; whether this login's time is known (when it isn't, Clear keeps everything, as today).
+  - **Buttons:** *Reload* (same function and guard as the existing Reload button); *Clear saved data* (the same confirmation popup and every existing guard: refuses with unsaved scans or during a scan or item info pass, never uses the `all` override); *Status* (prints the existing `/bscan status` output to chat); *Start scan*, enabled only while the auction house is open and no scan or item pass is running, calling the existing start. Reload, Clear and Start are disabled exactly when the auction-house buttons are.
+  - **Routine** in short plain text: "1. Play. 2. Reload (or log out) so the game writes the file. 3. Import on the computer. 4. Clear, then Reload. Clear keeps this login's journal and snapshots; they import again harmlessly as duplicates."
+- **Unchanged:** file format 6, scan format 4, every record and its fields, the journal, snapshot and clear rules (ADDON-11, ADDON-12), the auction-house buttons and the slash commands. The addon stays read-only: no buying, posting, unattended scanning or timers that act. Addon version becomes **0.9.0** (toc, `ADDON_VERSION`, README title).
+- **Brownstone:** preview, import and `beta-report` ignore the `ui` table; a test proves a format-6 file with `ui` imports and reports exactly as without it.
+- **Offline tests** in the existing Lua harness (`tests/test_addon.py`, `tests/fixtures/addon_harness.lua`): the panel's buttons call the same functions as the auction-house buttons (Clear refuses with an unsaved scan, shows the popup otherwise; Reload calls `ReloadUI`; Start is disabled with the house closed and during a scan); the status numbers, the 8,000 highlight and the overflow skipped count; the saved angle survives a reload; `/bscan panel` toggles; opening the panel adds no journal entry, snapshot or scan.
+- **Docs:** `addon/README.md` gets a short *Panel* section (replacing the visibility decision) and an in-game check written as play actions only: click the minimap button, open and close the panel, drag the button and reload, press each button once. `requirements.md` records the panel as a convenience view with the existing guards; `status.md` describes the current state.
 
 ### STORY-038 — Today craft details
 
