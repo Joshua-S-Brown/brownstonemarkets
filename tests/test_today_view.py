@@ -43,7 +43,7 @@ def test_today_default_settings_save_rejection_and_new_session(tmp_path, monkeyp
     at, _, path = app(tmp_path, monkeypatch)
     assert not at.exception and at.radio[0].value == 'Today'
     assert any('not available for this source' in i.value for i in at.info)
-    assert [tab.label for tab in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor']
+    assert [tab.label for tab in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor', 'Queue']
     settings = next(e for e in at.expander if e.label == 'Today settings')
     assert not settings.proto.expanded and len(settings.text_input) == 2
     assert any(c.value == 'Gold available: 10g · Minimum batch gain: 1c · Most crafts per item: 5'
@@ -141,7 +141,7 @@ def listing_evidence_app(tmp_path, monkeypatch, hours):
 def test_today_all_tabs_decision_columns_evidence_and_stale_state(tmp_path, monkeypatch, hours):
     at, source = listing_evidence_app(tmp_path, monkeypatch, hours)
     assert not at.exception
-    assert [t.label for t in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor']
+    assert [t.label for t in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor', 'Queue']
     columns = [
         ['Item', 'Profession', 'Batch', 'Limited by', 'Material cost (g)', 'Batch profit (g)',
          'Profit per craft (g)', 'Thin', 'State'],
@@ -150,8 +150,8 @@ def test_today_all_tabs_decision_columns_evidence_and_stale_state(tmp_path, monk
         ['Output', 'Batch', 'Lowest competing unit (g)', 'Listings', 'Units', 'Undercut unit (g)',
          'Profit at undercut for batch (g)', 'Thin', 'State'],
         ['Item', 'Units', 'Cost (g)', 'Vendor pays per unit (g)', 'Gain (g)', 'State']]
-    originals = [tab.dataframe[0].value.copy() for tab in at.tabs]
-    for tab, expected in zip(at.tabs, columns, strict=True):
+    originals = [tab.dataframe[0].value.copy() for tab in at.tabs[:4]]
+    for tab, expected in zip(at.tabs[:4], columns, strict=True):
         assert list(tab.dataframe[0].value.columns) == expected
         assert any('more rows' in c.value for c in tab.caption)
         assert set(tab.dataframe[0].value['State']) == ({'stale — inspect only'} if hours else {'potential gain'})
@@ -164,10 +164,11 @@ def test_today_all_tabs_decision_columns_evidence_and_stale_state(tmp_path, monk
     assert all(text in provenance[0] for text in [source['source_id'], source['market_id'],
                                                 'snapshot', 'scan evidence', 'UTC', 'time basis upstream scan'])
     for toggle in at.toggle:
-        toggle.set_value(True)
+        if toggle.label == "Show evidence columns":
+            toggle.set_value(True)
     at.run()
     assert not at.exception
-    for tab, original in zip(at.tabs, originals, strict=True):
+    for tab, original in zip(at.tabs[:4], originals, strict=True):
         table = tab.dataframe[0].value
         assert table[original.columns].equals(original)
         assert len(table.columns) > len(original.columns)
@@ -261,3 +262,139 @@ def test_today_selected_stale_craft_details_and_indented_steps(tmp_path, monkeyp
     assert steps[1].startswith('    ↳ Intermediate 5: 10 crafts → 10 units')
     assert steps[2].startswith('        ↳ Intermediate 6: 20 crafts → 20 units')
     assert all('stale — inspect only' in line for line in steps[1:])
+
+
+def test_today_choices_queue_ticks_copy_and_resets(tmp_path, monkeypatch):
+    at, _, path = app(tmp_path, monkeypatch)
+    before = path.read_bytes()
+    craft_check = at.tabs[0].checkbox[0]
+    assert craft_check.value is True
+    batch = widget(at.number_input, 'Batch for Fixture 3')
+    assert batch.value == 5 and batch.min == 1 and batch.max == 5
+    queue = at.tabs[4]
+    assert len(queue.checkbox) == 4
+    queue.checkbox[0].check().run()
+    assert at.tabs[4].checkbox[0].value
+    original = at.tabs[1].dataframe[0].value.copy()
+    at.tabs[4].checkbox[1].check().run()
+    assert at.tabs[1].dataframe[0].value.equals(original)
+    widget(at.toggle, 'Copy as text').set_value(True).run()
+    copied = at.code[0].value
+    assert all(w.label in copied for w in at.tabs[4].checkbox)
+    assert 'Gold needed:' in copied and 'Expected profit at undercut: unavailable' in copied
+    batch = widget(at.number_input, 'Batch for Fixture 3')
+    batch.set_value(2).run()
+    assert not at.exception
+    assert not any(w.value for w in at.tabs[4].checkbox)
+    assert at.tabs[2].dataframe[0].value['Batch'][0] == 2
+    assert at.tabs[0].dataframe[0].value['Batch profit (g)'][0] < .935
+    assert path.read_bytes() == before
+    at.tabs[0].checkbox[0].uncheck().run()
+    assert not at.tabs[1].dataframe and not at.tabs[2].dataframe and not at.tabs[4].checkbox
+    widget(at.number_input, 'Most crafts per item').set_value(3)
+    widget(at.button, 'Save Today settings').click().run()
+    assert at.tabs[0].checkbox[0].value and widget(at.number_input, 'Batch for Fixture 3').value == 3
+    assert any('session choices and queue ticks reset' in i.value for i in at.info)
+    again = AppTest.from_file(str(ROOT / 'app.py')).run()
+    assert again.tabs[0].checkbox[0].value and not any(w.value for w in again.tabs[4].checkbox)
+
+
+def test_today_queue_ticks_survive_evidence_turning_stale(tmp_path, monkeypatch):
+    at, _, _ = app(tmp_path, monkeypatch)
+    at.tabs[4].checkbox[0].check().run()
+    from brownstone.today import build_today
+
+    def aged(**args):
+        result = build_today(**args)
+        result['craft'] = [{**row, 'stale': True} for row in result['craft']]
+        return result
+    monkeypatch.setattr('views.today.build_today', aged)
+    at.run()
+    assert not at.exception and at.tabs[4].checkbox[0].value
+
+
+def test_today_source_scoping_and_scan_reset(tmp_path, monkeypatch):
+    from copy import deepcopy
+
+    at, source, _ = app(tmp_path, monkeypatch)
+    other = deepcopy(source)
+    other['source_id'] = 'other'
+    # Keep fixtures scoped: the other source has no snapshot and cannot borrow this plan.
+    monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [source, other])
+    at.run()
+    widget(at.selectbox, 'Data source').set_value(0).run()
+    at.tabs[4].checkbox[0].check().run()
+    widget(at.number_input, 'Batch for Fixture 3').set_value(2).run()
+    at.tabs[4].checkbox[0].check().run()
+    widget(at.selectbox, 'Data source').set_value(1).run()
+    assert not at.tabs and any('import a scan' in i.value for i in at.info)
+    widget(at.selectbox, 'Data source').set_value(0).run()
+    assert widget(at.number_input, 'Batch for Fixture 3').value == 2
+    assert at.tabs[4].checkbox[0].value
+    original = __import__('views.today', fromlist=['load_latest']).load_latest
+    def changed(config, message):
+        manifest, sid, count = original(config, message)
+        return {**manifest, 'scan_id': 'new-scan'}, sid, count
+    monkeypatch.setattr('views.today.load_latest', changed)
+    at.run()
+    assert not at.exception and widget(at.number_input, 'Batch for Fixture 3').value == 5
+    assert not any(w.value for w in at.tabs[4].checkbox)
+    assert any('Previous choices were dropped, not resized' in i.value for i in at.info)
+
+
+def test_today_refill_added_row_edit_and_ticks_stable(tmp_path, monkeypatch):
+    from test_today import two_plan
+
+    at, source, _ = app(tmp_path, monkeypatch)
+    source["max_age_hours"] = 48
+    def fixture(**args):
+        result = two_plan(settings=TodaySettings(130, 1, 'fixed', max_crafts=3),
+                        listings={1: [(2, 20, 10), (4, 80, 20), (6, 180, 30)]},
+                        **{k: args[k] for k in ('choices', 'refill') if k in args})
+        for row in result['craft']:
+            if row['catalog_id'] == 'second':
+                row['output_name'] = 'Second craft'
+        return result
+    monkeypatch.setattr('views.today.build_today', fixture)
+    at.run()
+    at.tabs[0].checkbox[0].uncheck().run()
+    assert len(at.tabs[0].checkbox) == 2 and at.tabs[0].checkbox[1].value
+    assert at.tabs[0].dataframe[0].value['Item'][0] == 'Second craft'
+    at.tabs[4].checkbox[0].check().run()
+    assert at.tabs[4].checkbox[0].value  # New refill controls do not change the plan on the next rerun.
+    at.tabs[0].checkbox[0].check().run()
+    assert at.tabs[0].checkbox[0].value and not at.tabs[0].checkbox[1].value
+    assert any(w.value.startswith('Second craft: ') and 'dropped, not resized' in w.value for w in at.warning)
+    at.tabs[0].checkbox[0].uncheck().run()
+    at.tabs[0].checkbox[1].check().run()
+    widget(at.toggle, 'Refill freed gold with next-best crafts').set_value(False).run()
+    assert len(at.tabs[0].dataframe[0].value) == 1  # Ticked refill row stays in the exact plan.
+    assert any('refill is off' in c.value for c in at.tabs[0].caption)
+    widget(at.number_input, 'Batch for Second craft').set_value(1).run()
+    assert at.tabs[0].dataframe[0].value['Batch'][0] == 1
+
+    at.tabs[0].checkbox[0].check().run()
+    assert at.tabs[0].checkbox[0].value and not at.tabs[0].checkbox[1].value
+    assert len(at.tabs[0].dataframe[0].value) == 1
+    assert any('dropped, not resized' in w.value for w in at.warning)
+
+
+
+def test_today_drops_infeasible_choice_with_note(tmp_path, monkeypatch):
+    from streamlit.elements.lib import policies
+
+    logged = []
+    monkeypatch.setattr(policies, '_shown_default_value_warning', False)
+    monkeypatch.setattr(policies._LOGGER, 'warning', lambda message, *args, **kwargs: logged.append(message))
+    at, _, _ = app(tmp_path, monkeypatch)
+    from brownstone.today import build_today
+
+    def restricted(**args):
+        return build_today(**{**args, 'settings': TodaySettings(100000, 1, 'fixed', max_crafts=3)})
+    monkeypatch.setattr('views.today.build_today', restricted)
+    # A previously editable quantity is now outside the calculation's feasible bound.
+    widget(at.number_input, 'Batch for Fixture 3').set_value(4).run()
+    assert not at.exception and not at.tabs[0].checkbox[0].value
+    assert not at.tabs[1].dataframe and not at.tabs[2].dataframe
+    assert any('dropped, not resized' in w.value for w in at.warning)
+    assert not any('Session State API' in message for message in logged)

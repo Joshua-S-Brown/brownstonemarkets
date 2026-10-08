@@ -30,7 +30,7 @@ app.py                  Streamlit entry: sidebar, Refresh, view dispatch
 views/                  Streamlit only; display, no calculations
   common.py             snapshot loading, freshness display, gold columns
   crafting.py           Action Board and recipe explanation
-  today.py              Collapsible settings, funded plan tabs and optional evidence columns
+  today.py              Settings, session plan controls, queue and optional evidence columns
   catalogs.py           Recipe catalogs page: status, one add-or-update flow (live review, then Save)
   market.py             Browse market and Opportunities
   scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
@@ -58,7 +58,7 @@ brownstone/             importable without Streamlit
   recipe_catalogs.py    catalogs found by selection file: status, previews and the add/update writes
   selection_files.py    in-place edits of a selection file that keep its comments
   action_board.py       ranking and label policy (versioned)
-  today.py              Today v1 prefix ladders, batch sizing, reservation, shopping/sell/aside results
+  today.py              Today v2 batch sizing, chosen-plan reservation, refill and session queue
   today_data.py         one scoped read of prices, base/legacy listings, metrics and vendor references
   today_settings.py     validated integer settings and atomic local JSON persistence
   cli.py                `python -m brownstone`: collect or import a source; `recipes` subcommand
@@ -376,7 +376,7 @@ key calculation; imports/rebuilds are the supported writers. No dependency was a
 
 ## Today contracts (STORY-025)
 
-Rules and decisions live in `requirements.md` → Today v1. `read_today_evidence` returns
+Rules and decisions live in `requirements.md` → Today. `read_today_evidence` returns
 `(observations, listings, metrics, vendor_sell_prices)` for one source and analytical snapshot.
 Listings are grouped base/legacy catalog identities with `(quantity, full buyout, unit ceil)` tuples;
 metrics retain ADDON-10 counts and p25. Missing listing support is `None`, distinct from an empty
@@ -408,6 +408,27 @@ The Craft dataframe supports single-row selection, initially empty. Its widget k
 plan contents and provenance (excluding continuously changing freshness age), so a changed plan
 clears selection. Selected materials appear beneath it, followed by indented catalog craft steps
 (STORY-038); detail materials are complete rather than capped at Buy's 10 displayed rows.
+
+STORY-039 adds optional ordered `choices` (catalog ID, recipe ID, exact batch size or `None` for
+unchecked) and `refill=True` to `build_today`. Exact choices reserve through the same prefix ladders
+before greedy refill of untouched outputs. Result rows expose `feasible_size` and `plan_order`;
+`choice_limits` exposes current bounds, and `dropped_choices` names why each choice was rejected
+(infeasible size, output already planned, row limit, recipe gone). A choice at the size the greedy
+rule would pick with the same funds and reservations keeps that row's limiting factor; any other size
+reads *chosen batch*. `refill` is echoed in the result; with refill off, `remaining.craft` counts the
+feasible outputs left out rather than rows beyond the cap.
+`session_queue` projects all reserved shopping (before the display cap), retained catalog route steps
+in postorder, and Sell rows; its copper totals never re-quote. Missing undercut totals remain null.
+The view adds source-scoped checkbox/batch controls and a Queue tab. Session fingerprints cover catalogs,
+source/market, snapshot (manifest and snapshot ID, which determine the stored evidence read), settings,
+freshness limit and auction cut, excluding the caller clock; the evidence itself is not re-serialised. Choice values and queue ticks are
+retained separately from widget state so Streamlit widget cleanup on navigation cannot lose them.
+The queue fingerprint includes plan/context but excludes control bookkeeping and staleness, so ticks
+survive the scan crossing the freshness limit. Widgets take start values only through session state
+(never also `value=`), avoiding Streamlit's duplicate-default warning.
+Each rerun builds the current plan once; stored default control rows supply the session choices.
+Copy as text is a per-source toggle showing a plain-text code block with Streamlit's clipboard
+control; it stays open across ticks. No disk or schema writes.
 
 Offline fixtures in `test_today.py`, `test_today_data.py` and `test_today_view.py` cover this contract
 without discovering local catalogs. Performance verification uses a copied database with current

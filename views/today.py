@@ -66,9 +66,11 @@ def render(config, catalogs):
         ids = sorted({item for c in catalogs for item in c["items_by_id"]})
         with read_db(config) as db:
             observations, listings, metrics, vendors = read_today_evidence(db, config, sid, ids)
-        result = build_today(catalogs, observations, config, {**manifest, "snapshot_id": sid}, settings,
-                             now=datetime.now(UTC), listings=listings, metrics=metrics, vendor_prices=vendors,
-                             max_age_hours=config["max_age_hours"], auction_cut=config["auction_cut"])
+        arguments = dict(catalogs=catalogs, observations=observations, market=config,
+                         snapshot={**manifest, "snapshot_id": sid}, settings=settings, now=datetime.now(UTC),
+                         listings=listings, metrics=metrics, vendor_prices=vendors,
+                         max_age_hours=config["max_age_hours"], auction_cut=config["auction_cut"])
+        result = _build_session_plan(arguments)
     except Exception as error:
         st.error(f"Unable to build Today: {error}")
         return
@@ -82,14 +84,14 @@ def render(config, catalogs):
                f"market {config['market_id']} · snapshot {sid} · "
                f"scan {manifest.get('scan_id', 'not available for this source')} · "
                f"evidence {freshness['observed_at']} (UTC) · time basis {freshness['basis']}")
-    _tables(result, names)
+    _tables(result, names, arguments=arguments)
 
 
 def _evidence(row):
     return {"State": "stale — inspect only" if row["stale"] else "potential gain"}
 
 
-def _table(rows, rest, decisions, key, *, selection_key=None):
+def _table(rows, rest, decisions, key, *, selection_key=None, rest_text="more rows outside this list's 10-row limit"):
     evidence = st.toggle("Show evidence columns", key=f"today-evidence-{key}")
     if rows:
         columns = [*decisions, "State"]
@@ -104,18 +106,22 @@ def _table(rows, rest, decisions, key, *, selection_key=None):
         selected = event.selection.rows if selection_key else []
     else:
         st.info("No rows clear these settings with the available evidence.")
-    st.caption(f"{rest} more rows outside this list's 10-row limit.")
+    st.caption(f"{rest} {rest_text}.")
     return selected if rows else []
 
 
-def _tables(result, names):
-    sells = {r["output_item_id"]: r for r in result["sell"]}
-    craft = [_craft_row(row, sells[row["output_item_id"]]) for row in result["craft"]]
-    craft_tab, buy_tab, sell_tab, vendor_tab = st.tabs(["Craft", "Buy", "Sell", "Below vendor"])
+def _tables(result, names, *, arguments=None):
+    craft_tab, buy_tab, sell_tab, vendor_tab, queue_tab = st.tabs(["Craft", "Buy", "Sell", "Below vendor", "Queue"])
     with craft_tab:
+        if arguments is not None:
+            result = _plan_controls(result, arguments)
+        sells = {r["output_item_id"]: r for r in result["sell"]}
+        craft = [_craft_row(row, sells[row["output_item_id"]]) for row in result["craft"]]
         selected = _table(craft, result["remaining"]["craft"],
                ["Item", "Profession", "Batch", "Limited by", "Material cost (g)", "Batch profit (g)",
-                "Profit per craft (g)", "Thin"], "craft", selection_key=_selection_key(result))
+                "Profit per craft (g)", "Thin"], "craft", selection_key=_selection_key(result),
+               rest_text=("more rows outside this list's 10-row limit" if result["refill"]
+                          else "more crafts fit the remaining gold; refill is off"))
         if selected:
             _craft_details(result["craft"][selected[0]])
         elif craft:
@@ -146,6 +152,9 @@ def _tables(result, names):
                  "Highest listing unit (g)": to_gold(r["highest_unit_copper"]), "Gain (g)": to_gold(r["gain_copper"]),
                  **_evidence(r)} for r in result["below_vendor"]], result["remaining"]["below_vendor"],
                ["Item", "Units", "Cost (g)", "Vendor pays per unit (g)", "Gain (g)"], "vendor")
+
+    with queue_tab:
+        _queue(result)
 
 
 def _craft_row(row, sell):
@@ -201,3 +210,145 @@ def _craft_details(row):
             lines.append(f"{'    ' * step['depth']}↳ {step['item_name']}: {step['crafts']} crafts → "
                          f"{step['quantity']} units · {state}")
         st.text("\n".join(lines))
+
+
+def _digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def _context(arguments):
+    # Listings, observations and metrics are read for the snapshot ID, so the snapshot identifies them.
+    return _digest({key: arguments[key] for key in ("catalogs", "market", "snapshot", "settings",
+                                                    "max_age_hours", "auction_cut")})
+
+
+def _session_choices(state, prefix):
+    choices = []
+    for row in state["rows"]:
+        identity = f"{prefix}-{row['catalog_id']}-{row['recipe_id']}"
+        checked = st.session_state.get(f"{identity}-chosen", state["values"].get(f"{identity}-chosen", True))
+        size = st.session_state.get(f"{identity}-size", state["values"].get(f"{identity}-size", row["batch_size"]))
+        choices.append({"catalog_id": row["catalog_id"], "recipe_id": row["recipe_id"],
+                        "batch_size": size if checked else None})
+    pristine = len(choices) == state["default_count"] and all(
+        c["batch_size"] == r["batch_size"]
+        for c, r in zip(choices, state["rows"][:state["default_count"]], strict=True))
+    return None if pristine else choices
+
+
+def _build_session_plan(arguments):
+    source = arguments["market"]["source_id"]
+    context = _context(arguments)
+    state = st.session_state.get(f"today-choices-{source}")
+    if state is None or state["context"] != context:
+        return build_today(**arguments)
+    prefix = f"today-plan-{source}-{context}"
+    refill_key = f"{prefix}-refill"
+    refill = st.session_state.get(refill_key, state["values"].get(refill_key, True))
+    return build_today(**arguments, choices=_session_choices(state, prefix), refill=refill)
+
+
+def _plan_controls(default, arguments):
+    source = arguments["market"]["source_id"]
+    context = _context(arguments)
+    state_key = f"today-choices-{source}"
+    state = st.session_state.get(state_key)
+    if state is None or state["context"] != context:
+        if state is not None:
+            st.info("Scan, settings or catalog evidence changed: session choices and queue ticks reset. "
+                    "Previous choices were dropped, not resized; a fresh default plan is shown.")
+            for key in state["widgets"]:
+                st.session_state.pop(key, None)
+        state = {"context": context, "rows": sorted(default["craft"], key=lambda r: r["plan_order"]),
+                 "widgets": [], "values": {}, "default_count": len(default["craft"])}
+        st.session_state[state_key] = state
+    for key, value in state["values"].items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+    prefix = f"today-plan-{source}-{context}"
+    refill_key = f"{prefix}-refill"
+    result = default
+    named = {(r["catalog_id"], r["recipe_id"]): r["output_name"] for r in state["rows"]}
+    for dropped in result["dropped_choices"]:
+        name = named.get((dropped["catalog_id"], dropped["recipe_id"]), f"Recipe {dropped['recipe_id']}")
+        st.warning(f"{name}: {dropped['reason']}")
+        identity = f"{prefix}-{dropped['catalog_id']}-{dropped['recipe_id']}"
+        st.session_state[f"{identity}-chosen"] = False
+        st.session_state[f"{identity}-size"] = 1
+    _seed(refill_key, True)
+    st.toggle("Refill freed gold with next-best crafts", key=refill_key)
+    state["widgets"] = [refill_key]
+    limits = {(r["catalog_id"], r["recipe_id"]): r["maximum"] for r in result["choice_limits"]}
+    known = {(r["catalog_id"], r["recipe_id"]) for r in state["rows"]}
+    state["rows"].extend(r for r in sorted(result["craft"], key=lambda r: r["plan_order"])
+                         if (r["catalog_id"], r["recipe_id"]) not in known)
+    _choice_widgets(state, prefix, limits)
+    state["values"] = {key: st.session_state[key] for key in state["widgets"]}
+    result["session_context"] = context
+    return result
+
+
+def _choice_widgets(state, prefix, limits):
+    for row in state["rows"]:
+        identity = f"{prefix}-{row['catalog_id']}-{row['recipe_id']}"
+        tick_key, size_key = f"{identity}-chosen", f"{identity}-size"
+        maximum = limits.get((row["catalog_id"], row["recipe_id"]), row["feasible_size"])
+        if not st.session_state.get(tick_key, True) and st.session_state.get(size_key, 1) > max(1, maximum):
+            st.session_state[size_key] = 1
+        _seed(tick_key, True)
+        _seed(size_key, min(row["batch_size"], max(1, maximum)))
+        tick, batch = st.columns([3, 1])
+        with tick:
+            st.checkbox(row["output_name"], key=tick_key, disabled=maximum == 0)
+        with batch:
+            st.number_input(f"Batch for {row['output_name']}", min_value=1, max_value=max(1, maximum),
+                            key=size_key, disabled=maximum == 0)
+        state["widgets"].extend([tick_key, size_key])
+
+
+def _seed(key, value):
+    # Widgets get their start value only through session state, never also through `value=`.
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
+def _queue_line(line):
+    stage, name = line["stage"], line["name"]
+    if stage in ("auction house", "vendor"):
+        return (f"Buy at {stage}: {name} · {line['purchased_units']} units · "
+                f"highest unit {format_money(line['highest_unit_copper'])} · total {format_money(line['cost_copper'])}")
+    if stage == "craft":
+        return f"Craft: {name} · recipe {line['recipe_id']} ({line['catalog_id']}) · {line['batch_size']} crafts"
+    price = format_money(line["unit_copper"]) if line["unit_copper"] is not None else "unavailable"
+    profit = format_money(line["profit_copper"]) if line["profit_copper"] is not None else "unavailable"
+    return f"Post: {name} · {line['quantity']} units · undercut unit {price} · profit {profit}"
+
+
+def _queue(result):
+    queue = result["queue"]
+    identity = _digest({"queue": queue, "context": result.get("session_context"), "evidence": [
+        {k: r[k] for k in ("source_id", "market_id", "snapshot_id", "scan_id")}
+        for r in result["craft"]]})
+    key = f"today-queue-{identity}"
+    source = result["source_id"]
+    state_key = f"today-queue-state-{source}"
+    previous = st.session_state.get(state_key, {})
+    if previous.get("identity") != key:
+        for tick in previous.get("ticks", {}):
+            st.session_state.pop(tick, None)
+        previous = {"identity": key, "ticks": {}}
+    lines = [_queue_line(line) for line in queue["lines"]]
+    tick_keys = [f"{key}-{i}" for i in range(len(lines))]
+    for text, tick in zip(lines, tick_keys, strict=True):
+        if tick not in st.session_state and tick in previous["ticks"]:
+            st.session_state[tick] = previous["ticks"][tick]
+        st.checkbox(text, key=tick)
+    st.session_state[state_key] = {"identity": key, "ticks": {tick: st.session_state[tick] for tick in tick_keys}}
+    profit = queue["expected_profit_copper"]
+    total = (f"Gold needed: {format_money(queue['gold_needed_copper'])} · "
+             f"Expected profit at undercut: {format_money(profit) if profit is not None else 'unavailable'}")
+    st.caption(total)
+    if result["freshness"]["stale"]:
+        st.caption("stale — inspect only")
+    if st.toggle("Copy as text", key=f"today-queue-copy-{source}"):
+        st.code("\n".join([*lines, total]), language=None)

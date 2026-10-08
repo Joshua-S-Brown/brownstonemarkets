@@ -355,7 +355,7 @@ def test_craft_details_reserved_costs_reconcile_across_crafts_and_vendor(monkeyp
     for buy in result['buy']:
         assert totals[(buy['item_id'], buy['method'])] == {field: buy[field] for field in totals[(1, 'buy')]}
     assert [craft_details(r)['materials'][0]['cost_copper'] for r in result['craft']] == [30, 80]
-    assert result['today_version'] == 1
+    assert result['today_version'] == 2
 
 
 def chain_catalog():
@@ -406,3 +406,140 @@ def test_craft_details_stale_and_full_material_tail():
     assert len(details['materials']) == 12 and len(result['buy']) == 10 and result['remaining']['buy'] == 2
     assert all(r['stale'] and not r['actionable'] for r in details['materials'])
     assert sum(r['cost_copper'] for r in details['materials']) == result['shopping_total_copper'] == 600
+
+
+def choice(row, size):
+    return {key: row[key] for key in ('catalog_id', 'recipe_id')} | {'batch_size': size}
+
+
+def two_plan(**overrides):
+    return plan(catalogs=[catalog(), output_catalog(4, 'second')],
+                observations={1: {'min_buyout': 10}, 3: {'min_buyout': 200}, 4: {'min_buyout': 150}},
+                **overrides)
+
+
+def test_choose_untick_with_and_without_refill():
+    args = dict(settings=TodaySettings(130, 1, 'fixed', max_crafts=3),
+                listings={1: [(2, 20, 10), (4, 80, 20), (6, 180, 30)]})
+    initial = two_plan(**args)
+    assert len(initial['craft']) == 1
+    choices = [choice(initial['craft'][0], None)]
+    exact = two_plan(**args, choices=choices, refill=False)
+    refilled = two_plan(**args, choices=choices)
+    assert exact['craft'] == exact['buy'] == exact['sell'] == []
+    assert exact['shopping_total_copper'] == 0
+    assert exact['remaining']['craft'] == 1 and not refilled['dropped_choices']
+    assert [r['output_item_id'] for r in refilled['craft']] == [4]
+    assert refilled['shopping_total_copper'] <= 130
+
+
+def test_choose_shrink_grow_and_profit_best_size():
+    args = dict(settings=TodaySettings(1000, 1, 'fixed'), listings={1: [(2, 20, 10), (8, 800, 100)]})
+    initial = plan(**args)
+    row = initial['craft'][0]
+    assert row['batch_size'] == 1 and row['feasible_size'] == 5
+    grown = plan(**args, choices=[choice(row, 5)], refill=False)['craft'][0]
+    assert grown['batch_size'] == 5 and grown['batch_profit_copper'] < row['batch_profit_copper']
+    assert grown['limiting_factor'] == 'chosen batch'
+    kept = plan(**args, choices=[choice(row, 1)], refill=False)['craft'][0]
+    assert kept['limiting_factor'] == row['limiting_factor'] == 'more crafts lower profit'
+    assert kept['batch_profit_copper'] == row['batch_profit_copper']
+    original = plan()['craft'][0]
+    small = plan(choices=[choice(original, 1)], refill=False)['craft'][0]
+    assert small['batch_profit_copper'] == 160 < original['batch_profit_copper']
+    assert small['batch_cost_copper'] == 30
+
+
+@pytest.mark.parametrize('size', [0, -1, 6, True, 1.5, '2'])
+def test_choose_rejects_infeasible_sizes_without_resizing(size):
+    row = plan()['craft'][0]
+    result = plan(choices=[choice(row, size)], refill=False)
+    assert not result['craft'] and len(result['dropped_choices']) == 1
+    assert result['dropped_choices'][0]['batch_size'] == size
+
+
+def test_choose_reserves_in_plan_order_and_rejects_unaffordable_later_choice():
+    args = dict(settings=TodaySettings(200, 1, 'fixed', max_crafts=1),
+                listings={1: [(3, 30, 10), (4, 80, 20)]})
+    initial = two_plan(**args)
+    rows = sorted(initial['craft'], key=lambda r: r['plan_order'], reverse=True)
+    result = two_plan(**args, choices=[choice(r, 1) for r in rows], refill=False)
+    ordered = sorted(result['craft'], key=lambda r: r['plan_order'])
+    assert [r['output_item_id'] for r in ordered] == [r['output_item_id'] for r in rows]
+    assert [r['purchases'][0]['cost_copper'] for r in ordered] == [30, 80]
+    assert [r['purchases'][0]['end'] for r in ordered] == [1, 2]
+    result = two_plan(**{**args, 'settings': TodaySettings(100, 1, 'fixed', max_crafts=1)},
+                      choices=[choice(r, 1) for r in rows], refill=False)
+    assert len(result['craft']) == 1 and len(result['dropped_choices']) == 1
+
+
+def test_choose_drop_reasons_name_row_limit_duplicate_and_missing_recipe(monkeypatch):
+    args = dict(settings=TodaySettings(200, 1, 'fixed', max_crafts=1), listings={1: [(3, 30, 10), (4, 80, 20)]})
+    rows = sorted(two_plan(**args)['craft'], key=lambda r: r['plan_order'])
+    missing = {'catalog_id': 'gone', 'recipe_id': 99, 'batch_size': 1}
+    monkeypatch.setattr('brownstone.today.ROW_LIMIT', 1)
+    result = two_plan(**args, choices=[choice(rows[0], 1), choice(rows[0], 1), choice(rows[1], 1), missing],
+                      refill=False)
+    assert [d['reason'] for d in result['dropped_choices']] == [
+        'Output is already planned; dropped, not resized.', 'Plan already has 1 crafts; dropped, not resized.',
+        "Recipe is no longer in today's candidates; dropped, not resized."]
+
+
+def test_choose_new_scan_drops_supply_missing_and_missing_recipe():
+    row = plan()['craft'][0]
+    for changes in ({'listings': {}}, {'catalogs': []}, {'settings': TodaySettings(0, 1, 'fixed')}):
+        result = plan(**changes, choices=[choice(row, 5)], refill=False)
+        assert not result['craft'] and result['dropped_choices']
+
+
+def test_queue_route_order_totals_and_no_requotes(monkeypatch):
+    from brownstone.today import session_queue
+
+    result = plan(catalogs=[chain_catalog()], settings=TodaySettings(10000, 1, 'fixed', max_crafts=2),
+                  listings={1: [(30, 300, 10)]})
+    def fail(*args, **kwargs):
+        raise AssertionError('Queue must not quote reserved purchases again')
+    monkeypatch.setattr(Ladder, 'quote', fail)
+    queue = session_queue(result['craft'], result['buy'], result['sell'])
+    assert queue == result['queue']
+    assert [r['stage'] for r in queue['lines']] == ['auction house', 'vendor', 'craft', 'craft', 'craft', 'post']
+    assert [r['recipe_id'] for r in queue['lines'] if r['stage'] == 'craft'] == [60, 50, 30]
+    assert [r['batch_size'] for r in queue['lines'] if r['stage'] == 'craft'] == [8, 4, 2]
+    assert queue['gold_needed_copper'] == result['shopping_total_copper']
+    assert queue['expected_profit_copper'] == sum(r['undercut_batch_profit_copper'] for r in result['sell'])
+    assert queue['lines'][-1]['unit_copper'] == result['sell'][0]['undercut_copper']
+
+
+def test_queue_complete_buy_tail_and_missing_undercut():
+    c = catalog()
+    for i in range(10, 22):
+        c['items_by_id'][i] = {**c['items_by_id'][2], 'item_id': i, 'name': f'Vendor {i}'}
+    c['recipes_by_id'][30]['inputs'] = [{'item_id': i, 'quantity': 1} for i in range(10, 22)]
+    result = plan(catalogs=[c], metrics=None)
+    assert len(result['buy']) == 10
+    assert len([r for r in result['queue']['lines'] if r['stage'] == 'vendor']) == 12
+    assert result['queue']['gold_needed_copper'] == 600
+    assert result['queue']['expected_profit_copper'] is None
+
+
+def test_choose_shrink_refills_without_growing_explicit_batch_or_duplicate_route():
+    args = dict(settings=TodaySettings(130, 1, 'fixed', max_crafts=3),
+                listings={1: [(2, 20, 10), (4, 80, 20), (6, 180, 30)]})
+    row = two_plan(**args)['craft'][0]
+    choices = [choice(row, 1)]
+    exact = two_plan(**args, choices=choices, refill=False)
+    refilled = two_plan(**args, choices=choices)
+    assert len(exact['craft']) == 1 and exact['shopping_total_copper'] == 30
+    assert {r['output_item_id']: r['batch_size'] for r in refilled['craft']} == {3: 1, 4: 2}
+    assert refilled['shopping_total_copper'] == 130
+    assert [r['purchases'][0]['end'] for r in sorted(refilled['craft'], key=lambda r: r['plan_order'])] == [1, 2]
+    duplicate = output_catalog(3, 'duplicate')
+    assert not plan(catalogs=[catalog(), duplicate], choices=[choice(row, None)])['craft']
+
+
+def test_queue_preserves_sibling_catalog_route_order():
+    from brownstone.today import _route_order
+
+    steps = [{'recipe_id': recipe, 'depth': depth} for recipe, depth in
+             [(10, 1), (11, 2), (12, 2), (13, 3), (20, 1), (21, 2)]]
+    assert [s['recipe_id'] for s in _route_order(steps)] == [11, 13, 12, 10, 21, 20]

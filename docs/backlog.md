@@ -52,7 +52,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
    - STORY-045 a simpler import page (Brownstone; small, display only; can go any time)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
-10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; next to build)
+10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
 11. STORY-046 a confidence label on each Today row (Brownstone; small)
 12. STORY-047 skill-up demand map (Brownstone; must be usable before 4 November)
 13. STORY-048 watchlist with target prices (Brownstone; small)
@@ -379,7 +379,7 @@ Acceptance:
 
 ### STORY-039 — Choose and adjust the Today plan
 
-Added 2026-10-06 (product owner feedback on Today). Depends on STORY-038.
+**Implemented and reviewed (2026-10-08).** Checked in a live browser on the Forever beta scan; first in-game use of the Queue awaits a fresh scan. Added 2026-10-06 (product owner feedback on Today). Depends on STORY-038.
 
 As a gold maker, I want to tick the crafts I'll actually make and change their batch sizes, so that Buy and Sell match what I'm really going to do.
 

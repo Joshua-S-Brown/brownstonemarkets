@@ -1,4 +1,4 @@
-"""Today v1: transparent batch estimates and one funded, supply-reserved plan.
+"""Today v2: transparent batch estimates and one funded, supply-reserved plan.
 
 Routes remain catalog-local board choices. Prefix ladders price complete stacks in O(log n),
 without expanding units; the clock and all scoped evidence are supplied by the caller.
@@ -12,7 +12,7 @@ from .freshness import assess
 from .markets import MARKET_KEYS
 from .today_settings import TodaySettings
 
-TODAY_VERSION = 1
+TODAY_VERSION = 2
 ROW_LIMIT = 10
 
 
@@ -109,7 +109,7 @@ def _batch(row, settings, ladders, reserved, funds):
     profit = profits[size]
     return {**row, "batch_size": size, "batch_cost_copper": row["net_revenue_copper"] * size - profit,
             "batch_profit_copper": profit, "profit_per_craft_copper": profit // size,
-            "limiting_factor": limit, "purchases": quotes[size]}, None
+            "limiting_factor": limit, "feasible_size": largest, "purchases": quotes[size]}, None
 
 
 def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut):
@@ -159,25 +159,89 @@ def _feasible(rows, settings, ladders, reserved, funds):
     return _sort(feasible), hidden
 
 
-def _select(rows, settings, ladders):
-    funds, reserved, shown = settings.gold_copper, {}, []
+def _select(rows, settings, ladders, *, funds=None, reserved=None, shown=None):
+    funds = settings.gold_copper if funds is None else funds
+    reserved = {} if reserved is None else reserved
+    shown = [] if shown is None else shown
     duplicates = Counter()
     while rows and len(shown) < ROW_LIMIT:
         feasible, hidden = _feasible(rows, settings, ladders, reserved, funds)
         if not feasible:
             return _sort(shown), hidden + duplicates, 0
         best = feasible[0]
+        best["plan_order"] = len(shown)
         shown.append(best)
         funds -= best["batch_cost_copper"]
-        for purchase in best["purchases"]:
-            if purchase["method"] != "vendor" and ladders is not None:
-                reserved[purchase["item_id"]] = purchase["end"]
+        _reserve(best, ladders, reserved)
         duplicates["output already planned"] += sum(
             row["output_item_id"] == best["output_item_id"] for row in rows) - 1
         rows = [row for row in rows if row["output_item_id"] != best["output_item_id"]]
     feasible, hidden = _feasible(rows, settings, ladders, reserved, funds)
     # Each output is selected at most once, so other routes to the same output are not extra rows.
     return _sort(shown), hidden + duplicates, len({row["output_item_id"] for row in feasible})
+
+
+def _reserve(row, ladders, reserved):
+    for purchase in row["purchases"]:
+        if purchase["method"] != "vendor" and ladders is not None:
+            reserved[purchase["item_id"]] = purchase["end"]
+
+
+def _chosen_batch(row, size, largest, settings, ladders, reserved, funds):
+    if type(size) is not int or not 1 <= size <= largest:
+        return None
+    recommended, _ = _batch(row, settings, ladders, reserved, funds)
+    if recommended is not None and recommended["batch_size"] == size:
+        return recommended  # An unchanged size keeps its real limiting factor.
+    purchases = _quote(row["shopping_choices"], size, ladders, reserved)
+    cost = sum(p["cost_copper"] for p in purchases)
+    profit = row["net_revenue_copper"] * size - cost
+    return {**row, "batch_size": size, "feasible_size": largest, "batch_cost_copper": cost,
+            "batch_profit_copper": profit, "profit_per_craft_copper": profit // size,
+            "limiting_factor": "chosen batch", "purchases": purchases}
+
+
+def _choose(rows, choices, settings, ladders, refill):
+    """Reserve exact choices in supplied plan order, then refill only untouched outputs."""
+    indexed = {(r["catalog_id"], r["recipe_id"]): r for r in rows}
+    funds, reserved, shown, excluded, dropped = settings.gold_copper, {}, [], set(), []
+    limits = {}
+    for choice in choices:
+        row = indexed.get((choice["catalog_id"], choice["recipe_id"]))
+        if row is not None:
+            excluded.add(row["output_item_id"])
+        limits[(choice["catalog_id"], choice["recipe_id"])] = (
+            _largest(row["shopping_choices"], settings.max_crafts, ladders, reserved, funds) if row else 0)
+        size = choice["batch_size"]
+        if size is None:
+            continue
+        sized, reason = _chosen(row, size, limits[(choice["catalog_id"], choice["recipe_id"])], settings,
+                                ladders, reserved, funds, shown)
+        if sized is None:
+            dropped.append({**choice, "reason": f"{reason}; dropped, not resized."})
+            continue
+        sized["plan_order"] = len(shown)
+        shown.append(sized)
+        funds -= sized["batch_cost_copper"]
+        _reserve(sized, ladders, reserved)
+    remaining = [r for r in rows if r["output_item_id"] not in excluded]
+    if refill:
+        crafts, hidden, rest = _select(remaining, settings, ladders, funds=funds, reserved=reserved, shown=shown)
+    else:
+        feasible, hidden = _feasible(remaining, settings, ladders, reserved, funds)
+        crafts, rest = _sort(shown), len({row["output_item_id"] for row in feasible})
+    return crafts, hidden, rest, dropped, limits
+
+
+def _chosen(row, size, largest, settings, ladders, reserved, funds, shown):
+    if row is None:
+        return None, "Recipe is no longer in today's candidates"
+    if row["output_item_id"] in {r["output_item_id"] for r in shown}:
+        return None, "Output is already planned"
+    if len(shown) >= ROW_LIMIT:
+        return None, f"Plan already has {ROW_LIMIT} crafts"
+    sized = _chosen_batch(row, size, largest, settings, ladders, reserved, funds)
+    return sized, "Choice is no longer feasible"
 
 
 def _shopping(rows, metrics):
@@ -232,7 +296,8 @@ def _vendor(ladders, vendor_prices, minimum):
 
 
 def build_today(catalogs, observations, market, snapshot, settings: TodaySettings, *, now,
-                listings=None, metrics=None, vendor_prices=None, max_age_hours=24, auction_cut=.05):
+                listings=None, metrics=None, vendor_prices=None, max_age_hours=24, auction_cut=.05,
+                choices=None, refill=True):
     if any(snapshot.get(key) != market.get(key) for key in MARKET_KEYS):
         raise ValueError("The snapshot belongs to a different market")
     for key in ("source_id", "rules_version"):
@@ -241,7 +306,11 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
     freshness = assess(snapshot, now, max_age_hours)
     ladders = {i: Ladder(rows) for i, rows in listings.items()} if listings is not None else None
     candidates, hidden = _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut)
-    crafts, excluded, rest = _select(candidates, settings, ladders)
+    dropped, limits = [], {}
+    if choices is None:
+        crafts, excluded, rest = _select(candidates, settings, ladders)
+    else:
+        crafts, excluded, rest, dropped, limits = _choose(candidates, choices, settings, ladders, refill)
     hidden.update(excluded)
     hidden = +hidden
     shopping = _shopping(crafts, metrics)
@@ -258,7 +327,10 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
                                                       for name, rows in lists.items()}, "craft": rest},
             "freshness": freshness, "listing_evidence_available": ladders is not None,
             "minimum_gain_copper": settings.minimum_gain, "today_version": TODAY_VERSION,
-            "shopping_total_copper": sum(row["cost_copper"] for row in shopping)}
+            "shopping_total_copper": sum(row["cost_copper"] for row in shopping),
+            "dropped_choices": dropped, "refill": refill or choices is None,
+            "choice_limits": [{"catalog_id": k[0], "recipe_id": k[1], "maximum": v} for k, v in limits.items()],
+            "source_id": market["source_id"], "queue": session_queue(crafts, shopping, sells)}
 
 
 def craft_details(row):
@@ -276,3 +348,39 @@ def craft_details(row):
               "crafts": step["crafts"] * row["batch_size"], **evidence}
              for step in row["intermediate_steps"]]
     return {"materials": materials, "intermediate_steps": steps}
+
+
+def session_queue(crafts, shopping, sells):
+    """Complete queue from reserved purchases and retained routes, including the Buy tail."""
+    names = {i: name for row in crafts for i, name in row["material_names"].items()}
+    lines = []
+    for vendor in (False, True):
+        for purchase in shopping:
+            if (purchase["method"] == "vendor") == vendor:
+                lines.append({**{key: purchase[key] for key in ("item_id", "quantity", "purchased_units",
+                                                             "cost_copper", "highest_unit_copper")},
+                              "stage": "vendor" if vendor else "auction house",
+                              "name": names[purchase["item_id"]]})
+    for row in sorted(crafts, key=lambda r: r["plan_order"]):
+        # Retained preorder/depth identifies each branch of the catalog route.
+        for step in _route_order(row["intermediate_steps"]):
+            lines.append({"stage": "craft", "name": step["item_name"], "recipe_id": step["recipe_id"],
+                          "catalog_id": row["catalog_id"], "batch_size": step["crafts"] * row["batch_size"]})
+        lines.append({"stage": "craft", "name": row["output_name"], "recipe_id": row["recipe_id"],
+                      "catalog_id": row["catalog_id"], "batch_size": row["batch_size"]})
+    for row, sell in zip(crafts, sells, strict=True):
+        lines.append({"stage": "post", "name": row["output_name"],
+                      "quantity": row["output_quantity"] * row["batch_size"],
+                      "unit_copper": sell["undercut_copper"], "profit_copper": sell["undercut_batch_profit_copper"]})
+    profits = [s["undercut_batch_profit_copper"] for s in sells]
+    return {"lines": lines, "gold_needed_copper": sum(p["cost_copper"] for p in shopping),
+            "expected_profit_copper": sum(profits) if all(p is not None for p in profits) else None}
+
+
+def _route_order(steps):
+    ordered, pending = [], []
+    for step in steps:
+        while pending and pending[-1]["depth"] >= step["depth"]:
+            ordered.append(pending.pop())
+        pending.append(step)
+    return ordered + list(reversed(pending))

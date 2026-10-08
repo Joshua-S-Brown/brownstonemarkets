@@ -101,13 +101,20 @@ _Last updated 2026-10-08._
   competition/undercut evidence and independent below-vendor aside. Every list caps at 10 and counts
   the rest; hidden recipes show reasons. Stale data stays inspectable with a warning and every row
   non-actionable. TSM labels listing-dependent evidence unavailable. Rules and decisions are in
-  `requirements.md` → Today v1; contracts are in `design.md` → Today contracts.
+  `requirements.md` → Today; contracts are in `design.md` → Today contracts.
 - **Today craft details (STORY-038, implemented and reviewed):** selecting a Craft row shows
   its complete reserved material purchases, required/purchased units, route, cost and highest unit
   price, plus indented chosen catalog intermediate steps and batch quantities. No row starts selected;
   changed plan contents/provenance clear selection. Materials reconcile exactly in copper with the
   craft and full merged shopping cost, including Buy's hidden tail; stale details remain inspect-only.
-  Today version, sizing, ranking and merged Buy output are unchanged.
+  Details reuse the reserved purchases of the current chosen plan.
+- **Choose the Today plan (STORY-039, implemented and reviewed 2026-10-08):** Craft controls start ticked,
+  allow exact batch edits, and re-reserve listings in plan order. Refill defaults on; turning it off
+  keeps the ticked plan. Source-scoped session choices reset on scan/settings/evidence changes, with
+  a note; invalid exact choices are dropped rather than resized. Queue lists complete auction/vendor
+  buys, catalog crafts in dependency order, then posts, with copper totals matching Buy/Sell. Queue
+  ticks are session-only and do not change numbers; Copy as text exposes the checklist and totals.
+  Rules are in `requirements.md` → Today; no database, addon, catalog or settings schema change.
 - **Scan changes (STORY-018):** compare any two distinct eligible addon scans of the selected source and market; defaults to the newest two scan IDs. Displays per-unit prices, listing/unit counts, changes, separate new/vanished lists, compatible-catalog item filtering, UTC finish times, gap and freshness. Missing listings, no buyout and no market value have distinct labels. Eligibility and display rules are in UI-06 (`requirements.md`). Market scope includes environment (DATA-03).
 - **Market depth (STORY-019):** Crafting shows output listing/unit counts and a direct-input depth summary on each board row, and the same counts in recipe inputs and shopping lists. Counts come from the exact priced scan. Missing listings and unavailable depth have distinct labels; depth is display-only (CRAFT-09 in `requirements.md`).
 - **Interface:**
@@ -115,7 +122,7 @@ _Last updated 2026-10-08._
   - STORY-030 is implemented, pending review: the sidebar's source metadata and configuration hint are
     in collapsed Source details. Today opens by default (STORY-025, pending review), with a settings
     summary, an expander that opens for zero gold or unreadable settings, and Craft/Buy/Sell/Below vendor
-    tabs. Decision columns lead each table; per-tab toggles expose evidence columns. Shared provenance
+    tabs plus the session Queue tab (STORY-039). Decision columns lead each table; per-tab toggles expose evidence columns. Shared provenance
     appears on the page, while freshness warnings and stale State columns remain visible.
   - Crafting groups unsupported recipes in one collapsed table, catalog captions in Catalogs on this
     board, and board explanations in How to read this board. Board provenance and freshness stay visible;
@@ -142,7 +149,7 @@ _Last updated 2026-10-08._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.81% in the current macOS run: 779 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.49% in the current macOS run: 802 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.10.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -381,3 +388,31 @@ Large Fang 20 / 20 / 19,966c. All five routes are auction purchases. Highest uni
 17c, 2,097c, 295c, 1,099c and 1,000c respectively. The retained catalog chain is Heavy Leather
 40 crafts/units → Medium Leather 200 → Light Leather 800, at depths 1/2/3. Evidence was fresh
 at 21:45 UTC. No database migration, import or settings write was needed.
+
+
+### STORY-039 Forever beta verification (2026-10-08)
+
+Loaded the enabled Forever beta source through `config/market.local.toml`, copied the complete
+453 MB data directory to a temporary directory, and ran calculations and the actual Streamlit page
+against that copy. Original data/settings were not written. Scan `20261007T185956Z-a4a84f` was fresh
+during the first check; the final rerun crossed the 24-hour freshness limit and correctly showed
+the stale banner, inspect-only table states and queue caption. Saved settings: 25g, scaled 1% with 10s floor (25s minimum), cap 5.
+
+The page renders Craft, Buy, Sell, Below vendor and Queue with no exceptions.
+Default: 9 crafts, 15 complete shopping rows (10 displayed, 5 beyond the cap), 37 queue lines;
+gold needed 24g 99s 91c and expected profit at undercut 90g 65s 89c. Top crafts are Barbaric
+Bracers (5, cautious profit 36g 32s 72c), Frost Oil (5, 18g 22s 20c) and Bronze Dory
+(5, 12g 4s 59c). Unticking Barbaric Bracers with refill off leaves 8 crafts, 28 queue lines,
+13g 79s 95c needed and 54g 35s 90c expected profit at undercut. Default refill adds Thick Murloc
+Armor and Raptor Hide Harness: 10 crafts, 42 queue lines, 24g 98s 23c needed and 78g 63s 90c
+expected profit at undercut. Queue gold reconciles exactly with full shopping cost in all cases.
+Refill-added controls, queue ticking across reruns and Copy as text were exercised on the page.
+No live game action, download or import was performed.
+
+Review check (2026-10-08, Claude, live browser on a scratch copy of the project and data; the real
+database SHA-256 was unchanged): default, untick-with-refill and refill-off totals reproduce the figures
+above exactly. Re-ticking Barbaric Bracers drops the two refill rows with a note and restores the default
+totals. Bronze Dory at batch 2 shows its lower real profit (4g 80s 62c) and refill spends the freed gold.
+Queue ticks and the Copy as text block persist across reruns while the scan is stale; Limited by keeps
+the real reason on unchanged rows; refill off reports the crafts left out (71); the server log shows no
+Session State warning.

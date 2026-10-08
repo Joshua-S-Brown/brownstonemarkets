@@ -443,7 +443,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Must load:** a catalog the board's loader would reject (for example two recipes making one item) is refused before anything is written.
 - **CRAFT-09 Market depth (STORY-019):** the board shows auction listing and unit counts for each output and direct input; the recipe input table shows the same counts. Counts include listings without a buyout and describe the exact complete, priced scan used for the prices, scoped by source and full market identity. An absent item is labeled **Not listed** with zero observed listings and units. TSM or a snapshot without a matching priced addon scan shows **Unavailable**, with no counts. Depth is display-only: it changes no cost, action label, ranking or policy version, and is not vendor stock or a claim about demand.
 
-### Today (today_version 1, STORY-025, implemented pending review 2026-10-06)
+### Today (today_version 2, STORY-025/039; STORY-039 reviewed 2026-10-08)
 
 - **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
   source during the session. Each source has its own ignored preferences file,
@@ -481,6 +481,28 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   supply, then gold. Profit per craft displays `floor(batch_profit / batch_size)`;
   exact batch profit remains authoritative. Each row identifies its recipe/catalog, rules and provenance,
   quantities, costs, revenue, competition, limits, availability and unconfirmed yield/vendor evidence.
+- **Choose and refill (STORY-039, version 2):** Craft rows start ticked at their recommended size.
+  Chosen sizes must be integers from 1 through the bound from funds, listed supply and the per-item cap.
+  Re-reserve complete listings and funds in plan order for exact chosen sizes; never silently resize an
+  infeasible choice. Drop it with a note that names the craft and why (size no longer feasible, output
+  already planned, 10-row limit reached, recipe no longer a candidate). A kept row at the size the
+  greedy rule would choose shows its real limiting factor; any other size shows *chosen batch*. Buy, Sell and shopping totals use only the resulting plan;
+  smaller batches show their actual lower profit, even below the automatic recommendation threshold.
+  By default, freed gold funds the next-best remaining outputs under the existing greedy rules, up to
+  the same 10-row limit. Refill does not grow explicit batches or re-add unchecked outputs (including
+  alternate routes to those outputs). Turning refill off keeps exactly the ticked choices, including
+  any refill rows already ticked; the Craft tab then counts the feasible crafts left out (never 0
+  when some fit) and keeps the hidden-reason counts. Choices and refill preference live only in the Streamlit session,
+  separately per source; scan, settings or catalog/evidence changes reset them with a note and a fresh
+  default plan. Previous choices are dropped rather than carried over at resized quantities.
+- **Session queue (STORY-039):** one complete checklist: auction-house materials, vendor materials,
+  crafts in the chosen catalog route's dependency order (intermediates before their consumers), then
+  posts at Sell's undercut prices. Buy lines show purchased units, highest unit price and full cost;
+  craft lines identify recipe and batch; post lines show units, price and profit at that price. Totals
+  show complete shopping gold and summed profit at undercut; missing undercut evidence leaves expected
+  profit unavailable, never zero. Queue projections reuse reserved purchases and retained route steps,
+  without quoting again. Queue ticks stay in session per source, reset with the plan (not when evidence merely turns
+  stale), and never affect quantities or numbers. Copy as text exposes the same complete list and totals as plain text.
 - **Hidden and capped:** hide invalid recipes (unsupported recipe before missing prices), no batch with
   priced supply (**insufficient listed materials**), batches where one craft exceeds remaining funds
   (**one craft exceeds funds**), and nonpositive profit or profit strictly below the minimum (**below
@@ -560,7 +582,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
 
 ## Not modeled (do not imply otherwise)
 
-Demand, sale likelihood, deposits, vendor stock, reputation discounts, recipe quality/rank, reagent alternatives and multi-yield recipes. Today v1 models listing costs and bounded batches under its rules above; the Action Board's depth remains display-only under CRAFT-09. The importer rejects variable yields, and an intermediate yielding more than 1 can fail with "Fractional unit costs". Every current catalog recipe yields 1.
+Demand, sale likelihood, deposits, vendor stock, reputation discounts, recipe quality/rank, reagent alternatives and multi-yield recipes. Today models listing costs and bounded batches under its rules above; the Action Board's depth remains display-only under CRAFT-09. The importer rejects variable yields, and an intermediate yielding more than 1 can fail with "Fractional unit costs". Every current catalog recipe yields 1.
 
 ## Open decisions
 
