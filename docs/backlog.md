@@ -52,19 +52,24 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
    - STORY-045 a simpler import page (Brownstone; small, display only; can go any time)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
-10. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
-11. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
-12. STORY-035 auction deposits (needs a beta check)
-13. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-14. STORY-036 vendor price ceilings
-15. STORY-027 removed listings
-16. STORY-015b crafting across professions
-17. STORY-021 item page and charts
-18. STORY-026 scan coverage and rhythm
-19. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-20. STORY-006 replay
+10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; next to build)
+11. STORY-046 a confidence label on each Today row (Brownstone; small)
+12. STORY-047 skill-up demand map (Brownstone; must be usable before 4 November)
+13. STORY-048 watchlist with target prices (Brownstone; small)
+14. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
+15. STORY-035 auction deposits (needs a beta check)
+16. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+17. STORY-036 vendor price ceilings
+18. STORY-027 removed listings
+19. STORY-015b crafting across professions
+20. STORY-021 item page and charts
+21. STORY-026 scan coverage and rhythm
+22. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+23. STORY-006 replay
 
 STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
+
+**Added 2026-10-08 (product owner, while waiting to play again):** clearer recommendations without new game data. STORY-039 gains a *session queue* (one ordered checklist for the next visit to the game). STORY-046, STORY-047 and STORY-048 are new and work on scans and catalogs already imported. Timing, volatility and sales speed stay in Later: they need live history. STORY-047 is time-critical, because launch-week demand comes before any history exists.
 
 **Added 2026-10-06 (product owner, after using Today on real data):** STORY-038 and STORY-039 follow the beta-capture stories because they need no game access and work on scans already taken. Character gold and inventory (STORY-032) and the second machine (STORY-037) are needed soon for multiple characters, so STORY-037 moves up to follow STORY-032: both machines will be played in the beta, and the journal (STORY-033) is most useful once both machines' files come in; *Restock* under Later is what lets Today use them.
 
@@ -314,6 +319,51 @@ Acceptance:
 - **Offline tests:** per-craft materials add up to the craft's cost and to the merged Buy list across crafts; a vendor route; an intermediate step; stale evidence.
 - **Implementation notes** (added 2026-10-07 at hand-off): read the materials from the selected craft row's existing `purchases` (the reserved quotes Today already made), never re-quote listings, so the details can't disagree with the plan. Intermediate steps come from the recipe's chosen catalog route (`crafting.py`, method `craft`); yields stay 1 (CRAFT-08). Calculation stays in `brownstone/` (no Streamlit), display in `views/today.py`. A display-only change: `TODAY_VERSION` stays 1.
 
+### STORY-046 — A confidence label on each Today row
+
+Added 2026-10-08 (product owner: clearer recommendations). Brownstone only; works on existing scans. Display of rules over evidence Today already has; no change to ranking, sizing or which rows appear.
+
+As a gold maker, I want each recommendation labeled *High*, *Medium* or *Low* confidence with its reasons, so that I can tell at a glance which ones to trust without reading every number.
+
+Acceptance:
+- **One label per Craft row** (and carried to its Sell and Queue lines): *Low* if any Low reason applies, else *Medium* if any Medium reason applies, else *High*. Reasons are shown in the row as short words (for example "thin, unconfirmed vendor price").
+- **Starting rules** (recorded in `requirements.md` → *Today* with a new `today_version`, every threshold named there):
+  - *Low:* the scan is stale (as today: inspection only); the output is *thin*; the output has no competing listing to price against; a material's batch buys more than **75%** of that material's listed units.
+  - *Medium:* the scan is older than half the freshness limit; the output has fewer than **5** listings; a material's batch buys more than **40%** of its listed units; a route uses a catalog value marked unconfirmed (the existing `*_verified` markers, `crafting.py`).
+- **Only evidence Today already computes:** no new prices, no history, no AI. A TSM source labels depth-based reasons *not available for this source* and never claims High from missing depth.
+- **A filter** on the Craft tab to hide Low rows (off by default; hidden rows counted under the existing hidden reasons).
+- **Offline tests:** each reason on its own, the worst-reason rule, stale and TSM sources, unconfirmed vendor price, and the filter's count.
+- **Docs:** `requirements.md` (*Today*, new version), `status.md`.
+
+### STORY-047 — Skill-up demand map
+
+Added 2026-10-08 (product owner); moved from *Recipe coverage* under Later. Brownstone only, from catalogs; scans optional. Must be usable before 4 November: launch-week demand comes before any price history exists.
+
+As a gold maker, I want to see which materials levelling crafters will need at each skill band, so that I know what to gather, keep or buy early in launch week.
+
+Acceptance:
+- **A new page section** (on the Recipe catalogs page or its own page, implementer's choice, stated in `design.md`) for the selected source's compatible catalogs: skill bands of **25** points (1–24, 25–49, … up to the highest learned-at level in the catalog).
+- **Per band and profession:** the recipes learned in that band (catalog `required_skill`), and the materials they use, with units for an assumed **N crafts per recipe** (setting, default **5**, 1–50, shown in the heading). Intermediates (thread, bolts, bars) are expanded through the catalog's own routes, so raw materials are visible too. Cross-profession chains are out of scope (STORY-015b).
+- **Totals across bands:** each material's total units for one crafter levelling the whole profession at the assumed N, and which professions use it. Sorted by total units.
+- **Optional market context** when the source has a fresh scan: units currently listed and lowest unit price per material, labeled with the scan time. Missing prices stay missing; nothing is called demand or a forecast.
+- **Honest labels:** the page says this is a reasoned expectation from catalog data and an assumed number of crafts, not observed demand. Recipes with unconfirmed values show their markers. Never infer a material's role from its name.
+- **Offline tests:** band boundaries, intermediate expansion, totals across professions, the N setting, a catalog without skill levels (shown as *skill unknown*, never band 1), and with and without a scan.
+- **Docs:** rule in `requirements.md` (*Crafting* or its own section), `design.md`, `status.md`.
+
+### STORY-048 — Watchlist with target prices
+
+Added 2026-10-08 (product owner). Brownstone only; the honest first step towards *Alerts* (end of the *History chain*), on prices you set rather than history.
+
+As a gold maker, I want to list items with a buy-below or sell-above price and see which ones hit after each import, so that I catch the prices I care about without searching for them.
+
+Acceptance:
+- **Add and remove items** by item ID or by picking from items seen in this source's scans or catalogs (search by name for picking only; stored by ID). Each entry has an optional *buy below* and *sell above* price in g/s/c (parsed with `money.py`, integer copper) and an optional note.
+- **Stored per source** in an ignored local file in the data directory, written atomically like Today settings (`requirements.md` → *Today*); the pattern is added to `.gitignore`. Invalid files show a warning and are never silently replaced.
+- **Hits** on Today (a short panel above the tabs) and on the import result: *buy* when the newest scan's lowest unit buyout is at or below the target, with the units available at or below it; *sell* when the lowest listing is at or above the target. Each hit shows the scan time; a stale scan marks hits *stale*. No listing means *not listed*, never a hit.
+- **A watchlist table** showing every entry with its current lowest price, units listed, and hit state.
+- **Offline tests:** parsing and storage round trip, a buy hit, a sell hit, exactly at target, not listed, stale scan, a TSM source (lowest price only, units *not available*), and one source's list never shown for another.
+- **Docs:** `requirements.md` (rule and file), `design.md`, `status.md`.
+
 ### STORY-043 — Today: only what you can make
 
 Added 2026-10-07 (product owner). Depends on STORY-041's beta evidence: which IDs the client reports decides how recipes match catalogs. Takes the Today half of *Known recipes and skill* from Later.
@@ -339,7 +389,8 @@ Acceptance:
 - **Freed gold:** by default, gold freed by unticking or shrinking a craft goes to the next-best crafts under the existing greedy rules. A toggle keeps the plan to exactly what was ticked instead. Record the rule in `requirements.md` → *Today* with a new `today_version`.
 - **Kept for the session only** and per source; choices reset when the scan or settings change, and nothing is written to disk unless a later decision says so.
 - **Honest numbers:** a smaller batch than the profit-best size shows its lower profit; a choice that is no longer feasible after a new scan is dropped with a note, never silently resized.
-- **Offline tests:** untick with and without refill, a shrunk and a grown batch, infeasible sizes rejected, and reserved listings never shared between crafts.
+- **Session queue** (added 2026-10-08, product owner): a *Queue* tab lists the chosen plan as one checklist in the order you'd do it in game: 1. buy at the auction house (one line per material: units, highest unit price, total); 2. buy at vendors; 3. craft (recipe, batch size, in route order, so intermediates such as bolts come before the items that use them); 4. post (item, units, the undercut price from *Sell*, profit at that price). A total line shows gold needed and expected profit. Each line has a tick box; ticks are kept for the session with the plan and reset with it, and ticking never changes the plan or its numbers. A *Copy as text* button gives the same list as plain text (for a second screen or a note).
+- **Offline tests:** untick with and without refill, a shrunk and a grown batch, infeasible sizes rejected, reserved listings never shared between crafts, the queue's order (auction house, vendor, craft in route order, post) and its totals matching Buy and Sell, and ticks reset when the plan changes.
 
 STORY-016 (backup) is deferred to Later (product owner, 2026-10-06).
 
@@ -588,7 +639,7 @@ Acceptance:
 **Recipe coverage** (unblocked by STORY-004):
 - **More recipes and professions:** added in the app on the Recipe catalogs page and shown together on the board (`status.md`); routing across professions is STORY-015b.
 - **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*). **Moves to the top of Next if the Bolt of Linen Cloth check finds a yield above 1.**
-- **Skill-up demand map:** from the catalogs' skill levels and quantities, which materials levelling crafters will need at each skill band. A reasoned expectation for stocking up before launch, not a forecast.
+- **Skill-up demand map:** now STORY-047 in Next (2026-10-08).
 - **In-game recipe reader:** now part of *Known recipes and skill* under *Your own character's data* (reading your own character's data was approved 2026-10-06).
 
 **Launch runbook** (moved from Next, product owner 2026-10-06): beta and live are separate markets (DATA-03), so launch needs no data migration or cutover rehearsal. Do both parts in the week before 4 November, when the steps are current.
