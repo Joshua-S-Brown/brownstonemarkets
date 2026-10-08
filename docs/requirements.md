@@ -195,6 +195,18 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   The addon import page alone displays latest bags level and skill ranks/max per character;
   it never infers a profession or catalog match from a name. Beta must confirm skill API shapes,
   IDs, gathering/secondary coverage and logout/reload readability.
+- **Unreadable logout reads (addon 0.10.0, decided 2026-10-08):** the first real Forever logout
+  snapshot (Windows, 08 Oct) read 0 slots in every bag, 0 copper and level 1 while the same
+  login's journal showed items and 52 copper. The client no longer answers at logout. The addon
+  therefore also reads bags/gold/level/skills in memory after login, settled bag changes, money
+  changes, `PLAYER_LEVEL_UP` (using its level argument) and `SKILL_LINES_CHANGED`, keeping only a
+  read whose backpack (container 0) has a positive size. At `PLAYER_LOGOUT` a fresh read is still
+  tried first. If its backpack isn't readable and this character has such a read, that read is saved
+  instead with its own `captured_at` and `read_event`, `event = PLAYER_LOGOUT`, and the logout's
+  gold/level/containers kept under `unreadable_read`. Without one, the logout read is saved as read.
+  Brownstone treats any bags snapshot whose backpack reports 0 slots as unreadable: never complete,
+  never the latest bags/gold/level/skills (*unknown* instead), excluded from beta reconciliation and a
+  `bags readable` failure in the beta report. Its raw record is preserved and imported unchanged.
 - **Clear/session rule:** initial `PLAYER_ENTERING_WORLD(true, false)` records this character's
   login marker in `sessions`; `(false, true)` retains it across reload. Only the first world entry
   after the addon loads sets or keeps the marker; later loading screens leave it alone, flags or not.
@@ -264,6 +276,10 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   and attachments. The `SendMail` post-hook records recipient/subject/body arguments plus the
   **last observed draft**, explicitly marked as such: post-hook APIs may already have cleared it.
   It is evidence for later reconciliation, not a claim of successful delivery or complete attachments.
+- **Vendor services (addon 0.10.0, decided 2026-10-08):** the merchant's sell-junk button and
+  class trainers are family `vendor`: post-hooks `C_MerchantFrame.SellAllJunkItems` and
+  `BuyTrainerService`, and events `TRAINER_SHOW`/`TRAINER_CLOSED` (window `trainer`). Before this,
+  junk sales and trainer spending appeared only as bag and money changes. File format stays **6**.
 - **Active owned auctions (STORY-040):** guarded `OWNED_AUCTIONS_UPDATED` reads
   `C_AuctionHouse.GetNumOwnedAuctions` and every 1-based `GetOwnedAuctionInfo` table;
   guarded `AUCTION_OWNED_LIST_UPDATE` reads `GetNumAuctionItems("owner")` and every 1-based

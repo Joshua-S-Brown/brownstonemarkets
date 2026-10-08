@@ -64,7 +64,16 @@ def _item_count(slots: list) -> int | None:
     return len({s["item_id"] for s in slots})
 
 
+def unreadable_backpack(record: dict) -> bool:
+    """A bags read the client answered with a 0-slot backpack (beta logout, 08 Oct): its values are not evidence."""
+    return record.get("kind") == "bags" and any(
+        isinstance(c, dict) and c.get("container_id") == 0 and c.get("size") == 0
+        for c in _list(record.get("containers"), "snapshot containers"))
+
+
 def _complete(record: dict) -> bool:
+    if unreadable_backpack(record):
+        return False
     containers = _list(record.get("containers"), "snapshot containers")
     return bool(containers) and all(c.get("size") is not None and c.get("slots_readable") is not False
                                     for c in containers)
@@ -189,7 +198,9 @@ def latest_rows(config: Mapping[str, Any]) -> list[dict]:
         for raw, machine in rows.fetchall():
             r = json.loads(raw)
             key = (r["character"], r["realm"], r["faction"])
-            characters.setdefault(key, {})[r["kind"]] = (r, machine)
+            characters.setdefault(key, {})
+            if not unreadable_backpack(r):
+                characters[key][r["kind"]] = (r, machine)
     return [_latest_row(key, value) for key, value in sorted(characters.items())]
 
 

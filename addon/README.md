@@ -1,4 +1,4 @@
-# Brownstone Scan 0.9.0
+# Brownstone Scan 0.10.0
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -87,7 +87,7 @@ After `/reload` or logout:
 ```
 
 It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
-`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.9.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.10.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
@@ -399,11 +399,15 @@ The added file fields are:
 | `slots` | Occupied slots: `container_id`, `slot`, nullable `item_id`, `count`, exact `item_link`. |
 | `containers` | Reported container IDs, nullable sizes, `slots_readable = false` on reader errors; unknown never means empty. |
 | `event`, `fired_events`, `rejected_events`, `container_api` | Trigger, fired counts this runtime, guarded-registration failures, modern/legacy reader. |
+| `read_event`, `unreadable_read` | 0.10.0, only when the logout read was unreadable: the event of the saved read, and what the logout read returned. |
 | `login_at`, `world_signal` | Login marker and actual initial-login/reloading-UI arguments (missing arguments omitted). |
 | `sessions` | Character/realm-keyed persisted login markers, initial-login evidence and reload-seen flag. |
 | `snapshot_sequence` | Account-wide monotonic same-second discriminator, retained when clearing. |
 
 Gold/bags are read at `PLAYER_LOGOUT`; bank only at open/close, never by logout with a closed bank.
+Since **0.10.0**, when the logout read finds no readable backpack (the client already stopped answering),
+the newest readable read from this login is saved instead, with `read_event` and the logout's values
+in `unreadable_read` ([ADDON-11](../docs/requirements.md#addon-11-character-snapshots-story-032)).
 Modern `C_Container` readers fall back to legacy globals. Slot evidence is kept without resolving
 variants yet. Preview/import uses the existing addon source, exact-byte archive and file inventory.
 The import page's latest-character table reports gold in gold and independently timed bags/bank,
@@ -508,6 +512,8 @@ returns and attachment info/link. A send hook includes its recipient/subject/bod
 `draft_is_last_observed` plus the last observed draft's money/COD/items/time. This draft may be
 missing or stale: a post-hook runs after the game function, which may already clear the draft.
 Do not read a hook as success or invent values where the client returned none.
+Since **0.10.0** the sell-junk button (`C_MerchantFrame.SellAllJunkItems`) and trainer purchases
+(`BuyTrainerService`, `TRAINER_SHOW`/`TRAINER_CLOSED`) are recorded as family `vendor`.
 
 `journal_diagnostics` holds this load's rejected events, missing/installed hooks and fired counts.
 `journal_errors` counts observation failures reported in chat; these do not interrupt a game call.

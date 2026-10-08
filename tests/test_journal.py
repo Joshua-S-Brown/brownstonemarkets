@@ -162,6 +162,22 @@ def test_lua_all_event_families_own_spellcasts_and_loot():
     assert len(entries(g)) == 6
 
 
+def test_lua_trainer_window_and_junk_button_are_vendor_evidence():
+    _, g, _ = journal_client()
+    fire(g, "TRAINER_SHOW")
+    g.BuyTrainerService(3)
+    g.money = 12000
+    fire(g, "PLAYER_MONEY")
+    fire(g, "TRAINER_CLOSED")
+    fire(g, "MERCHANT_SHOW")
+    g.C_MerchantFrame.SellAllJunkItems()
+    rs = entries(g)
+    assert [r["event"] for r in rs] == ["TRAINER_SHOW", "BuyTrainerService", "PLAYER_MONEY", "TRAINER_CLOSED",
+                                        "MERCHANT_SHOW", "C_MerchantFrame.SellAllJunkItems"]
+    assert {r["family"] for r in rs} == {"vendor", "money"}
+    assert rs[2]["windows"]["trainer"] is True and rs[4]["windows"]["trainer"] is False
+
+
 def test_lua_spellcasts_only_succeeded_crafts_and_refresh_events_only_counted():
     lua, g, _ = journal_client()
     for event in ("UNIT_SPELLCAST_START", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED"):

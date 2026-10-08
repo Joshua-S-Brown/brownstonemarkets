@@ -34,9 +34,14 @@ def latest_rows(config) -> list[dict]:
 
 _SEQUENCE = "TRY_CAST(json_extract_string(record_json, '$.sequence') AS BIGINT)"
 _RECIPES = "json_extract_string(record_json, '$.known_recipes.name')"
+# character_snapshots.unreadable_backpack in SQL: a bags read with a 0-slot backpack is not evidence.
+_READABLE_BAGS = ("NOT coalesce(list_contains(list_transform(json_extract(record_json, '$.containers[*]'), "
+                  "c -> json_extract_string(c, '$.container_id') = '0' AND json_extract_string(c, '$.size') = '0'), "
+                  "true), false)")
 # Only the newest bags snapshot per character and newest list per profession leave the database.
 _LATEST = {
-    "character_snapshots": "kind='bags' QUALIFY row_number() OVER (PARTITION BY character, character_realm, "
+    "character_snapshots": f"kind='bags' AND {_READABLE_BAGS} QUALIFY row_number() OVER (PARTITION BY character, "
+                           "character_realm, "
                            f"character_faction ORDER BY captured_at DESC, {_SEQUENCE} DESC NULLS LAST) = 1",
     "character_journal": f"family='craft' AND {_RECIPES} IS NOT NULL QUALIFY row_number() OVER (PARTITION BY "
                          f"character, character_realm, character_faction, {_RECIPES} "

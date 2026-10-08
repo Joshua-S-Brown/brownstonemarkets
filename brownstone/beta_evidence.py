@@ -21,8 +21,10 @@ COVERAGE = (
                                  "C_AuctionHouse.ConfirmCommoditiesPurchase", "AUCTION_HOUSE_PURCHASE_COMPLETED")),
     ("journal", "cancel", ("CancelAuction", "C_AuctionHouse.CancelAuction", "AUCTION_HOUSE_AUCTION_CANCELED")),
     ("journal", "vendor buy", ("BuyMerchantItem",)),
-    ("journal", "vendor sell", ("SellCursorItem", "UseContainerItem", "C_Container.UseContainerItem")),
+    ("journal", "vendor sell", ("SellCursorItem", "UseContainerItem", "C_Container.UseContainerItem",
+                                 "C_MerchantFrame.SellAllJunkItems")),
     ("journal", "repair", ("RepairAllItems",)),
+    ("journal", "trainer", ("TRAINER_SHOW", "BuyTrainerService")),
     ("journal", "craft", ("DoTradeSkill", "DoCraft", "C_TradeSkillUI.CraftRecipe", "UNIT_SPELLCAST_SUCCEEDED")),
     ("journal", "loot/gathering", ("CHAT_MSG_LOOT", "LOOT_OPENED", "LOOT_SLOT_CLEARED")),
     ("active auctions", "owned list", ("OWNED_AUCTIONS_UPDATED", "AUCTION_OWNED_LIST_UPDATE")),
@@ -191,7 +193,7 @@ def reconciliation(report: dict, records: list[dict]) -> None:
         groups[identity(r)].append(r)
     for values in groups.values():
         ordered = sorted(values, key=lambda r: (r["captured_at"], r.get("sequence", 0)))
-        bags = [r for r in ordered if r.get("kind") == "bags"]
+        bags = [r for r in ordered if r.get("kind") == "bags" and not character_snapshots.unreadable_backpack(r)]
         for before, after in zip(bags, bags[1:], strict=False):
             interval = [r for r in ordered if _order(before) < _order(r) <= _order(after) and "entry_id" in r]
             _gold_residual(report, before, after, interval)
@@ -254,6 +256,33 @@ def profession_checks(report: dict, records: list[dict]) -> None:
         check(report, "recipe list", "warn" if state.get("possibly_incomplete") or causes else "pass",
               {"profession": name, "listed_recipes": professions._recipe_count(state),
                "possibly_incomplete": state.get("possibly_incomplete"), "causes": causes}, [identifier(r)])
+
+
+def snapshot_checks(report: dict, records: list[dict]) -> None:
+    """Bags snapshots must be readable and match the same login's last journaled money."""
+    for r in records:
+        if r.get("kind") != "bags":
+            continue
+        unreadable = character_snapshots.unreadable_backpack(r)
+        check(report, "bags readable", "fail" if unreadable else "pass",
+              {"event": r.get("event"), "read_event": r.get("read_event"),
+               "replaced_unreadable_read": "unreadable_read" in r}, [identifier(r)])
+        if not unreadable:
+            _snapshot_money(report, r, records)
+
+
+def _snapshot_money(report: dict, snapshot: dict, records: list[dict]) -> None:
+    # Snapshots and journal share one sequence, so the last earlier money entry is the gold at that point.
+    money = [r for r in records if r.get("family") == "money" and identity(r) == identity(snapshot)
+             and r.get("login_at") is not None and r.get("login_at") == snapshot.get("login_at")
+             and r.get("sequence", 0) < snapshot.get("sequence", 0) and r.get("after_copper") is not None]
+    if not money or snapshot.get("gold_copper") is None:
+        return
+    last = max(money, key=lambda r: r["sequence"])
+    residual = snapshot["gold_copper"] - last["after_copper"]
+    check(report, "snapshot vs journal gold", "fail" if residual else "pass",
+          {"snapshot_copper": snapshot["gold_copper"], "journal_copper": last["after_copper"]},
+          [identifier(last), identifier(snapshot)])
 
 
 def _skill_check(report: dict, r: dict) -> None:

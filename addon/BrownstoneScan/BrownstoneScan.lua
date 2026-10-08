@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.9.0"
+local ADDON_VERSION = "0.10.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -290,16 +290,14 @@ local function readSlot(id, slot)
     return { container_id = id, slot = slot, item_id = itemID, count = count, item_link = link }, failed
 end
 
-local function captureCharacter(kind, event)
-    if kind == "bank" and not bankOpen then return end
+-- Reads one snapshot without saving it; the sequence and ID are assigned when it is saved.
+local function readCharacter(kind, event)
     local key, name, realm = characterKey()
     local faction = safe(UnitFactionGroup, "player")
-    if not key or not faction then say("Character identity unavailable; snapshot not saved.") return end
+    if not key or not faction then return nil end
     local now = time()
-    local db = BrownstoneScanDB
-    db.snapshot_sequence = (db.snapshot_sequence or 0) + 1
-    local snapshot = { snapshot_id = key .. ":" .. kind .. ":" .. now .. ":" .. db.snapshot_sequence,
-        character = name, realm = realm, faction = faction, kind = kind, sequence = db.snapshot_sequence,
+    local snapshot = { key = key,
+        character = name, realm = realm, faction = faction, kind = kind,
         captured_at = now, captured_at_utc = utc(now), addon_version = ADDON_VERSION,
         event = event, login_at = loginTime, world_signal = worldSignal, client = collectContext().client,
         slots = {}, containers = {},
@@ -332,7 +330,53 @@ local function captureCharacter(kind, event)
             end
         end
     end
+    return snapshot
+end
+
+-- A real backpack always has slots. Zero or unknown means the client no longer answers (beta 08 Oct:
+-- at logout every bag read 0 slots, gold 0 and level 1 while the journal showed items and money).
+local function backpackReadable(snapshot)
+    for _, container in ipairs(snapshot.containers) do
+        if container.container_id == 0 then return type(container.size) == "number" and container.size > 0 end
+    end
+    return false
+end
+
+-- Newest bags read this load whose backpack was readable; memory only, never saved by itself.
+local lastBags
+
+local function refreshBags(event, level)
+    local snapshot = readCharacter("bags", event)
+    if snapshot and backpackReadable(snapshot) then
+        if type(level) == "number" then snapshot.level = level end  -- UnitLevel can lag PLAYER_LEVEL_UP
+        lastBags = snapshot
+    end
+end
+
+local function saveSnapshot(snapshot)
+    local db = BrownstoneScanDB
+    db.snapshot_sequence = (db.snapshot_sequence or 0) + 1
+    snapshot.sequence = db.snapshot_sequence
+    snapshot.snapshot_id = snapshot.key .. ":" .. snapshot.kind .. ":" .. snapshot.captured_at .. ":" .. snapshot.sequence
+    snapshot.key = nil
     db.snapshots[#db.snapshots + 1] = snapshot
+end
+
+local function captureCharacter(kind, event)
+    if kind == "bank" and not bankOpen then return end
+    local snapshot = readCharacter(kind, event)
+    if not snapshot then say("Character identity unavailable; snapshot not saved.") return end
+    if kind == "bags" and not backpackReadable(snapshot) and lastBags and lastBags.key == snapshot.key then
+        -- Save the newest readable values instead, keeping their own read time and what this read returned.
+        local fresh = snapshot
+        snapshot = lastBags
+        lastBags = nil
+        snapshot.read_event, snapshot.event = snapshot.event, event
+        snapshot.unreadable_read = { captured_at = fresh.captured_at, gold_copper = fresh.gold_copper,
+            level = fresh.level, containers = fresh.containers }
+        snapshot.fired_events = fresh.fired_events
+    end
+    saveSnapshot(snapshot)
 end
 
 -- Returns how many snapshots were removed, or nil when the login time is unknown and all are kept.
@@ -772,6 +816,7 @@ local journalEvents = {
     OWNED_AUCTIONS_UPDATED = "auction", AUCTION_OWNED_LIST_UPDATE = "auction", AUCTION_ITEM_LIST_UPDATE = "auction",
     AUCTION_MULTISELL_START = "auction", AUCTION_MULTISELL_UPDATE = "auction", AUCTION_MULTISELL_FAILURE = "auction",
     MERCHANT_SHOW = "vendor", MERCHANT_CLOSED = "vendor", MERCHANT_UPDATE = "vendor",
+    TRAINER_SHOW = "vendor", TRAINER_CLOSED = "vendor",
     TRADE_SKILL_SHOW = "craft", TRADE_SKILL_CLOSE = "craft", TRADE_SKILL_UPDATE = "craft",
     CRAFT_SHOW = "craft", CRAFT_CLOSE = "craft", CRAFT_UPDATE = "craft",
     UNIT_SPELLCAST_SUCCEEDED = "craft", CHAT_MSG_LOOT = "loot", LOOT_OPENED = "loot", LOOT_CLOSED = "loot",
@@ -787,6 +832,7 @@ local journalHooks = {
     { "StartAuction", "auction" }, { "PostAuction", "auction" }, { "PlaceAuctionBid", "auction" },
     { "CancelAuction", "auction" }, { "BuyMerchantItem", "vendor" }, { "SellCursorItem", "vendor" },
     { "UseContainerItem", "vendor" }, { "RepairAllItems", "vendor" },
+    { "SellAllJunkItems", "vendor", "C_MerchantFrame" }, { "BuyTrainerService", "vendor" },
     { "DoTradeSkill", "craft" }, { "DoCraft", "craft" },
     { "PostItem", "auction", "C_AuctionHouse" }, { "PostCommodity", "auction", "C_AuctionHouse" },
     { "PlaceBid", "auction", "C_AuctionHouse" }, { "CancelAuction", "auction", "C_AuctionHouse" },
@@ -1213,9 +1259,11 @@ function journal.observe(event, ...)
     end
     if journalCountOnly[event] then return end
     local open = { MAIL_SHOW = "mailbox", MERCHANT_SHOW = "merchant", AUCTION_HOUSE_SHOW = "auction_house",
-        TRADE_SKILL_SHOW = "trade_skill", CRAFT_SHOW = "trade_skill", LOOT_OPENED = "loot", BANKFRAME_OPENED = "bank" }
+        TRADE_SKILL_SHOW = "trade_skill", CRAFT_SHOW = "trade_skill", LOOT_OPENED = "loot", BANKFRAME_OPENED = "bank",
+        TRAINER_SHOW = "trainer" }
     local close = { MAIL_CLOSED = "mailbox", MERCHANT_CLOSED = "merchant", AUCTION_HOUSE_CLOSED = "auction_house",
-        TRADE_SKILL_CLOSE = "trade_skill", CRAFT_CLOSE = "trade_skill", LOOT_CLOSED = "loot", BANKFRAME_CLOSED = "bank" }
+        TRADE_SKILL_CLOSE = "trade_skill", CRAFT_CLOSE = "trade_skill", LOOT_CLOSED = "loot", BANKFRAME_CLOSED = "bank",
+        TRAINER_CLOSED = "trainer" }
     if open[event] then journal.windows[open[event]] = true end
     local arguments = journal.args(...)
     if event == "TRADE_SKILL_SHOW" or event == "CRAFT_SHOW" then
@@ -1265,6 +1313,8 @@ for _, event in ipairs({
     "PLAYER_LOGOUT",
     "BANKFRAME_OPENED",
     "BANKFRAME_CLOSED",
+    "PLAYER_LEVEL_UP",
+    "SKILL_LINES_CHANGED",
 }) do
     attempted[event] = true
     if not pcall(frame.RegisterEvent, frame, event) then
@@ -1473,6 +1523,11 @@ frame:SetScript("OnEvent", function(_, event, ...)
             startSession(arg1, arg2)
             journal.lastMoney, journal.lastBags = journal.money(), journal.bags()
         end
+        journal.protect(refreshBags, "bags refresh", event)
+    elseif event == "BAG_UPDATE_DELAYED" or event == "PLAYER_MONEY" or event == "SKILL_LINES_CHANGED" then
+        journal.protect(refreshBags, "bags refresh", event)
+    elseif event == "PLAYER_LEVEL_UP" then
+        journal.protect(refreshBags, "bags refresh", event, arg1)
     elseif event == "PLAYER_LOGOUT" then
         firedEvents[event] = (firedEvents[event] or 0) + 1
         captureCharacter("bags", event)

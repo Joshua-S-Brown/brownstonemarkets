@@ -10,7 +10,7 @@ from test_addon import ROOT, client, python_value
 from test_scans import FINISHED, NOW, addon_source, listing, scan, to_lua
 
 from brownstone import character_snapshots as holdings
-from brownstone import cli, storage
+from brownstone import cli, professions, storage
 from brownstone.pipeline import StalePreviewError, import_guidance, import_scans, preview_scans
 from brownstone.scan_inputs import import_inputs, preview_inputs
 
@@ -288,6 +288,8 @@ def test_lua_unknown_login_and_missing_apis_retain_evidence_without_zero():
     event = g.mainFrame.scripts.OnEvent
     event(g.mainFrame, "PLAYER_LOGOUT")
     g.epoch += 100
+    # Missing from the start of this load, so no earlier readable read can stand in at logout.
+    lua.execute('GetMoney = nil; C_Container.GetContainerNumSlots = function() error("missing") end')
     lua.execute((ROOT / "addon/BrownstoneScan/BrownstoneScan.lua").read_text())
     event = g.mainFrame.scripts.OnEvent
     event(g.mainFrame, "ADDON_LOADED", "BrownstoneScan")
@@ -295,12 +297,66 @@ def test_lua_unknown_login_and_missing_apis_retain_evidence_without_zero():
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert len(g.BrownstoneScanDB.snapshots) == 1
     assert any("every character snapshot was kept" in m for m in g.messages.values())
-    lua.execute('GetMoney = nil; C_Container.GetContainerNumSlots = function() error("missing") end')
     event(g.mainFrame, "PLAYER_LOGOUT")
     record = python_value(g.BrownstoneScanDB.snapshots[2])
     assert "gold_copper" not in record and all("size" not in c for c in record["containers"])
     assert record["slots"] == {}
     assert holdings.summarize(record, NOW)["complete"] is False
+
+
+def test_lua_unreadable_logout_bags_save_the_newest_readable_read():
+    lua, g = capture_client()
+    event = g.mainFrame.scripts.OnEvent
+    lua.execute('function UnitLevel() return 5 end')
+    g.epoch += 10
+    event(g.mainFrame, "PLAYER_LEVEL_UP", 6)
+    read_at = g.epoch
+    g.epoch += 50
+    # Beta 08 Oct: at logout the client answered 0 slots everywhere, 0 copper and level 1.
+    lua.execute('''GetMoney = function() return 0 end; function UnitLevel() return 1 end
+        C_Container.GetContainerNumSlots = function() return 0 end''')
+    event(g.mainFrame, "PLAYER_LOGOUT")
+    r = python_value(g.BrownstoneScanDB.snapshots[1])
+    assert r["event"] == "PLAYER_LOGOUT" and r["read_event"] == "PLAYER_LEVEL_UP"
+    assert r["captured_at"] == read_at and r["level"] == 6 and r["gold_copper"] == 12345
+    assert r["snapshot_id"].endswith(f":bags:{read_at}:{r['sequence']}") and "key" not in r
+    assert {s["container_id"] for s in r["slots"]} == {-2, 0, 1, 2, 3, 4, 5}
+    assert r["unreadable_read"]["gold_copper"] == 0 and r["unreadable_read"]["level"] == 1
+    assert {c["size"] for c in r["unreadable_read"]["containers"]} == {0}
+    assert r["fired_events"]["PLAYER_LOGOUT"] == 1 and holdings.summarize(r, NOW)["complete"]
+
+
+def test_lua_unreadable_bags_without_an_earlier_read_are_saved_as_read():
+    lua, g = capture_client()
+    lua.execute('C_Container.GetContainerNumSlots = function() return 0 end')
+    lua.execute((ROOT / "addon/BrownstoneScan/BrownstoneScan.lua").read_text())
+    event = g.mainFrame.scripts.OnEvent
+    event(g.mainFrame, "ADDON_LOADED", "BrownstoneScan")
+    event(g.mainFrame, "PLAYER_ENTERING_WORLD", True, False)
+    event(g.mainFrame, "BAG_UPDATE_DELAYED")
+    event(g.mainFrame, "PLAYER_LOGOUT")
+    r = python_value(g.BrownstoneScanDB.snapshots[1])
+    assert "read_event" not in r and "unreadable_read" not in r
+    assert holdings.unreadable_backpack(r) and not holdings.summarize(r, NOW)["complete"]
+
+
+def test_zero_slot_backpack_is_unknown_and_never_replaces_readable_bags(tmp_path):
+    good = snapshot("good", level=7)
+    bad = snapshot("bad", level=1)
+    bad.update(gold_copper=0, slots=[], captured_at=FINISHED + 10,
+               containers=[dict(container_id=0, size=0), dict(container_id=1, size=0)])
+    bad.pop("captured_at_utc")
+    config = addon_source(tmp_path / "data", write(tmp_path / "own.lua", [good, bad]))
+    preview = preview_scans(config, now=NOW)
+    assert [s["complete"] for s in preview.snapshot_summaries] == [True, False]
+    import_scans(config, now=NOW)
+    row = holdings.latest_rows(config)[0]
+    assert row["Gold"] == 1.2345 and row["Bags slots"] == 1
+    assert professions.latest_rows(config)[0]["Level"] == 7
+    only = addon_source(tmp_path / "only", write(tmp_path / "only.lua", [bad]))
+    import_scans(only, now=NOW)
+    assert holdings.latest_rows(only)[0]["Gold"] is None
+    assert professions.latest_rows(only)[0]["Level"] is None
 
 
 def test_lua_rejected_character_event_is_guarded_and_recorded():

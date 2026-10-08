@@ -431,3 +431,18 @@ def test_format6_ui_is_ignored_by_preview_import_and_beta_report(tmp_path):
         report["file"].pop("bytes")
         report["file"].pop("sha256")
     assert after == before
+
+
+def test_unreadable_bags_fail_and_snapshot_gold_matches_the_login_money():
+    db = database()
+    for r in [*db["snapshots"], *db["journal"]]:
+        r["login_at"] = FINISHED - 60
+    report = analyze(db)
+    assert len(checks(report, "bags readable", "pass")) == 2
+    assert checks(report, "snapshot vs journal gold", "pass")
+    db["snapshots"][-1]["gold_copper"] = 0
+    assert checks(analyze(db), "snapshot vs journal gold", "fail")
+    db["snapshots"][-1]["containers"][0]["size"] = 0
+    report = analyze(db)
+    assert checks(report, "bags readable", "fail")
+    assert not checks(report, "snapshot vs journal gold") and not checks(report, "snapshot gold")

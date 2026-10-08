@@ -36,6 +36,7 @@ def analyze(raw: bytes, now: datetime) -> tuple[dict, tuple]:
     evidence.session_checks(report, sessions, database)
     evidence.reconciliation(report, records)
     evidence.profession_checks(report, records)
+    evidence.snapshot_checks(report, records)
     evidence.coverage(report, records, database)
     report["session_method"] = ("Inferred shared-sequence order: PLAYER_LOGOUT closes a load; identity/login changes "
                                 "and decreasing session_time start one. GetTime may persist across reload. "
