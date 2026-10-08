@@ -2,7 +2,13 @@
 import streamlit as st
 
 from brownstone import character_snapshots, journal, professions
-from brownstone.pipeline import import_guidance, import_scans, preview_configuration, preview_scans
+from brownstone.pipeline import (
+    StalePreviewError,
+    import_guidance,
+    import_scans,
+    preview_configuration,
+    preview_scans,
+)
 from brownstone.scan_inputs import (
     CLEAR_REMINDER,
     file_rows,
@@ -98,6 +104,9 @@ def _import(config, preview):
     try:
         manifest = import_scans(config, scan_ids=st.session_state.get("scan_import_selection", []),
                                 reviewed=preview)
+    except StalePreviewError as error:
+        st.session_state["scan_import_result"] = [("error", f"Import failed: {error}. Nothing was imported.")]
+        return
     except Exception as error:
         st.session_state["scan_import_result"] = [("error", f"Import failed: {error}. Preview again before "
                                                             "retrying. Your previous snapshot remains available.")]
@@ -152,6 +161,8 @@ def _import_inputs(config, preview):
         # Fresh read after import supplies per-file and latest-machine cleanup evidence.
         st.session_state["scan_import_preview"] = preview_inputs(config)
         st.session_state["scan_import_result"] = messages
+    except StalePreviewError as error:
+        st.session_state["scan_import_result"] = [("error", f"Import failed: {error}. Nothing was imported.")]
     except Exception as error:
         st.session_state["scan_import_result"] = [("error", f"Import failed: {error}. Preview again.")]
 

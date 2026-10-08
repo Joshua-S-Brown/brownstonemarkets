@@ -50,6 +50,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 6. STORY-041 your professions and known recipes (addon; beta; must be testable by 13 October)
 7. STORY-042 beta evidence report (Brownstone CLI; Claude runs it after each play session)
 8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
+   - STORY-045 a simpler import page (Brownstone; small, display only; can go any time)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
 11. STORY-039 choose and adjust the Today plan (Brownstone; after STORY-038)
@@ -280,6 +281,22 @@ Acceptance:
 - **Brownstone:** preview, import and `beta-report` ignore the `ui` table; a test proves a format-6 file with `ui` imports and reports exactly as without it.
 - **Offline tests** in the existing Lua harness (`tests/test_addon.py`, `tests/fixtures/addon_harness.lua`): the panel's buttons call the same functions as the auction-house buttons (Clear refuses with an unsaved scan, shows the popup otherwise; Reload calls `ReloadUI`; Start is disabled with the house closed and during a scan); the status numbers, the 8,000 highlight and the overflow skipped count; the saved angle survives a reload; `/bscan panel` toggles; opening the panel adds no journal entry, snapshot or scan.
 - **Docs:** `addon/README.md` gets a short *Panel* section (replacing the visibility decision) and an in-game check written as play actions only: click the minimap button, open and close the panel, drag the button and reload, press each button once. `requirements.md` records the panel as a convenience view with the existing guards; `status.md` describes the current state.
+
+### STORY-045 — A simpler import page
+
+Added 2026-10-08 (product owner: "I just want to import. I do need to see all that, just really if there's an issue"). Display only in `views/scan_import.py`; no change to preview, stale checks, import, archiving or the CLI.
+
+As the product owner, I want the import page to tell me in a line or two what's new and let me import it, so that I only read the details when something is wrong.
+
+Acceptance:
+- **Summary first:** after **Preview addon scans**, one short line per file with something new, for example "windows-pc, dropped 08 Oct 13:00 UTC: 1 new scan, 12 character records". Files with nothing new are counted in one line ("2 files already imported"). When nothing at all is new, a single line says so, with the existing /reload hint. The local `scan_path` file having no scans is a quiet note in that line, not a problem, when other files are readable.
+- **One button:** **Import addon scan** sits directly under the summary, with the existing default selection (every file or scan with something new). The review step stays: Preview, then Import. No one-click import.
+- **Details collapsed:** every table and note shown today (file status, per-file scan tables, character snapshots and journal previews, latest drop per machine, the partial-scan and other-house captions, the cleanup reminder) and the file/scan selection move unchanged into a collapsed **Details** expander. The already-imported holdings tables at the top (skills, active auctions, journal, snapshots) go into their own collapsed **Imported character data** expander.
+- **Problems open the details:** the Details expander starts open, and a warning line under the summary names the problem, when any file has a read, parse or conflict error, a new scan is partial, any record is from another house, or the selection the user would import differs from the default. Import results keep today's messages; an error result also opens Details.
+- **Clear guidance in one line:** after an import, one line per machine says whether it's safe to /bscan clear there (its latest drop is fully imported) instead of the full reminder, which stays in Details.
+- **Unchanged:** ADDON-06 and OPS-03 behavior, every stale-preview and conflict check, messages from `brownstone/`, the CLI `--preview` output, both the single-file and drop-folder paths.
+- **Offline tests** (`tests/test_app.py` AppTest): a clean preview shows the summary and the button with Details collapsed; each problem kind opens Details and shows the warning; nothing new shows the single line and no button; an import still succeeds and still raises the stale error after a changed file.
+- **Docs:** ADDON-06 in `requirements.md` says the preview columns are in a Details section that opens on problems; `design.md` (`views/scan_import`) and `status.md` describe the current page.
 
 ### STORY-038 — Today craft details
 

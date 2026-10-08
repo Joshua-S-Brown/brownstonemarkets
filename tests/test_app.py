@@ -448,7 +448,7 @@ def test_preview_retryable_error_then_stale_file_invalidates_without_writes(tmp_
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     addon["scan_path"].write_bytes(original + b"\n")
     next(b for b in at.button if b.label == "Import addon scan").click().run()
-    assert any("Preview is stale" in e.value for e in at.error)
+    assert any("Preview is stale" in e.value and e.value.count("Preview again") == 1 for e in at.error)
     assert not addon["data_dir"].exists()
     at.run()
     assert not any(b.label == "Import addon scan" for b in at.button)
