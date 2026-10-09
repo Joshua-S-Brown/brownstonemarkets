@@ -53,8 +53,8 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
    - STORY-045 a simpler import page (Brownstone; small, display only; can go any time)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
-11. STORY-046 a confidence label on each Today row (Brownstone; small)
-12. STORY-047 skill-up demand map (Brownstone; must be usable before 4 November; refined for implementation 2026-10-08, next to hand off)
+11. STORY-046 a confidence label on each Today row (Brownstone; small; refined for implementation 2026-10-08, next to hand off)
+12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
 13. STORY-048 watchlist with target prices (Brownstone; small)
 14. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
 15. STORY-035 auction deposits (needs a beta check)
@@ -326,16 +326,22 @@ Added 2026-10-08 (product owner: clearer recommendations). Brownstone only; work
 As a gold maker, I want each recommendation labeled *High*, *Medium* or *Low* confidence with its reasons, so that I can tell at a glance which ones to trust without reading every number.
 
 Acceptance:
-- **One label per Craft row** (and carried to its Sell and Queue lines): *Low* if any Low reason applies, else *Medium* if any Medium reason applies, else *High*. Reasons are shown in the row as short words (for example "thin, unconfirmed vendor price").
-- **Starting rules** (recorded in `requirements.md` → *Today* with a new `today_version`, every threshold named there):
-  - *Low:* the scan is stale (as today: inspection only); the output is *thin*; the output has no competing listing to price against; a material's batch buys more than **75%** of that material's listed units.
-  - *Medium:* the scan is older than half the freshness limit; the output has fewer than **5** listings; a material's batch buys more than **40%** of its listed units; a route uses a catalog value marked unconfirmed (the existing `*_verified` markers, `crafting.py`).
-- **Only evidence Today already computes:** no new prices, no history, no AI. A TSM source labels depth-based reasons *not available for this source* and never claims High from missing depth.
-- **A filter** on the Craft tab to hide Low rows (off by default; hidden rows counted under the existing hidden reasons).
-- **Offline tests:** each reason on its own, the worst-reason rule, stale and TSM sources, unconfirmed vendor price, and the filter's count.
+- **One label per Craft row** (and carried to its Sell and Queue lines): *Low* if any Low reason applies, else *Medium* if any Medium reason applies, else *High*. Reasons are shown in the row as short words (for example "thin, unconfirmed vendor price"). Calculation in `brownstone/` (no Streamlit), display in `views/today.py`.
+- **Starting rules** (recorded in `requirements.md` → *Today* under `today_version` 3, every threshold named there):
+  - *Low:* the scan is stale (as today: inspection only); the output is *thin* (CRAFT-09's existing rule); the output has no competing listing to price against; a material's batch buys more than **75%** of that material's listed units.
+  - *Medium:* the scan is older than half the freshness limit; the output has fewer than **5** listings; a material's batch buys more than **40%** of its listed units; a route uses a catalog value marked unconfirmed (the existing `*_verified` markers, `crafting.py`, on the recipe or any item its route uses).
+  - **Ages** use the same freshness basis and limit Today already shows (DATA-05), including its labeled collection time when the scan time is unknown.
+  - **Material share** is the batch's planned purchase units for that material (the reservations STORY-039 already makes, so earlier rows' purchases count against later ones as they do now) over all its listed units in the scan (CRAFT-09: including no-buyout listings). Materials bought from a vendor or not bought at all give no share reason.
+- **Only evidence Today already computes:** no new prices, no history, no AI. A TSM source shows depth-based reasons (thin, listing count, material share) as *depth not available for this source*, and that reason alone makes the row at best *Medium*: missing depth never yields High.
+- **Display only:** labels never change ranking, batch sizes, refill, reservations, queue order or which rows appear, apart from the filter below.
+- **A filter** on the Craft tab to hide Low rows (off by default, session only; hidden rows counted under the existing hidden reasons as *low confidence*). Hiding a row doesn't free its reservations or change other rows.
+- **Offline tests:** each reason on its own, including the exact thresholds (75%/40% of listed units, 5 listings, half the freshness limit); the worst-reason rule; stale and TSM sources; unconfirmed vendor price and unconfirmed yield; a material share across two rows using the same material; labels unchanged rankings and sizes (same rows and order with labels as without); the filter's count; the label on Sell and Queue lines.
+- **Real-data check:** on the Forever beta source, the number of High, Medium and Low rows and the most common reasons.
 - **Docs:** `requirements.md` (*Today*, new version), `status.md`.
 
 ### STORY-047 — Skill-up demand map
+
+**Implemented and reviewed (2026-10-08).** At review, raw expansion covers all N crafts at once and selections can mark an item `raw_material` (CRAFT-08), used for Forever leather tiers.
 
 Added 2026-10-08 (product owner); moved from *Recipe coverage* under Later. Refined 2026-10-08 for implementation. Brownstone only, from catalogs; scans optional. Must be usable before 4 November: launch-week demand comes before any price history exists.
 
