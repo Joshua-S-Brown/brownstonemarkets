@@ -137,7 +137,7 @@ def test_tracked_catalogs_are_exactly_what_the_importer_generates(game, name):
 def test_classic_import_keeps_the_hand_verified_values_and_fills_skill_levels():
     # STORY-007 verified these by hand; the importer must reproduce them from the saved page.
     catalog = load_recipe_catalog(ROOT / "config/classic-era-tailoring.toml")
-    assert catalog["catalog_version"] == "0.3"
+    assert catalog["catalog_version"] == "0.4"
     assert {r: recipe["required_skill"] for r, recipe in catalog["recipes_by_id"].items()} == {
         2964: 75, 3757: 80, 3865: 175, 12065: 225, 18401: 250, 18405: 260}
     assert not any("required_skill_verified" in recipe for recipe in catalog["recipes_by_id"].values())

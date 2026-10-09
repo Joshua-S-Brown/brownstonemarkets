@@ -593,7 +593,8 @@ def test_journal_only_import_page_counts_latest_duplicates_and_reload_guidance(t
     assert not at.exception and not at.error
     table = next(t.value for t in at.dataframe if "Family" in t.value.columns)
     assert table["new"].tolist() == [1] and table["Character"].tolist() == ["Alice"]
-    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    # Local database writes can exceed AppTest's three-second default under coverage.
+    next(b for b in at.button if b.label == "Import addon scan").click().run(timeout=30)
     assert not at.exception and not at.error
     saved = next(t.value for t in at.dataframe if "Entries" in t.value.columns)
     assert saved["Entries"].tolist() == [1] and saved["Latest (UTC)"].iloc[0].endswith("+00:00")

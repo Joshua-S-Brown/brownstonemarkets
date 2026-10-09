@@ -366,3 +366,13 @@ def create(config_dir: Path, raw: bytes, page_name: str, selection: dict, saved_
     return {**preview, "manifest": manifest, "catalog_version": selection["catalog_version"],
             "tracked": [preview["selection_path"], preview["catalog_path"]],
             "archived": [copy, copy.with_suffix(".json")]}
+
+
+# Verified against saved First Aid entries and their rendered Source cells; CRAFT-08 has the evidence.
+LEARNING_LABELS = {2: "drop", 4: "quest", 5: "vendor", 6: "trainer"}
+
+
+def learning_label(recipe: dict) -> str:
+    """Only verified listview-code meanings belong here; see CRAFT-08's evidence table."""
+    return ", ".join(LEARNING_LABELS.get(code, f"other (code {code})")
+                     for code in recipe.get("learned_from", [])) or "unknown"

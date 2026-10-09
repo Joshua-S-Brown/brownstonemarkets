@@ -52,7 +52,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
    - STORY-049 known recipes on the Forever client (addon; fixes STORY-041's capture; next to hand off, testable in game by 15 October)
    - STORY-045 a simpler import page (Brownstone; small, display only; refined 2026-10-09)
-   - STORY-050 how each recipe is learned (catalogs; small; no game time)
+   - STORY-050 how each recipe is learned (catalogs; implemented and reviewed 2026-10-09)
    - STORY-051 characters page (Brownstone; small; no game time)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
@@ -274,7 +274,7 @@ Acceptance:
 
 ### STORY-050 — How each recipe is learned
 
-Added 2026-10-09. Catalogs only; no game time. Same shape as STORY-047's catalog fields.
+**Implemented and reviewed (2026-10-09).** Added 2026-10-09. Catalogs only; no game time. Same shape as STORY-047's catalog fields.
 
 As a gold maker, I want each catalog recipe to say how it's learned and what training costs, so that plans can tell "train it now" from "find a pattern".
 

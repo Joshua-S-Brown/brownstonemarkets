@@ -236,3 +236,41 @@ def test_a_broken_selection_file_leaves_the_other_views_working(tmp_path, monkey
     assert any("Recipe catalogs unavailable" in w.value for w in at.warning)
     at.radio[0].set_value("Recipe catalogs").run()
     assert any("Could not read the selection files" in e.value for e in at.error)
+
+
+def test_learning_details_only_on_catalog_recipe_view(tmp_path, monkeypatch):
+    from test_recipe_learning import page
+
+    from brownstone import recipe_catalogs as rc
+
+    at, config = open_page(tmp_path, monkeypatch)
+    entry, = rc.find_catalogs(config)
+    rc.regenerate(entry, page([2, 5], 100).encode(), 'fixture.html', '2026-10-01', tmp_path / 'archive')
+    at.run()
+    widget(at.selectbox, 'Catalog recipe').set_value(3755).run()
+    assert not at.exception
+    captions = [c.value for c in at.caption]
+    assert 'Learned from: drop, vendor' in captions
+    assert 'Training cost: 1s' in captions
+    widget(at.selectbox, 'Catalog recipe').set_value(2963).run()
+    assert 'Learned from: unknown' in [c.value for c in at.caption]
+    assert 'Training cost: unknown' in [c.value for c in at.caption]
+    widget(at.radio, 'View').set_value('Crafting').run()
+    assert not at.exception
+    assert not any(c.value.startswith(('Learned from:', 'Training cost:')) for c in at.caption)
+
+
+def test_real_tailoring_recipe_learning_view(tmp_path, monkeypatch):
+    at, _ = open_page(tmp_path, monkeypatch)
+    monkeypatch.setattr('brownstone.recipe_catalogs.CONFIG_DIR', ROOT / 'config')
+    at.run()
+    widget(at.selectbox, 'Recipe catalog').set_value('forever-tailoring').run()
+    expected = [(2963, 'unknown', 'unknown'), (3755, 'trainer', '1s'),
+                (6686, 'drop, vendor', 'unknown'), (18405, 'vendor', 'unknown')]
+    for recipe_id, learned, cost in expected:
+        widget(at.selectbox, 'Catalog recipe').set_value(recipe_id).run()
+        assert not at.exception
+        captions = [c.value for c in at.caption]
+        assert f'Learned from: {learned}' in captions
+        assert f'Training cost: {cost}' in captions
+    assert any('⚠' in c.value for c in at.caption)

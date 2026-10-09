@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "blacksmithing"
 status = "beta-observed"
-catalog_version = "0.2"
+catalog_version = "0.3"
 
 [recipe_defaults]
 output_quantity_verified = false

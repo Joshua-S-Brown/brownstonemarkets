@@ -6,6 +6,8 @@
  "saved_at": "2026-10-06",
  "recipes": {
   "2385": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 2385,
    "name": "Brown Linen Vest",
    "learnedat": 10,
@@ -28,6 +30,8 @@
    "skillup_colors": [10, 45, 57, 70]
   },
   "2386": {
+   "learned_from": [6],
+   "training_cost_copper": 200,
    "id": 2386,
    "name": "Linen Boots",
    "learnedat": 65,
@@ -76,6 +80,7 @@
    "skillup_colors": [1, 35, 47, 60]
   },
   "2389": {
+   "learned_from": [2, 16, 21],
    "id": 2389,
    "name": "Red Linen Robe",
    "learnedat": 40,
@@ -102,6 +107,8 @@
    "skillup_colors": [40, 50, 67, 85]
   },
   "2392": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 2392,
    "name": "Red Linen Shirt",
    "learnedat": 40,
@@ -128,6 +135,8 @@
    "skillup_colors": [40, 50, 67, 85]
   },
   "2393": {
+   "learned_from": [6],
+   "training_cost_copper": 25,
    "id": 2393,
    "name": "White Linen Shirt",
    "learnedat": 1,
@@ -154,6 +163,8 @@
    "skillup_colors": [1, 35, 47, 60]
   },
   "2394": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 2394,
    "name": "Blue Linen Shirt",
    "learnedat": 40,
@@ -180,6 +191,8 @@
    "skillup_colors": [40, 50, 67, 85]
   },
   "2395": {
+   "learned_from": [6],
+   "training_cost_copper": 300,
    "id": 2395,
    "name": "Barbaric Linen Vest",
    "learnedat": 70,
@@ -205,6 +218,8 @@
    "env_status": "unchanged"
   },
   "2396": {
+   "learned_from": [6],
+   "training_cost_copper": 200,
    "id": 2396,
    "name": "Green Linen Shirt",
    "learnedat": 70,
@@ -230,6 +245,8 @@
    "env_status": "unchanged"
   },
   "2397": {
+   "learned_from": [6],
+   "training_cost_copper": 200,
    "id": 2397,
    "name": "Reinforced Linen Cape",
    "learnedat": 60,
@@ -252,6 +269,8 @@
    "skillup_colors": [60, 60, 77, 95]
   },
   "2399": {
+   "learned_from": [6],
+   "training_cost_copper": 300,
    "id": 2399,
    "name": "Green Woolen Vest",
    "learnedat": 85,
@@ -278,6 +297,8 @@
    "skillup_colors": [85, 85, 102, 120]
   },
   "2401": {
+   "learned_from": [6],
+   "training_cost_copper": 300,
    "id": 2401,
    "name": "Woolen Boots",
    "learnedat": 95,
@@ -304,6 +325,8 @@
    "skillup_colors": [95, 95, 112, 130]
   },
   "2402": {
+   "learned_from": [6],
+   "training_cost_copper": 250,
    "id": 2402,
    "name": "Woolen Cape",
    "learnedat": 75,
@@ -326,6 +349,7 @@
    "skillup_colors": [75, 80, 97, 115]
   },
   "2403": {
+   "learned_from": [2, 16],
    "id": 2403,
    "name": "Gray Woolen Robe",
    "learnedat": 105,
@@ -352,6 +376,8 @@
    "skillup_colors": [105, 105, 122, 140]
   },
   "2406": {
+   "learned_from": [6],
+   "training_cost_copper": 200,
    "id": 2406,
    "name": "Gray Woolen Shirt",
    "learnedat": 100,
@@ -396,6 +422,8 @@
    "skillup_colors": [1, 25, 37, 50]
   },
   "2964": {
+   "learned_from": [6],
+   "training_cost_copper": 100,
    "id": 2964,
    "name": "Bolt of Woolen Cloth",
    "learnedat": 75,
@@ -414,6 +442,8 @@
    "skillup_colors": [75, 75, 77, 85]
   },
   "3755": {
+   "learned_from": [6],
+   "training_cost_copper": 100,
    "id": 3755,
    "name": "Linen Bag",
    "learnedat": 45,
@@ -436,6 +466,8 @@
    "skillup_colors": [45, 45, 47, 65]
   },
   "3757": {
+   "learned_from": [6],
+   "training_cost_copper": 200,
    "id": 3757,
    "name": "Woolen Bag",
    "learnedat": 80,
@@ -458,6 +490,7 @@
    "skillup_colors": [80, 80, 92, 110]
   },
   "3758": {
+   "learned_from": [2, 21],
    "id": 3758,
    "name": "Green Woolen Bag",
    "learnedat": 95,
@@ -484,6 +517,8 @@
    "skillup_colors": [95, 100, 117, 135]
   },
   "3813": {
+   "learned_from": [6],
+   "training_cost_copper": 800,
    "id": 3813,
    "name": "Small Silk Pack",
    "learnedat": 150,
@@ -510,6 +545,8 @@
    "skillup_colors": [150, 150, 160, 175]
   },
   "3839": {
+   "learned_from": [6],
+   "training_cost_copper": 500,
    "id": 3839,
    "name": "Bolt of Silk Cloth",
    "learnedat": 125,
@@ -527,6 +564,8 @@
    "env_status": "unchanged"
   },
   "3840": {
+   "learned_from": [6],
+   "training_cost_copper": 100,
    "id": 3840,
    "name": "Heavy Linen Gloves",
    "learnedat": 35,
@@ -549,6 +588,8 @@
    "skillup_colors": [35, 50, 67, 85]
   },
   "3841": {
+   "learned_from": [6],
+   "training_cost_copper": 200,
    "id": 3841,
    "name": "Green Linen Bracers",
    "learnedat": 60,
@@ -575,6 +616,8 @@
    "skillup_colors": [60, 60, 77, 95]
   },
   "3842": {
+   "learned_from": [6],
+   "training_cost_copper": 300,
    "id": 3842,
    "name": "Handstitched Linen Britches",
    "learnedat": 70,
@@ -597,6 +640,8 @@
    "skillup_colors": [70, 70, 87, 105]
   },
   "3843": {
+   "learned_from": [6],
+   "training_cost_copper": 400,
    "id": 3843,
    "name": "Heavy Woolen Gloves",
    "learnedat": 85,
@@ -619,6 +664,7 @@
    "skillup_colors": [85, 85, 102, 120]
   },
   "3844": {
+   "learned_from": [2, 16, 21],
    "id": 3844,
    "name": "Heavy Woolen Cloak",
    "learnedat": 100,
@@ -645,6 +691,8 @@
    "skillup_colors": [100, 105, 122, 140]
   },
   "3845": {
+   "learned_from": [6],
+   "training_cost_copper": 300,
    "id": 3845,
    "name": "Soft-soled Linen Boots",
    "learnedat": 80,
@@ -671,6 +719,7 @@
    "skillup_colors": [80, 80, 97, 115]
   },
   "3847": {
+   "learned_from": [2, 16, 21],
    "id": 3847,
    "name": "Red Woolen Boots",
    "learnedat": 95,
@@ -701,6 +750,8 @@
    "skillup_colors": [95, 95, 97, 115]
   },
   "3848": {
+   "learned_from": [6],
+   "training_cost_copper": 500,
    "id": 3848,
    "name": "Double-stitched Woolen Shoulders",
    "learnedat": 110,
@@ -723,6 +774,7 @@
    "skillup_colors": [110, 110, 127, 145]
   },
   "3849": {
+   "learned_from": [2],
    "id": 3849,
    "name": "Reinforced Woolen Shoulders",
    "learnedat": 120,
@@ -749,6 +801,8 @@
    "skillup_colors": [120, 120, 137, 155]
   },
   "3850": {
+   "learned_from": [6],
+   "training_cost_copper": 500,
    "id": 3850,
    "name": "Heavy Woolen Pants",
    "learnedat": 110,
@@ -771,6 +825,7 @@
    "skillup_colors": [110, 110, 127, 145]
   },
   "3851": {
+   "learned_from": [2, 16],
    "id": 3851,
    "name": "Phoenix Pants",
    "learnedat": 125,
@@ -797,6 +852,8 @@
    "skillup_colors": [125, 125, 142, 160]
   },
   "3852": {
+   "learned_from": [6],
+   "training_cost_copper": 750,
    "id": 3852,
    "name": "Gloves of Meditation",
    "learnedat": 130,
@@ -823,6 +880,7 @@
    "skillup_colors": [130, 130, 140, 155]
   },
   "3854": {
+   "learned_from": [5],
    "id": 3854,
    "name": "Azure Silk Gloves",
    "learnedat": 145,
@@ -853,6 +911,8 @@
    "skillup_colors": [145, 145, 155, 170]
   },
   "3855": {
+   "learned_from": [6],
+   "training_cost_copper": 750,
    "id": 3855,
    "name": "Spidersilk Boots",
    "learnedat": 125,
@@ -883,6 +943,7 @@
    "skillup_colors": [125, 125, 142, 160]
   },
   "3856": {
+   "learned_from": [2, 16],
    "id": 3856,
    "name": "Spider Silk Slippers",
    "learnedat": 140,
@@ -909,6 +970,7 @@
    "skillup_colors": [140, 140, 147, 160]
   },
   "3857": {
+   "learned_from": [5],
    "id": 3857,
    "name": "Enchanter's Cowl",
    "learnedat": 165,
@@ -935,6 +997,7 @@
    "skillup_colors": [165, 165, 165, 180]
   },
   "3858": {
+   "learned_from": [2],
    "id": 3858,
    "name": "Shadow Hood",
    "learnedat": 170,
@@ -961,6 +1024,8 @@
    "skillup_colors": [170, 170, 170, 185]
   },
   "3859": {
+   "learned_from": [6],
+   "training_cost_copper": 750,
    "id": 3859,
    "name": "Azure Silk Vest",
    "learnedat": 150,
@@ -983,6 +1048,7 @@
    "skillup_colors": [150, 150, 160, 175]
   },
   "3860": {
+   "learned_from": [2, 16],
    "id": 3860,
    "name": "Boots of the Enchanter",
    "learnedat": 175,
@@ -1009,6 +1075,8 @@
    "skillup_colors": [175, 175, 175, 190]
   },
   "3861": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 3861,
    "name": "Long Silken Cloak",
    "learnedat": 185,
@@ -1035,6 +1103,7 @@
    "skillup_colors": [185, 185, 185, 200]
   },
   "3862": {
+   "learned_from": [5],
    "id": 3862,
    "name": "Icy Cloak",
    "learnedat": 200,
@@ -1065,6 +1134,7 @@
    "skillup_colors": [200, 200, 200, 215]
   },
   "3863": {
+   "learned_from": [2],
    "id": 3863,
    "name": "Spider Belt",
    "learnedat": 180,
@@ -1091,6 +1161,7 @@
    "skillup_colors": [180, 180, 180, 195]
   },
   "3864": {
+   "learned_from": [2],
    "id": 3864,
    "name": "Star Belt",
    "learnedat": 200,
@@ -1125,6 +1196,8 @@
    "skillup_colors": [200, 200, 200, 215]
   },
   "3865": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 3865,
    "name": "Bolt of Mageweave",
    "learnedat": 175,
@@ -1142,6 +1215,8 @@
    "env_status": "unchanged"
   },
   "3866": {
+   "learned_from": [6],
+   "training_cost_copper": 250,
    "id": 3866,
    "name": "Stylish Red Shirt",
    "learnedat": 110,
@@ -1168,6 +1243,7 @@
    "skillup_colors": [110, 110, 127, 145]
   },
   "3868": {
+   "learned_from": [2],
    "id": 3868,
    "name": "Phoenix Gloves",
    "learnedat": 125,
@@ -1198,6 +1274,7 @@
    "skillup_colors": [125, 125, 142, 160]
   },
   "3869": {
+   "learned_from": [5],
    "id": 3869,
    "name": "Bright Yellow Shirt",
    "learnedat": 135,
@@ -1223,6 +1300,7 @@
    "env_status": "unchanged"
   },
   "3870": {
+   "learned_from": [5],
    "id": 3870,
    "name": "Dark Silk Shirt",
    "learnedat": 155,
@@ -1248,6 +1326,8 @@
    "env_status": "unchanged"
   },
   "3871": {
+   "learned_from": [6],
+   "training_cost_copper": 500,
    "id": 3871,
    "name": "Formal White Shirt",
    "learnedat": 170,
@@ -1273,6 +1353,7 @@
    "env_status": "unchanged"
   },
   "3872": {
+   "learned_from": [2, 21],
    "id": 3872,
    "name": "Rich Purple Silk Shirt",
    "learnedat": 185,
@@ -1298,6 +1379,7 @@
    "env_status": "unchanged"
   },
   "3873": {
+   "learned_from": [5],
    "id": 3873,
    "name": "Black Swashbuckler's Shirt",
    "learnedat": 200,
@@ -1323,6 +1405,8 @@
    "env_status": "unchanged"
   },
   "3908": {
+   "learned_from": [6],
+   "training_cost_copper": 10,
    "id": 3908,
    "name": "Tailoring",
    "learnedat": 9999,
@@ -1331,6 +1415,8 @@
    "env_status": "unchanged"
   },
   "3909": {
+   "learned_from": [6],
+   "training_cost_copper": 500,
    "id": 3909,
    "name": "Tailoring",
    "learnedat": 50,
@@ -1339,6 +1425,8 @@
    "env_status": "unchanged"
   },
   "3910": {
+   "learned_from": [6],
+   "training_cost_copper": 5000,
    "id": 3910,
    "name": "Tailoring",
    "learnedat": 125,
@@ -1347,6 +1435,8 @@
    "env_status": "unchanged"
   },
   "3914": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 3914,
    "name": "Brown Linen Pants",
    "learnedat": 30,
@@ -1391,6 +1481,8 @@
    "skillup_colors": [1, 35, 47, 60]
   },
   "6521": {
+   "learned_from": [6],
+   "training_cost_copper": 400,
    "id": 6521,
    "name": "Pearl-clasped Cloak",
    "learnedat": 90,
@@ -1417,6 +1509,7 @@
    "skillup_colors": [90, 95, 112, 130]
   },
   "6686": {
+   "learned_from": [2, 5],
    "id": 6686,
    "name": "Red Linen Bag",
    "learnedat": 70,
@@ -1443,6 +1536,7 @@
    "skillup_colors": [70, 75, 92, 110]
   },
   "6688": {
+   "learned_from": [2, 5],
    "id": 6688,
    "name": "Red Woolen Bag",
    "learnedat": 115,
@@ -1469,6 +1563,8 @@
    "skillup_colors": [115, 115, 132, 150]
   },
   "6690": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 6690,
    "name": "Lesser Wizard's Robe",
    "learnedat": 135,
@@ -1495,6 +1591,7 @@
    "skillup_colors": [135, 135, 145, 160]
   },
   "6692": {
+   "learned_from": [2],
    "id": 6692,
    "name": "Robes of Arcana",
    "learnedat": 150,
@@ -1521,6 +1618,7 @@
    "skillup_colors": [150, 150, 160, 175]
   },
   "6693": {
+   "learned_from": [2],
    "id": 6693,
    "name": "Green Silk Pack",
    "learnedat": 175,
@@ -1551,6 +1649,7 @@
    "skillup_colors": [175, 175, 175, 190]
   },
   "6695": {
+   "learned_from": [2],
    "id": 6695,
    "name": "Black Silk Pack",
    "learnedat": 185,
@@ -1577,6 +1676,8 @@
    "skillup_colors": [185, 185, 185, 200]
   },
   "7623": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 7623,
    "name": "Brown Linen Robe",
    "learnedat": 30,
@@ -1599,6 +1700,8 @@
    "skillup_colors": [30, 50, 67, 85]
   },
   "7624": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 7624,
    "name": "White Linen Robe",
    "learnedat": 30,
@@ -1625,6 +1728,7 @@
    "skillup_colors": [30, 50, 67, 85]
   },
   "7629": {
+   "learned_from": [2, 16, 21],
    "id": 7629,
    "name": "Red Linen Vest",
    "learnedat": 55,
@@ -1651,6 +1755,7 @@
    "skillup_colors": [55, 60, 77, 95]
   },
   "7630": {
+   "learned_from": [5],
    "id": 7630,
    "name": "Blue Linen Vest",
    "learnedat": 55,
@@ -1677,6 +1782,7 @@
    "skillup_colors": [55, 60, 77, 95]
   },
   "7633": {
+   "learned_from": [5],
    "id": 7633,
    "name": "Blue Linen Robe",
    "learnedat": 70,
@@ -1703,6 +1809,7 @@
    "skillup_colors": [70, 70, 87, 105]
   },
   "7639": {
+   "learned_from": [5],
    "id": 7639,
    "name": "Blue Overalls",
    "learnedat": 100,
@@ -1729,6 +1836,7 @@
    "skillup_colors": [100, 100, 117, 135]
   },
   "7643": {
+   "learned_from": [5],
    "id": 7643,
    "name": "Greater Adept's Robe",
    "learnedat": 115,
@@ -1755,6 +1863,7 @@
    "skillup_colors": [115, 115, 132, 150]
   },
   "7892": {
+   "learned_from": [2],
    "id": 7892,
    "name": "Stylish Blue Shirt",
    "learnedat": 120,
@@ -1785,6 +1894,7 @@
    "skillup_colors": [120, 120, 137, 155]
   },
   "7893": {
+   "learned_from": [2, 16],
    "id": 7893,
    "name": "Stylish Green Shirt",
    "learnedat": 120,
@@ -1815,6 +1925,8 @@
    "skillup_colors": [120, 120, 137, 155]
   },
   "8465": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 8465,
    "name": "Simple Dress",
    "learnedat": 40,
@@ -1845,6 +1957,8 @@
    "skillup_colors": [40, 50, 67, 85]
   },
   "8467": {
+   "learned_from": [6],
+   "training_cost_copper": 250,
    "id": 8467,
    "name": "White Woolen Dress",
    "learnedat": 110,
@@ -1871,6 +1985,8 @@
    "skillup_colors": [110, 110, 127, 145]
   },
   "8483": {
+   "learned_from": [6],
+   "training_cost_copper": 500,
    "id": 8483,
    "name": "White Swashbuckler's Shirt",
    "learnedat": 160,
@@ -1896,6 +2012,8 @@
    "env_status": "unchanged"
   },
   "8489": {
+   "learned_from": [6],
+   "training_cost_copper": 750,
    "id": 8489,
    "name": "Red Swashbuckler's Shirt",
    "learnedat": 175,
@@ -1921,6 +2039,8 @@
    "env_status": "unchanged"
   },
   "8758": {
+   "learned_from": [6],
+   "training_cost_copper": 600,
    "id": 8758,
    "name": "Azure Silk Pants",
    "learnedat": 140,
@@ -1947,6 +2067,8 @@
    "skillup_colors": [140, 140, 150, 165]
   },
   "8760": {
+   "learned_from": [6],
+   "training_cost_copper": 600,
    "id": 8760,
    "name": "Azure Silk Hood",
    "learnedat": 145,
@@ -1972,6 +2094,8 @@
    "env_status": "unchanged"
   },
   "8762": {
+   "learned_from": [6],
+   "training_cost_copper": 750,
    "id": 8762,
    "name": "Silk Headband",
    "learnedat": 160,
@@ -1993,6 +2117,8 @@
    "env_status": "unchanged"
   },
   "8764": {
+   "learned_from": [6],
+   "training_cost_copper": 900,
    "id": 8764,
    "name": "Earthen Vest",
    "learnedat": 170,
@@ -2019,6 +2145,8 @@
    "skillup_colors": [170, 170, 170, 185]
   },
   "8766": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 8766,
    "name": "Azure Silk Belt",
    "learnedat": 175,
@@ -2053,6 +2181,8 @@
    "skillup_colors": [175, 175, 175, 190]
   },
   "8770": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 8770,
    "name": "Robe of Power",
    "learnedat": 190,
@@ -2091,6 +2221,8 @@
    "skillup_colors": [190, 190, 190, 205]
   },
   "8772": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 8772,
    "name": "Crimson Silk Belt",
    "learnedat": 175,
@@ -2121,6 +2253,8 @@
    "skillup_colors": [175, 175, 175, 190]
   },
   "8774": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 8774,
    "name": "Green Silken Shoulders",
    "learnedat": 180,
@@ -2143,6 +2277,8 @@
    "skillup_colors": [180, 180, 180, 195]
   },
   "8776": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 8776,
    "name": "Linen Belt",
    "learnedat": 15,
@@ -2165,6 +2301,7 @@
    "skillup_colors": [15, 50, 67, 85]
   },
   "8780": {
+   "learned_from": [2, 16],
    "id": 8780,
    "name": "Hands of Darkness",
    "learnedat": 145,
@@ -2195,6 +2332,7 @@
    "skillup_colors": [145, 145, 155, 170]
   },
   "8782": {
+   "learned_from": [2],
    "id": 8782,
    "name": "Truefaith Gloves",
    "learnedat": 150,
@@ -2225,6 +2363,7 @@
    "skillup_colors": [150, 150, 160, 175]
   },
   "8784": {
+   "learned_from": [2],
    "id": 8784,
    "name": "Green Silk Armor",
    "learnedat": 165,
@@ -2251,6 +2390,7 @@
    "skillup_colors": [165, 165, 165, 180]
   },
   "8786": {
+   "learned_from": [5],
    "id": 8786,
    "name": "Azure Silk Cloak",
    "learnedat": 175,
@@ -2277,6 +2417,7 @@
    "skillup_colors": [175, 175, 175, 190]
   },
   "8789": {
+   "learned_from": [5],
    "id": 8789,
    "name": "Crimson Silk Cloak",
    "learnedat": 180,
@@ -2307,6 +2448,8 @@
    "skillup_colors": [180, 180, 180, 195]
   },
   "8791": {
+   "learned_from": [6],
+   "training_cost_copper": 2500,
    "id": 8791,
    "name": "Crimson Silk Vest",
    "learnedat": 185,
@@ -2332,6 +2475,7 @@
    "env_status": "unchanged"
   },
   "8793": {
+   "learned_from": [2],
    "id": 8793,
    "name": "Crimson Silk Shoulders",
    "learnedat": 190,
@@ -2362,6 +2506,7 @@
    "skillup_colors": [190, 190, 190, 205]
   },
   "8795": {
+   "learned_from": [2, 16],
    "id": 8795,
    "name": "Azure Shoulders",
    "learnedat": 190,
@@ -2392,6 +2537,7 @@
    "skillup_colors": [190, 190, 190, 205]
   },
   "8797": {
+   "learned_from": [2],
    "id": 8797,
    "name": "Earthen Silk Belt",
    "learnedat": 195,
@@ -2426,6 +2572,8 @@
    "skillup_colors": [195, 195, 195, 210]
   },
   "8799": {
+   "learned_from": [6],
+   "training_cost_copper": 3000,
    "id": 8799,
    "name": "Crimson Silk Pantaloons",
    "learnedat": 195,
@@ -2451,6 +2599,7 @@
    "env_status": "unchanged"
   },
   "8802": {
+   "learned_from": [5],
    "id": 8802,
    "name": "Crimson Silk Robe",
    "learnedat": 205,
@@ -2484,6 +2633,8 @@
    "env_status": "unchanged"
   },
   "8804": {
+   "learned_from": [6],
+   "training_cost_copper": 5000,
    "id": 8804,
    "name": "Crimson Silk Gloves",
    "learnedat": 210,
@@ -2543,6 +2694,8 @@
    "skillup_colors": [1, 40, 50, 60]
   },
   "12045": {
+   "learned_from": [6],
+   "training_cost_copper": 50,
    "id": 12045,
    "name": "Simple Linen Boots",
    "learnedat": 20,
@@ -2569,6 +2722,8 @@
    "skillup_colors": [20, 50, 67, 85]
   },
   "12046": {
+   "learned_from": [6],
+   "training_cost_copper": 300,
    "id": 12046,
    "name": "Simple Kilt",
    "learnedat": 75,
@@ -2591,6 +2746,7 @@
    "skillup_colors": [75, 75, 92, 110]
   },
   "12047": {
+   "learned_from": [2],
    "id": 12047,
    "name": "Colorful Kilt",
    "learnedat": 120,
@@ -2616,6 +2772,8 @@
    "env_status": "unchanged"
   },
   "12048": {
+   "learned_from": [6],
+   "training_cost_copper": 4000,
    "id": 12048,
    "name": "Black Mageweave Vest",
    "learnedat": 205,
@@ -2637,6 +2795,8 @@
    "env_status": "unchanged"
   },
   "12049": {
+   "learned_from": [6],
+   "training_cost_copper": 4000,
    "id": 12049,
    "name": "Black Mageweave Leggings",
    "learnedat": 205,
@@ -2658,6 +2818,8 @@
    "env_status": "unchanged"
   },
   "12050": {
+   "learned_from": [6],
+   "training_cost_copper": 4000,
    "id": 12050,
    "name": "Black Mageweave Robe",
    "learnedat": 210,
@@ -2679,6 +2841,7 @@
    "env_status": "unchanged"
   },
   "12052": {
+   "training_cost_copper": 4500,
    "id": 12052,
    "name": "Shadoweave Pants",
    "learnedat": 210,
@@ -2704,6 +2867,8 @@
    "env_status": "unchanged"
   },
   "12053": {
+   "learned_from": [6],
+   "training_cost_copper": 5000,
    "id": 12053,
    "name": "Black Mageweave Gloves",
    "learnedat": 215,
@@ -2725,6 +2890,7 @@
    "env_status": "unchanged"
   },
   "12055": {
+   "training_cost_copper": 4950,
    "id": 12055,
    "name": "Shadoweave Robe",
    "learnedat": 215,
@@ -2750,6 +2916,7 @@
    "env_status": "unchanged"
   },
   "12056": {
+   "learned_from": [2, 16],
    "id": 12056,
    "name": "Red Mageweave Vest",
    "learnedat": 215,
@@ -2775,6 +2942,7 @@
    "env_status": "unchanged"
   },
   "12059": {
+   "learned_from": [2],
    "id": 12059,
    "name": "White Bandit Mask",
    "learnedat": 215,
@@ -2800,6 +2968,7 @@
    "env_status": "unchanged"
   },
   "12060": {
+   "learned_from": [2],
    "id": 12060,
    "name": "Red Mageweave Pants",
    "learnedat": 215,
@@ -2825,6 +2994,8 @@
    "env_status": "unchanged"
   },
   "12061": {
+   "learned_from": [6],
+   "training_cost_copper": 2500,
    "id": 12061,
    "name": "Orange Mageweave Shirt",
    "learnedat": 215,
@@ -2850,6 +3021,7 @@
    "env_status": "unchanged"
   },
   "12064": {
+   "learned_from": [5],
    "id": 12064,
    "name": "Orange Martial Shirt",
    "learnedat": 220,
@@ -2875,6 +3047,8 @@
    "env_status": "unchanged"
   },
   "12065": {
+   "learned_from": [6],
+   "training_cost_copper": 5000,
    "id": 12065,
    "name": "Mageweave Bag",
    "learnedat": 225,
@@ -2896,6 +3070,7 @@
    "env_status": "unchanged"
   },
   "12066": {
+   "learned_from": [2, 16],
    "id": 12066,
    "name": "Red Mageweave Gloves",
    "learnedat": 225,
@@ -2921,6 +3096,8 @@
    "env_status": "unchanged"
   },
   "12067": {
+   "learned_from": [6],
+   "training_cost_copper": 5000,
    "id": 12067,
    "name": "Dreamweave Gloves",
    "learnedat": 225,
@@ -2950,6 +3127,8 @@
    "env_status": "unchanged"
   },
   "12069": {
+   "learned_from": [6],
+   "training_cost_copper": 5000,
    "id": 12069,
    "name": "Cindercloth Robe",
    "learnedat": 225,
@@ -2975,6 +3154,8 @@
    "env_status": "unchanged"
   },
   "12070": {
+   "learned_from": [6],
+   "training_cost_copper": 5000,
    "id": 12070,
    "name": "Dreamweave Vest",
    "learnedat": 225,
@@ -3004,6 +3185,7 @@
    "env_status": "unchanged"
   },
   "12071": {
+   "training_cost_copper": 5400,
    "id": 12071,
    "name": "Shadoweave Gloves",
    "learnedat": 225,
@@ -3029,6 +3211,8 @@
    "env_status": "unchanged"
   },
   "12072": {
+   "learned_from": [6],
+   "training_cost_copper": 6000,
    "id": 12072,
    "name": "Black Mageweave Headband",
    "learnedat": 230,
@@ -3050,6 +3234,8 @@
    "env_status": "unchanged"
   },
   "12073": {
+   "learned_from": [6],
+   "training_cost_copper": 6000,
    "id": 12073,
    "name": "Black Mageweave Boots",
    "learnedat": 230,
@@ -3075,6 +3261,8 @@
    "env_status": "unchanged"
   },
   "12074": {
+   "learned_from": [6],
+   "training_cost_copper": 6000,
    "id": 12074,
    "name": "Black Mageweave Shoulders",
    "learnedat": 230,
@@ -3096,6 +3284,7 @@
    "env_status": "unchanged"
   },
   "12075": {
+   "learned_from": [5],
    "id": 12075,
    "name": "Lavender Mageweave Shirt",
    "learnedat": 230,
@@ -3121,6 +3310,7 @@
    "env_status": "unchanged"
   },
   "12076": {
+   "training_cost_copper": 5850,
    "id": 12076,
    "name": "Shadoweave Shoulders",
    "learnedat": 235,
@@ -3146,6 +3336,8 @@
    "env_status": "unchanged"
   },
   "12077": {
+   "learned_from": [6],
+   "training_cost_copper": 5000,
    "id": 12077,
    "name": "Simple Black Dress",
    "learnedat": 235,
@@ -3175,6 +3367,7 @@
    "env_status": "unchanged"
   },
   "12078": {
+   "learned_from": [2],
    "id": 12078,
    "name": "Red Mageweave Shoulders",
    "learnedat": 235,
@@ -3200,6 +3393,8 @@
    "env_status": "unchanged"
   },
   "12079": {
+   "learned_from": [6],
+   "training_cost_copper": 6500,
    "id": 12079,
    "name": "Red Mageweave Bag",
    "learnedat": 235,
@@ -3225,6 +3420,7 @@
    "env_status": "unchanged"
   },
   "12080": {
+   "learned_from": [5],
    "id": 12080,
    "name": "Pink Mageweave Shirt",
    "learnedat": 235,
@@ -3250,6 +3446,7 @@
    "env_status": "unchanged"
   },
   "12081": {
+   "learned_from": [5],
    "id": 12081,
    "name": "Admiral's Hat",
    "learnedat": 240,
@@ -3275,6 +3472,7 @@
    "env_status": "unchanged"
   },
   "12082": {
+   "training_cost_copper": 6300,
    "id": 12082,
    "name": "Shadoweave Boots",
    "learnedat": 240,
@@ -3304,6 +3502,7 @@
    "env_status": "unchanged"
   },
   "12084": {
+   "learned_from": [2, 16],
    "id": 12084,
    "name": "Red Mageweave Headband",
    "learnedat": 240,
@@ -3329,6 +3528,7 @@
    "env_status": "unchanged"
   },
   "12085": {
+   "learned_from": [5],
    "id": 12085,
    "name": "Tuxedo Shirt",
    "learnedat": 240,
@@ -3350,6 +3550,7 @@
    "env_status": "unchanged"
   },
   "12086": {
+   "learned_from": [4],
    "id": 12086,
    "name": "Shadoweave Mask",
    "learnedat": 245,
@@ -3375,6 +3576,8 @@
    "env_status": "unchanged"
   },
   "12088": {
+   "learned_from": [6],
+   "training_cost_copper": 7500,
    "id": 12088,
    "name": "Cindercloth Boots",
    "learnedat": 245,
@@ -3404,6 +3607,7 @@
    "env_status": "unchanged"
   },
   "12089": {
+   "learned_from": [5],
    "id": 12089,
    "name": "Tuxedo Pants",
    "learnedat": 245,
@@ -3425,6 +3629,7 @@
    "env_status": "unchanged"
   },
   "12091": {
+   "learned_from": [5],
    "id": 12091,
    "name": "White Wedding Dress",
    "learnedat": 250,
@@ -3450,6 +3655,8 @@
    "env_status": "unchanged"
   },
   "12092": {
+   "learned_from": [6],
+   "training_cost_copper": 7500,
    "id": 12092,
    "name": "Dreamweave Circlet",
    "learnedat": 250,
@@ -3487,6 +3694,7 @@
    "env_status": "unchanged"
   },
   "12093": {
+   "learned_from": [5],
    "id": 12093,
    "name": "Tuxedo Jacket",
    "learnedat": 250,
@@ -3508,6 +3716,8 @@
    "env_status": "unchanged"
   },
   "12180": {
+   "learned_from": [6],
+   "training_cost_copper": 50000,
    "id": 12180,
    "name": "Tailoring",
    "learnedat": 200,
@@ -3516,6 +3726,8 @@
    "env_status": "unchanged"
   },
   "18401": {
+   "learned_from": [6],
+   "training_cost_copper": 10000,
    "id": 18401,
    "name": "Bolt of Runecloth",
    "learnedat": 250,
@@ -3533,6 +3745,8 @@
    "env_status": "unchanged"
   },
   "18402": {
+   "learned_from": [6],
+   "training_cost_copper": 10000,
    "id": 18402,
    "name": "Runecloth Belt",
    "learnedat": 255,
@@ -3554,6 +3768,7 @@
    "env_status": "unchanged"
   },
   "18403": {
+   "learned_from": [2, 16],
    "id": 18403,
    "name": "Frostweave Tunic",
    "learnedat": 255,
@@ -3579,6 +3794,7 @@
    "env_status": "unchanged"
   },
   "18404": {
+   "learned_from": [2],
    "id": 18404,
    "name": "Frostweave Robe",
    "learnedat": 255,
@@ -3604,6 +3820,7 @@
    "env_status": "unchanged"
   },
   "18405": {
+   "learned_from": [5],
    "id": 18405,
    "name": "Runecloth Bag",
    "learnedat": 260,
@@ -3637,6 +3854,7 @@
    "env_status": "unchanged"
   },
   "18406": {
+   "learned_from": [5],
    "id": 18406,
    "name": "Runecloth Robe",
    "learnedat": 260,
@@ -3662,6 +3880,7 @@
    "env_status": "unchanged"
   },
   "18407": {
+   "learned_from": [2],
    "id": 18407,
    "name": "Runecloth Tunic",
    "learnedat": 260,
@@ -3687,6 +3906,7 @@
    "env_status": "unchanged"
   },
   "18408": {
+   "learned_from": [2],
    "id": 18408,
    "name": "Cindercloth Vest",
    "learnedat": 260,
@@ -3712,6 +3932,7 @@
    "env_status": "unchanged"
   },
   "18409": {
+   "learned_from": [5],
    "id": 18409,
    "name": "Runecloth Cloak",
    "learnedat": 265,
@@ -3737,6 +3958,7 @@
    "env_status": "unchanged"
   },
   "18410": {
+   "learned_from": [2],
    "id": 18410,
    "name": "Ghostweave Belt",
    "learnedat": 265,
@@ -3766,6 +3988,7 @@
    "env_status": "unchanged"
   },
   "18411": {
+   "learned_from": [2, 16],
    "id": 18411,
    "name": "Frostweave Gloves",
    "learnedat": 265,
@@ -3791,6 +4014,7 @@
    "env_status": "unchanged"
   },
   "18412": {
+   "learned_from": [2],
    "id": 18412,
    "name": "Cindercloth Gloves",
    "learnedat": 270,
@@ -3816,6 +4040,7 @@
    "env_status": "unchanged"
   },
   "18413": {
+   "learned_from": [2],
    "id": 18413,
    "name": "Ghostweave Gloves",
    "learnedat": 270,
@@ -3845,6 +4070,7 @@
    "env_status": "unchanged"
   },
   "18414": {
+   "learned_from": [2, 16],
    "id": 18414,
    "name": "Brightcloth Robe",
    "learnedat": 270,
@@ -3870,6 +4096,7 @@
    "env_status": "unchanged"
   },
   "18415": {
+   "learned_from": [2],
    "id": 18415,
    "name": "Brightcloth Gloves",
    "learnedat": 270,
@@ -3895,6 +4122,7 @@
    "env_status": "unchanged"
   },
   "18416": {
+   "learned_from": [2],
    "id": 18416,
    "name": "Ghostweave Vest",
    "learnedat": 275,
@@ -3924,6 +4152,7 @@
    "env_status": "unchanged"
   },
   "18417": {
+   "learned_from": [5],
    "id": 18417,
    "name": "Runecloth Gloves",
    "learnedat": 275,
@@ -3949,6 +4178,7 @@
    "env_status": "unchanged"
   },
   "18418": {
+   "learned_from": [2],
    "id": 18418,
    "name": "Cindercloth Cloak",
    "learnedat": 275,
@@ -3974,6 +4204,7 @@
    "env_status": "unchanged"
   },
   "18419": {
+   "learned_from": [5],
    "id": 18419,
    "name": "Felcloth Pants",
    "learnedat": 275,
@@ -3999,6 +4230,7 @@
    "env_status": "unchanged"
   },
   "18420": {
+   "learned_from": [2],
    "id": 18420,
    "name": "Brightcloth Cloak",
    "learnedat": 275,
@@ -4024,6 +4256,7 @@
    "env_status": "unchanged"
   },
   "18421": {
+   "learned_from": [2],
    "id": 18421,
    "name": "Wizardweave Leggings",
    "learnedat": 275,
@@ -4049,6 +4282,7 @@
    "env_status": "unchanged"
   },
   "18422": {
+   "learned_from": [2],
    "id": 18422,
    "name": "Cloak of Fire",
    "learnedat": 275,
@@ -4082,6 +4316,7 @@
    "env_status": "unchanged"
   },
   "18423": {
+   "learned_from": [5],
    "id": 18423,
    "name": "Runecloth Boots",
    "learnedat": 280,
@@ -4111,6 +4346,7 @@
    "env_status": "unchanged"
   },
   "18424": {
+   "learned_from": [2],
    "id": 18424,
    "name": "Frostweave Pants",
    "learnedat": 280,
@@ -4136,6 +4372,7 @@
    "env_status": "unchanged"
   },
   "18434": {
+   "learned_from": [2],
    "id": 18434,
    "name": "Cindercloth Pants",
    "learnedat": 280,
@@ -4161,6 +4398,7 @@
    "env_status": "unchanged"
   },
   "18436": {
+   "learned_from": [2],
    "id": 18436,
    "name": "Robe of Winter Night",
    "learnedat": 285,
@@ -4194,6 +4432,7 @@
    "env_status": "unchanged"
   },
   "18437": {
+   "learned_from": [2, 16],
    "id": 18437,
    "name": "Felcloth Boots",
    "learnedat": 285,
@@ -4223,6 +4462,7 @@
    "env_status": "unchanged"
   },
   "18438": {
+   "learned_from": [2],
    "id": 18438,
    "name": "Runecloth Pants",
    "learnedat": 285,
@@ -4248,6 +4488,7 @@
    "env_status": "unchanged"
   },
   "18439": {
+   "learned_from": [2],
    "id": 18439,
    "name": "Brightcloth Pants",
    "learnedat": 290,
@@ -4277,6 +4518,7 @@
    "env_status": "unchanged"
   },
   "18440": {
+   "learned_from": [2],
    "id": 18440,
    "name": "Mooncloth Leggings",
    "learnedat": 290,
@@ -4302,6 +4544,7 @@
    "env_status": "unchanged"
   },
   "18441": {
+   "learned_from": [2],
    "id": 18441,
    "name": "Ghostweave Pants",
    "learnedat": 290,
@@ -4327,6 +4570,7 @@
    "env_status": "unchanged"
   },
   "18442": {
+   "learned_from": [2],
    "id": 18442,
    "name": "Felcloth Hood",
    "learnedat": 290,
@@ -4352,6 +4596,7 @@
    "env_status": "unchanged"
   },
   "18444": {
+   "learned_from": [2],
    "id": 18444,
    "name": "Runecloth Headband",
    "learnedat": 295,
@@ -4377,6 +4622,7 @@
    "env_status": "unchanged"
   },
   "18445": {
+   "learned_from": [2],
    "id": 18445,
    "name": "Mooncloth Bag",
    "learnedat": 300,
@@ -4414,6 +4660,7 @@
    "env_status": "unchanged"
   },
   "18446": {
+   "learned_from": [2],
    "id": 18446,
    "name": "Wizardweave Robe",
    "learnedat": 300,
@@ -4439,6 +4686,7 @@
    "env_status": "unchanged"
   },
   "18447": {
+   "learned_from": [2],
    "id": 18447,
    "name": "Mooncloth Vest",
    "learnedat": 300,
@@ -4465,6 +4713,7 @@
    "skillup_colors": [300, 300, 300, 315]
   },
   "18448": {
+   "learned_from": [2],
    "id": 18448,
    "name": "Mooncloth Shoulders",
    "learnedat": 300,
@@ -4491,6 +4740,7 @@
    "skillup_colors": [300, 300, 305, 320]
   },
   "18449": {
+   "learned_from": [2],
    "id": 18449,
    "name": "Runecloth Shoulders",
    "learnedat": 300,
@@ -4520,6 +4770,7 @@
    "env_status": "unchanged"
   },
   "18450": {
+   "learned_from": [2],
    "id": 18450,
    "name": "Wizardweave Turban",
    "learnedat": 300,
@@ -4549,6 +4800,7 @@
    "env_status": "unchanged"
   },
   "18451": {
+   "learned_from": [2],
    "id": 18451,
    "name": "Felcloth Robe",
    "learnedat": 300,
@@ -4578,6 +4830,7 @@
    "env_status": "unchanged"
   },
   "18452": {
+   "learned_from": [2],
    "id": 18452,
    "name": "Mooncloth Circlet",
    "learnedat": 300,
@@ -4612,6 +4865,7 @@
    "skillup_colors": [300, 300, 310, 325]
   },
   "18453": {
+   "learned_from": [2, 16],
    "id": 18453,
    "name": "Felcloth Shoulders",
    "learnedat": 300,
@@ -4645,6 +4899,7 @@
    "env_status": "unchanged"
   },
   "18454": {
+   "learned_from": [2],
    "id": 18454,
    "name": "Gloves of Spell Mastery",
    "learnedat": 300,
@@ -4691,6 +4946,7 @@
    "skillup_colors": [300, 310, 325, 340]
   },
   "18455": {
+   "learned_from": [2],
    "id": 18455,
    "name": "Bottomless Bag",
    "learnedat": 300,
@@ -4733,6 +4989,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "18456": {
+   "learned_from": [2],
    "id": 18456,
    "name": "Truefaith Vestments",
    "learnedat": 300,
@@ -4775,6 +5032,7 @@
    "skillup_colors": [300, 310, 325, 340]
   },
   "18457": {
+   "learned_from": [2],
    "id": 18457,
    "name": "Robe of the Archmage",
    "learnedat": 300,
@@ -4817,6 +5075,7 @@
    "skillup_colors": [300, 310, 325, 340]
   },
   "18458": {
+   "learned_from": [2],
    "id": 18458,
    "name": "Robe of the Void",
    "learnedat": 300,
@@ -4859,6 +5118,7 @@
    "skillup_colors": [300, 310, 325, 340]
   },
   "18560": {
+   "learned_from": [5],
    "id": 18560,
    "name": "Mooncloth",
    "learnedat": 250,
@@ -4877,6 +5137,7 @@
    "skillup_colors": [250, 270, 285, 300]
   },
   "19435": {
+   "learned_from": [4],
    "id": 19435,
    "name": "Mooncloth Boots",
    "learnedat": 290,
@@ -4907,6 +5168,7 @@
    "skillup_colors": [290, 290, 300, 315]
   },
   "20848": {
+   "learned_from": [5],
    "id": 20848,
    "name": "Flarecore Mantle",
    "learnedat": 300,
@@ -4941,6 +5203,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "20849": {
+   "learned_from": [5],
    "id": 20849,
    "name": "Flarecore Gloves",
    "learnedat": 300,
@@ -4975,6 +5238,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "21945": {
+   "learned_from": [2],
    "id": 21945,
    "name": "Green Holiday Shirt",
    "learnedat": 190,
@@ -5000,6 +5264,7 @@
    "env_status": "unchanged"
   },
   "22759": {
+   "learned_from": [2],
    "id": 22759,
    "name": "Flarecore Wraps",
    "learnedat": 300,
@@ -5063,6 +5328,7 @@
    "env_status": "unchanged"
   },
   "22866": {
+   "learned_from": [2],
    "id": 22866,
    "name": "Belt of the Archmage",
    "learnedat": 300,
@@ -5109,6 +5375,7 @@
    "skillup_colors": [300, 310, 325, 340]
   },
   "22867": {
+   "learned_from": [2],
    "id": 22867,
    "name": "Felcloth Gloves",
    "learnedat": 300,
@@ -5143,6 +5410,7 @@
    "skillup_colors": [300, 300, 310, 325]
   },
   "22868": {
+   "learned_from": [2],
    "id": 22868,
    "name": "Inferno Gloves",
    "learnedat": 300,
@@ -5173,6 +5441,7 @@
    "skillup_colors": [300, 300, 310, 325]
   },
   "22869": {
+   "learned_from": [2],
    "id": 22869,
    "name": "Mooncloth Gloves",
    "learnedat": 300,
@@ -5203,6 +5472,7 @@
    "skillup_colors": [300, 300, 310, 325]
   },
   "22870": {
+   "learned_from": [2],
    "id": 22870,
    "name": "Cloak of Warding",
    "learnedat": 300,
@@ -5233,6 +5503,7 @@
    "skillup_colors": [300, 300, 310, 325]
   },
   "22902": {
+   "learned_from": [5],
    "id": 22902,
    "name": "Mooncloth Robe",
    "learnedat": 300,
@@ -5263,6 +5534,7 @@
    "skillup_colors": [300, 300, 305, 320]
   },
   "23662": {
+   "learned_from": [5],
    "id": 23662,
    "name": "Wisdom of the Timbermaw",
    "learnedat": 290,
@@ -5292,6 +5564,7 @@
    "env_status": "unchanged"
   },
   "23663": {
+   "learned_from": [5],
    "id": 23663,
    "name": "Mantle of the Timbermaw",
    "learnedat": 300,
@@ -5322,6 +5595,7 @@
    "skillup_colors": [300, 305, 319, 334]
   },
   "23664": {
+   "learned_from": [5],
    "id": 23664,
    "name": "Argent Boots",
    "learnedat": 290,
@@ -5355,6 +5629,7 @@
    "env_status": "unchanged"
   },
   "23665": {
+   "learned_from": [5],
    "id": 23665,
    "name": "Argent Shoulders",
    "learnedat": 300,
@@ -5381,6 +5656,7 @@
    "skillup_colors": [300, 305, 320, 335]
   },
   "23666": {
+   "learned_from": [5],
    "id": 23666,
    "name": "Flarecore Robe",
    "learnedat": 300,
@@ -5415,6 +5691,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "23667": {
+   "learned_from": [5],
    "id": 23667,
    "name": "Flarecore Leggings",
    "learnedat": 300,
@@ -5449,6 +5726,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "24091": {
+   "learned_from": [5],
    "id": 24091,
    "name": "Bloodvine Vest",
    "learnedat": 300,
@@ -5483,6 +5761,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "24092": {
+   "learned_from": [5],
    "id": 24092,
    "name": "Bloodvine Leggings",
    "learnedat": 300,
@@ -5517,6 +5796,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "24093": {
+   "learned_from": [5],
    "id": 24093,
    "name": "Bloodvine Boots",
    "learnedat": 300,
@@ -5551,6 +5831,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "24901": {
+   "learned_from": [2],
    "id": 24901,
    "name": "Runed Stygian Leggings",
    "learnedat": 300,
@@ -5581,6 +5862,7 @@
    "skillup_colors": [300, 300, 315, 330]
   },
   "24902": {
+   "learned_from": [2],
    "id": 24902,
    "name": "Runed Stygian Belt",
    "learnedat": 300,
@@ -5615,6 +5897,7 @@
    "skillup_colors": [300, 300, 315, 330]
   },
   "24903": {
+   "learned_from": [2],
    "id": 24903,
    "name": "Runed Stygian Boots",
    "learnedat": 300,
@@ -5649,6 +5932,7 @@
    "skillup_colors": [300, 300, 315, 330]
   },
   "26085": {
+   "learned_from": [5],
    "id": 26085,
    "name": "Soul Pouch",
    "learnedat": 260,
@@ -5707,6 +5991,7 @@
    "env_status": "unchanged"
   },
   "26087": {
+   "learned_from": [2],
    "id": 26087,
    "name": "Core Felcloth Bag",
    "learnedat": 300,
@@ -5741,6 +6026,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "26403": {
+   "learned_from": [4],
    "id": 26403,
    "name": "Festival Dress",
    "learnedat": 250,
@@ -5770,6 +6056,7 @@
    "env_status": "updated"
   },
   "26407": {
+   "learned_from": [4],
    "id": 26407,
    "name": "Festival Suit",
    "learnedat": 250,
@@ -5799,6 +6086,7 @@
    "env_status": "updated"
   },
   "27658": {
+   "learned_from": [5],
    "id": 27658,
    "name": "Enchanted Mageweave Pouch",
    "learnedat": 225,
@@ -5824,6 +6112,7 @@
    "env_status": "unchanged"
   },
   "27659": {
+   "learned_from": [5],
    "id": 27659,
    "name": "Enchanted Runecloth Bag",
    "learnedat": 275,
@@ -5849,6 +6138,7 @@
    "env_status": "unchanged"
   },
   "27660": {
+   "learned_from": [2],
    "id": 27660,
    "name": "Big Bag of Enchantment",
    "learnedat": 300,
@@ -5878,6 +6168,7 @@
    "env_status": "unchanged"
   },
   "27724": {
+   "learned_from": [5],
    "id": 27724,
    "name": "Cenarion Herb Bag",
    "learnedat": 275,
@@ -5907,6 +6198,7 @@
    "env_status": "unchanged"
   },
   "27725": {
+   "learned_from": [5],
    "id": 27725,
    "name": "Satchel of Cenarius",
    "learnedat": 300,
@@ -6056,6 +6348,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "28210": {
+   "learned_from": [5],
    "id": 28210,
    "name": "Gaea's Embrace",
    "learnedat": 300,
@@ -6086,6 +6379,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "28480": {
+   "learned_from": [5],
    "id": 28480,
    "name": "Sylvan Vest",
    "learnedat": 300,
@@ -6116,6 +6410,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "28481": {
+   "learned_from": [5],
    "id": 28481,
    "name": "Sylvan Crown",
    "learnedat": 300,
@@ -6146,6 +6441,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "28482": {
+   "learned_from": [5],
    "id": 28482,
    "name": "Sylvan Shoulders",
    "learnedat": 300,
@@ -6232,6 +6528,7 @@
    "skillup_colors": [250, 250, 252, 255]
   },
   "428424": {
+   "learned_from": [5],
    "id": 428424,
    "name": "Phoenix Bindings",
    "learnedat": 125,
@@ -6275,6 +6572,7 @@
    "env_status": "unchanged"
   },
   "435610": {
+   "learned_from": [5],
    "id": 435610,
    "name": "Gneuro-Linked Arcano-Filament Monocle",
    "learnedat": 225,
@@ -6305,6 +6603,7 @@
    "skillup_colors": [225, 225, 230, 235]
   },
   "435827": {
+   "learned_from": [5],
    "id": 435827,
    "name": "Hyperconductive Arcano-Filament",
    "learnedat": 200,
@@ -6331,6 +6630,7 @@
    "skillup_colors": [200, 200, 210, 220]
   },
   "435841": {
+   "learned_from": [2, 5],
    "id": 435841,
    "name": "Invoker's Cord",
    "learnedat": 150,
@@ -6361,6 +6661,7 @@
    "skillup_colors": [150, 170, 185, 200]
   },
   "435848": {
+   "learned_from": [2, 5],
    "id": 435848,
    "name": "Invoker's Mantle",
    "learnedat": 150,
@@ -6391,6 +6692,7 @@
    "skillup_colors": [150, 170, 185, 200]
   },
   "439085": {
+   "learned_from": [5],
    "id": 439085,
    "name": "Crimson Silk Robe",
    "learnedat": 205,
@@ -6421,6 +6723,8 @@
    "skillup_colors": [205, 220, 235, 250]
   },
   "439086": {
+   "learned_from": [6],
+   "training_cost_copper": 4000,
    "id": 439086,
    "name": "Black Mageweave Vest",
    "learnedat": 205,
@@ -6439,6 +6743,8 @@
    "skillup_colors": [205, 220, 235, 250]
   },
   "439088": {
+   "learned_from": [6],
+   "training_cost_copper": 4000,
    "id": 439088,
    "name": "Black Mageweave Leggings",
    "learnedat": 205,
@@ -6457,6 +6763,7 @@
    "skillup_colors": [205, 220, 235, 250]
   },
   "439091": {
+   "learned_from": [2],
    "id": 439091,
    "name": "Earthen Silk Belt",
    "learnedat": 195,
@@ -6487,6 +6794,7 @@
    "skillup_colors": [195, 215, 230, 245]
   },
   "439093": {
+   "learned_from": [2],
    "id": 439093,
    "name": "Crimson Silk Shoulders",
    "learnedat": 190,
@@ -6513,6 +6821,8 @@
    "skillup_colors": [190, 210, 225, 240]
   },
   "439094": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 439094,
    "name": "Long Silken Cloak",
    "learnedat": 185,
@@ -6535,6 +6845,7 @@
    "skillup_colors": [185, 205, 220, 235]
   },
   "439097": {
+   "learned_from": [2],
    "id": 439097,
    "name": "Boots of the Enchanter",
    "learnedat": 175,
@@ -6557,6 +6868,8 @@
    "skillup_colors": [175, 195, 210, 225]
   },
   "439098": {
+   "learned_from": [6],
+   "training_cost_copper": 1000,
    "id": 439098,
    "name": "Crimson Silk Belt",
    "learnedat": 175,
@@ -6583,6 +6896,8 @@
    "skillup_colors": [175, 195, 210, 225]
   },
   "439100": {
+   "learned_from": [6],
+   "training_cost_copper": 900,
    "id": 439100,
    "name": "Earthen Vest",
    "learnedat": 170,
@@ -6605,6 +6920,7 @@
    "skillup_colors": [170, 190, 205, 220]
   },
   "439102": {
+   "learned_from": [5],
    "id": 439102,
    "name": "Enchanter's Cowl",
    "learnedat": 165,
@@ -6731,6 +7047,7 @@
    "env_status": "unchanged"
   },
   "461708": {
+   "learned_from": [5],
    "id": 461708,
    "name": "Incandescent Mooncloth Robe",
    "learnedat": 300,
@@ -6757,6 +7074,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "461727": {
+   "learned_from": [5],
    "id": 461727,
    "name": "Leather-Reinforced Runecloth Bag",
    "learnedat": 300,
@@ -6787,6 +7105,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "461747": {
+   "learned_from": [2],
    "id": 461747,
    "name": "Incandescent Mooncloth Vest",
    "learnedat": 300,
@@ -6809,6 +7128,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "461750": {
+   "learned_from": [2],
    "id": 461750,
    "name": "Incandescent Mooncloth Circlet",
    "learnedat": 300,
@@ -6839,6 +7159,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "461752": {
+   "learned_from": [2],
    "id": 461752,
    "name": "Incandescent Mooncloth Leggings",
    "learnedat": 290,
@@ -6861,6 +7182,7 @@
    "skillup_colors": [290, 305, 320, 335]
   },
   "462282": {
+   "learned_from": [2],
    "id": 462282,
    "name": "Embroidered Belt of the Archmage",
    "learnedat": 300,
@@ -6899,6 +7221,7 @@
    "skillup_colors": [300, 315, 330, 345]
   },
   "463972": {
+   "learned_from": [2],
    "id": 463972,
    "name": "Bottomless Bag",
    "learnedat": 300,
@@ -7449,6 +7772,7 @@
    "env_status": "unchanged"
   },
   "1224607": {
+   "learned_from": [2],
    "id": 1224607,
    "name": "Scarlet Augur's Hood",
    "learnedat": 280,
@@ -7471,6 +7795,7 @@
    "skillup_colors": [280, 285, 295, 305]
   },
   "1224608": {
+   "learned_from": [2],
    "id": 1224608,
    "name": "Scarlet Augur's Mantle",
    "learnedat": 280,
@@ -7489,6 +7814,7 @@
    "skillup_colors": [280, 285, 295, 305]
   },
   "1224609": {
+   "learned_from": [2],
    "id": 1224609,
    "name": "Scarlet Augur's Vestments",
    "learnedat": 280,
@@ -7511,6 +7837,7 @@
    "skillup_colors": [280, 285, 295, 305]
   },
   "1224610": {
+   "learned_from": [2],
    "id": 1224610,
    "name": "Scarlet Augur's Cuffs",
    "learnedat": 250,
@@ -7525,6 +7852,7 @@
    "skillup_colors": [250, 260, 282, 305]
   },
   "1224611": {
+   "learned_from": [2],
    "id": 1224611,
    "name": "Scarlet Augur's Mitts",
    "learnedat": 260,
@@ -7543,6 +7871,7 @@
    "skillup_colors": [260, 270, 287, 305]
   },
   "1224612": {
+   "learned_from": [2],
    "id": 1224612,
    "name": "Scarlet Augur's Strap",
    "learnedat": 250,
@@ -7561,6 +7890,7 @@
    "skillup_colors": [250, 260, 282, 305]
   },
   "1224613": {
+   "learned_from": [2],
    "id": 1224613,
    "name": "Scarlet Augur's Leggings",
    "learnedat": 270,
@@ -7583,6 +7913,7 @@
    "skillup_colors": [270, 280, 292, 305]
   },
   "1224614": {
+   "learned_from": [2],
    "id": 1224614,
    "name": "Scarlet Augur's Soles",
    "learnedat": 260,
@@ -7665,6 +7996,8 @@
    "skillup_colors": [290, 300, 302, 305]
   },
   "1229504": {
+   "learned_from": [4, 6],
+   "training_cost_copper": 100,
    "id": 1229504,
    "name": "Faction Banner",
    "learnedat": 20,
@@ -7718,6 +8051,7 @@
    "env_status": "new"
   },
   "1257013": {
+   "learned_from": [5],
    "id": 1257013,
    "name": "Linen Reagent Bag",
    "learnedat": 5,
@@ -7740,6 +8074,7 @@
    "skillup_colors": [5, 30, 47, 65]
   },
   "1257017": {
+   "learned_from": [5],
    "id": 1257017,
    "name": "Woolen Reagent Bag",
    "learnedat": 70,
@@ -7766,6 +8101,8 @@
    "skillup_colors": [70, 75, 92, 110]
   },
   "1257368": {
+   "learned_from": [6],
+   "training_cost_copper": 526,
    "id": 1257368,
    "name": "Novice Arcanist's Sash",
    "learnedat": 50,
@@ -7792,6 +8129,8 @@
    "skillup_colors": [50, 55, 55, 55]
   },
   "1257369": {
+   "learned_from": [6],
+   "training_cost_copper": 526,
    "id": 1257369,
    "name": "Novice Ardent's Sash",
    "learnedat": 50,
@@ -7818,6 +8157,7 @@
    "skillup_colors": [50, 55, 55, 55]
   },
   "1257370": {
+   "learned_from": [5],
    "id": 1257370,
    "name": "Pristine Boots",
    "learnedat": 60,
@@ -7848,6 +8188,7 @@
    "skillup_colors": [60, 85, 102, 120]
   },
   "1257371": {
+   "learned_from": [5],
    "id": 1257371,
    "name": "Silky Boots",
    "learnedat": 60,
@@ -7878,6 +8219,7 @@
    "skillup_colors": [60, 85, 102, 120]
   },
   "1257372": {
+   "learned_from": [5],
    "id": 1257372,
    "name": "Flame Boots",
    "learnedat": 60,
@@ -7908,6 +8250,7 @@
    "skillup_colors": [60, 85, 102, 120]
   },
   "1257373": {
+   "learned_from": [5],
    "id": 1257373,
    "name": "Shadow Boots",
    "learnedat": 60,
@@ -7938,6 +8281,7 @@
    "skillup_colors": [60, 85, 102, 120]
   },
   "1257374": {
+   "learned_from": [5],
    "id": 1257374,
    "name": "Pearly Boots",
    "learnedat": 60,
@@ -7968,6 +8312,7 @@
    "skillup_colors": [60, 85, 102, 120]
   },
   "1257375": {
+   "learned_from": [5],
    "id": 1257375,
    "name": "Shining Boots",
    "learnedat": 60,
@@ -7998,6 +8343,7 @@
    "skillup_colors": [60, 85, 102, 120]
   },
   "1257376": {
+   "learned_from": [2],
    "id": 1257376,
    "name": "Filigreed Pristine Gown",
    "learnedat": 75,
@@ -8028,6 +8374,7 @@
    "skillup_colors": [75, 80, 80, 80]
   },
   "1257377": {
+   "learned_from": [2],
    "id": 1257377,
    "name": "Filigreed Silky Gown",
    "learnedat": 75,
@@ -8058,6 +8405,7 @@
    "skillup_colors": [75, 80, 80, 80]
   },
   "1257378": {
+   "learned_from": [2],
    "id": 1257378,
    "name": "Filigreed Flame Gown",
    "learnedat": 75,
@@ -8088,6 +8436,7 @@
    "skillup_colors": [75, 80, 80, 80]
   },
   "1257379": {
+   "learned_from": [2],
    "id": 1257379,
    "name": "Filigreed Shadow Gown",
    "learnedat": 75,
@@ -8118,6 +8467,7 @@
    "skillup_colors": [75, 80, 80, 80]
   },
   "1257380": {
+   "learned_from": [2],
    "id": 1257380,
    "name": "Filigreed Pearly Gown",
    "learnedat": 75,
@@ -8148,6 +8498,7 @@
    "skillup_colors": [75, 80, 80, 80]
   },
   "1257381": {
+   "learned_from": [2],
    "id": 1257381,
    "name": "Filigreed Shining Gown",
    "learnedat": 75,
@@ -8178,6 +8529,7 @@
    "skillup_colors": [75, 80, 80, 80]
   },
   "1257382": {
+   "learned_from": [5],
    "id": 1257382,
    "name": "Pristine Gloves",
    "learnedat": 75,
@@ -8208,6 +8560,7 @@
    "skillup_colors": [75, 100, 117, 135]
   },
   "1257383": {
+   "learned_from": [5],
    "id": 1257383,
    "name": "Silky Gloves",
    "learnedat": 75,
@@ -8238,6 +8591,7 @@
    "skillup_colors": [75, 100, 117, 135]
   },
   "1257384": {
+   "learned_from": [5],
    "id": 1257384,
    "name": "Flame Gloves",
    "learnedat": 75,
@@ -8268,6 +8622,7 @@
    "skillup_colors": [75, 100, 117, 135]
   },
   "1257385": {
+   "learned_from": [5],
    "id": 1257385,
    "name": "Shadow Gloves",
    "learnedat": 75,
@@ -8298,6 +8653,7 @@
    "skillup_colors": [75, 100, 117, 135]
   },
   "1257386": {
+   "learned_from": [5],
    "id": 1257386,
    "name": "Pearly Gloves",
    "learnedat": 75,
@@ -8328,6 +8684,7 @@
    "skillup_colors": [75, 100, 117, 135]
   },
   "1257387": {
+   "learned_from": [5],
    "id": 1257387,
    "name": "Shining Gloves",
    "learnedat": 75,
@@ -8358,6 +8715,7 @@
    "skillup_colors": [75, 100, 117, 135]
   },
   "1257388": {
+   "learned_from": [5],
    "id": 1257388,
    "name": "Pristine Sash",
    "learnedat": 85,
@@ -8388,6 +8746,7 @@
    "skillup_colors": [85, 110, 127, 145]
   },
   "1257389": {
+   "learned_from": [5],
    "id": 1257389,
    "name": "Silky Sash",
    "learnedat": 85,
@@ -8418,6 +8777,7 @@
    "skillup_colors": [85, 110, 127, 145]
   },
   "1257390": {
+   "learned_from": [5],
    "id": 1257390,
    "name": "Flame Sash",
    "learnedat": 85,
@@ -8448,6 +8808,7 @@
    "skillup_colors": [85, 110, 127, 145]
   },
   "1257391": {
+   "learned_from": [5],
    "id": 1257391,
    "name": "Shadow Sash",
    "learnedat": 85,
@@ -8478,6 +8839,7 @@
    "skillup_colors": [85, 110, 127, 145]
   },
   "1257392": {
+   "learned_from": [5],
    "id": 1257392,
    "name": "Pearly Sash",
    "learnedat": 85,
@@ -8508,6 +8870,7 @@
    "skillup_colors": [85, 110, 127, 145]
   },
   "1257393": {
+   "learned_from": [5],
    "id": 1257393,
    "name": "Shining Sash",
    "learnedat": 85,
@@ -8538,6 +8901,7 @@
    "skillup_colors": [85, 110, 127, 145]
   },
   "1257394": {
+   "learned_from": [2],
    "id": 1257394,
    "name": "Filigreed Pristine Leggings",
    "learnedat": 100,
@@ -8568,6 +8932,7 @@
    "skillup_colors": [100, 105, 105, 105]
   },
   "1257395": {
+   "learned_from": [2],
    "id": 1257395,
    "name": "Filigreed Silky Leggings",
    "learnedat": 100,
@@ -8598,6 +8963,7 @@
    "skillup_colors": [100, 105, 105, 105]
   },
   "1257396": {
+   "learned_from": [2],
    "id": 1257396,
    "name": "Filigreed Flame Leggings",
    "learnedat": 100,
@@ -8628,6 +8994,7 @@
    "skillup_colors": [100, 105, 105, 105]
   },
   "1257397": {
+   "learned_from": [2],
    "id": 1257397,
    "name": "Filigreed Shadow Leggings",
    "learnedat": 100,
@@ -8658,6 +9025,7 @@
    "skillup_colors": [100, 105, 105, 105]
   },
   "1257398": {
+   "learned_from": [2],
    "id": 1257398,
    "name": "Filigreed Pearly Leggings",
    "learnedat": 100,
@@ -8688,6 +9056,7 @@
    "skillup_colors": [100, 105, 105, 105]
   },
   "1257399": {
+   "learned_from": [2],
    "id": 1257399,
    "name": "Filigreed Shining Leggings",
    "learnedat": 100,
@@ -8718,6 +9087,7 @@
    "skillup_colors": [100, 105, 105, 105]
   },
   "1257400": {
+   "learned_from": [5],
    "id": 1257400,
    "name": "Pristine Circlet",
    "learnedat": 100,
@@ -8756,6 +9126,7 @@
    "skillup_colors": [100, 125, 142, 160]
   },
   "1257401": {
+   "learned_from": [5],
    "id": 1257401,
    "name": "Silky Circlet",
    "learnedat": 100,
@@ -8794,6 +9165,7 @@
    "skillup_colors": [100, 125, 142, 160]
   },
   "1257402": {
+   "learned_from": [5],
    "id": 1257402,
    "name": "Flame Circlet",
    "learnedat": 100,
@@ -8832,6 +9204,7 @@
    "skillup_colors": [100, 125, 142, 160]
   },
   "1257403": {
+   "learned_from": [5],
    "id": 1257403,
    "name": "Shadow Circlet",
    "learnedat": 100,
@@ -8870,6 +9243,7 @@
    "skillup_colors": [100, 125, 142, 160]
   },
   "1257404": {
+   "learned_from": [5],
    "id": 1257404,
    "name": "Pearly Circlet",
    "learnedat": 100,
@@ -8908,6 +9282,7 @@
    "skillup_colors": [100, 125, 142, 160]
   },
   "1257405": {
+   "learned_from": [5],
    "id": 1257405,
    "name": "Shining Circlet",
    "learnedat": 100,
@@ -8946,6 +9321,7 @@
    "skillup_colors": [100, 125, 142, 160]
   },
   "1257406": {
+   "learned_from": [5],
    "id": 1257406,
    "name": "Pristine Gown",
    "learnedat": 110,
@@ -8984,6 +9360,7 @@
    "skillup_colors": [110, 130, 145, 160]
   },
   "1257407": {
+   "learned_from": [5],
    "id": 1257407,
    "name": "Silky Gown",
    "learnedat": 110,
@@ -9022,6 +9399,7 @@
    "skillup_colors": [110, 130, 145, 160]
   },
   "1257408": {
+   "learned_from": [5],
    "id": 1257408,
    "name": "Flame Gown",
    "learnedat": 110,
@@ -9060,6 +9438,7 @@
    "skillup_colors": [110, 130, 145, 160]
   },
   "1257409": {
+   "learned_from": [5],
    "id": 1257409,
    "name": "Shadow Gown",
    "learnedat": 110,
@@ -9098,6 +9477,7 @@
    "skillup_colors": [110, 130, 145, 160]
   },
   "1257410": {
+   "learned_from": [5],
    "id": 1257410,
    "name": "Pearly Gown",
    "learnedat": 110,
@@ -9136,6 +9516,7 @@
    "skillup_colors": [110, 130, 145, 160]
   },
   "1257411": {
+   "learned_from": [5],
    "id": 1257411,
    "name": "Shining Gown",
    "learnedat": 110,
@@ -9174,6 +9555,7 @@
    "skillup_colors": [110, 130, 145, 160]
   },
   "1257412": {
+   "learned_from": [5],
    "id": 1257412,
    "name": "Silk Reagent Bag",
    "learnedat": 125,
@@ -9234,6 +9616,7 @@
    "skillup_colors": [125, 130, 130, 130]
   },
   "1257414": {
+   "learned_from": [2],
    "id": 1257414,
    "name": "Filigreed Silky Circlet",
    "learnedat": 125,
@@ -9264,6 +9647,7 @@
    "skillup_colors": [125, 130, 130, 130]
   },
   "1257415": {
+   "learned_from": [2],
    "id": 1257415,
    "name": "Filigreed Flame Circlet",
    "learnedat": 125,
@@ -9294,6 +9678,7 @@
    "skillup_colors": [125, 130, 130, 130]
   },
   "1257416": {
+   "learned_from": [2],
    "id": 1257416,
    "name": "Filigreed Shadow Circlet",
    "learnedat": 125,
@@ -9324,6 +9709,7 @@
    "skillup_colors": [125, 130, 130, 130]
   },
   "1257417": {
+   "learned_from": [2],
    "id": 1257417,
    "name": "Filigreed Pearly Circlet",
    "learnedat": 125,
@@ -9354,6 +9740,7 @@
    "skillup_colors": [125, 130, 130, 130]
   },
   "1257418": {
+   "learned_from": [2],
    "id": 1257418,
    "name": "Filigreed Shining Circlet",
    "learnedat": 125,
@@ -9384,6 +9771,7 @@
    "skillup_colors": [125, 130, 130, 130]
   },
   "1257419": {
+   "learned_from": [5],
    "id": 1257419,
    "name": "Pristine Leggings",
    "learnedat": 125,
@@ -9422,6 +9810,7 @@
    "skillup_colors": [125, 145, 160, 175]
   },
   "1257420": {
+   "learned_from": [5],
    "id": 1257420,
    "name": "Silky Leggings",
    "learnedat": 125,
@@ -9460,6 +9849,7 @@
    "skillup_colors": [125, 145, 160, 175]
   },
   "1257421": {
+   "learned_from": [5],
    "id": 1257421,
    "name": "Flame Leggings",
    "learnedat": 125,
@@ -9498,6 +9888,7 @@
    "skillup_colors": [125, 145, 160, 175]
   },
   "1257422": {
+   "learned_from": [5],
    "id": 1257422,
    "name": "Shadow Leggings",
    "learnedat": 125,
@@ -9536,6 +9927,7 @@
    "skillup_colors": [125, 145, 160, 175]
   },
   "1257423": {
+   "learned_from": [5],
    "id": 1257423,
    "name": "Pearly Leggings",
    "learnedat": 125,
@@ -9574,6 +9966,7 @@
    "skillup_colors": [125, 145, 160, 175]
   },
   "1257424": {
+   "learned_from": [5],
    "id": 1257424,
    "name": "Shining Leggings",
    "learnedat": 125,
@@ -9638,6 +10031,8 @@
    "skillup_colors": [140, 160, 175, 190]
   },
   "1257426": {
+   "learned_from": [6],
+   "training_cost_copper": 1450,
    "id": 1257426,
    "name": "Gilded Slippers",
    "learnedat": 140,
@@ -9672,6 +10067,8 @@
    "skillup_colors": [140, 145, 145, 145]
   },
   "1257427": {
+   "learned_from": [6],
+   "training_cost_copper": 1450,
    "id": 1257427,
    "name": "Frothing Slippers",
    "learnedat": 140,
@@ -9706,6 +10103,8 @@
    "skillup_colors": [140, 145, 145, 145]
   },
   "1257428": {
+   "learned_from": [6],
+   "training_cost_copper": 1450,
    "id": 1257428,
    "name": "Fiery Slippers",
    "learnedat": 140,
@@ -9740,6 +10139,8 @@
    "skillup_colors": [140, 145, 145, 145]
   },
   "1257429": {
+   "learned_from": [6],
+   "training_cost_copper": 1450,
    "id": 1257429,
    "name": "Black Slippers",
    "learnedat": 140,
@@ -9774,6 +10175,8 @@
    "skillup_colors": [140, 145, 145, 145]
   },
   "1257430": {
+   "learned_from": [6],
+   "training_cost_copper": 1450,
    "id": 1257430,
    "name": "Golden Slippers",
    "learnedat": 140,
@@ -9808,6 +10211,8 @@
    "skillup_colors": [140, 145, 145, 145]
   },
   "1257431": {
+   "learned_from": [6],
+   "training_cost_copper": 1450,
    "id": 1257431,
    "name": "Radiant Slippers",
    "learnedat": 140,
@@ -9984,6 +10389,7 @@
    "skillup_colors": [165, 185, 200, 215]
   },
   "1257437": {
+   "learned_from": [5],
    "id": 1257437,
    "name": "Frothing Handwraps",
    "learnedat": 165,
@@ -10018,6 +10424,7 @@
    "skillup_colors": [165, 185, 200, 215]
   },
   "1257438": {
+   "learned_from": [5],
    "id": 1257438,
    "name": "Fiery Handwraps",
    "learnedat": 165,
@@ -10052,6 +10459,7 @@
    "skillup_colors": [165, 185, 200, 215]
   },
   "1257439": {
+   "learned_from": [5],
    "id": 1257439,
    "name": "Black Handwraps",
    "learnedat": 165,
@@ -10086,6 +10494,7 @@
    "skillup_colors": [165, 185, 200, 215]
   },
   "1257440": {
+   "learned_from": [5],
    "id": 1257440,
    "name": "Golden Handwraps",
    "learnedat": 165,
@@ -10120,6 +10529,7 @@
    "skillup_colors": [165, 185, 200, 215]
   },
   "1257441": {
+   "learned_from": [5],
    "id": 1257441,
    "name": "Radiant Handwraps",
    "learnedat": 165,
@@ -10180,6 +10590,7 @@
    "skillup_colors": [170, 185, 200, 215]
   },
   "1257443": {
+   "learned_from": [5],
    "id": 1257443,
    "name": "Mageweave Reagent Bag",
    "learnedat": 190,
@@ -10414,6 +10825,7 @@
    "skillup_colors": [190, 195, 195, 195]
   },
   "1257450": {
+   "learned_from": [5],
    "id": 1257450,
    "name": "Nethergeld Shoulders",
    "learnedat": 195,
@@ -10452,6 +10864,7 @@
    "skillup_colors": [195, 210, 225, 240]
   },
   "1257451": {
+   "learned_from": [5],
    "id": 1257451,
    "name": "Netherfroth Shoulders",
    "learnedat": 195,
@@ -10490,6 +10903,7 @@
    "skillup_colors": [195, 210, 225, 240]
   },
   "1257452": {
+   "learned_from": [5],
    "id": 1257452,
    "name": "Netherflame Shoulders",
    "learnedat": 195,
@@ -10528,6 +10942,7 @@
    "skillup_colors": [195, 210, 225, 240]
   },
   "1257453": {
+   "learned_from": [5],
    "id": 1257453,
    "name": "Netherpearl Shoulders",
    "learnedat": 195,
@@ -10566,6 +10981,7 @@
    "skillup_colors": [195, 210, 225, 240]
   },
   "1257454": {
+   "learned_from": [5],
    "id": 1257454,
    "name": "Nethershine Shoulders",
    "learnedat": 195,
@@ -10604,6 +11020,7 @@
    "skillup_colors": [195, 210, 225, 240]
   },
   "1257455": {
+   "learned_from": [5],
    "id": 1257455,
    "name": "Netherlight Shoulders",
    "learnedat": 195,
@@ -10642,6 +11059,7 @@
    "skillup_colors": [195, 210, 225, 240]
   },
   "1257456": {
+   "learned_from": [5],
    "id": 1257456,
    "name": "Nethergeld Cuffs",
    "learnedat": 205,
@@ -10680,6 +11098,7 @@
    "skillup_colors": [205, 220, 235, 250]
   },
   "1257457": {
+   "learned_from": [5],
    "id": 1257457,
    "name": "Netherfroth Cuffs",
    "learnedat": 205,
@@ -10718,6 +11137,7 @@
    "skillup_colors": [205, 220, 235, 250]
   },
   "1257458": {
+   "learned_from": [5],
    "id": 1257458,
    "name": "Netherflame Cuffs",
    "learnedat": 205,
@@ -10756,6 +11176,7 @@
    "skillup_colors": [205, 220, 235, 250]
   },
   "1257459": {
+   "learned_from": [5],
    "id": 1257459,
    "name": "Netherpearl Cuffs",
    "learnedat": 205,
@@ -10794,6 +11215,7 @@
    "skillup_colors": [205, 220, 235, 250]
   },
   "1257460": {
+   "learned_from": [5],
    "id": 1257460,
    "name": "Nethershine Cuffs",
    "learnedat": 205,
@@ -10832,6 +11254,7 @@
    "skillup_colors": [205, 220, 235, 250]
   },
   "1257461": {
+   "learned_from": [5],
    "id": 1257461,
    "name": "Netherlight Cuffs",
    "learnedat": 205,
@@ -10952,6 +11375,7 @@
    "skillup_colors": [215, 230, 245, 260]
   },
   "1257465": {
+   "learned_from": [5],
    "id": 1257465,
    "name": "Runecloth Reagent Bag",
    "learnedat": 215,
@@ -10982,6 +11406,7 @@
    "skillup_colors": [215, 230, 245, 260]
   },
   "1257466": {
+   "learned_from": [5],
    "id": 1257466,
    "name": "Gilded Waistcord",
    "learnedat": 215,
@@ -11016,6 +11441,7 @@
    "skillup_colors": [215, 230, 245, 260]
   },
   "1257467": {
+   "learned_from": [5],
    "id": 1257467,
    "name": "Frothing Waistcord",
    "learnedat": 215,
@@ -11050,6 +11476,7 @@
    "skillup_colors": [215, 230, 245, 260]
   },
   "1257468": {
+   "learned_from": [5],
    "id": 1257468,
    "name": "Fiery Waistcord",
    "learnedat": 215,
@@ -11084,6 +11511,7 @@
    "skillup_colors": [215, 230, 245, 260]
   },
   "1257469": {
+   "learned_from": [5],
    "id": 1257469,
    "name": "Black Waistcord",
    "learnedat": 215,
@@ -11118,6 +11546,7 @@
    "skillup_colors": [215, 230, 245, 260]
   },
   "1257470": {
+   "learned_from": [5],
    "id": 1257470,
    "name": "Golden Waistcord",
    "learnedat": 215,
@@ -11152,6 +11581,7 @@
    "skillup_colors": [215, 230, 245, 260]
   },
   "1257471": {
+   "learned_from": [5],
    "id": 1257471,
    "name": "Radiant Waistcord",
    "learnedat": 215,
@@ -11420,6 +11850,7 @@
    "skillup_colors": [235, 240, 240, 240]
   },
   "1257479": {
+   "learned_from": [5],
    "id": 1257479,
    "name": "Gilded Sandals",
    "learnedat": 235,
@@ -11458,6 +11889,7 @@
    "skillup_colors": [235, 250, 265, 280]
   },
   "1257480": {
+   "learned_from": [5],
    "id": 1257480,
    "name": "Frothing Sandals",
    "learnedat": 235,
@@ -11496,6 +11928,7 @@
    "skillup_colors": [235, 250, 265, 280]
   },
   "1257481": {
+   "learned_from": [5],
    "id": 1257481,
    "name": "Fiery Sandals",
    "learnedat": 235,
@@ -11534,6 +11967,7 @@
    "skillup_colors": [235, 250, 265, 280]
   },
   "1257482": {
+   "learned_from": [5],
    "id": 1257482,
    "name": "Black Sandals",
    "learnedat": 235,
@@ -11572,6 +12006,7 @@
    "skillup_colors": [235, 250, 265, 280]
   },
   "1257483": {
+   "learned_from": [5],
    "id": 1257483,
    "name": "Golden Sandals",
    "learnedat": 235,
@@ -11610,6 +12045,7 @@
    "skillup_colors": [235, 250, 265, 280]
   },
   "1257484": {
+   "learned_from": [5],
    "id": 1257484,
    "name": "Radiant Sandals",
    "learnedat": 235,
@@ -11700,6 +12136,7 @@
    "skillup_colors": [250, 265, 280, 295]
   },
   "1257487": {
+   "learned_from": [5],
    "id": 1257487,
    "name": "Runecloth Cuffs",
    "learnedat": 250,
@@ -12030,6 +12467,8 @@
    "skillup_colors": [300, 300, 300, 300]
   },
   "1263425": {
+   "learned_from": [4, 6],
+   "training_cost_copper": 100,
    "id": 1263425,
    "name": "Faction Banner",
    "learnedat": 20,
@@ -12051,6 +12490,7 @@
    "env_status": "new"
   },
   "1292941": {
+   "learned_from": [5],
    "id": 1292941,
    "name": "Manaflare Pants",
    "learnedat": 300,
@@ -12081,6 +12521,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292942": {
+   "learned_from": [5],
    "id": 1292942,
    "name": "Manaflare Gloves",
    "learnedat": 300,
@@ -12111,6 +12552,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292943": {
+   "learned_from": [5],
    "id": 1292943,
    "name": "Manaflare Mantle",
    "learnedat": 300,
@@ -12141,6 +12583,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292944": {
+   "learned_from": [5],
    "id": 1292944,
    "name": "Manaflare Boots",
    "learnedat": 300,
@@ -12171,6 +12614,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292957": {
+   "learned_from": [5],
    "id": 1292957,
    "name": "Pants of Conviction",
    "learnedat": 300,
@@ -12201,6 +12645,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292958": {
+   "learned_from": [5],
    "id": 1292958,
    "name": "Gloves of Conviction",
    "learnedat": 300,
@@ -12231,6 +12676,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292959": {
+   "learned_from": [5],
    "id": 1292959,
    "name": "Mantle of Conviction",
    "learnedat": 300,
@@ -12261,6 +12707,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292960": {
+   "learned_from": [5],
    "id": 1292960,
    "name": "Treads of Conviction",
    "learnedat": 300,
@@ -12291,6 +12738,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292961": {
+   "learned_from": [5],
    "id": 1292961,
    "name": "Leggings of Conviction",
    "learnedat": 300,
@@ -12321,6 +12769,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292962": {
+   "learned_from": [5],
    "id": 1292962,
    "name": "Handguards of Conviction",
    "learnedat": 300,
@@ -12351,6 +12800,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292963": {
+   "learned_from": [5],
    "id": 1292963,
    "name": "Pauldrons of Conviction",
    "learnedat": 300,
@@ -12381,6 +12831,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292964": {
+   "learned_from": [5],
    "id": 1292964,
    "name": "Boots of Conviction",
    "learnedat": 300,
@@ -12411,6 +12862,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292977": {
+   "learned_from": [5],
    "id": 1292977,
    "name": "Demonheart Leggings",
    "learnedat": 300,
@@ -12441,6 +12893,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292978": {
+   "learned_from": [5],
    "id": 1292978,
    "name": "Demonheart Gloves",
    "learnedat": 300,
@@ -12471,6 +12924,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292979": {
+   "learned_from": [5],
    "id": 1292979,
    "name": "Demonheart Spaulders",
    "learnedat": 300,
@@ -12501,6 +12955,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1292980": {
+   "learned_from": [5],
    "id": 1292980,
    "name": "Demonheart Boots",
    "learnedat": 300,
@@ -12531,6 +12986,7 @@
    "skillup_colors": [300, 320, 325, 330]
   },
   "1297120": {
+   "learned_from": [5],
    "id": 1297120,
    "name": "Venomspew Gloves",
    "learnedat": 285,
@@ -12561,6 +13017,7 @@
    "skillup_colors": [285, 290, 292, 295]
   },
   "1297121": {
+   "learned_from": [5],
    "id": 1297121,
    "name": "Venomspew Cord",
    "learnedat": 290,
@@ -12591,6 +13048,7 @@
    "skillup_colors": [290, 295, 297, 300]
   },
   "1297122": {
+   "learned_from": [5],
    "id": 1297122,
    "name": "Venomspew Footpads",
    "learnedat": 295,
@@ -12621,6 +13079,7 @@
    "skillup_colors": [295, 295, 297, 300]
   },
   "1297123": {
+   "learned_from": [5],
    "id": 1297123,
    "name": "Swarmtender's Gloves",
    "learnedat": 285,
@@ -12651,6 +13110,7 @@
    "skillup_colors": [285, 290, 292, 295]
   },
   "1297124": {
+   "learned_from": [5],
    "id": 1297124,
    "name": "Swarmtender's Cord",
    "learnedat": 290,
@@ -12681,6 +13141,7 @@
    "skillup_colors": [290, 295, 297, 300]
   },
   "1297125": {
+   "learned_from": [5],
    "id": 1297125,
    "name": "Swarmtender's Footpads",
    "learnedat": 295,
@@ -12711,6 +13172,7 @@
    "skillup_colors": [295, 295, 297, 300]
   },
   "1301439": {
+   "learned_from": [5],
    "id": 1301439,
    "name": "Cloudy Stormsewn Vest",
    "learnedat": 60,
@@ -12733,6 +13195,7 @@
    "skillup_colors": [60, 65, 67, 70]
   },
   "1301440": {
+   "learned_from": [5],
    "id": 1301440,
    "name": "Cloudy Stormsewn Cuffs",
    "learnedat": 50,
@@ -12755,6 +13218,7 @@
    "skillup_colors": [50, 55, 57, 60]
   },
   "1301441": {
+   "learned_from": [5],
    "id": 1301441,
    "name": "Cloudy Stormsewn Handwraps",
    "learnedat": 55,
@@ -12777,6 +13241,7 @@
    "skillup_colors": [55, 60, 62, 65]
   },
   "1301442": {
+   "learned_from": [5],
    "id": 1301442,
    "name": "Cloudy Stormsewn Cord",
    "learnedat": 50,
@@ -12799,6 +13264,7 @@
    "skillup_colors": [50, 55, 57, 60]
   },
   "1301443": {
+   "learned_from": [5],
    "id": 1301443,
    "name": "Cloudy Stormsewn Leggings",
    "learnedat": 60,
@@ -12821,6 +13287,7 @@
    "skillup_colors": [60, 65, 67, 70]
   },
   "1301444": {
+   "learned_from": [5],
    "id": 1301444,
    "name": "Cloudy Stormsewn Shoes",
    "learnedat": 55,
@@ -12843,6 +13310,7 @@
    "skillup_colors": [55, 60, 62, 65]
   },
   "1301463": {
+   "learned_from": [5],
    "id": 1301463,
    "name": "Azure Stormsewn Vest",
    "learnedat": 60,
@@ -12865,6 +13333,7 @@
    "skillup_colors": [60, 65, 67, 70]
   },
   "1301464": {
+   "learned_from": [5],
    "id": 1301464,
    "name": "Azure Stormsewn Cuffs",
    "learnedat": 50,
@@ -12887,6 +13356,7 @@
    "skillup_colors": [50, 55, 57, 60]
   },
   "1301465": {
+   "learned_from": [5],
    "id": 1301465,
    "name": "Azure Stormsewn Handwraps",
    "learnedat": 55,
@@ -12909,6 +13379,7 @@
    "skillup_colors": [55, 60, 62, 65]
   },
   "1301466": {
+   "learned_from": [5],
    "id": 1301466,
    "name": "Azure Stormsewn Cord",
    "learnedat": 50,
@@ -12931,6 +13402,7 @@
    "skillup_colors": [50, 55, 57, 60]
   },
   "1301468": {
+   "learned_from": [5],
    "id": 1301468,
    "name": "Azure Stormsewn Leggings",
    "learnedat": 60,
@@ -12953,6 +13425,7 @@
    "skillup_colors": [60, 65, 67, 70]
   },
   "1301469": {
+   "learned_from": [5],
    "id": 1301469,
    "name": "Azure Stormsewn Shoes",
    "learnedat": 55,
@@ -12975,6 +13448,7 @@
    "skillup_colors": [55, 60, 62, 65]
   },
   "1301532": {
+   "learned_from": [5],
    "id": 1301532,
    "name": "Cloudy Stormsewn Cowl",
    "learnedat": 175,
@@ -13005,6 +13479,7 @@
    "skillup_colors": [175, 185, 187, 190]
   },
   "1301533": {
+   "learned_from": [5],
    "id": 1301533,
    "name": "Cloudy Stormsewn Epaulets",
    "learnedat": 175,
@@ -13035,6 +13510,7 @@
    "skillup_colors": [175, 185, 187, 190]
   },
   "1301540": {
+   "learned_from": [5],
    "id": 1301540,
    "name": "Azure Stormsewn Cowl",
    "learnedat": 175,
@@ -13065,6 +13541,7 @@
    "skillup_colors": [175, 185, 187, 190]
   },
   "1301541": {
+   "learned_from": [5],
    "id": 1301541,
    "name": "Azure Stormsewn Epaulets",
    "learnedat": 175,

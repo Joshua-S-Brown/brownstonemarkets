@@ -20,7 +20,13 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from .crafting import AVAILABILITY, parse_recipe_catalog, valid_skillup_colors
+from .crafting import (
+    AVAILABILITY,
+    parse_recipe_catalog,
+    valid_learned_from,
+    valid_skillup_colors,
+    valid_training_cost,
+)
 
 GAME_PATHS = {"classic": "classic", "forever": "forever"}  # Catalog game_version -> Wowhead path segment.
 # Wowhead lists Cooking and First Aid as secondary skills; every other crafting profession under professions.
@@ -85,6 +91,10 @@ def extract_page(html: str, sha256: str, saved_at: str) -> dict:
                   "creates": row.get("creates"), "reagents": row.get("reagents") or []}
         if valid_skillup_colors(row.get("colors")):
             recipe["skillup_colors"] = row["colors"]
+        if valid_learned_from(row.get("source")):
+            recipe["learned_from"] = row["source"]
+        if valid_training_cost(row.get("trainingcost")):
+            recipe["training_cost_copper"] = row["trainingcost"]
         if "envChange" in row:  # Forever pages flag new or changed spells relative to Classic.
             recipe["env_status"] = row["envChange"].get("status")
         if row.get("seasonId"):  # Classic pages include seasonal realms' spells (2 = Season of Discovery).
@@ -347,6 +357,10 @@ def _catalog_recipe(extract: dict, profession: str, recipe_id: str, defaults: di
     entry.pop("skillup_colors", None)
     if valid_skillup_colors(recipe.get("skillup_colors")):
         entry["skillup_colors"] = recipe["skillup_colors"]
+    for key, validator in (("learned_from", valid_learned_from), ("training_cost_copper", valid_training_cost)):
+        entry.pop(key, None)
+        if validator(recipe.get(key)):
+            entry[key] = recipe[key]
     _check_availability(entry, f"Recipe {recipe_id}")
     entry["inputs"] = [{"item_id": reagent, "quantity": quantity} for reagent, quantity in recipe["reagents"]]
     return entry

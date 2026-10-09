@@ -5,7 +5,7 @@ game_version = "classic"
 rules_version = "classic-era"
 profession = "tailoring"
 status = "reference-observed"
-catalog_version = "0.3"
+catalog_version = "0.4"
 notes = "Representative subset: Woolen, Mageweave and Runecloth bags; not the complete Tailoring catalog. Vendor prices are undiscounted single-unit prices; availability and reputation discounts are not modeled."
 
 [[recipes]]

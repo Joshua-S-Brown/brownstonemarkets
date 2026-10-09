@@ -13,8 +13,11 @@ from datetime import UTC, date, datetime
 import streamlit as st
 
 from brownstone import recipe_catalogs as rc
+from brownstone.crafting import parse_recipe_catalog
+from brownstone.money import format_money
 from brownstone.recipe_import import archived_saved_at
 from views.common import EXPERIENCES, show_context
+from views.crafting import _materials, _recipe_heading
 
 GAMES = {game: EXPERIENCES[game] for game in rc.CATALOG_PREFIXES}  # Experiences that have catalogs.
 KINDS = {"yield": "yield", "vendor": "vendor status and price", "post-launch": "post-launch"}
@@ -52,6 +55,7 @@ def render(config, sources, config_dir, archive_dir):
     st.caption(f"No {GAMES[game]} catalog yet: "
                + (", ".join(rc.profession_title(p).lower() for p in missing) or "none"))
     _details(statuses)
+    _recipe_view(entries)
     st.markdown("#### Add or update a profession")
     _manage(game, entries, missing, sources, config_dir, archive_dir)
 
@@ -351,3 +355,30 @@ def _written():
         st.markdown("Changed tracked files, to review and commit yourself:\n"
                     + "\n".join(f"- `{path}`" for path in result["tracked"]))
     st.caption("Archived page (not tracked): " + ", ".join(result["archived"]))
+
+
+def _recipe_view(entries):
+    generated = {entry["name"]: entry for entry in entries if entry["catalog"]}
+    if not generated:
+        return
+    with st.expander("View a catalog recipe"):
+        name = st.selectbox("Recipe catalog", list(generated),
+                            format_func=lambda name: rc.profession_title(generated[name]["selection"]["profession"]),
+                            key="catalogs-recipe-catalog")
+        try:
+            catalog = parse_recipe_catalog(generated[name]["catalog"])
+        except ValueError as error:
+            st.error(f"Cannot inspect this catalog: {error}")
+            return
+        recipes = catalog["recipes_by_id"]
+        recipe_id = st.selectbox("Catalog recipe", list(recipes), format_func=lambda rid: recipes[rid]["name"],
+                                 key=f"catalogs-recipe-{name}")
+        _recipe_heading(catalog, recipe_id)
+        recipe = recipes[recipe_id]
+        st.caption(f"Learned from: {rc.learning_label(recipe)}")
+        cost = recipe.get("training_cost_copper")
+        st.caption(f"Training cost: {format_money(cost) if cost is not None else 'unknown'}")
+        try:
+            _materials(catalog, recipe_id)
+        except ValueError as error:
+            st.warning(f"This recipe cannot be expanded: {error}")

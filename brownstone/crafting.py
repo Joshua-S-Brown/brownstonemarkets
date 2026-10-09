@@ -48,6 +48,23 @@ def valid_skillup_colors(value: object) -> bool:
             and value == sorted(value))
 
 
+def valid_learned_from(value: object) -> bool:
+    """Source codes stay in page order, including codes whose meaning is unverified."""
+    return isinstance(value, list) and bool(value) and all(type(v) is int and v > 0 for v in value)
+
+
+def valid_training_cost(value: object) -> bool:
+    """Only an explicit positive integer copper value is evidence; zero is never read as free."""
+    return type(value) is int and value > 0
+
+
+def _check_learning(recipe: dict) -> None:
+    if "learned_from" in recipe and not valid_learned_from(recipe["learned_from"]):
+        raise ValueError("learned_from must be a non-empty list of positive integer source codes")
+    if "training_cost_copper" in recipe and not valid_training_cost(recipe["training_cost_copper"]):
+        raise ValueError("training_cost_copper must be a positive copper integer")
+
+
 def _check_page_coverage(raw: dict) -> None:
     if "page_coverage" not in raw:
         return
@@ -88,6 +105,7 @@ def _check_recipe(recipe: dict, profession: str, items: dict, output_recipes: di
     if not _https(recipe.get("verification_url", "https://")):
         raise ValueError("Recipe verification must be an HTTPS URL")
     _check_flags(recipe)
+    _check_learning(recipe)
     if "skillup_colors" in recipe and not valid_skillup_colors(recipe["skillup_colors"]):
         raise ValueError("skillup_colors must be four positive non-decreasing integers")
     for ingredient in recipe.get("inputs", []):
