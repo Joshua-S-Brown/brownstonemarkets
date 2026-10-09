@@ -272,6 +272,19 @@ def test_previous_unreadable_invalid_and_import_failure(tmp_path):
     assert code == 1 and checks(report, "import round trip", "fail")
 
 
+def test_other_house_scan_is_named_and_character_round_trip_still_passes(tmp_path):
+    # Beta 2026-10-09: an Ironforge scan beside a Stormwind-pinned source failed with a stale-preview error.
+    db = database()
+    db["scans"] = [scan("ironforge", FINISHED, [listing(2589, 1, 100)],
+                        house={"npc_name": "Auctioneer Redmuse", "zone": "Ironforge"})]
+    path = write(tmp_path, db)
+    config = addon_source(tmp_path / "data", path)
+    config["scan_evidence"]["zone"] = "Stormwind City"
+    _, report, code = beta_report.create_report(path, config, tmp_path / "work/beta-reports", now=NOW)
+    assert code == 0 and checks(report, "import round trip", "pass")
+    assert "zone is 'Ironforge'" in checks(report, "scan house", "warn")[0]["detail"]
+
+
 @pytest.mark.parametrize("value", [False, {"all": False}, {"all": None, 1: {"enabled": False}}])
 def test_filter_causes(value):
     filters = {"SubClass": value} if isinstance(value, dict) else {"OnlyShowSkillUps": True}

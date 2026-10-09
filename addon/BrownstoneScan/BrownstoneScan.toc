@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: Brownstone Scan
-## Notes: Read-only auction scans character snapshots and economy journal saved to SavedVariables for Brownstone Markets (addon 0.10.0).
+## Notes: Read-only auction scans character snapshots and economy journal saved to SavedVariables for Brownstone Markets (addon 0.10.1).
 ## Author: Brownstone Markets
-## Version: 0.10.0
+## Version: 0.10.1
 ## SavedVariables: BrownstoneScanDB
 ## DefaultState: enabled
 

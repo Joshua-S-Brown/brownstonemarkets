@@ -27,14 +27,19 @@ _Last updated 2026-10-08._
   Offline synthetic saved-page, calculation, scoped market and AppTest checks cover the story.
   Real beta validation and limitations: [below](#skill-up-map-real-data-check-story-047).
 
-- **First beta play session (2026-10-08, Windows, addon 0.9.0):** levelling a new character
-  produced loot, bag, money and vendor journal entries that check out (money chain unbroken, bag
-  changes match merchant visits). The logout bags snapshot was empty (0 slots, 0 copper, level 1),
-  so addon **0.10.0** saves the newest readable read from that login instead, and Brownstone treats
-  0-slot backpack snapshots as unreadable (shown as *unknown*; the beta report fails them and
-  compares snapshot gold with the login's last money entry). 0.10.0 also records the sell-junk
-  button and class trainers as `vendor`. Rules: ADDON-11, ADDON-12. **Pending in game:** a logout
-  and a `/reload` on 0.10.0 must show readable bags and gold matching the journal.
+- **Beta play sessions (Windows):** on 2026-10-08 (addon 0.9.0) the logout bags snapshot was empty
+  (0 slots, 0 copper, level 1), so addon **0.10.0** saves the newest readable read from that login, and
+  Brownstone treats 0-slot backpack snapshots as unreadable (ADDON-11, ADDON-12). The 2026-10-09 session
+  (0.10.0; Basilly and Cicelyna: loot, a trainer, crafts, mail, bank and an Ironforge scan) confirmed it:
+  logout and `/reload` bags were readable and snapshot gold matched the money chain. Crafting 5 Bolt of
+  Linen Cloth and 1 Linen Bag, and buying 3 Coarse Thread at 10c, confirmed those catalog values (Forever
+  Tailoring catalog 0.4). Failed mail sends were journaled as `MAIL_FAILED`, never as sends. Every fresh
+  login's first bag entry had listed the whole bag as gains; addon **0.10.1** sets that baseline from the
+  first settled bag update instead (rule beside the journal baselines in `requirements.md`). The scan was
+  first skipped as another house because the source pinned Stormwind's zone and auctioneer; Alliance cities
+  share one house, so only faction is now scan evidence, and the scan is imported. **Pending in game:** log in
+  on 0.10.1, loot or move one item and log out; the first bag entry after login should be `baseline_missing`
+  and the next a real change.
 
 - **Brownstone panel (STORY-044, implemented; pending in-game beta check):** addon **0.9.0**
   adds a draggable minimap coin and `/bscan panel`, opening a movable Escape-closeable
@@ -170,9 +175,9 @@ _Last updated 2026-10-08._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.07% in the current macOS run: 896 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.08% in the current macOS run: 898 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
-- **Scanning addon:** `addon/BrownstoneScan/` is version **0.10.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
+- **Scanning addon:** `addon/BrownstoneScan/` is version **0.10.1**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
   - **Offline verified:** shipped Lua executes under Lua 5.1 with modern and legacy WoW stubs, including missing/erroring optional APIs, seller fallback, one reference lookup per ID, manual start, timeout and partial close. Delayed/synchronous answers, failed requests/answers, timeout and late events, missing API/rejected event, house close during the pass, pre-pass save and reload-mid-pass import, first-pass preservation and maintenance guards are verified. Resulting scans import; mixed formats 1–4, raw archive bytes, deduplication, variant prices/scope/depth/comparison, migration backup/replay and reference nulls are tested. Lupa is a declared, pinned dev dependency; Python coverage does not measure Lua branches.
   - **Reload and Clear saved scans buttons** sit beside the scan button on the auction house window, with Clear protected like `/bscan clear` and both disabled during a scan; behaviour and decisions are in `addon/README.md` → *Reload and clear controls*.
@@ -384,7 +389,7 @@ codes, unique folders and absence of writes outside report/temporary directories
 
 Current limits: load boundaries are inferred, historical diagnostics are unavailable, and journal
 error counters cannot be assigned to loads. Checklist observation does not prove an action
-succeeded or establish invoice semantics. Serialized sizes are approximations. Real files on this
+succeeded or establish invoice semantics. Serialized sizes are approximations. A scan from another house is named as a *scan house* warning and left out of the round trip. Real files on this
 machine currently provide formats 1–4 only, including two Windows drops; genuine format-5/6
 snapshot/journal/profession evidence remains pending play. Synthetic formats 5/6 exercise the full
 report/import path offline. Details of module boundaries and reconciliation are in

@@ -262,7 +262,13 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   are omitted while retaining positions/count. No arguments are interpreted as transaction results.
   ID is length-prefixed character/realm + `:journal:` + Unix seconds + the **same persistent account
   sequence snapshots increment**. Each observation has its own ID, even within one second.
-- At login/reload, money and carried-bag counts establish transient baselines. `PLAYER_MONEY`
+- At login/reload, money and carried-bag counts establish transient baselines. **Fresh-login bags (addon 0.10.1,
+  decided 2026-10-09):** at a fresh login (`initial_login` true) the client has not loaded bag contents, so on the
+  beta every login's first bag entry listed the whole bag as gains. The bag baseline is left unset there; the first
+  settled bag update records `baseline_missing` and sets it. A `/reload` or unknown signal keeps the world-entry
+  baseline, which the beta showed correct after a reload. Entries from addon 0.10.0 and earlier keep that first
+  post-login entry as recorded: raw evidence is never rewritten, and any reader treats it as a baseline, not a change.
+  `PLAYER_MONEY`
   records nullable before/after integer copper. `BAG_UPDATE_DELAYED` records signed per-item carried
   count differences after settling, with bank/mailbox/merchant/auction house/trade skill/loot context;
   no unchanged-bag entry. Incomplete reads invalidate the baseline and record `baseline_missing`,

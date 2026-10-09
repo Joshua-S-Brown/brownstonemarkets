@@ -159,10 +159,13 @@ def test_forever_catalog_has_beta_tiers_new_dyes_and_only_forever_evidence():
     runecloth_bag = catalog["recipes_by_id"][18405]
     assert runecloth_bag["availability"] == "post-launch"
     assert {catalog["items_by_id"][i]["availability"] for i in (249409, 249430)} == {"post-launch"}
+    # Only values counted in game (2026-10-09) are confirmed; everything else stays unconfirmed.
+    counted = {2963, 3755}
     for recipe in catalog["recipes_by_id"].values():
-        assert recipe["output_quantity"] == 1 and recipe["output_quantity_verified"] is False
-    assert all(item.get("vendor_verified") is False for item in catalog["items_by_id"].values()
-               if item["role"] == "vendor_material")
+        assert recipe["output_quantity"] == 1
+        assert recipe["output_quantity_verified"] is (recipe["recipe_id"] in counted)
+    assert {i: item["vendor_verified"] for i, item in catalog["items_by_id"].items()
+            if item["role"] == "vendor_material"} == {2320: True, 2321: False, 2604: False, 14341: False}
 
 
 def test_archive_keeps_bytes_once_and_remembers_the_saved_date(tmp_path):

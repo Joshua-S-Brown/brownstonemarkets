@@ -482,6 +482,27 @@ def test_journal_mixed_scan_selection_and_transaction_rollback(tmp_path):
         assert db.execute("SELECT scan_id FROM addon_scans").fetchall() == [("a",)]
 
 
+def test_lua_fresh_login_waits_for_loaded_bags_before_counting_changes():
+    lua, g, _ = journal_client()
+    # Beta 2026-10-09: at a fresh login the client reports empty bags until contents load.
+    lua.execute('''
+        loaded = false
+        C_Container.GetContainerItemInfo = function(id, slot)
+            if loaded and slot == 1 then return { itemID=2589, stackCount=quantity } end end
+    ''')
+    lua.execute((ROOT / "addon/BrownstoneScan/BrownstoneScan.lua").read_text())
+    fire(g, "ADDON_LOADED", "BrownstoneScan")
+    fire(g, "PLAYER_ENTERING_WORLD", True, False)
+    before = len(entries(g))
+    g.loaded = True
+    fire(g, "BAG_UPDATE_DELAYED")
+    assert entries(g)[-1]["baseline_missing"] is True and "item_changes" not in entries(g)[-1]
+    g.quantity = 5
+    fire(g, "BAG_UPDATE_DELAYED")
+    # Two more in each of the stub's 7 carried containers, counted from the loaded baseline.
+    assert entries(g)[-1]["item_changes"] == {2589: 14} and len(entries(g)) == before + 2
+
+
 def test_lua_missing_namespace_never_hooks_a_similarly_named_global():
     lua, g, _ = journal_client()
     lua.execute('C_Container=nil; C_AuctionHouse=nil')

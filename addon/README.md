@@ -1,4 +1,4 @@
-# Brownstone Scan 0.10.0
+# Brownstone Scan 0.10.1
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -87,7 +87,7 @@ After `/reload` or logout:
 ```
 
 It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
-`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.10.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.10.1** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
@@ -520,7 +520,7 @@ Since **0.10.0** the sell-junk button (`C_MerchantFrame.SellAllJunkItems`) and t
 A hook can become installed after a UI addon loads; missing diagnostics refresh then. Routine
 logging is silent; explicit `/bscan status` reports journal count/cap and missing hooks. The addon
 never performs an economy action or opens/takes mail. Window flags mean observed event state;
-an absent flag is unknown. Inbox comparisons and bag/money baselines reset on addon reload.
+an absent flag is unknown. Inbox comparisons and bag/money baselines reset on addon reload. Since **0.10.1** a fresh login sets no bag baseline until its first settled bag update, which records `baseline_missing` (rule: `docs/requirements.md` → journal baselines).
 The single overflow marker has `event = JOURNAL_OVERFLOW`, cumulative `skipped` and a fresh ID
 on each update. Compare versions rather than summing their skipped counts.
 

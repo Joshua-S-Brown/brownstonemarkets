@@ -149,8 +149,13 @@ def round_trip(report: dict, raw: bytes, config: Source, now: datetime) -> None:
             isolated["data_dir"] = root / "data"
             isolated["scan_path"] = path
             preview = pipeline.preview_scans(isolated, path, now)
-            first = pipeline.import_scans(isolated, path, now=now, reviewed=preview)
-            second = pipeline.import_scans(isolated, path, now=now)
+            # Another house's scan is never imported; name it instead of failing the round trip.
+            other = ["; ".join(m) for m in preview.mismatches if m]
+            if other:
+                evidence.check(report, "scan house", "warn", "Not imported: " + " | ".join(other))
+            selected = preview.new_ids
+            first = pipeline.import_scans(isolated, path, selected, now=now, reviewed=preview)
+            second = pipeline.import_scans(isolated, path, selected, now=now)
             outcomes = second["scans"] + second.get("non_scan_records", [])
             if not outcomes or any(r["outcome"] != "duplicate" for r in outcomes):
                 raise ValueError("Second import did not mark every record duplicate (empty or other-house file)")

@@ -71,7 +71,7 @@ server_type = "normal"
 faction = "alliance"
 rules_version = "forever-beta-1.60"
 
+# Alliance cities share one faction house, so zone and auctioneer are not evidence here: a 2026-10-09
+# Ironforge scan (Auctioneer Redmuse) is the same house as Stormwind (Auctioneer Fitch).
 [sources.scan_evidence]
 faction = "Alliance"
-zone = "Stormwind City"
-auctioneer = "Auctioneer Fitch"

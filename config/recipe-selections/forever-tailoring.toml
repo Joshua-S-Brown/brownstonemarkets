@@ -6,7 +6,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"  # Game build rules; not a Forever server type.
 profession = "tailoring"
 status = "beta-observed"
-catalog_version = "0.3"
+catalog_version = "0.4"
 notes = "Forever beta, first tiers: Linen, Red Linen and Woolen bags with their bolts, plus Runecloth Bag for launch. Revalidate after material game builds by re-saving the page and regenerating."
 
 # Output counts: Wowhead's list data gives every recipe exactly 1. The "(2)" in its spell tooltips is the
@@ -18,6 +18,8 @@ output_quantity_note = "Wowhead list data says 1 per craft; the tooltip's (2) is
 
 [[recipes]]
 recipe_id = 3755  # Linen Bag
+output_quantity_verified = true
+output_quantity_note = "Counted in game 2026-10-09 (Forever beta, Windows, addon 0.10.0): 1 craft used 3 Bolt of Linen Cloth and 3 Coarse Thread and made 1 bag (equipped, then mailed); journal collection 20261009T100943647411Z_3bf14086."
 
 [[recipes]]
 recipe_id = 6686  # Red Linen Bag (pattern from a vendor or drop)
@@ -77,6 +79,8 @@ recipe_id = 2406  # Gray Woolen Shirt
 
 [[recipes]]
 recipe_id = 2963  # Bolt of Linen Cloth
+output_quantity_verified = true
+output_quantity_note = "Counted in game 2026-10-09 (Forever beta, Windows, addon 0.10.0): 5 crafts, each -2 Linen Cloth and +1 bolt in bags; journal collection 20261009T100943647411Z_3bf14086."
 
 [[recipes]]
 recipe_id = 2964  # Bolt of Woolen Cloth
@@ -1269,8 +1273,8 @@ availability_note = "New in Forever; no vendor price in Wowhead's data, so it is
 [[items]]
 item_id = 2320  # Coarse Thread
 vendor = true
-vendor_verified = false
-vendor_note = "Confirm at a Forever trade supplies vendor."
+vendor_verified = true
+vendor_note = "Bought in game 2026-10-09 (Forever beta, Windows, addon 0.10.0): 3 BuyMerchantItem, each 10c (PLAYER_MONEY 261 to 231); journal collection 20261009T100943647411Z_3bf14086."
 
 [[items]]
 item_id = 2321  # Fine Thread

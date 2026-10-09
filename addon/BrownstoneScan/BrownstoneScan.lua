@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.10.0"
+local ADDON_VERSION = "0.10.1"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -1521,7 +1521,10 @@ frame:SetScript("OnEvent", function(_, event, ...)
         if not sessionSeen or characterKey() ~= sessionKey then
             sessionSeen = true
             startSession(arg1, arg2)
-            journal.lastMoney, journal.lastBags = journal.money(), journal.bags()
+            -- At a fresh login bag contents are not loaded yet (beta 09 Oct: every login's first bag entry
+            -- listed the whole bag as gains), so the first settled bag update sets that baseline instead.
+            journal.lastMoney = journal.money()
+            journal.lastBags = arg1 ~= true and journal.bags() or nil
         end
         journal.protect(refreshBags, "bags refresh", event)
     elseif event == "BAG_UPDATE_DELAYED" or event == "PLAYER_MONEY" or event == "SKILL_LINES_CHANGED" then

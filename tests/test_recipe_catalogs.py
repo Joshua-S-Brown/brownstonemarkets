@@ -97,8 +97,9 @@ def test_status_reports_page_evidence_unconfirmed_values_and_refresh_due(workspa
 
     real = next(e for e in rc.find_catalogs(ROOT / "config") if e["name"] == "forever-tailoring")
     kinds = [value["kind"] for value in rc.unconfirmed_values(real["catalog"])]
-    assert kinds.count("yield") == len(real["catalog"]["recipes"])  # Every Forever yield stays unconfirmed.
-    assert kinds.count("vendor") == 4 and kinds.count("post-launch") == 3
+    # Every Forever yield stays unconfirmed except the two counted in game on 2026-10-09.
+    assert kinds.count("yield") == len(real["catalog"]["recipes"]) - 2
+    assert kinds.count("vendor") == 3 and kinds.count("post-launch") == 3
 
     moved = rc.catalog_status(entry, [source(rules_version="forever-1.61", label="Forever AH"),
                                       source(game_version="classic", rules_version="classic-era")],
@@ -406,13 +407,15 @@ def test_items_several_recipes_make_are_bought_and_their_recipes_not_offered():
 def test_comments_inside_a_block_stay_with_it_and_a_closing_comment_is_kept():
     text = (ROOT / "config/recipe-selections/forever-tailoring.toml").read_text(encoding="utf-8").replace(
         "recipe_id = 6686  # Red Linen Bag (pattern from a vendor or drop)\n",
-        "recipe_id = 6686  # Red Linen Bag\n# Counted in game.\noutput_quantity_verified = true\n")
+        "recipe_id = 6686  # Red Linen Bag\n# Red Linen counted.\noutput_quantity_verified = true\n")
     extract = fixture_extract("forever")
     recipes = [3755, 3757, 18405]  # Drop Red Linen Bag: its override must not move to Linen Bag.
     used = used_items(extract, recipes)
     edited, _ = selection_files.edit_recipes(text, extract, recipes, [2320, 2321, 14341], used)
-    assert all("output_quantity_verified" not in pick for pick in tomllib.loads(edited)["recipes"])
-    assert "Counted in game" not in edited
+    # Linen Bag keeps only its own counted override.
+    picks = {pick["recipe_id"]: pick for pick in tomllib.loads(edited)["recipes"]}
+    assert [rid for rid, pick in picks.items() if "output_quantity_verified" in pick] == [3755]
+    assert "Red Linen counted" not in edited
 
     closing = SELECTION + "\n# Closing note.\n"
     extract = rc.read_page(PAGE.encode(), "forever", "tailoring", "2026-10-04")
