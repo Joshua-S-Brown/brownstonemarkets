@@ -198,7 +198,7 @@ def test_importing_nothing_new_warns_to_reload_instead_of_claiming_success(tmp_p
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not any(b.label == "Import addon scan" for b in at.button)
     assert not at.success
-    assert any(w.value.startswith("Nothing new") and "/reload" in w.value for w in at.warning)
+    assert any(w.value.startswith("Nothing new") and "/reload" in w.value for w in at.caption)
 
 
 def test_combined_board_duplicate_recipe_selection_uses_own_catalog(tmp_path, monkeypatch):
@@ -487,7 +487,7 @@ def test_preview_marks_other_house_scans_and_imports_the_rest(tmp_path, monkeypa
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert at.success and any("another auction house" in i.value for i in at.info)
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
-    assert any(w.value.startswith("Nothing new") for w in at.warning)
+    assert any(w.value.startswith("Nothing new") for w in at.caption)
     assert not at.exception
 
 
@@ -528,7 +528,7 @@ def test_drop_import_page_machine_files_cleanup_and_stale_review(tmp_path, monke
     selection = next(w for w in at.multiselect if w.label.startswith("Files to import"))
     selection.set_value([]).run()
     assert not any(b.label == "Import addon scan" for b in at.button)
-    selection.set_value([str(win)]).run()
+    next(w for w in at.multiselect if w.label.startswith("Files to import")).set_value([str(win)]).run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     latest = next(t.value for t in at.dataframe if "Latest drop" in t.value.columns)
     assert latest["Fully imported"].iloc[0]
@@ -603,7 +603,7 @@ def test_journal_only_import_page_counts_latest_duplicates_and_reload_guidance(t
     else:
         assert any(m.value.startswith("Imported character records") for m in at.success)
         next(b for b in at.button if b.label == "Preview addon scans").click().run()
-        assert any("Nothing new" in m.value and "/reload" in m.value for m in at.warning)
+        assert any("Nothing new" in m.value and "/reload" in m.value for m in at.caption)
 
 
 @pytest.mark.parametrize("drop_folder", [False, True])
@@ -672,3 +672,208 @@ def test_professions_import_page_rows_and_unknown(tmp_path, monkeypatch, drop_fo
     assert table["Listed recipes"].iloc[0] == 1 and table["Rank"].iloc[0] == 20
     assert table["Known recipes (UTC)"].iloc[1] == "known recipes unknown"
     assert table["Skills"].iloc[2] == "skills unknown" and table["Level"].isna().iloc[2]
+
+
+def import_details(at):
+    return next(e for e in at.expander if e.label == "Details")
+
+
+@pytest.mark.parametrize("drop_folder", [False, True])
+def test_simple_import_clean_summary_button_and_collapsed_tables(tmp_path, monkeypatch, drop_folder):
+    from test_character_snapshots import snapshot, write
+    from test_scans import finished_now, listing, scan, write_scans
+
+    at, addon = preview_addon(tmp_path, monkeypatch, [scan("clean", finished_now(), [listing(1, 1, 50)])])
+    if drop_folder:
+        folder = tmp_path / "simple-drops"
+        folder.mkdir()
+        addon["drop_folder"] = folder
+        old = write_scans(folder / "windows-pc-20261008T130000Z-BrownstoneScan.lua",
+                          scan("old", finished_now(), [listing(2, 1, 60)]))
+        from brownstone.pipeline import import_scans
+        import_scans(addon, old)
+        new = write_scans(folder / "windows-pc-20261009T090000Z-BrownstoneScan.lua",
+                          scan("new", finished_now(), [listing(3, 1, 70)]))
+    r = snapshot()
+    r.update(captured_at=finished_now())
+    r.pop("captured_at_utc")
+    write(addon["scan_path"], [r], scans=[scan("clean", finished_now(), [listing(1, 1, 50)])])
+    at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert not at.exception and not at.warning
+    assert any("local file: 1 new scan, 1 character record" in c.value for c in at.caption)
+    assert not import_details(at).proto.expanded
+    assert not next(e for e in at.expander if e.label == "Imported character data").proto.expanded
+    assert len(import_details(at).dataframe) == len([t for t in at.sidebar.dataframe])
+    assert not import_details(at).button
+    assert at.multiselect[0].value == ([str(addon["scan_path"]), str(new)] if drop_folder else ["clean"])
+    assert any(b.label == "Import addon scan" for b in at.button)
+    if drop_folder:
+        assert any(c.value == "windows-pc, dropped 09 Oct 09:00 UTC: 1 new scan, 0 character records"
+                   for c in at.caption)
+        assert any(c.value == "1 file already imported." for c in at.caption)
+        assert any("1 dropped file is fully imported" in c.value for c in at.caption)
+    else:
+        assert not any("dropped file" in c.value for c in at.caption)
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert at.success and not at.error and not at.exception
+    assert any("/bscan clear is safe" in c.value for c in at.caption)
+    holdings = next(e for e in at.expander if e.label == "Imported character data")
+    assert holdings.dataframe and not holdings.proto.expanded
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert sum(c.value.startswith("Nothing new") for c in at.caption) == 1
+    assert not any(b.label == "Import addon scan" for b in at.button)
+    assert not import_details(at).proto.expanded
+
+
+@pytest.mark.parametrize("problem", ["read", "parse", "conflict", "partial", "house", "selection", "drop"])
+def test_simple_import_problem_warning_opens_details(tmp_path, monkeypatch, problem):
+    from test_scans import finished_now, listing, scan, write_scans
+
+    record = scan("clean", finished_now(), [listing(1, 1, 50)])
+    at, addon = preview_addon(tmp_path, monkeypatch, [record])
+    if problem == "read":
+        addon["scan_path"].unlink()
+    elif problem == "parse":
+        addon["scan_path"].write_text("BrownstoneScanDB = {")
+    elif problem == "conflict":
+        from brownstone.pipeline import import_scans
+        import_scans(addon)
+        record["listings"][0]["buyout"] = 51
+        write_scans(addon["scan_path"], record)
+    elif problem == "partial":
+        write_scans(addon["scan_path"], scan("partial", finished_now(), [], status="stopped"))
+    elif problem == "house":
+        write_scans(addon["scan_path"], scan("horde", finished_now(), [], faction={"player": "Horde"}))
+    elif problem == "drop":
+        folder = tmp_path / "new-drops"
+        folder.mkdir()
+        addon["drop_folder"] = folder
+        write_scans(folder / "windows-pc-20261008T130000Z-BrownstoneScan.lua", record)
+        at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert not at.exception
+    if problem in ("read", "parse", "conflict"):
+        # The error is shown once; with no preview there are no details to open.
+        assert any("Preview failed" in e.value and (problem != "conflict" or "conflict" in e.value)
+                   for e in at.error)
+        assert not at.warning and not any(e.label == "Details" for e in at.expander)
+        return
+    if problem in ("selection", "drop"):
+        at.multiselect[0].set_value([]).run()
+    assert import_details(at).proto.expanded
+    expected = {"partial": "New partial scan", "house": "another auction house",
+                "selection": "Selection differs", "drop": "windows-pc-20261008T130000Z-BrownstoneScan.lua"}
+    assert any(expected[problem] in w.value for w in at.warning)
+    if problem == "drop":
+        assert any("not fully imported" in w.value for w in at.warning)
+        assert any(c.value == "windows-pc, dropped 08 Oct 13:00 UTC: 1 new scan, 0 character records"
+                   for c in at.caption)
+
+
+@pytest.mark.parametrize("drop_folder", [False, True])
+def test_simple_import_stale_error_shown_once_without_writes(tmp_path, monkeypatch, drop_folder):
+    from test_scans import finished_now, listing, scan
+    at, addon = preview_addon(tmp_path, monkeypatch, [scan("clean", finished_now(), [listing(1, 1, 50)])])
+    if drop_folder:
+        folder = tmp_path / "stale-drops"
+        folder.mkdir()
+        addon["drop_folder"] = folder
+        at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    addon["scan_path"].write_bytes(addon["scan_path"].read_bytes() + b"\n")
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert any("stale" in e.value for e in at.error)
+    assert not at.warning and not any(e.label == "Details" for e in at.expander)
+    assert not addon["data_dir"].exists()
+    assert not any(b.label == "Import addon scan" for b in at.button)
+
+
+def test_simple_import_quiet_empty_local_and_machine_cleanup(tmp_path, monkeypatch):
+    from test_scans import finished_now, listing, scan, write_scans
+    at, addon = preview_addon(tmp_path, monkeypatch, [])
+    folder = tmp_path / "quiet-drops"
+    folder.mkdir()
+    addon["drop_folder"] = folder
+    drop = write_scans(folder / "windows-pc-20261008T130000Z-BrownstoneScan.lua",
+                       scan("win", finished_now(), [listing(1, 1, 50)]))
+    raw = drop.read_bytes()
+    at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert any("Local scan_path file has no scans" in c.value for c in at.caption)
+    assert all("preview.lua" not in w.value for w in at.warning)
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert not at.error and not at.exception
+    assert any("windows-pc: /bscan clear is safe only if you haven't played" in c.value for c in at.caption)
+    assert any("1 dropped file is fully imported" in c.value for c in at.caption)
+    assert not import_details(at).proto.expanded
+    assert drop.exists() and drop.read_bytes() == raw
+    assert any("Local scan_path file has no scans" in c.value for c in at.caption)
+
+
+@pytest.mark.parametrize("problem", ["read", "parse", "conflict", "character-house"])
+def test_simple_drop_problems_name_file_and_preserve_good_import(tmp_path, monkeypatch, problem):
+    from test_scans import finished_now, listing, scan, write_scans
+    at, addon = preview_addon(tmp_path, monkeypatch, [scan("good", finished_now(), [listing(1, 1, 50)])])
+    folder = tmp_path / "problem-drops"
+    folder.mkdir()
+    addon["drop_folder"] = folder
+    bad = folder / "windows-pc-20261008T130000Z-BrownstoneScan.lua"
+    record = scan("bad", finished_now(), [listing(2, 1, 60)])
+    write_scans(bad, record)
+    if problem == "read":
+        from brownstone import pipeline
+        original = pipeline._read_scan_bytes
+
+        def unreadable(path):
+            if path == bad:
+                raise PermissionError("still syncing")
+            return original(path)
+
+        monkeypatch.setattr(pipeline, "_read_scan_bytes", unreadable)
+    elif problem == "parse":
+        bad.write_text("BrownstoneScanDB = {")
+    elif problem == "conflict":
+        from brownstone.pipeline import import_scans
+        import_scans(addon, bad)
+        record["listings"][0]["buyout"] = 61
+        write_scans(bad, record)
+    else:
+        from test_character_snapshots import snapshot, write
+        r = snapshot()
+        r["faction"] = "Horde"
+        r.update(captured_at=finished_now())
+        r.pop("captured_at_utc")
+        write(bad, [r])
+    raw = bad.read_bytes()
+    at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert import_details(at).proto.expanded
+    expected = {"read": "still syncing", "parse": "not fully imported", "conflict": "conflict",
+                "character-house": "another auction house"}
+    assert any(bad.name in w.value and expected[problem] in w.value for w in at.warning)
+    next(b for b in at.button if b.label == "Import addon scan").click().run()
+    assert at.success and not at.error and not at.exception
+    assert any("windows-pc: don't /bscan clear" in c.value for c in at.caption)
+    assert bad.read_bytes() == raw
+    assert import_details(at).proto.expanded
+
+
+@pytest.mark.parametrize("drop_folder", [False, True])
+def test_simple_import_details_stay_open_after_selection_restored(tmp_path, monkeypatch, drop_folder):
+    from test_scans import finished_now, listing, scan
+    at, addon = preview_addon(tmp_path, monkeypatch, [scan("clean", finished_now(), [listing(1, 1, 50)])])
+    if drop_folder:
+        folder = tmp_path / "sticky-drops"
+        folder.mkdir()
+        addon["drop_folder"] = folder
+        at.run()
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    default = at.multiselect[0].value
+    assert not import_details(at).proto.expanded
+    at.multiselect[0].set_value([]).run()
+    assert import_details(at).proto.expanded
+    at.multiselect[0].set_value(default).run()
+    assert not at.warning and import_details(at).proto.expanded
+    next(b for b in at.button if b.label == "Preview addon scans").click().run()
+    assert not import_details(at).proto.expanded

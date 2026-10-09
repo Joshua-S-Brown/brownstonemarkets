@@ -2,7 +2,7 @@
 
 Current implemented state, limitations and how to verify. History lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-08._
+_Last updated 2026-10-09._
 
 ## Implemented
 
@@ -109,7 +109,7 @@ _Last updated 2026-10-08._
   - House evidence is checked against the configured market. Preview lists scans from another house as not importable, with the reasons; importing one (including a CLI import of the whole file) fails. CLI `--scan` validates only selected scans.
   - Stacks are priced per unit, rounded up when inexact. `market_value` is the quantity-weighted 25th percentile.
   - Deduplication is by `scan_id`, and identical file bytes are stored once, gzip-compressed. Partial scans are stored and labeled but not priced. After an import that saved something new and left no file scans unimported, the app and CLI say `/bscan clear` is safe; subsets warn to import the remainder first; scans from another house warn that clearing deletes them; an import with nothing new warns to `/reload` first instead. The addon refuses to clear scans it hasn't written to the file yet.
-  - Preview displays IDs, UTC start/finish, status, listing count, import state and partial status. It writes nothing and uses only read-only database queries. Empty selections and duplicates-only previews offer no import. File/configuration/duplicate-state changes invalidate a review before import; reads use the bounds and best-effort detection in ADDON-06. A missing database is created only by an explicit import.
+  - STORY-045: Preview shows one short summary per file with new scans or character records, counts already-imported files, and puts Import directly below the summary. Details contains the existing preview tables, notes and selection; it opens on the problems named in ADDON-06/STORY-045, including drops the selection would leave not fully imported, and stays open for the rest of that review. Imported character data stays in its own collapsed expander. Cleanup is a count of fully imported drops for manual deletion, hidden at zero; after import, each latest-drop machine (or the local file's machine) gets one conditional clear-guidance line. Empty local files are quiet when another input is readable. Preview displays IDs, UTC start/finish, status, listing count, import state and partial status in Details. It writes nothing and uses only read-only database queries. Empty selections and duplicates-only previews offer no import. File/configuration/duplicate-state changes invalidate a review before import; reads use the bounds and best-effort detection in ADDON-06. A missing database is created only by an explicit import.
   - Reads scan formats 1, 2, 3 and 4; older scans keep new fields null (ADDON-08/09). Converting the real scan to format 2 gives identical listings and item prices, at 2.8 MB instead of 24.8 MB.
   - The Forever Action Board works from imported scans with no calculation changes.
   - The beta source `forever-us-normal-alliance-addon` is disabled in the tracked `config/market.toml`. On the user's machine, the untracked `config/market.local.toml` enables it and points it at the game's SavedVariables file, to archive beta scans before the beta closes. Classic Mankrik stays the default development source.
