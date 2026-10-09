@@ -195,6 +195,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   The addon import page alone displays latest bags level and skill ranks/max per character;
   it never infers a profession or catalog match from a name. Beta must confirm skill API shapes,
   IDs, gathering/secondary coverage and logout/reload readability.
+  STORY-049 extends recipe evidence in ADDON-12; level/skill capture is unchanged.
 - **Unreadable logout reads (addon 0.10.0, decided 2026-10-08):** the first real Forever logout
   snapshot (Windows, 08 Oct) read 0 slots in every bag, 0 copper and level 1 while the same
   login's journal showed items and 52 copper. The client no longer answers at logout. The addon
@@ -332,11 +333,45 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   restrictions, not a guarantee of a complete learned catalog. Capture is silent in normal play.
   A window never observed remains *known recipes unknown*. The import page alone shows the latest
   list UTC and listed non-header recipe count per profession, with the incompleteness flag;
-  unreadable counts/rows remain unknown. Matching/learned-recipe interpretation is STORY-043.
+  unreadable counts/rows remain unknown. STORY-049 below extends modern learned interpretation;
+  Today/catalog eligibility remains STORY-043.
   Journal was chosen instead of a new snapshot kind to reuse change-only lists and the bounded
   existing non-scan lifecycle. Addon is **0.8.0**; format remains **6**, schema remains **11**:
   existing raw JSON stores the added payloads without a migration. Forever event/API support,
   default hidden recipes, ID meaning and UI completeness remain beta checks by 13 October.
+- **Forever known recipes (STORY-049, addon 0.11.0):** on an observed open profession
+  window, prefer a guarded `C_TradeSkillUI` reader; fall back to the STORY-041 legacy reader
+  when the modern reader cannot establish a profession/list surface. The Craft window
+  (`CRAFT_*` events) always uses the legacy `GetCraft*` reader, because `C_TradeSkillUI` would
+  report the trade-skill profession instead. All candidate reads are
+  guarded independently; availability and returned shapes remain beta checks. Preserve every
+  listed recipe ID, raw recipe info and schematic (including reagent slots/options), profession
+  returns, links, output quantities, category and filter evidence with API provenance. Record all
+  rows, but **only `learned == true` counts as known**; false is unlearned and absent is unknown.
+  Modern craftable `numAvailable` is ignored for change detection, retained in saved evidence.
+  Guard `TRADE_SKILL_LIST_UPDATE`, `TRADE_SKILL_DATA_SOURCE_CHANGED` and `NEW_RECIPE_LEARNED`
+  alongside the existing window events. Fired counts stay in diagnostics; read refreshes only
+  while the corresponding window is observed open. Report observed active filters/collapsed
+  categories as possibly incomplete, without changing them; unavailable reads prove no completeness.
+  The first profession opening in each load carries `trade_skill_api_inventory`: sorted available
+  `C_TradeSkillUI` function names and accepted candidate profession-event names, even when the list
+  cannot be read. Attach it to the changed list or plain opening entry, avoiding another entry.
+  Existing change detection, legacy capture, cap, clear, silent/read-only rules apply unchanged.
+- **Seen crafted (STORY-049):** the import-page projection reads existing scoped craft journal
+  entries. A positive recipe ID in `C_TradeSkillUI.CraftRecipe` or the player's successful craft
+  cast establishes known evidence from that observation, labelled *seen crafted*. Deduplicate IDs
+  within character/profession and retain this evidence alongside the latest window list. A cast
+  must have a recipe ID identified by window evidence, a game/rules-compatible catalog or that
+  character's CraftRecipe hook; opening a profession can itself cast a non-recipe spell.
+  Window recipe IDs supply profession provenance; compatible catalog recipe IDs supply profession
+  metadata where the beta saved no list. Ambiguous/unmapped hook IDs retain *Profession unknown*,
+  never a guessed profession. No price/catalog eligibility calculation is introduced.
+  Show latest evidence UTC, known count and source (*window list*, *seen crafted*, or both),
+  and the seen-crafted IDs; no evidence remains *unknown*, never zero. Only learned modern rows
+  count toward the list, and the combined known count avoids IDs already in that list.
+  Format remains **6**, schema **11**: the existing raw JSON journal handles these payloads,
+  so no new storage or migration is needed. Modern API shapes, recipe IDs and completeness still
+  need the Forever beta play check by 15 October.
 - **Spellcasts are crafting evidence only (decided 2026-10-07, product owner):** only
   `UNIT_SPELLCAST_SUCCEEDED` for unit `player` while a trade skill or craft window is observed open is
   recorded. Start, failed and interrupted casts, other units' casts and every spell cast without a

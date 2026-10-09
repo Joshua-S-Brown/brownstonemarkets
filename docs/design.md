@@ -217,8 +217,7 @@ counted count tuple and rows; `skills.modern` has API name, counted profession i
 Each row keeps its original index, counted `info`, name, rank/max and available ID; legacy headers
 remain in raw evidence. Modern rows are a dense array even when the index tuple has nil holes.
 Legacy rows also keep header expansion, with `possibly_incomplete` on the surface when a header is
-collapsed. The import page reads only the newest bags snapshot per character and newest list per
-character/profession (SQL `QUALIFY` on capture time, then sequence).
+collapsed. The import page reads only the newest bags snapshot per character (SQL `QUALIFY` on capture time, then sequence).
 Snapshot hashing retains historical hashes exactly; only the new `skills` subtree uses the journal's
 typed-key canonical encoder, so counted tuples cannot conflate numeric and string keys.
 Stored snapshot JSON retains those tuples without sorting mixed key types.
@@ -233,6 +232,16 @@ report the same name, display deterministically prefers the modern row (which su
 labels its API/ID and keeps both originals raw; it never fills one API's holes from the other.
 Only `views/scan_import`
 uses it. Capture/display/unknown rules and the journal choice live in ADDON-11/12.
+STORY-049 adds a modern `known_recipes.api = "C_TradeSkillUI"` surface: `recipe_ids`,
+count tuple, profession returns keyed by function name, dense rows with `recipe_id`, raw `info`
+and `schematic`, learned flag, links, output quantities and category evidence. Schematic reagent
+slots/options remain raw rather than being flattened into guessed required ingredients. Filters
+retain counted return tuples. The first opening's journal payload also has `trade_skill_api_inventory`
+(function/event name arrays). Format 6/schema 11 are unchanged.
+`professions` reads scoped craft journal records to retain all craft evidence alongside the latest
+list per profession, ordered by capture time/sequence. Compatible catalog recipe IDs supply only
+profession metadata when window provenance is missing; unresolved hook IDs remain visible separately.
+The import page shows list and seen-crafted sources/counts/IDs. Rules and beta limits live in ADDON-12.
 Reference tuple shapes and filter index 0 come from Blizzard's
 [Classic trade skill UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua)
 and [Classic craft UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua);

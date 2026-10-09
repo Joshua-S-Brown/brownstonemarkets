@@ -5,6 +5,7 @@ from pathlib import Path
 import duckdb
 
 from .config import MARKET_KEYS
+from .recipe_catalogs import CONFIG_DIR, find_catalogs, profession_title
 from .scans import _list, _utc
 
 
@@ -29,23 +30,23 @@ def latest_rows(config) -> list[dict]:
             for name, realm, faction, raw in records:
                 state = characters.setdefault((name, realm, faction), {"bags": {}, "recipes": {}})
                 _observe(state, json.loads(raw))
+    catalog_ids = _catalog_recipe_ids(config)
+    for state in characters.values():
+        _project_crafts(state, catalog_ids)
     return [row for key, state in sorted(characters.items()) for row in _rows(key, state)]
 
 
 _SEQUENCE = "TRY_CAST(json_extract_string(record_json, '$.sequence') AS BIGINT)"
-_RECIPES = "json_extract_string(record_json, '$.known_recipes.name')"
 # character_snapshots.unreadable_backpack in SQL: a bags read with a 0-slot backpack is not evidence.
 _READABLE_BAGS = ("NOT coalesce(list_contains(list_transform(json_extract(record_json, '$.containers[*]'), "
                   "c -> json_extract_string(c, '$.container_id') = '0' AND json_extract_string(c, '$.size') = '0'), "
                   "true), false)")
-# Only the newest bags snapshot per character and newest list per profession leave the database.
+# The newest bags snapshot and scoped craft evidence leave the database.
 _LATEST = {
     "character_snapshots": f"kind='bags' AND {_READABLE_BAGS} QUALIFY row_number() OVER (PARTITION BY character, "
                            "character_realm, "
                            f"character_faction ORDER BY captured_at DESC, {_SEQUENCE} DESC NULLS LAST) = 1",
-    "character_journal": f"family='craft' AND {_RECIPES} IS NOT NULL QUALIFY row_number() OVER (PARTITION BY "
-                         f"character, character_realm, character_faction, {_RECIPES} "
-                         f"ORDER BY captured_at DESC, {_SEQUENCE} DESC NULLS LAST) = 1",
+    "character_journal": "family='craft' ORDER BY captured_at, " + _SEQUENCE + " NULLS FIRST, entry_id",
 }
 
 
@@ -56,11 +57,63 @@ def _order(record: dict) -> tuple:
 def _observe(state: dict, record: dict) -> None:
     if record.get("kind") == "bags" and _order(record) > _order(state["bags"]):
         state["bags"] = record
+    if _crafted_id(record) is not None:
+        state.setdefault("crafts", []).append(record)
     recipes = record.get("known_recipes")
     if isinstance(recipes, dict) and isinstance(recipes.get("name"), str):
         previous = state["recipes"].get(recipes["name"], {})
         if _order(record) > _order(previous):
             state["recipes"][recipes["name"]] = record
+
+
+def _crafted_id(record: dict) -> int | None:
+    arguments = record.get("arguments") or {}
+    event = record.get("event")
+    value = None
+    if event == "C_TradeSkillUI.CraftRecipe":
+        value = _first(arguments)
+    elif event == "UNIT_SPELLCAST_SUCCEEDED" and _first(arguments) == "player":
+        value = arguments.get("3", arguments.get(3)) if isinstance(arguments, dict) else (
+            arguments[2] if len(arguments) > 2 else None)
+    return value if type(value) is int and value > 0 else None
+
+
+def _catalog_recipe_ids(config) -> dict[int, set[str]]:
+    result: dict[int, set[str]] = {}
+    for entry in find_catalogs(CONFIG_DIR):
+        catalog = entry["catalog"]
+        if not catalog or any(catalog.get(k) != config.get(k) for k in ("game_version", "rules_version")):
+            continue
+        for recipe in catalog.get("recipes", []):
+            result.setdefault(recipe["recipe_id"], set()).add(profession_title(catalog["profession"]))
+    return result
+
+
+def _project_crafts(state: dict, catalog_ids: dict[int, set[str]]) -> None:
+    # Window IDs are direct client provenance. Catalogs supply profession metadata only; no price join.
+    ids: dict[int, set[str]] = {}
+    for name, record in state["recipes"].items():
+        for row in _list(record["known_recipes"].get("rows"), "recipe rows"):
+            for field in ("recipe_id", "spell_id"):
+                if type(row.get(field)) is int:
+                    ids.setdefault(row[field], set()).add(name)
+    for catalog_id, catalog_names in catalog_ids.items():
+        ids.setdefault(catalog_id, set(catalog_names))
+    hook_ids = {_crafted_id(r) for r in state.get("crafts", []) if r.get("event") == "C_TradeSkillUI.CraftRecipe"}
+    seen: dict[str, dict] = {}
+    for record in state.get("crafts", []):
+        recipe_id = _crafted_id(record)
+        if recipe_id is None:
+            continue
+        if record.get("event") == "UNIT_SPELLCAST_SUCCEEDED" and recipe_id not in ids and recipe_id not in hook_ids:
+            continue  # Opening a profession also casts a spell; an unidentified spell is not a recipe.
+        names = ids.get(recipe_id, set())
+        name = next(iter(names)) if len(names) == 1 else "Profession unknown"
+        evidence = seen.setdefault(name, {})
+        previous = evidence.get(recipe_id, {})
+        if _order(record) > _order(previous):
+            evidence[recipe_id] = record
+    state["seen"] = seen
 
 
 def _skills(bags: dict) -> dict:
@@ -87,6 +140,8 @@ def _recipe_count(state: dict) -> int | None:
     rows = _list(state.get("rows"), "recipe rows")
     if type(count) is not int or len(rows) != count or any(r.get("type") is None for r in rows):
         return None
+    if state.get("api") == "C_TradeSkillUI":
+        return sum(r.get("learned") is True for r in rows)
     return sum(r["type"] != "header" for r in rows)
 
 
@@ -111,21 +166,44 @@ def _readable_skills(bags: dict, skills: dict) -> bool:
 def _rows(key: tuple, state: dict) -> list[dict]:
     bags = state["bags"]
     skills = _skills(bags)
-    names = sorted(set(skills) | set(state["recipes"]))
+    names = sorted(set(skills) | set(state["recipes"]) | set(state.get("seen", {})))
     result = []
     for name in names or [None]:
         skill = skills.get(name, {})
         record = state["recipes"].get(name, {})
         recipes = record.get("known_recipes", {})
-        moment = (_utc(record["captured_at"], record.get("captured_at_utc"), "captured_at").isoformat()
-                  if record else "known recipes unknown")
+        seen = state.get("seen", {}).get(name, {})
+        crafted: dict = max(seen.values(), key=_order, default={})
+        latest = record or crafted
+        moment = (_utc(latest["captured_at"], latest.get("captured_at_utc"), "captured_at").isoformat()
+                  if latest else "known recipes unknown")
         result.append(dict(zip(("Character", "Realm", "Faction"), key, strict=True)) | {
             "Level": bags.get("level"), "Skills": _skills_status(bags, skills),
             "Profession / skill": name, "Skill API": skill.get("api"), "Skill ID": skill.get("skill_id"),
             "Rank": skill.get("rank"), "Max rank": skill.get("max_rank"),
             "Known recipes (UTC)": moment, "Listed recipes": _recipe_count(recipes),
+            "Recipe source": " + ".join((["window list"] if record else []) + (["seen crafted"] if seen else []))
+                or "unknown",
+            "Seen crafted recipes": sorted(seen), "Known recipes": _known_count(recipes, seen),
+            "Seen crafted (UTC)": _evidence_time(crafted),
             "Possibly incomplete": recipes.get("possibly_incomplete")})
     return result
+
+
+def _evidence_time(record: dict) -> str | None:
+    return (_utc(record["captured_at"], record.get("captured_at_utc"), "captured_at").isoformat()
+            if record else None)
+
+
+def _known_count(recipes: dict, seen: dict) -> int | None:
+    count = _recipe_count(recipes)
+    if count is None:
+        return len(seen) if seen else None
+    rows = _list(recipes.get("rows"), "recipe rows")
+    known = [row for row in rows if row.get("type") != "header" and
+             (recipes.get("api") != "C_TradeSkillUI" or row.get("learned") is True)]
+    listed_ids = {row.get(field) for row in known for field in ("recipe_id", "spell_id")}
+    return count + len(set(seen) - listed_ids)
 
 
 def validate_skills(record: dict) -> None:
@@ -154,6 +232,8 @@ def validate_recipes(record: dict) -> None:
     _integers(state, ("rank", "max_rank"))
     for row in _list(state.get("rows"), "recipe rows"):
         _text(row, ("name", "type", "recipe_link", "item_link"))
+        if row.get("learned") is not None and type(row["learned"]) is not bool:
+            raise ValueError("Recipe learned must be boolean or missing")
         _integers(row, ("index", "recipe_id", "spell_id", "item_id", "min_made", "max_made"))
         for reagent in _list(row.get("reagents"), "recipe reagents"):
             _text(reagent, ("item_link",))

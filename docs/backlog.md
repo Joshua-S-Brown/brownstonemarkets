@@ -250,6 +250,10 @@ Acceptance:
 
 ### STORY-049 — Known recipes on the Forever client
 
+**Implemented offline (2026-10-09); pending Forever beta play check.** Capture/projection
+contracts live in [ADDON-12](requirements.md#addon-12-event-journal-story-033); play actions in
+[addon/README.md](../addon/README.md#forever-known-recipes-play-checklist-story-049--by-15-october).
+
 Added 2026-10-09 (beta finding). Fixes STORY-041's known-recipe capture on the Forever client. Must be testable in game by **15 October**, so the beta can confirm it before 21 October.
 
 **Evidence:** on 2026-10-09 (Windows, addon 0.10.1, Basilly, Tailoring 7/75) `TRADE_SKILL_SHOW` fired but no `known_recipes` list was saved: `GetTradeSkillLine` returned nothing. The same client crafted through `C_TradeSkillUI.CraftRecipe(2963, 1)` and `CraftRecipe(3755, 1)`, whose first argument is the catalog's recipe ID. `TRADE_SKILL_UPDATE`/`CRAFT_UPDATE` never fired. Level and skill lines (modern API) were captured correctly and stay unchanged.

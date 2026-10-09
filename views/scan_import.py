@@ -129,7 +129,8 @@ def _warning(problems):
 def _show_holdings(config):
     skills = professions.latest_rows(config)
     if skills:
-        st.caption("Latest imported level, skills and listed recipes; missing values are unknown")
+        st.caption("Latest imported level, skills and known recipes with their evidence source; "
+                   "missing values are unknown")
         st.dataframe(skills, hide_index=True)
     auctions = journal.active_auction_rows(config)
     if auctions:

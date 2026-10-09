@@ -1,4 +1,4 @@
-# Brownstone Scan 0.10.1
+# Brownstone Scan 0.11.0
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -87,7 +87,7 @@ After `/reload` or logout:
 ```
 
 It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
-`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.10.1** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.11.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
@@ -529,6 +529,13 @@ snapshot/scan tables. Import displays saved counts/latest UTC time per character
 only entries is valid; all matching non-scan records import when the file is selected, even with
 `--scan`. Fully imported includes journal entries. Duplicate-only import still says **Nothing new:
 /reload first**. Follow OPS-03 before clear, then verify current-login entries survived the write.
+
+### Forever known recipes play checklist (STORY-049) — by 15 October
+
+1. Open each character's profession windows (Mining and Engineering; Tailoring and Enchanting).
+2. Learn one recipe at a trainer, then reopen that profession window.
+3. Craft one thing.
+4. Log out.
 
 ### Professions beta checklist (STORY-041) — by 13 October, Mac and Windows
 

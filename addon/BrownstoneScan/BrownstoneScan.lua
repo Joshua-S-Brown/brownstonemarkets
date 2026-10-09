@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.10.1"
+local ADDON_VERSION = "0.11.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -818,6 +818,7 @@ local journalEvents = {
     MERCHANT_SHOW = "vendor", MERCHANT_CLOSED = "vendor", MERCHANT_UPDATE = "vendor",
     TRAINER_SHOW = "vendor", TRAINER_CLOSED = "vendor",
     TRADE_SKILL_SHOW = "craft", TRADE_SKILL_CLOSE = "craft", TRADE_SKILL_UPDATE = "craft",
+    TRADE_SKILL_LIST_UPDATE = "craft", TRADE_SKILL_DATA_SOURCE_CHANGED = "craft", NEW_RECIPE_LEARNED = "craft",
     CRAFT_SHOW = "craft", CRAFT_CLOSE = "craft", CRAFT_UPDATE = "craft",
     UNIT_SPELLCAST_SUCCEEDED = "craft", CHAT_MSG_LOOT = "loot", LOOT_OPENED = "loot", LOOT_CLOSED = "loot",
     LOOT_SLOT_CLEARED = "loot", BANKFRAME_OPENED = "bags", BANKFRAME_CLOSED = "bags",
@@ -1123,19 +1124,99 @@ function professions.row(prefix, index)
     return row
 end
 
+-- Candidate readers: availability is evidence, never assumed from the client version.
+professions.modernEvents = { "TRADE_SKILL_SHOW", "TRADE_SKILL_CLOSE", "TRADE_SKILL_UPDATE", "CRAFT_SHOW", "CRAFT_CLOSE", "CRAFT_UPDATE",
+    "TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_DATA_SOURCE_CHANGED", "NEW_RECIPE_LEARNED" }
+function professions.inventory()
+    if professions.inventoried then return end
+    local inventory = { functions = {}, events = {} }
+    local api = type(C_TradeSkillUI) == "table" and C_TradeSkillUI or {}
+    for name, fn in pairs(api) do
+        if type(fn) == "function" then inventory.functions[#inventory.functions + 1] = name end
+    end
+    table.sort(inventory.functions)
+    for _, name in ipairs(professions.modernEvents) do
+        local rejected = false
+        for _, missing in ipairs(missingEvents) do if missing == name then rejected = true end end
+        if not rejected then inventory.events[#inventory.events + 1] = name end
+    end
+    return inventory
+end
+
+function professions.modernRow(api, id, index)
+    local infoReturns = journal.read(api.GetRecipeInfo, id)
+    local schematicReturns = journal.read(api.GetRecipeSchematic, id, false)
+    local info = infoReturns and infoReturns[1]
+    local schematic = schematicReturns and schematicReturns[1]
+    local row = { index = index, recipe_id = id, type = "recipe", info = info,
+        schematic = schematic, recipe_link = safe(api.GetRecipeLink, id),
+        item_link = safe(api.GetRecipeItemLink, id) }
+    if type(info) == "table" then
+        row.name, row.learned, row.craftable = info.name, info.learned, info.numAvailable
+        row.category_id = info.categoryID
+        row.category = journal.read(api.GetCategoryInfo, info.categoryID)
+    end
+    if type(schematic) == "table" then
+        row.item_id, row.min_made, row.max_made = schematic.outputItemID, schematic.quantityMin, schematic.quantityMax
+    end
+    return row
+end
+
+function professions.modern()
+    local api = C_TradeSkillUI
+    if type(api) ~= "table" or type(api.GetAllRecipeIDs) ~= "function" then return end
+    local raw, name, rank, maxRank = {}, nil, nil, nil
+    for _, fn in ipairs({ "GetChildProfessionInfo", "GetBaseProfessionInfo", "GetTradeSkillLine" }) do
+        local values = journal.read(api[fn])
+        raw[fn] = values
+        local info = values and values[1]
+        if not name and type(info) == "table" then
+            name, rank, maxRank = info.professionName, info.skillLevel, info.maxSkillLevel
+        elseif not name and type(info) == "string" then
+            name, rank, maxRank = info, values[2], values[3]
+        end
+    end
+    if not name or name == "" or name == "UNKNOWN" then return end
+    local ids = safe(api.GetAllRecipeIDs)
+    local state = { api = "C_TradeSkillUI", profession = raw, name = name, rank = rank,
+        max_rank = maxRank, recipe_ids = journal.copy(ids), rows = {}, filters = {}, possibly_incomplete = false }
+    if type(ids) == "table" then
+        state.counts = { #ids, n = 1 }
+        for i, id in ipairs(ids) do state.rows[i] = professions.modernRow(api, id, i) end
+    else state.possibly_incomplete = true end
+    for _, fn in ipairs({ "GetOnlyShowMakeableRecipes", "GetOnlyShowSkillUpRecipes",
+        "GetRecipeItemNameFilter", "GetRecipeItemLevelFilter", "GetFilterFlags" }) do
+        local values = journal.read(api[fn])
+        state.filters[fn] = values
+        for i = 1, (values and values.n or 0) do
+            local value = values[i]
+            if value == true or (type(value) == "number" and value > 0) or
+                (type(value) == "string" and value ~= "") then state.possibly_incomplete = true end
+        end
+    end
+    for _, row in ipairs(state.rows) do
+        local category = row.category and row.category[1]
+        if type(category) == "table" and (category.isCollapsed == true or category.isExpanded == false) then state.possibly_incomplete = true end
+    end
+    return state
+end
+
 -- Craftable counts change with every craft or bag change; comparing without them saves a new list
 -- only when recipes, ranks, headers or filters change. Saved lists still carry the counts.
 function professions.structure(state)
     local copy = journal.copy(state)
     for _, row in pairs(copy.rows) do
         row.craftable = nil
-        if row.info then row.info[state.api == "GetCraft" and 4 or 3] = nil end
+        if row.info then
+            if state.api == "C_TradeSkillUI" then row.info.numAvailable = nil
+            else row.info[state.api == "GetCraft" and 4 or 3] = nil end
+        end
     end
     return copy
 end
 
 -- Returns "recorded" when a changed list was saved, "unchanged" when it matched, nil when unreadable.
-function professions.window(event, arguments)
+function professions.legacy(event)
     local craft = event == "CRAFT_SHOW" or event == "CRAFT_UPDATE"
     local prefix = craft and "GetCraft" or "GetTradeSkill"
     local profession = journal.read(_G[craft and "GetCraftDisplaySkillLine" or "GetTradeSkillLine"])
@@ -1152,13 +1233,22 @@ function professions.window(event, arguments)
             state.possibly_incomplete = true
         end
     end
+    return state
+end
+
+function professions.window(event, arguments, inventory)
+    -- The Craft window (Enchanting) has no modern reader; C_TradeSkillUI would report the trade skill instead.
+    local craft = event == "CRAFT_SHOW" or event == "CRAFT_UPDATE"
+    local state = (not craft and professions.modern()) or professions.legacy(event)
+    if not state then return end
     local identity = characterKey()
     if not identity then return end
     local key = identity .. ":" .. state.name
     local structure = professions.structure(state)
     if journal.equal(structure, professions.last[key]) then return "unchanged" end
-    if journal.add(event, "craft", arguments, { known_recipes = state }) then
+    if journal.add(event, "craft", arguments, { known_recipes = state, trade_skill_api_inventory = inventory }) then
         professions.last[key] = structure
+        if inventory then professions.inventoried = true end
         return "recorded"
     end
 end
@@ -1250,7 +1340,9 @@ function journal.observe(event, ...)
         professions.open.trade = event == "TRADE_SKILL_SHOW"
     elseif event == "CRAFT_SHOW" or event == "CRAFT_CLOSE" then
         professions.open.craft = event == "CRAFT_SHOW"
-    elseif event == "TRADE_SKILL_UPDATE" or event == "CRAFT_UPDATE" then
+    elseif event == "TRADE_SKILL_UPDATE" or event == "CRAFT_UPDATE" or
+        event == "TRADE_SKILL_LIST_UPDATE" or event == "TRADE_SKILL_DATA_SOURCE_CHANGED" or
+        event == "NEW_RECIPE_LEARNED" then
         -- Closed windows report placeholder names (Classic: "UNKNOWN"); only read an open one.
         if professions.open[event == "CRAFT_UPDATE" and "craft" or "trade"] then
             professions.window(event, journal.args(...))
@@ -1267,7 +1359,12 @@ function journal.observe(event, ...)
     if open[event] then journal.windows[open[event]] = true end
     local arguments = journal.args(...)
     if event == "TRADE_SKILL_SHOW" or event == "CRAFT_SHOW" then
-        if professions.window(event, arguments) ~= "recorded" then journal.add(event, family, arguments) end
+        local inventory = professions.inventory()
+        if professions.window(event, arguments, inventory) ~= "recorded" then
+            if journal.add(event, family, arguments, { trade_skill_api_inventory = inventory }) and inventory then
+                professions.inventoried = true
+            end
+        end
     elseif event == "BAG_UPDATE_DELAYED" then journal.bagChange(arguments)
     elseif event == "PLAYER_MONEY" then
         local current = journal.money()

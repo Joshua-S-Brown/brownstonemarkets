@@ -28,7 +28,7 @@ def test_skills_both_apis_level_missing_and_raw_tuples():
     ''')
     fire(g, "PLAYER_LOGOUT")
     record = python_value(g.BrownstoneScanDB.snapshots)[-1]
-    assert record["level"] == 22 and record["addon_version"] == "0.10.1"
+    assert record["level"] == 22 and record["addon_version"] == "0.11.0"
     assert record["skills"]["legacy"]["rows"][1]["rank"] == 55
     assert "skill_id" not in record["skills"]["legacy"]["rows"][1]
     assert record["skills"]["modern"]["indexes"]["n"] == 3
@@ -366,3 +366,213 @@ def test_collapsed_skill_header_flagged_and_shown(tmp_path):
     surfaces = {"legacy": {"counts": {"1": 2}, "rows": [], "possibly_incomplete": True}}
     rows = professions._rows(("Alice", "Beta", "Alliance"), {"bags": {"skills": surfaces}, "recipes": {}})
     assert rows[0]["Skills"] == "possibly incomplete"
+
+
+def modern_client():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        learned, available, filtered = false, 2, false
+        C_TradeSkillUI.GetAllRecipeIDs = function() return {2963, 3755, 999} end
+        C_TradeSkillUI.GetRecipeInfo = function(id)
+            if id == 999 then return {name="Unknown flag"} end
+            return {name="Recipe", learned=id == 2963 or learned, categoryID=1, numAvailable=available}
+        end
+        C_TradeSkillUI.GetRecipeSchematic = function(id)
+            return {outputItemID=2589, quantityMin=1, quantityMax=2,
+                reagentSlotSchematics={{required=true, quantityRequired=3, reagents={{itemID=2320}}}}}
+        end
+        C_TradeSkillUI.GetBaseProfessionInfo = function()
+            return {professionName="Tailoring", skillLevel=7, maxSkillLevel=75, professionID=197}
+        end
+        C_TradeSkillUI.GetOnlyShowMakeableRecipes = function() return filtered end
+        C_TradeSkillUI.GetCategoryInfo = function() return {isCollapsed=filtered} end
+        C_TradeSkillUI.SetRecipeItemNameFilter = function() error("action forbidden") end
+        C_TradeSkillUI.OpenTradeSkill = function() error("action forbidden") end
+        function GetTradeSkillLine() error("modern must take precedence") end
+    ''')
+    return lua, g
+
+
+def test_modern_recipes_raw_learned_schematic_inventory_change_only_silent_no_actions():
+    lua, g = modern_client()
+    messages = len(g.messages)
+    fire(g, "TRADE_SKILL_SHOW")
+    record = entries(g)[-1]
+    state = record["known_recipes"]
+    assert state["api"] == "C_TradeSkillUI" and state["rank"] == 7
+    assert [r.get("learned") for r in state["rows"]] == [True, False, None]
+    assert professions._recipe_count(state) == 1
+    assert state["rows"][0]["schematic"]["reagentSlotSchematics"][0]["quantityRequired"] == 3
+    assert state["rows"][0]["min_made"] == 1 and state["rows"][0]["max_made"] == 2
+    inventory = record["trade_skill_api_inventory"]
+    assert "GetRecipeInfo" in inventory["functions"] and "GetRecipeLink" not in inventory["functions"]
+    assert "TRADE_SKILL_LIST_UPDATE" in inventory["events"]
+    lua.execute('available=1')
+    fire(g, "TRADE_SKILL_LIST_UPDATE")
+    assert len(entries(g)) == 1
+    fire(g, "TRADE_SKILL_CLOSE")
+    fire(g, "TRADE_SKILL_SHOW")
+    assert "known_recipes" not in entries(g)[-1]
+    assert sum("trade_skill_api_inventory" in e for e in entries(g)) == 1
+    lua.execute('learned=true')
+    fire(g, "NEW_RECIPE_LEARNED", 3755)
+    assert professions._recipe_count(entries(g)[-1]["known_recipes"]) == 2
+    lua.execute('filtered=true; C_TradeSkillUI.GetRecipeSchematic=nil')
+    fire(g, "TRADE_SKILL_DATA_SOURCE_CHANGED")
+    assert entries(g)[-1]["known_recipes"]["possibly_incomplete"] is True
+    assert "schematic" not in entries(g)[-1]["known_recipes"]["rows"][0]
+    assert g.actionCalls == 0 and len(g.messages) == messages
+    assert g.BrownstoneScanDB.journal_diagnostics.fired_events.NEW_RECIPE_LEARNED == 1
+
+
+def test_modern_failed_read_inventory_legacy_fallback_and_closed_events():
+    lua, g = modern_client()
+    lua.execute('''C_TradeSkillUI.GetBaseProfessionInfo = function() error("unavailable") end
+        function GetTradeSkillLine() return "Engineering", 1, 75 end
+        function GetNumTradeSkills() return 0 end''')
+    fire(g, "TRADE_SKILL_LIST_UPDATE")
+    assert not entries(g)
+    fire(g, "TRADE_SKILL_SHOW")
+    assert entries(g)[-1]["known_recipes"]["api"] == "GetTradeSkill"
+    assert "trade_skill_api_inventory" in entries(g)[-1]
+    lua, g = modern_client()
+    lua.execute('C_TradeSkillUI.GetBaseProfessionInfo=nil; GetTradeSkillLine=nil')
+    fire(g, "CRAFT_SHOW")
+    assert "known_recipes" not in entries(g)[-1]
+    assert "trade_skill_api_inventory" in entries(g)[-1]
+
+
+def test_modern_client_craft_window_uses_craft_reader():
+    lua, g = modern_client()
+    lua.execute('''
+        function GetCraftDisplaySkillLine() return "Enchanting", 10, 75 end
+        function GetNumCrafts() return 1 end
+        function GetCraftInfo() return "Enchant", nil, "trivial", nil end
+        function GetCraftItemLink() return "|Henchant:7418|h" end
+    ''')
+    fire(g, "CRAFT_SHOW")
+    state = entries(g)[-1]["known_recipes"]
+    assert state["api"] == "GetCraft" and state["name"] == "Enchanting"
+
+
+@pytest.mark.parametrize("event", ["TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_DATA_SOURCE_CHANGED", "NEW_RECIPE_LEARNED"])
+def test_modern_event_rejected_inventory(event):
+    lua, g = capture_client()
+    lua.execute(f'''local original = CreateFrame
+        function CreateFrame(...)
+            local frame = original(...)
+            function frame:RegisterEvent(e) if e == "{event}" then error("unsupported") end end
+            return frame
+        end''')
+    lua.execute((ROOT / "addon/BrownstoneScan/BrownstoneScan.lua").read_text())
+    fire(g, "ADDON_LOADED", "BrownstoneScan")
+    fire(g, "TRADE_SKILL_SHOW")
+    assert event not in entries(g)[-1]["trade_skill_api_inventory"]["events"]
+
+
+def test_seen_crafted_projection_import_scope_union_time_and_unknown(tmp_path, monkeypatch):
+    monkeypatch.setattr(professions, "_catalog_recipe_ids", lambda c: {2963: {"Tailoring"}, 3755: {"Tailoring"}})
+    hook = entry("hook")
+    hook.update(family="craft", event="C_TradeSkillUI.CraftRecipe", arguments={1: 2963, 2: 1, "n": 2})
+    cast = entry("cast")
+    cast["sequence"] = 2
+    cast.update(family="craft", event="UNIT_SPELLCAST_SUCCEEDED", arguments={1: "player", 2: "cast", 3: 3755, "n": 3})
+    duplicate = copy.deepcopy(hook)
+    duplicate.update(entry_id="again", sequence=3)
+    bob = entry("bob")
+    bob["character"] = "Bob"
+    bob.update(family="craft", event="C_TradeSkillUI.CraftRecipe", arguments={1: 123456, "n": 1})
+    opening_cast = copy.deepcopy(cast)
+    opening_cast.update(entry_id="opening", arguments={1: "player", 3: 3908, "n": 3})
+    path = write(tmp_path / "craft.lua", [hook, cast, duplicate, bob, opening_cast], [snapshot()])
+    config = addon_source(tmp_path / "data", path)
+    import_scans(config, now=NOW)
+    alice, bob_row = professions.latest_rows(config)
+    assert alice["Recipe source"] == "seen crafted" and alice["Known recipes"] == 2
+    assert alice["Seen crafted recipes"] == [2963, 3755] and alice["Listed recipes"] is None
+    assert bob_row["Profession / skill"] == "Profession unknown" and bob_row["Known recipes"] == 1
+    for field in ("source_id", *MARKET_KEYS):
+        assert professions.latest_rows(config | {field: str(config[field]) + "_other"}) == []
+    listed = recipes("list", sequence=4)
+    listed["known_recipes"] = {"api": "C_TradeSkillUI", "name": "Tailoring", "counts": {1: 3}, "rows": [
+        {"type": "recipe", "recipe_id": 2963, "learned": True},
+        {"type": "recipe", "recipe_id": 3755, "learned": False}, {"type": "recipe", "recipe_id": 9}]}
+    write(path, [listed])
+    import_scans(config, now=NOW)
+    alice = professions.latest_rows(config)[0]
+    assert alice["Known recipes"] == 2 and alice["Listed recipes"] == 1
+    assert alice["Recipe source"] == "window list + seen crafted"
+    from views import scan_import
+    tables = []
+    monkeypatch.setattr(scan_import.st, "dataframe", lambda rows, **_: tables.append(rows))
+    monkeypatch.setattr(scan_import.st, "caption", lambda *_: None)
+    scan_import._show_holdings(config)
+    table = next(t for t in tables if t and "Known recipes" in t[0])
+    assert table[0]["Seen crafted recipes"] == [2963, 3755] and table[0]["Known recipes"] == 2
+    assert professions._crafted_id({"event": "UNIT_SPELLCAST_SUCCEEDED", "arguments": ["target", "cast", 1]}) is None
+    assert professions._crafted_id({"event": "C_TradeSkillUI.CraftRecipe", "arguments": [False]}) is None
+
+
+def test_modern_learned_flag_validation():
+    with pytest.raises(ValueError, match="learned"):
+        professions.validate_recipes({"known_recipes": {"rows": [{"learned": 1}]}})
+
+
+def test_modern_lua_shared_import_and_page_evidence(tmp_path, monkeypatch):
+    from datetime import UTC, datetime
+
+    from views import scan_import
+
+    _, g = modern_client()
+    fire(g, "TRADE_SKILL_SHOW")
+    fire(g, "PLAYER_LOGOUT")
+    raw = entries(g)
+    path = write(tmp_path / "modern.lua", raw, python_value(g.BrownstoneScanDB.snapshots))
+    config = addon_source(tmp_path / "data", path)
+    now = datetime.fromtimestamp(raw[0]["captured_at"], UTC)
+    import_scans(config, now=now)
+    assert not preview_scans(config, now=now).new_record_ids
+    tables = []
+    monkeypatch.setattr(scan_import.st, "dataframe", lambda rows, **_: tables.append(rows))
+    monkeypatch.setattr(scan_import.st, "caption", lambda *_: None)
+    scan_import._show_holdings(config)
+    table = next(t for t in tables if t and "Known recipes" in t[0])
+    assert table[0]["Recipe source"] == "window list" and table[0]["Known recipes"] == 1
+
+
+def test_catalog_recipe_profession_metadata_requires_game_and_rules(monkeypatch):
+    catalogs = [{"catalog": {"game_version": game, "rules_version": rules, "profession": profession,
+                             "recipes": [{"recipe_id": 1}]}}
+                for game, rules, profession in [("forever", "beta", "tailoring"),
+                                                ("classic", "beta", "engineering"),
+                                                ("forever", "other", "alchemy")]]
+    monkeypatch.setattr(professions, "find_catalogs", lambda _: catalogs + [{"catalog": None}])
+    assert professions._catalog_recipe_ids({"game_version": "forever", "rules_version": "beta"}) == {1: {"Tailoring"}}
+    assert professions._catalog_recipe_ids({"game_version": "forever"}) == {}
+
+
+def test_window_profession_provenance_precedes_catalog_and_list_time_stays_visible():
+    listed = {"captured_at": 100, "sequence": 1, "known_recipes": {"name": "Client profession",
+              "api": "C_TradeSkillUI", "counts": {1: 1},
+              "rows": [{"recipe_id": 1, "type": "recipe", "learned": True}]}}
+    crafted = {"captured_at": 200, "sequence": 2, "event": "C_TradeSkillUI.CraftRecipe", "arguments": [1]}
+    state = {"bags": {}, "recipes": {"Client profession": listed}, "crafts": [crafted]}
+    professions._project_crafts(state, {1: {"Catalog profession"}})
+    row = professions._rows(("Alice", "Beta", "Alliance"), state)[0]
+    assert row["Profession / skill"] == "Client profession" and row["Known recipes"] == 1
+    assert row["Known recipes (UTC)"] == "1970-01-01T00:01:40+00:00"
+    assert row["Seen crafted (UTC)"] == "1970-01-01T00:03:20+00:00"
+
+
+def test_inventory_retry_after_cap_and_new_load():
+    _, g = modern_client()
+    for i in range(1, 10001):
+        g.BrownstoneScanDB.journal[i] = g.BrownstoneScanDB.journal[i] or g.mainFrame
+    fire(g, "TRADE_SKILL_SHOW")
+    # Remove the synthetic capped entries; the unsaved inventory must still be available.
+    g.BrownstoneScanDB.journal = g.BrownstoneScanDB.scans
+    fire(g, "TRADE_SKILL_SHOW")
+    assert "trade_skill_api_inventory" in entries(g)[-1]
+    _, fresh = modern_client()
+    fire(fresh, "TRADE_SKILL_SHOW")
+    assert "trade_skill_api_inventory" in entries(fresh)[-1]
