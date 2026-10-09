@@ -37,9 +37,11 @@ _Last updated 2026-10-08._
   login's first bag entry had listed the whole bag as gains; addon **0.10.1** sets that baseline from the
   first settled bag update instead (rule beside the journal baselines in `requirements.md`). The scan was
   first skipped as another house because the source pinned Stormwind's zone and auctioneer; Alliance cities
-  share one house, so only faction is now scan evidence, and the scan is imported. **Pending in game:** log in
-  on 0.10.1, loot or move one item and log out; the first bag entry after login should be `baseline_missing`
-  and the next a real change.
+  share one house, so only faction is now scan evidence, and the scan is imported. **0.10.1 confirmed in game
+  (2026-10-09, Windows, Keenagen):** the first bag entry after login was `baseline_missing`; after
+  `/bscan clear` and `/reload` the next entries were real changes (4 shots fired, then +1 Chipped Claw
+  looted), and the two logout snapshots differ by exactly those 3 units. Beta report: no failures and no
+  bag residual warnings.
 
 - **Brownstone panel (STORY-044, implemented; pending in-game beta check):** addon **0.9.0**
   adds a draggable minimap coin and `/bscan panel`, opening a movable Escape-closeable

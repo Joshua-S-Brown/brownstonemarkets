@@ -50,7 +50,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 6. STORY-041 your professions and known recipes (addon; beta; must be testable by 13 October)
 7. STORY-042 beta evidence report (Brownstone CLI; Claude runs it after each play session)
 8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
-   - STORY-045 a simpler import page (Brownstone; small, display only; can go any time)
+   - STORY-045 a simpler import page (Brownstone; small, display only; next to hand off, refined 2026-10-09)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
 11. STORY-046 a confidence label on each Today row (Brownstone; implemented and reviewed 2026-10-08)
@@ -299,8 +299,9 @@ Acceptance:
 - **Details collapsed:** every table and note shown today (file status, per-file scan tables, character snapshots and journal previews, latest drop per machine, the partial-scan and other-house captions, the cleanup reminder) and the file/scan selection move unchanged into a collapsed **Details** expander. The already-imported holdings tables at the top (skills, active auctions, journal, snapshots) go into their own collapsed **Imported character data** expander.
 - **Problems open the details:** the Details expander starts open, and a warning line under the summary names the problem, when any file has a read, parse or conflict error, a new scan is partial, any record is from another house, or the selection the user would import differs from the default. Import results keep today's messages; an error result also opens Details.
 - **Clear guidance in one line:** after an import, one line per machine says whether it's safe to /bscan clear there (its latest drop is fully imported) instead of the full reminder, which stays in Details.
+- **Drop clean-up in one line** (added 2026-10-09): drops are deleted by hand (OPS-03), so the folder grows between sessions. One line says how many dropped files are fully imported and can be deleted from the drop folder by hand, for example "5 dropped files are fully imported and can be deleted from the drop folder". Files not fully imported are named in the problem warning. Display only: Brownstone still never deletes or moves a drop.
 - **Unchanged:** ADDON-06 and OPS-03 behavior, every stale-preview and conflict check, messages from `brownstone/`, the CLI `--preview` output, both the single-file and drop-folder paths.
-- **Offline tests** (`tests/test_app.py` AppTest): a clean preview shows the summary and the button with Details collapsed; each problem kind opens Details and shows the warning; nothing new shows the single line and no button; an import still succeeds and still raises the stale error after a changed file.
+- **Offline tests** (`tests/test_app.py` AppTest): a clean preview shows the summary, the drop clean-up line and the button with Details collapsed; each problem kind opens Details and shows the warning; nothing new shows the single line and no button; an import still succeeds and still raises the stale error after a changed file.
 - **Docs:** ADDON-06 in `requirements.md` says the preview columns are in a Details section that opens on problems; `design.md` (`views/scan_import`) and `status.md` describe the current page.
 
 ### STORY-038 — Today craft details
