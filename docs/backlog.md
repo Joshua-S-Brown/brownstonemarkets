@@ -293,14 +293,19 @@ Added 2026-10-09 (product owner: "which character can do what"). Brownstone only
 
 As a gold maker, I want one page listing my characters with their level and professions, and how those change over time, so that I know who can do what without logging in.
 
-Acceptance:
-- **Its own page, *Characters*,** after Today in the navigation. Calculation in `brownstone/` (no Streamlit), display in `views/`.
-- **One row per character** of the selected source and market (never pooled across sources): name, realm, machine, level, gold, last seen (UTC), and each profession with rank/max. Values come from the latest readable bags snapshot; a character with none since addon 0.8.0 shows *skills unknown*.
-- **Known recipes** per profession: count and time of the latest list or *seen crafted* evidence (STORY-049), or *unknown*. Never zero for unknown.
-- **At cap:** a profession at its maximum rank is marked *at cap: train the next tier*. Which character level each tier needs is not assumed; it's shown only once recorded with evidence in `requirements.md` (*Known Forever market facts*).
-- **Progress over time:** per character, level and each profession's rank at each imported snapshot, as a small table or line chart (collapsed by default).
-- **Offline tests:** two characters on two machines, a character with no skills (unknown), a profession at cap, rank history across snapshots, scoping by source and market.
-- **Docs:** `design.md`, `status.md`; any new rule in `requirements.md`.
+Acceptance (refined 2026-10-09 for handoff):
+- **Its own page, *Characters*,** after Today in the navigation. Calculation in a new `brownstone/characters.py` (no Streamlit) that returns plain data; display in `views/characters.py`. Reuse the existing projections rather than re-reading records a second way: `character_snapshots` (latest readable bags, unreadable-backpack rule) and `professions` (skills, known recipes, *seen crafted*). Refactor them into data plus display shaping if needed, keeping the addon import page's tables unchanged.
+- **One card per character** of the selected source and full market (never pooled across sources), newest *last seen* first:
+  - **Header:** name and realm, machine, and *last seen* as a relative time with the UTC time beside it.
+  - **Level and gold** as two headline numbers. Gold through `brownstone/money.py`; *unknown* when no readable bags snapshot exists, never 0.
+  - **Professions:** one line each with a rank/max progress bar and the known-recipe count and its source (*window list* or *seen crafted*) with its time, or *unknown*. Never zero for unknown. A *possibly incomplete* skill or recipe list keeps that label. A character with no readable skills since addon 0.8.0 shows *skills unknown* instead of bars.
+  - **Freshness:** a card whose latest readable bags snapshot is older than 7 days is marked *stale* (the threshold recorded in `requirements.md`).
+- **At cap:** a profession whose rank equals its reported maximum is marked *at cap: train the next tier*. Which character level each tier needs is not assumed; it's shown only once recorded with evidence in `requirements.md` (*Known Forever market facts*).
+- **Progress over time** (collapsed by default, per character): a line chart of level and each profession's rank at each readable imported snapshot (Altair, already pinned), with the same values as a small table for exact reading. Unreadable snapshots are left out, never drawn as a drop to 0 or level 1.
+- **Look and feel** (product owner: "Streamlit's pretty boring"): make it the most visual page in the app using only Streamlit 1.65 and Altair, no new packages and no custom HTML/CSS injection. Bordered card containers in a responsive grid (two per row on a wide screen), headline numbers, progress bars, small coloured badges for *at cap*, *stale*, *skills unknown* and *possibly incomplete*, and profession emoji or Material icons (decorative only, chosen by profession ID or the catalog's profession, never inferred for any calculation). Class, race and portraits aren't captured, so they aren't shown or invented; adding capture is a separate addon story.
+- **Empty state:** no characters for this source shows a short message pointing to the addon import page, not an empty table.
+- **Offline tests:** two characters on two machines, a character with no skills (unknown), unknown gold not shown as 0, a profession at cap, recipe counts from a window list and from *seen crafted*, rank history across snapshots skipping an unreadable one, a stale card, the empty state, scoping by source and full market (a second source's character never appears), and an AppTest render of the page.
+- **Docs:** `design.md` (new module and page), `status.md`; the stale threshold and any other new rule in `requirements.md`.
 
 ### STORY-052 — Progression planner
 
