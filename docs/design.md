@@ -31,6 +31,7 @@ views/                  Streamlit only; display, no calculations
   common.py             snapshot loading, freshness display, gold columns
   crafting.py           Action Board and recipe explanation
   today.py              Settings, session plan controls, queue and optional evidence columns
+  skillups.py           Skill-up totals first, collapsed bands, optional scoped market context
   catalogs.py           Recipe catalogs page: status, one add-or-update flow (live review, then Save)
   market.py             Browse market and Opportunities
   scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
@@ -53,6 +54,7 @@ brownstone/             importable without Streamlit
   analysis.py           browse and discount screen queries
   freshness.py          the one staleness policy
   money.py              explicit g/s/c parser and copper ↔ gold display helpers
+  skillups.py           pure catalog placement, direct/raw quantities and unique-recipe totals
   crafting.py           catalog loading, expansion, route costs, price bases
   recipe_import.py      saved Wowhead profession page → archive, extract, catalog TOML (no network)
   recipe_catalogs.py    catalogs found by selection file: status, previews and the add/update writes
@@ -81,7 +83,7 @@ Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain module
 | Listing | `source_id, scan_id, listing_index` + market identity | `scan_listings`: `item_id, item_name, quantity, buyout` (whole stack), `unit_buyout` (exact only), `unit_buyout_ceil`, `min_bid, bid, complete_info`, plus nullable ADDON-09 fields and ADDON-08 variant/resolution |
 | Scan metrics | version + source + full market + scan/snapshot + item/variant/state | `scan_metrics`: integer price/count facts and share/coverage numerators; rules in ADDON-10. `metric_key` is canonical JSON of every identity field, preserving nulls without hash/delimiter collisions; primary key enforces uniqueness |
 | Scan item reference | source + scan + item ID + full market identity | `scan_items`: first-pass observations, separate pass values and effective-field provenance; `effective_scan_items` resolves references under ADDON-09; `_items.parquet` in silver; legacy scans have no reference observations |
-| Catalog | `game_version, rules_version, catalog_version` | TOML generated from a selection file and one saved page (CRAFT-08). Header: `source_url`, `source_sha256`, `verified_at`. Items: role, Wowhead URL, optional `vendor_price_copper` with `vendor_price_source_url`, `vendor_verified`, `availability`. Recipes: inputs, `output_quantity`, `required_skill`, Wowhead spell URL, `verification_url`, `evidence_sha256`, optional `output_quantity_verified`, `availability` |
+| Catalog | `game_version, rules_version, catalog_version` | TOML generated from a selection file and one saved page (CRAFT-08). Header: `source_url`, `source_sha256`, `verified_at`, optional `page_coverage` (CRAFT-08). Items: role, Wowhead URL, optional `vendor_price_copper` with `vendor_price_source_url`, `vendor_verified`, `availability`. Recipes: inputs, `output_quantity`, `required_skill`, optional `skillup_colors` (CRAFT-08), Wowhead spell URL, `verification_url`, `evidence_sha256`, optional `output_quantity_verified`, `availability` |
 | Recipe selection | file name = catalog name | `config/recipe-selections/<catalog>.toml`: catalog header fields, finished `[[recipes]]` (with optional overrides), `[recipe_defaults]`, `[[items]]` vendor evidence and notes |
 | Recipe source page | SHA-256 | `data/recipe-sources/wowhead/<game>/<profession>/<sha16>.html` + `.json` manifest: page URL, `saved_at`, `archived_at`, original file name |
 
@@ -299,7 +301,7 @@ Windows scripts copy the whole account file unchanged. No other view consumes th
 - `selection_files` edits a selection file in place: `set_value` replaces one header line, and `edit_recipes` removes and adds `[[recipes]]` blocks, adds or removes vendor marks (keeping an item's other notes), drops notes on items no chosen recipe uses, and reads the result back, refusing if it doesn't match. `preview_update(entry, raw, saved_at, recipe_ids, vendor_ids, rules_version)` runs these edits before generating, so a write is exactly the preview.
 - `single_makers` (in `recipe_import`) maps each item to its one usable recipe; items several usable recipes make are left out, so they are bought. The importer and the app's recipe list both use it. Choices travel as `choices(recipes, vendor)`.
 - The view keys each preview by a hash of the page bytes, date and selection; changing any of them hides the write button until a new preview. After a write it reloads and lists the tracked files written (catalog and selection), never committing.
-- Tests use trimmed extracts in `tests/fixtures/wowhead/` and assert that each tracked catalog equals the importer's output.
+- Tests use saved-page extracts in `tests/fixtures/wowhead/` and assert that each tracked catalog equals the importer's output.
 
 ## Switching to WoW Forever
 
@@ -478,3 +480,18 @@ source-local type/ID identities, reports additions by full character identity an
 kind for snapshots), and fails changed content for an existing ID. Coverage rows list alternative
 events/hooks, seen/unseen names and installed hooks: observation confirms capture only, not success
 of an economic action, a sale/expiry invoice's meaning, complete containers or full recipe coverage.
+
+## Skill-up map contracts (STORY-047)
+
+Rules live in CRAFT-08/CRAFT-10 (`requirements.md`). `skillups.build_skillups` takes parsed compatible
+catalogs, N and the post-launch toggle; returns profession groups, recipe placements/errors, band
+memberships and sorted direct/raw totals. Groups retain their catalog; `material_plan` expands within
+it for all N crafts at once (`material_plan(catalog, recipe_id, crafts, stop_at)`), stopping at
+items marked `raw_material`; the board calls it without `stop_at`. Recipe rows occur once in profession totals; bands reference those rows, so repeated placement
+does not multiply combined totals. `coverage_line` handles both catalog generations.
+
+`views/skillups.py` filters with the board's `compatible_catalogs`, keeps controls in session state,
+leads with totals and renders collapsed bands. Its optional context uses `latest_snapshot`, read-only
+DuckDB and `today_data.read_skillup_market`: scoped `price_observations` and ADDON-10 `read_scan_metrics`,
+excluding unresolved/variant identities. Context is joined only after quantities/order are computed;
+missing prices remain blank and shared freshness/time captions stay visible. No schema change.

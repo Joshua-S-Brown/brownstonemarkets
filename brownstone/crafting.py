@@ -22,6 +22,7 @@ def parse_recipe_catalog(raw: dict) -> dict:
         if not raw.get(key):
             raise ValueError(f"Recipe catalog requires {key}")
 
+    _check_page_coverage(raw)
     items = {item["item_id"]: item for item in raw.get("items", [])}
     recipes = {recipe["recipe_id"]: recipe for recipe in raw.get("recipes", [])}
     if len(items) != len(raw.get("items", [])) or len(recipes) != len(raw.get("recipes", [])):
@@ -40,6 +41,22 @@ def parse_recipe_catalog(raw: dict) -> dict:
             "recipe_for_output": output_recipes}
 
 
+def valid_skillup_colors(value: object) -> bool:
+    """Wowhead's orange, yellow, green and grey thresholds, without guessed values."""
+    return (isinstance(value, list) and len(value) == 4
+            and all(type(v) is int and v > 0 for v in value)
+            and value == sorted(value))
+
+
+def _check_page_coverage(raw: dict) -> None:
+    if "page_coverage" not in raw:
+        return
+    counts = raw["page_coverage"]
+    if (not isinstance(counts, dict) or set(counts) != {"usable", "no_item", "unknown_yield"}
+            or any(type(v) is not int or v < 0 for v in counts.values())):
+        raise ValueError("page_coverage requires non-negative integer usable, no_item and unknown_yield counts")
+
+
 def _https(value: object) -> bool:
     return str(value).startswith("https://")
 
@@ -54,6 +71,8 @@ def _check_item(item: dict) -> None:
     if not _https(item.get("vendor_price_source_url", "https://")):
         raise ValueError("Vendor price provenance must be an HTTPS URL")
     _check_flags(item)
+    if "raw_material" in item and (item["raw_material"] is not True or not item.get("raw_material_note")):
+        raise ValueError("raw_material must be true and carry a raw_material_note")
 
 
 def _check_recipe(recipe: dict, profession: str, items: dict, output_recipes: dict) -> None:
@@ -69,6 +88,8 @@ def _check_recipe(recipe: dict, profession: str, items: dict, output_recipes: di
     if not _https(recipe.get("verification_url", "https://")):
         raise ValueError("Recipe verification must be an HTTPS URL")
     _check_flags(recipe)
+    if "skillup_colors" in recipe and not valid_skillup_colors(recipe["skillup_colors"]):
+        raise ValueError("skillup_colors must be four positive non-decreasing integers")
     for ingredient in recipe.get("inputs", []):
         if ingredient.get("item_id") not in items or not _positive(ingredient.get("quantity")):
             raise ValueError("Recipe inputs must reference items with positive quantities")
@@ -86,12 +107,16 @@ def _check_flags(record: dict) -> None:
             raise ValueError(f"{key} must be true or false")
 
 
-def material_plan(catalog: dict, recipe_id: int) -> dict[int, int]:
-    """Expand intermediates into base quantities; fail on recipe cycles."""
+def material_plan(catalog: dict, recipe_id: int, crafts: int = 1,
+                  stop_at: frozenset[int] = frozenset()) -> dict[int, int]:
+    """Expand intermediates for `crafts` crafts into base quantities; fail on cycles or fractional crafts.
+
+    Items in ``stop_at`` count as base materials even when the catalog can craft them.
+    """
     totals: defaultdict[int, int] = defaultdict(int)
 
     def expand_item(item_id: int, quantity: int, trail: tuple[int, ...]) -> None:
-        nested_id = catalog["recipe_for_output"].get(item_id)
+        nested_id = None if item_id in stop_at else catalog["recipe_for_output"].get(item_id)
         if nested_id is None:
             totals[item_id] += quantity
             return
@@ -109,7 +134,7 @@ def material_plan(catalog: dict, recipe_id: int) -> dict[int, int]:
     if recipe is None:
         raise ValueError(f"Unknown recipe {recipe_id}")
     for ingredient in recipe["inputs"]:
-        expand_item(ingredient["item_id"], ingredient["quantity"], (recipe_id,))
+        expand_item(ingredient["item_id"], ingredient["quantity"] * crafts, (recipe_id,))
     return dict(sorted(totals.items()))
 
 

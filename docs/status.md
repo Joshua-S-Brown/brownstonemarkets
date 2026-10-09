@@ -6,6 +6,15 @@ _Last updated 2026-10-08._
 
 ## Implemented
 
+- **Skill-up demand map (STORY-047, implemented, pending review):** Skill-ups follows Recipe catalogs.
+  Compatible professions default to all; session controls adjust crafts per recipe and post-launch
+  inclusion. Direct/raw totals lead, profession totals follow and bands are collapsed. Catalog
+  regeneration adds page coverage and skill-up evidence without changing existing values; older
+  catalogs still load. Market context reads the newest selected-source snapshot and remains visible
+  when stale. Contracts/rules: `design.md` → Skill-up map, `requirements.md` → CRAFT-08/CRAFT-10.
+  Offline synthetic saved-page, calculation, scoped market and AppTest checks cover the story.
+  Real beta validation and limitations: [below](#skill-up-map-real-data-check-story-047).
+
 - **First beta play session (2026-10-08, Windows, addon 0.9.0):** levelling a new character
   produced loot, bag, money and vendor journal entries that check out (money chain unbroken, bag
   changes match merchant visits). The logout bags snapshot was empty (0 slots, 0 copper, level 1),
@@ -128,12 +137,12 @@ _Last updated 2026-10-08._
     board, and board explanations in How to read this board. Board provenance and freshness stay visible;
     recipe summaries in g/s/c and expandable recipe evidence retain their existing behavior. UI rules
     and the layout choices are in `requirements.md` → UI-01 and Today → Evidence and honesty.
-  - Browse market, Opportunities, Recipe catalogs and Scan changes are also available. Opportunities explains when a source can't support it.
+  - Browse market, Opportunities, Recipe catalogs, Skill-ups and Scan changes are also available. Opportunities explains when a source can't support it.
   - All money is displayed in gold.
 - **Launcher:** `launch.py` (via `Start Brownstone.command` / `.cmd`) restarts its own server when the code has changed.
 - **Catalogs:**
-  - **Classic Era 0.2:** Woolen, Mageweave and Runecloth bags with their bolts. Regenerated from the saved page with the same quantities, roles and vendor prices hand-verified in STORY-007 (a test pins them). It now has all six skill levels from the page: Bolt of Woolen Cloth 75, Woolen Bag 80, Bolt of Mageweave 175, Mageweave Bag 225, Bolt of Runecloth 250, Runecloth Bag 260.
-  - **Forever beta 0.1** (`forever-beta-1.60`): Linen, Red Linen and Woolen bags with Linen and Woolen bolts, plus Runecloth Bag and its bolt, marked post-launch. It replaces the hand-typed file, which had two errors: Bolt of Runecloth takes 5 Runecloth, not 4, and Runecloth Bag also takes 4 Magenta Dye and 2 Cerulean Dye.
+  - **Classic Era:** Tailoring 0.3 (six representative bag/bolt recipes); Alchemy and Enchanting 0.2. Tailoring retains the quantities, roles and vendor prices hand-verified in STORY-007.
+  - **Forever beta** (`forever-beta-1.60`): Tailoring 0.3; Alchemy, Blacksmithing, Cooking, Enchanting, Engineering, First Aid, Leatherworking and Mining 0.2. Catalogs are generated from archived pages; selection coverage and unconfirmed yields/vendor values remain visible. All twelve catalogs were regenerated for STORY-047; parsed comparisons confirmed only `skillup_colors`, `page_coverage` and `catalog_version` changed. Selection files changed only their version.
 - **Markets and sources (STORY-009):**
   - A market is the auction house; a source is the feed that observed it. `market_id` is derived, so several sources can observe one market, each with its own folder and deduplication.
   - Forever houses (server type + faction, no realm) can be configured. Neutral houses default to a 15% cut.
@@ -149,7 +158,7 @@ _Last updated 2026-10-08._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (95.49% in the current macOS run: 802 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.02% in the current macOS run: 857 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.10.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -416,3 +425,52 @@ totals. Bronze Dory at batch 2 shows its lower real profit (4g 80s 62c) and refi
 Queue ticks and the Copy as text block persist across reruns while the scan is stale; Limited by keeps
 the real reason on unchanged rows; refill off reports the crafts left out (71); the server log shows no
 Session State warning.
+
+## Skill-up map real-data check (STORY-047)
+
+Checked 2026-10-08 using `config/market.local.toml`'s enabled Forever beta source
+`forever-us-normal-alliance-addon`, market `forever-us-normal-alliance-beta`. Read-only DuckDB
+connection; database SHA-256 unchanged. N=5, default post-launch exclusion (one recipe).
+Newest snapshot/scan: `20261007T185956Z-a4a84f`, observed 2026-10-07 19:00:04 UTC; stale at the
+24-hour limit. All market columns remained visible; absent items had zero listed units and blank prices.
+
+| Profession | Catalog / page usable | Unknown skill-up range | No item on page | Raw expansion errors |
+| --- | ---: | ---: | ---: | ---: |
+| alchemy | 167 / 167 | 13 | 15 | 5 |
+| blacksmithing | 430 / 431 | 97 | 65 | 1 |
+| cooking | 129 / 129 | 15 | 3 | 0 |
+| enchanting | 28 / 30 | 6 | 200 | 2 |
+| engineering | 205 / 207 | 12 | 20 | 30 |
+| first-aid | 31 / 31 | 18 | 0 | 2 |
+| leatherworking | 511 / 512 | 46 | 78 | 32 |
+| mining | 17 / 17 | 11 | 1 | 0 |
+| tailoring | 412 / 413 | 107 | 50 | 0 |
+
+Top ten raw materials in combined totals (units), after the review marked Forever leather tiers
+`raw_material`:
+
+- Runecloth (14047): 28,060.
+- Mageweave Cloth (4338): 16,010.
+- Thorium Bar (12359): 11,250.
+- Silk Cloth (4306): 10,310.
+- Rugged Leather (8170): 7,645.
+- Thick Leather (4304): 5,535.
+- Fel Leather (248825): 4,950.
+- Mithril Bar (3860): 4,450.
+- Bronze Bar (2841): 4,095.
+- Rune Thread (14341): 3,990.
+
+Tailoring 50–74 tables contained 42 recipes, 18 direct and 18 raw material rows; raw Linen Cloth was
+1,240 units (9,908 listed, 0.003g lowest), raw Wool Cloth 765 (3,956 listed, 0.0077g lowest).
+All 42 yields were marked unconfirmed; two recipe ranges were unknown. Cerulean Dye's existing
+item post-launch marker remained visible; the toggle excludes recipes marked post-launch, not
+recipes whose inputs carry that item marker.
+
+Limitations found by this check: 72 recipes have fractional intermediate craft counts at N = 5 (expansion
+checks all N crafts together, so Silver Contact's yield of 5 divides evenly) and contribute no raw units; their direct units remain visible and the page warns above totals. Before the review,
+Leatherworking's conversion chains expanded high-tier leather back to 17,179,425 Ruined Leather Scraps;
+the selection now marks Light to Rugged Leather `raw_material` (CRAFT-08), so raw totals stop there.
+Totals remain an all-recipe expectation, not a gathering recommendation or launch forecast.
+The 107 unknown Tailoring ranges include page colour arrays containing zero; validity remains
+strict rather than interpreting zero. Saved pages are October 4 (Alchemy) or October 6 (other Forever
+professions). Full check output is local-only under ignored `work/story047/real-data.json`.

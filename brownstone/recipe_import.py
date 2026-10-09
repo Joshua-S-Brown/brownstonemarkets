@@ -20,7 +20,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from .crafting import AVAILABILITY, parse_recipe_catalog
+from .crafting import AVAILABILITY, parse_recipe_catalog, valid_skillup_colors
 
 GAME_PATHS = {"classic": "classic", "forever": "forever"}  # Catalog game_version -> Wowhead path segment.
 # Wowhead lists Cooking and First Aid as secondary skills; every other crafting profession under professions.
@@ -83,6 +83,8 @@ def extract_page(html: str, sha256: str, saved_at: str) -> dict:
     for row in _literal(html, "listviewspells =", "[", "]"):
         recipe = {"id": row["id"], "name": row["name"], "learnedat": row.get("learnedat"),
                   "creates": row.get("creates"), "reagents": row.get("reagents") or []}
+        if valid_skillup_colors(row.get("colors")):
+            recipe["skillup_colors"] = row["colors"]
         if "envChange" in row:  # Forever pages flag new or changed spells relative to Classic.
             recipe["env_status"] = row["envChange"].get("status")
         if row.get("seasonId"):  # Classic pages include seasonal realms' spells (2 = Season of Discovery).
@@ -263,9 +265,22 @@ def build_catalog(extract: dict, selection: dict) -> dict:
                          f"{extract['saved_at']} (SHA-256 {extract['sha256'][:12]}...). Reagents, quantities, "
                          f"output counts, skill levels and vendor buy prices come from that page."),
         "source_url": extract["source_url"], "source_sha256": extract["sha256"],
+        "page_coverage": page_coverage(extract),
         **({"notes": selection["notes"]} if selection.get("notes") else {}),
         "items": catalog_items, "recipes": catalog_recipes,
     }
+
+
+def page_coverage(extract: dict) -> dict[str, int]:
+    """Non-seasonal reagent-bearing page spells, including those not selected."""
+    counts = {"usable": 0, "no_item": 0, "unknown_yield": 0}
+    for recipe in extract["recipes"].values():
+        if recipe.get("season") or not recipe["reagents"]:
+            continue
+        kind = "no_item" if not recipe["creates"] else (
+            "usable" if makes_fixed_quantity(recipe) else "unknown_yield")
+        counts[kind] += 1
+    return counts
 
 
 def makes_fixed_quantity(recipe: dict) -> bool:
@@ -329,6 +344,9 @@ def _catalog_recipe(extract: dict, profession: str, recipe_id: str, defaults: di
     }
     entry.update(defaults)
     entry.update({key: value for key, value in pick.items() if key != "recipe_id"})
+    entry.pop("skillup_colors", None)
+    if valid_skillup_colors(recipe.get("skillup_colors")):
+        entry["skillup_colors"] = recipe["skillup_colors"]
     _check_availability(entry, f"Recipe {recipe_id}")
     entry["inputs"] = [{"item_id": reagent, "quantity": quantity} for reagent, quantity in recipe["reagents"]]
     return entry
@@ -363,6 +381,10 @@ def toml_value(value: Any) -> str:
         return "true" if value else "false"
     if isinstance(value, int):
         return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(toml_value(v) for v in value) + "]"
+    if isinstance(value, dict):
+        return "{ " + ", ".join(f"{k} = {toml_value(v)}" for k, v in value.items()) + " }"
     if isinstance(value, str):
         return json.dumps(value, ensure_ascii=False)  # JSON string escapes are valid TOML basic strings.
     raise TypeError(f"Unsupported catalog value {value!r}")

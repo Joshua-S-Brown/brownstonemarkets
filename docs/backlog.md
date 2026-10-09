@@ -54,7 +54,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
 11. STORY-046 a confidence label on each Today row (Brownstone; small)
-12. STORY-047 skill-up demand map (Brownstone; must be usable before 4 November)
+12. STORY-047 skill-up demand map (Brownstone; must be usable before 4 November; refined for implementation 2026-10-08, next to hand off)
 13. STORY-048 watchlist with target prices (Brownstone; small)
 14. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
 15. STORY-035 auction deposits (needs a beta check)
@@ -337,18 +337,38 @@ Acceptance:
 
 ### STORY-047 — Skill-up demand map
 
-Added 2026-10-08 (product owner); moved from *Recipe coverage* under Later. Brownstone only, from catalogs; scans optional. Must be usable before 4 November: launch-week demand comes before any price history exists.
+Added 2026-10-08 (product owner); moved from *Recipe coverage* under Later. Refined 2026-10-08 for implementation. Brownstone only, from catalogs; scans optional. Must be usable before 4 November: launch-week demand comes before any price history exists.
 
 As a gold maker, I want to see which materials levelling crafters will need at each skill band, so that I know what to gather, keep or buy early in launch week.
 
+**Why skill-up colours (found at refinement):** a recipe is crafted for skill-ups from the level it turns orange until it turns green, not only in the band where it's learned (Bolt of Linen Cloth: learned at 1, orange from 1, yellow from 25, green from 37, grey from 50). The saved Wowhead pages already carry these four thresholds (`colors`, on 463 of 471 Forever Tailoring spells), but catalogs don't record them yet. Coverage also varies: the Forever Enchanting catalog holds 28 of the page's 270 spells, because enchants that create no item can't be catalog recipes (CRAFT-08), so its map would look complete without a coverage line.
+
 Acceptance:
-- **A new page section** (on the Recipe catalogs page or its own page, implementer's choice, stated in `design.md`) for the selected source's compatible catalogs: skill bands of **25** points (1–24, 25–49, … up to the highest learned-at level in the catalog).
-- **Per band and profession:** the recipes learned in that band (catalog `required_skill`), and the materials they use, with units for an assumed **N crafts per recipe** (setting, default **5**, 1–50, shown in the heading). Intermediates (thread, bolts, bars) are expanded through the catalog's own routes, so raw materials are visible too. Cross-profession chains are out of scope (STORY-015b).
-- **Totals across bands:** each material's total units for one crafter levelling the whole profession at the assumed N, and which professions use it. Sorted by total units.
-- **Optional market context** when the source has a fresh scan: units currently listed and lowest unit price per material, labeled with the scan time. Missing prices stay missing; nothing is called demand or a forecast.
-- **Honest labels:** the page says this is a reasoned expectation from catalog data and an assumed number of crafts, not observed demand. Recipes with unconfirmed values show their markers. Never infer a material's role from its name.
-- **Offline tests:** band boundaries, intermediate expansion, totals across professions, the N setting, a catalog without skill levels (shown as *skill unknown*, never band 1), and with and without a scan.
-- **Docs:** rule in `requirements.md` (*Crafting* or its own section), `design.md`, `status.md`.
+- **Catalogs record skill-up thresholds** (CRAFT-08, a catalog value change with evidence):
+  - The generator copies each recipe's Wowhead `colors` into an optional `skillup_colors = [orange, yellow, green, grey]`, from the same saved page as every other value (its SHA-256 is already on each recipe). A recipe whose page entry has no `colors`, a zero or non-integer value, or values that decrease gets no field (unknown), never a guess.
+  - The catalog header gets `page_coverage`: counts from the saved page of non-seasonal spells that have reagents, split into *usable* (a fixed, known yield; CRAFT-08's rule), *no item* (create nothing, such as enchants) and *unknown yield*. Spells without reagents (profession rank spells) aren't counted.
+  - `parse_recipe_catalog` accepts both optional fields and validates them (four positive integers, non-decreasing; non-negative counts). Older catalogs without them still load.
+  - Regenerate every catalog that has a saved page (Forever and Classic Era) through the existing generator; the `catalog_version` bump follows CRAFT-08. The only content changes in the diff are the two new fields and the version; the report confirms this per catalog. The Recipe catalogs page's **Save catalog** writes the same fields through the same code.
+- **Its own page, *Skill-ups*,** after Recipe catalogs in the view list (Recipe catalogs is an editing page). Calculation in a new `brownstone/skillups.py` (no Streamlit, no downloads); display in `views/skillups.py`. The page uses the selected source's compatible catalogs (same game version and `rules_version`, as the board does), one profession per catalog, all shown by default with a profession filter.
+- **Bands and placement:** skill bands of **25** points (1–24, 25–49, …, up to the highest band any recipe reaches). A recipe belongs to every band that overlaps its **skill-up range**, from orange (inclusive) to green (exclusive): the levels where a craft gives a point every time or usually. A recipe without `skillup_colors` is placed only in the band of its `required_skill` and labeled *skill-up range unknown*. A recipe without `required_skill` either goes in a separate *skill unknown* group, never band 1. A zero-width range (orange equals green) is shown as *no reliable skill-ups* in its learned band and adds no units.
+- **Assumed crafts:** one setting, **N crafts per recipe** (default **5**, whole numbers 1–50), kept for the session only and shown in every heading that uses it ("assuming 5 crafts of each recipe"). Nothing is written to disk.
+- **Per band and profession:** the recipes in that band (name, learned at, orange/yellow/green/grey, unconfirmed markers from the existing `*_verified` fields and `availability`), then two material tables for N crafts of each of those recipes:
+  - **Direct materials:** the recipe inputs as listed.
+  - **Raw materials:** intermediates the catalog crafts (bolts, thread, bars made in the same catalog) expanded through the catalog's own routes (`material_plan` in `crafting.py`), so what you gather or buy is visible. Routes never cross catalogs: Blacksmithing's bars stay bars (cross-profession chains are STORY-015b). If expansion fails (cycle or fractional yield), that recipe shows the error and adds no raw units, never zero cost or a partial count.
+  Units are integers. Each table names its material by catalog name and item ID.
+- **Totals** across bands, per profession and across all shown professions: each material's units for **one crafter making N of every recipe shown once** (a recipe spanning several bands counts once in totals), the professions and bands that use it, sorted by total units, direct and raw as above. *post-launch* recipes are listed with their marker but left out of totals by default, with a toggle to include them and a count of what was left out.
+- **Coverage, stated:** under each profession's heading, "Catalog holds X of Y usable recipes on its saved page (saved <date>); Z recipes on the page create no item and aren't counted", from `page_coverage`. A catalog without `page_coverage` says *coverage unknown; regenerate the catalog*. When X < Y the totals heading says they cover only the catalog's recipes.
+- **Optional market context:** when the selected source has an imported snapshot, each material row shows units listed and lowest unit buyout from the newest snapshot (ADDON-10 metrics; TSM shows the price it has and units *not available for this source*), labeled with the scan time and *stale* when past the freshness limit. Never hidden because of staleness; missing prices stay missing and are never zero. No snapshot: the columns are absent and one line says so. Market context never changes units or order.
+- **Honest labels:** the page states once, at the top, that this is an expectation from catalog data and an assumed number of crafts per recipe, not observed demand or a forecast; that real levellers craft some recipes more and skip others; and that unknown skill-up ranges are placed by learned level only. Never infer a material's role or a recipe's use from its name.
+- **Decision first (STORY-030):** the totals table leads; bands are collapsed sections; rule text sits in one caption.
+- **Offline tests** (synthetic catalogs and saved-page fixtures, no `data/`):
+  - Generator: colours copied; missing, zero and decreasing colours give no field; `page_coverage` counts (usable, no item, unknown yield, rank spells excluded, seasonal excluded); parser accepts and rejects the new fields; a catalog without them still loads; regeneration from an unchanged page changes nothing else.
+  - Map: band boundaries (24/25, 49/50); a range spanning three bands; orange-to-green exclusive at green; unknown range placed by learned level; no `required_skill` in *skill unknown*; zero-width range; intermediate expansion (thread → bolt → item) and a fractional-yield error; a recipe in several bands counted once in totals; totals across two professions sharing a material; N = 1, 5, 50 and rejected 0/51; post-launch excluded then included; coverage line with and without `page_coverage`.
+  - Page (AppTest): renders with and without a snapshot, stale scan labeled, TSM units *not available*, profession filter, N change updates units.
+- **Docs:** CRAFT-08 in `requirements.md` gains the two catalog fields; a new **CRAFT-10 Skill-up map** holds the placement, N, totals, coverage and market-context rules. `design.md` describes `brownstone/skillups.py`, the view and the catalog fields; `status.md` describes the page and the real-data check.
+- **Real-data check:** on the Forever beta source, report per profession X of Y coverage, the number of recipes with unknown range, the top 10 raw materials in totals at N = 5, and one band's tables (Tailoring 50–74), with market columns from the newest scan.
+
+**Not in this story:** how each recipe is learned (trainer, vendor, drop). The pages carry Wowhead source codes, but their meanings aren't confirmed from evidence here; a later story can add a trainer-only filter once they are. Enchants that create no item stay out of catalogs.
 
 ### STORY-048 — Watchlist with target prices
 

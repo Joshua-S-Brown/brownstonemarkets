@@ -5,7 +5,7 @@ game_version = "classic"
 rules_version = "classic-era"
 profession = "alchemy"
 status = "reference-observed"
-catalog_version = "0.1"
+catalog_version = "0.2"
 
 [[recipes]]
 recipe_id = 2329  # Elixir of Lion's Strength

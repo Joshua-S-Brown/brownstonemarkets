@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "leatherworking"
 status = "beta-observed"
-catalog_version = "0.1"
+catalog_version = "0.2"
 
 [recipe_defaults]
 output_quantity_verified = false
@@ -1543,3 +1543,32 @@ recipe_id = 1306531  # Mourning Handguards
 
 [[recipes]]
 recipe_id = 1306532  # Wild Leather Armor Kit
+
+# Leather tiers are skinned or bought directly. Their conversion recipes stay for skill-ups and the board's
+# buy-or-craft pricing, but skill-up raw totals stop here (STORY-047 review, 2026-10-08): expanding each tier
+# into the one below turned every Rugged Leather into 2,160 Ruined Leather Scraps.
+
+[[items]]
+item_id = 2318  # Light Leather
+raw_material = true
+raw_material_note = "Skinned or bought directly; skill-up raw totals do not expand it through the lower-tier conversion."
+
+[[items]]
+item_id = 2319  # Medium Leather
+raw_material = true
+raw_material_note = "Skinned or bought directly; skill-up raw totals do not expand it through the lower-tier conversion."
+
+[[items]]
+item_id = 4234  # Heavy Leather
+raw_material = true
+raw_material_note = "Skinned or bought directly; skill-up raw totals do not expand it through the lower-tier conversion."
+
+[[items]]
+item_id = 4304  # Thick Leather
+raw_material = true
+raw_material_note = "Skinned or bought directly; skill-up raw totals do not expand it through the lower-tier conversion."
+
+[[items]]
+item_id = 8170  # Rugged Leather
+raw_material = true
+raw_material_note = "Skinned or bought directly; skill-up raw totals do not expand it through the lower-tier conversion."

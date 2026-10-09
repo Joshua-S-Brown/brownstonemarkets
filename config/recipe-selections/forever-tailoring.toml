@@ -6,7 +6,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"  # Game build rules; not a Forever server type.
 profession = "tailoring"
 status = "beta-observed"
-catalog_version = "0.2"
+catalog_version = "0.3"
 notes = "Forever beta, first tiers: Linen, Red Linen and Woolen bags with their bolts, plus Runecloth Bag for launch. Revalidate after material game builds by re-saving the page and regenerating."
 
 # Output counts: Wowhead's list data gives every recipe exactly 1. The "(2)" in its spell tooltips is the
