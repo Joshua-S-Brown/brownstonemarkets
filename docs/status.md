@@ -41,7 +41,9 @@ _Last updated 2026-10-09._
   (2026-10-09, Windows, Keenagen):** the first bag entry after login was `baseline_missing`; after
   `/bscan clear` and `/reload` the next entries were real changes (4 shots fired, then +1 Chipped Claw
   looted), and the two logout snapshots differ by exactly those 3 units. Beta report: no failures and no
-  bag residual warnings.
+  bag residual warnings. Level and profession ranks (modern skill API) are captured for every character, but opening
+  Tailoring saved **no known-recipe list**: the Forever client doesn't answer STORY-041's `GetTradeSkill*`
+  reader. STORY-049 adds a `C_TradeSkillUI` reader.
 
 - **Brownstone panel (STORY-044, implemented; pending in-game beta check):** addon **0.9.0**
   adds a draggable minimap coin and `/bscan panel`, opening a movable Escape-closeable

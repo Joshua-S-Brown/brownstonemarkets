@@ -50,13 +50,17 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 6. STORY-041 your professions and known recipes (addon; beta; must be testable by 13 October)
 7. STORY-042 beta evidence report (Brownstone CLI; Claude runs it after each play session)
 8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
-   - STORY-045 a simpler import page (Brownstone; small, display only; next to hand off, refined 2026-10-09)
+   - STORY-049 known recipes on the Forever client (addon; fixes STORY-041's capture; next to hand off, testable in game by 15 October)
+   - STORY-045 a simpler import page (Brownstone; small, display only; refined 2026-10-09)
+   - STORY-050 how each recipe is learned (catalogs; small; no game time)
+   - STORY-051 characters page (Brownstone; small; no game time)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
 11. STORY-046 a confidence label on each Today row (Brownstone; implemented and reviewed 2026-10-08)
 12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
 13. STORY-048 watchlist with target prices (Brownstone; small)
-14. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
+14. STORY-043 Today: what each character can make (Brownstone; after STORY-049's beta evidence and STORY-050)
+    - STORY-052 progression planner (Brownstone; medium; after STORY-043, STORY-047 and STORY-050)
 15. STORY-035 auction deposits (needs a beta check)
 16. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
 17. STORY-036 vendor price ceilings
@@ -68,6 +72,8 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 23. STORY-006 replay
 
 STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
+
+**Added 2026-10-09 (product owner: "Today shows things I can't craft yet… how do I plan my progression?"):** three questions: what can I craft for profit now (STORY-043), which professions have the most profitable recipes just within reach (STORY-052), and which character can do what (STORY-051). The 2026-10-09 Windows file showed levels and profession ranks are captured, but opening Tailoring recorded no recipe list: the Forever client answers the modern `C_TradeSkillUI` API, not the `GetTradeSkill*` functions STORY-041 reads. STORY-049 fixes that first because only the beta can confirm it. Saved Wowhead pages already say how each recipe is learned (`source`, `trainingcost`), which STORY-050 brings into catalogs. Decided with the product owner: *nearly achievable* defaults to the next **25** skill points (Skill-ups' band width), adjustable; recipes learned from patterns are shown marked *needs pattern*, not hidden.
 
 **Added 2026-10-08 (product owner, while waiting to play again):** clearer recommendations without new game data. STORY-039 gains a *session queue* (one ordered checklist for the next visit to the game). STORY-046, STORY-047 and STORY-048 are new and work on scans and catalogs already imported. Timing, volatility and sales speed stay in Later: they need live history. STORY-047 is time-critical, because launch-week demand comes before any history exists.
 
@@ -223,7 +229,7 @@ Acceptance:
 
 ### STORY-041 — Your professions and known recipes
 
-**Implemented (2026-10-07); pending the in-game beta check.** Contracts and implementation choices
+**Implemented (2026-10-07); level and skill capture confirmed on the beta 2026-10-09; known-recipe capture failed there and moves to STORY-049.** Contracts and implementation choices
 live in [ADDON-11/12](requirements.md#addon-11-character-snapshots-story-032); play checklist in
 [addon/README.md](../addon/README.md#professions-beta-checklist-story-041--by-13-october-mac-and-windows).
 
@@ -241,6 +247,73 @@ Acceptance:
 - **Seen in Brownstone:** on the addon import page, per character: level, each profession with rank/max, and for each profession the time of the latest known-recipe list and its recipe count, or *unknown*. No other views; matching to catalogs is STORY-043.
 - **Offline tests** with Lua stubs for both skill APIs and both window APIs: several professions, a header row, a collapsed header (flagged), a reagent with a missing link, an unchanged list (no new entry), a changed list after learning a recipe, a missing API, a rejected event, no action or filter functions called, and the import page's rows and unknown cases.
 - **Checklist** in `addon/README.md`, in play terms only (the product owner plays, Claude checks; see *Now*): open each profession window, learn a recipe and reopen it, gain a skill point, log out. Mining and Engineering on one character; Tailoring and Enchanting on the druid.
+
+### STORY-049 — Known recipes on the Forever client
+
+Added 2026-10-09 (beta finding). Fixes STORY-041's known-recipe capture on the Forever client. Must be testable in game by **15 October**, so the beta can confirm it before 21 October.
+
+**Evidence:** on 2026-10-09 (Windows, addon 0.10.1, Basilly, Tailoring 7/75) `TRADE_SKILL_SHOW` fired but no `known_recipes` list was saved: `GetTradeSkillLine` returned nothing. The same client crafted through `C_TradeSkillUI.CraftRecipe(2963, 1)` and `CraftRecipe(3755, 1)`, whose first argument is the catalog's recipe ID. `TRADE_SKILL_UPDATE`/`CRAFT_UPDATE` never fired. Level and skill lines (modern API) were captured correctly and stay unchanged.
+
+As a gold maker, I want the addon to record which recipes each character knows on the Forever client, so that Today and the planner can tell what I can actually make.
+
+Acceptance:
+- **Modern window API first:** when a profession window opens or its list changes, read the recipe list through `C_TradeSkillUI` when the client has it, and fall back to STORY-041's `GetTradeSkill*`/`GetCraft*` reader otherwise. Candidate functions (each guarded; which exist is a **beta check**): `GetAllRecipeIDs`, `GetRecipeInfo` (name, learned flag, category, craftable count), `GetRecipeSchematic` (output item ID, min/max made, reagent item IDs and counts), `GetBaseProfessionInfo`/`GetChildProfessionInfo`/`GetTradeSkillLine` (profession name, rank, max rank), and recipe/item link functions. Preserve raw values as reported, with the API used, as ADDON-12 already does for the legacy reader.
+- **Known means learned:** the modern list can include unlearned recipes. Record every row with its learned flag; only `learned == true` counts as known. A missing flag leaves that row's status unknown, never known.
+- **Events:** keep the existing window events and add the modern list events guarded (for example `TRADE_SKILL_LIST_UPDATE`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`), recording which fired. Same change detection as STORY-041 (ignore craftable counts; one entry per changed list).
+- **API inventory:** the first time a profession window opens in each load, record once which `C_TradeSkillUI` functions and events the client offers (names only), so a failed read still tells us what to use.
+- **Crafts as evidence:** Brownstone's import projection treats a recipe ID seen in a `CraftRecipe` hook or a successful craft cast by that character as known from that time, labelled *seen crafted*, alongside any list. No addon change is needed for this; it reads existing journal entries.
+- **Unchanged:** read-only and silent; no crafting, training, filter changes or window opening. Filtered or collapsed lists are flagged *possibly incomplete* as in STORY-041. Bump the addon version; file format only if import needs it (record which). New storage only through a numbered migration.
+- **Seen in Brownstone:** STORY-041's import-page row per character and profession shows the latest list's time and known-recipe count, or *unknown*, and now also the source (*window list* or *seen crafted*).
+- **Offline tests** with Lua stubs for the modern API: learned and unlearned rows, a schematic with reagents, a missing function, a list that changes after learning a recipe, an unchanged reopen (no new entry), the API inventory, the legacy fallback still working, no action functions called; and Brownstone projection tests for *seen crafted*.
+- **Checklist** in `addon/README.md`, play actions only: open each profession window, learn one recipe at a trainer and reopen the window, craft one thing, log out. Claude checks the file.
+- **Docs:** ADDON-11/12 in `requirements.md` (modern reader, learned rule, inventory, *seen crafted*), `status.md`.
+
+### STORY-050 — How each recipe is learned
+
+Added 2026-10-09. Catalogs only; no game time. Same shape as STORY-047's catalog fields.
+
+As a gold maker, I want each catalog recipe to say how it's learned and what training costs, so that plans can tell "train it now" from "find a pattern".
+
+**Evidence:** the saved Wowhead list pages carry `source` codes and `trainingcost` per spell (Linen Bag: `source [6]`, `trainingcost 100`; Red Linen Bag: `[2,5]`; Runecloth Bag: `[5]`; Bolt of Linen Cloth: none, a starting recipe).
+
+Acceptance:
+- **Catalog fields** (CRAFT-08, a catalog value change with evidence): `learned_from` (the page's source codes as listed) and `training_cost_copper` (integer copper) when the page gives them; absent when it doesn't, never guessed. The code-to-label table (*trainer*, *vendor*, *drop*, *quest*, …) is recorded once in `requirements.md` with its evidence; an unlisted code shows as *other (code N)*. A recipe with no source and `learnedat` 1 is labelled *starting recipe* only if the page evidence supports it; otherwise *unknown*.
+- **Regenerate** every Forever catalog from its archived page under `data/recipe-sources/` and confirm each diff holds only the new fields and the version bump. Classic catalogs too if their pages carry the fields.
+- **Shown** on the Recipe catalogs page's recipe view. No other views; STORY-043 and STORY-052 use the fields.
+- **Offline tests:** each code, several codes, a missing source, a training cost, a malformed value left absent, older catalogs still loading.
+- **Docs:** CRAFT-08 in `requirements.md`, `design.md`, `status.md`.
+
+### STORY-051 — Characters page
+
+Added 2026-10-09 (product owner: "which character can do what"). Brownstone only; works on imported snapshots and journals.
+
+As a gold maker, I want one page listing my characters with their level and professions, and how those change over time, so that I know who can do what without logging in.
+
+Acceptance:
+- **Its own page, *Characters*,** after Today in the navigation. Calculation in `brownstone/` (no Streamlit), display in `views/`.
+- **One row per character** of the selected source and market (never pooled across sources): name, realm, machine, level, gold, last seen (UTC), and each profession with rank/max. Values come from the latest readable bags snapshot; a character with none since addon 0.8.0 shows *skills unknown*.
+- **Known recipes** per profession: count and time of the latest list or *seen crafted* evidence (STORY-049), or *unknown*. Never zero for unknown.
+- **At cap:** a profession at its maximum rank is marked *at cap: train the next tier*. Which character level each tier needs is not assumed; it's shown only once recorded with evidence in `requirements.md` (*Known Forever market facts*).
+- **Progress over time:** per character, level and each profession's rank at each imported snapshot, as a small table or line chart (collapsed by default).
+- **Offline tests:** two characters on two machines, a character with no skills (unknown), a profession at cap, rank history across snapshots, scoping by source and market.
+- **Docs:** `design.md`, `status.md`; any new rule in `requirements.md`.
+
+### STORY-052 — Progression planner
+
+Added 2026-10-09 (product owner: "which professions have the most profitable nearly achievable recipes that I need to push my level to get next"). Depends on STORY-043 (known/learnable status), STORY-047 (skill-up colours) and STORY-050 (how recipes are learned).
+
+As a gold maker, I want to see, for each of my characters and professions, the profitable recipes just beyond my current skill and what it costs to reach them, so that I can decide which profession to level next.
+
+Acceptance:
+- **Its own page, *Progression*,** after Characters. Choose a character (default: the first with skills). Calculation in `brownstone/` (no Streamlit, no downloads), display in `views/`.
+- **Within reach:** for each of the character's professions, recipes with `required_skill` above the current rank and at most **25** points above it (adjustable per session, 5 to 100). Each shows profit per craft from the newest scan of the selected source, computed with Today's existing per-craft rules (cautious output price, auction cut, missing prices never free), its confidence label (STORY-046) and how it's learned (STORY-050). Recipes learned from patterns, drops or vendors are shown marked *needs pattern*, not hidden.
+- **Cost to get there:** the skill points needed and an estimate of the cheapest way to earn them: for each point, the cheapest catalog craft that still gives a skill-up at that rank (orange or yellow by `skillup_colors`), costed from the scan, plus any training costs on the way (STORY-050). Labelled once as an estimate: skill-up chances on yellow are not modelled as exact, and it assumes one point per orange craft (rule recorded in `requirements.md`). Crafts already known come first; missing material prices mark the estimate incomplete rather than free.
+- **Compare professions:** one summary row per profession: points to the best reachable recipe, estimated cost to reach it, and its profit per craft. Sorted by profit per craft, then by cost. Ties and incomplete estimates are shown, never dropped.
+- **At cap:** a profession at its max rank shows *train the next tier first* and still lists what lies beyond.
+- **Honest labels:** current-scan profit, not a forecast; sales speed and demand are unknown; beta prices.
+- **Offline tests:** reach window boundaries, a pattern recipe marked, a known recipe excluded from *within reach*, skill-up cost from colours (including a gap with no skill-up craft, shown as incomplete), training cost added, missing prices incomplete, comparison sort and ties, a profession at cap.
+- **Real-data check:** on the Forever beta source, the summary rows for each character and the best reachable recipe per profession.
+- **Docs:** a new CRAFT rule in `requirements.md` (reach window, skill-up cost estimate), `design.md`, `status.md`.
 
 ### STORY-042 — Beta evidence report
 
@@ -393,18 +466,24 @@ Acceptance:
 - **Offline tests:** parsing and storage round trip, a buy hit, a sell hit, exactly at target, not listed, stale scan, a TSM source (lowest price only, units *not available*), and one source's list never shown for another.
 - **Docs:** `requirements.md` (rule and file), `design.md`, `status.md`.
 
-### STORY-043 — Today: only what you can make
+### STORY-043 — Today: what each character can make
 
-Added 2026-10-07 (product owner). Depends on STORY-041's beta evidence: which IDs the client reports decides how recipes match catalogs. Takes the Today half of *Known recipes and skill* from Later.
+Added 2026-10-07 (product owner); reworked 2026-10-09 (product owner: "Today shows things I can't actually craft yet"). Depends on STORY-049's beta evidence (which IDs the client reports decides how recipes match catalogs) and STORY-050 (how recipes are learned). Takes the Today half of *Known recipes and skill* from Later.
 
-As a gold maker, I want to choose one of my characters on Today and see only crafts that character knows, so that the plan is something I can actually do.
+As a gold maker, I want to choose one of my characters on Today and see what that character can make now or train now, so that the plan is something I can actually do.
 
 Acceptance:
-- **Choose a character** on Today: *All recipes* (the default, unchanged behaviour) or any character with an imported known-recipe list for this source and market. Kept per source in the existing Today settings.
-- **Matching by IDs only:** a catalog recipe is known when the character's latest list for that profession has the same recipe or spell ID, or failing that the same created item ID and the same reagent item IDs. Never by name. The rule and the IDs used are recorded in `requirements.md` → *Today* with a new `today_version`.
-- **Unknown is shown, not hidden:** a profession whose list is unknown or *possibly incomplete* keeps its crafts, marked *known recipes unknown* or *list may be incomplete*. Only crafts proven unknown are hidden, and the Craft tab counts them under its hidden reasons.
-- **Catalog check:** where a known recipe's reagent counts or yield differ from the catalog, list them under the page (a pointer for CRAFT-08 confirmation). The catalog isn't changed automatically; catalog values still need source evidence.
-- **Offline tests:** a known recipe kept, an unknown one hidden and counted, matching by spell ID and by item and reagents, a name-only match rejected, an unknown and a possibly incomplete profession kept and marked, and a reagent mismatch listed.
+- **Choose a character** on Today: *All recipes* (the default, unchanged behaviour) or any character of this source and market with imported skills. Kept per source in the existing Today settings.
+- **Status per craft** for the chosen character:
+  - **Known:** the catalog recipe is in the character's latest list for that profession, or *seen crafted* (STORY-049).
+  - **Train now:** not known, learned from a trainer (STORY-050), and the character's rank is at least `required_skill`. Shows the training cost; the cost is not added to the batch profit, but shown beside it.
+  - **Not yet:** rank below `required_skill`, or learned only from a pattern, drop or vendor and not known. Hidden, and counted under the Craft tab's hidden reasons. STORY-052 shows these.
+  - **Unknown:** the profession's list is unknown or *possibly incomplete*: crafts at or below the rank stay, marked *known recipes unknown* or *list may be incomplete*. Nothing proven unknown is hidden.
+- **Matching by IDs only:** recipe or spell ID, or failing that the same created item ID and the same reagent item IDs. Never by name. The rule and IDs used are recorded in `requirements.md` → *Today* with a new `today_version`.
+- **All recipes** gains a *Who can make it* column: characters for whom the craft is Known or Train now.
+- **Catalog check:** where a known recipe's reagent counts or yield differ from the catalog, list them under the page (a pointer for CRAFT-08 confirmation). The catalog isn't changed automatically.
+- **Display only otherwise:** ranking, sizing and reservations unchanged within the filtered set; the queue lists only the chosen character's crafts.
+- **Offline tests:** each status, a training cost shown but not subtracted, matching by spell ID and by item and reagents, a name-only match rejected, unknown and possibly incomplete lists kept and marked, *seen crafted* counted as known, the *Who can make it* column, a reagent mismatch listed.
 
 ### STORY-039 — Choose and adjust the Today plan
 
@@ -633,7 +712,8 @@ Acceptance:
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
 
 **Your own character's data** (approved 2026-10-06; capture is STORY-032/033 and the ledger STORY-034 in Next). Once those exist:
-- **Known recipes and skill:** moved to Next on 2026-10-07 as STORY-041 (capture) and STORY-043 (Today). Still here: the Action Board filtered to what you can make, and *what can I learn next* from your skill rank and the catalogs' skill levels.
+- **Known recipes and skill:** moved to Next on 2026-10-07 as STORY-041 (capture) and STORY-043 (Today); 2026-10-09 added STORY-049 (Forever capture), STORY-051 (Characters) and STORY-052 (progression; *what can I learn next*). Still here: the Action Board filtered to what you can make.
+- **Profession page** (added 2026-10-09, product owner): drill into one profession: every catalog recipe by skill band, with each character's status (known, train now, not yet), how it's learned, profit from the newest scan and its materials; linking to the item page (STORY-021). Builds on STORY-043, STORY-050 and STORY-052.
 - **Calibrate removed listings:** your own sales from invoices show how many *removed* listings (STORY-027) were real sales.
 
 **Ledger analytics** (from the 2026-10-06 design notes; each needs STORY-034 and some weeks of your own sales):
