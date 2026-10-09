@@ -1,4 +1,4 @@
-"""Today v2: transparent batch estimates and one funded, supply-reserved plan.
+"""Today v3: transparent batch estimates and one funded, supply-reserved plan.
 
 Routes remain catalog-local board choices. Prefix ladders price complete stacks in O(log n),
 without expanding units; the clock and all scoped evidence are supplied by the caller.
@@ -10,9 +10,10 @@ from decimal import Decimal
 from .action_board import catalog_for_row, compatible_catalogs, rank_catalogs
 from .freshness import assess
 from .markets import MARKET_KEYS
+from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 
-TODAY_VERSION = 2
+TODAY_VERSION = 3
 ROW_LIMIT = 10
 
 
@@ -131,15 +132,8 @@ def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, au
                                         for p in row["shopping_choices"]},
                      "recipe_source": recipe["source_url"], "catalog_version": catalog["catalog_version"],
                      "availability": recipe.get("availability", "available"),
-                     "evidence_notes": _notes(catalog, recipe, row)})
+                     "evidence_notes": route_notes(catalog, recipe, row)})
     return rows, hidden
-
-
-def _notes(catalog, recipe, row):
-    records = [recipe, *[catalog["items_by_id"][i] for i in row["shopping_list"]]]
-    return [f"{record.get('name', 'Recipe')}: {key.replace('_', ' ')}"
-            for record in records for key, value in record.items()
-            if (key.endswith("_verified") and value is False) or (key == "availability" and value == "post-launch")]
 
 
 def _sort(rows):
@@ -315,6 +309,10 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
     hidden = +hidden
     shopping = _shopping(crafts, metrics)
     sells = [_sell(row, metrics, auction_cut) for row in crafts]
+    for row, sell in zip(crafts, sells, strict=True):
+        label = confidence(row, sell, freshness, max_age_hours, metrics, ladders)
+        row.update(label)
+        sell.update(label)
     vendors = _vendor(ladders, vendor_prices or {}, settings.minimum_gain)
     evidence = {"stale": freshness["stale"], "actionable": not freshness["stale"],
                 "observed_at": freshness["observed_at"], "time_basis": freshness["basis"],
@@ -360,18 +358,20 @@ def session_queue(crafts, shopping, sells):
                 lines.append({**{key: purchase[key] for key in ("item_id", "quantity", "purchased_units",
                                                              "cost_copper", "highest_unit_copper")},
                               "stage": "vendor" if vendor else "auction house",
-                              "name": names[purchase["item_id"]]})
+                              "name": names[purchase["item_id"]], **purchase_confidence(crafts, purchase)})
     for row in sorted(crafts, key=lambda r: r["plan_order"]):
         # Retained preorder/depth identifies each branch of the catalog route.
         for step in _route_order(row["intermediate_steps"]):
             lines.append({"stage": "craft", "name": step["item_name"], "recipe_id": step["recipe_id"],
-                          "catalog_id": row["catalog_id"], "batch_size": step["crafts"] * row["batch_size"]})
+                          "catalog_id": row["catalog_id"], "batch_size": step["crafts"] * row["batch_size"],
+                          **_confidence_fields(row)})
         lines.append({"stage": "craft", "name": row["output_name"], "recipe_id": row["recipe_id"],
-                      "catalog_id": row["catalog_id"], "batch_size": row["batch_size"]})
+                      "catalog_id": row["catalog_id"], "batch_size": row["batch_size"], **_confidence_fields(row)})
     for row, sell in zip(crafts, sells, strict=True):
         lines.append({"stage": "post", "name": row["output_name"],
                       "quantity": row["output_quantity"] * row["batch_size"],
-                      "unit_copper": sell["undercut_copper"], "profit_copper": sell["undercut_batch_profit_copper"]})
+                      "unit_copper": sell["undercut_copper"], "profit_copper": sell["undercut_batch_profit_copper"],
+                      **_confidence_fields(row)})
     profits = [s["undercut_batch_profit_copper"] for s in sells]
     return {"lines": lines, "gold_needed_copper": sum(p["cost_copper"] for p in shopping),
             "expected_profit_copper": sum(profits) if all(p is not None for p in profits) else None}
@@ -384,3 +384,7 @@ def _route_order(steps):
             ordered.append(pending.pop())
         pending.append(step)
     return ordered + list(reversed(pending))
+
+
+def _confidence_fields(row):
+    return {key: row[key] for key in ("confidence", "confidence_reasons") if key in row}

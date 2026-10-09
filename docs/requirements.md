@@ -453,7 +453,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Market context:** optional, read-only, newest imported snapshot of the selected source and full market. ADDON-10 base/legacy metrics supply units listed and lowest unit buyout; TSM shows its price and units *not available for this source*. No snapshot omits columns with an explanation. Scan time (or labeled collection time) and DATA-05/Today's freshness policy label stale/future evidence without hiding it. Missing/nonpositive prices stay missing. Context changes neither units nor order.
   - **Presentation:** Skill-ups follows Recipe catalogs in navigation. Totals lead, band sections are collapsed, rule/honesty text is one caption.
 
-### Today (today_version 2, STORY-025/039; STORY-039 reviewed 2026-10-08)
+### Today (today_version 3, STORY-025/039/046; STORY-039 reviewed 2026-10-08)
 
 - **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
   source during the session. Each source has its own ignored preferences file,
@@ -513,6 +513,28 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   profit unavailable, never zero. Queue projections reuse reserved purchases and retained route steps,
   without quoting again. Queue ticks stay in session per source, reset with the plan (not when evidence merely turns
   stale), and never affect quantities or numbers. Copy as text exposes the same complete list and totals as plain text.
+- **Confidence (STORY-046, version 3):** label each selected Craft row and carry its label and short
+  reasons to Sell and its Queue craft/post lines. A merged Queue buy line carries the worst label of
+  its contributing crafts and their distinct reasons. Low wins over Medium; no reasons means High.
+  This display pass runs after reservations and changes no ranking, sizing, refill, queue order or costs.
+  Named thresholds are **CONFIDENCE_LOW_SHARE_PERCENT = 75**, **CONFIDENCE_MEDIUM_SHARE_PERCENT = 40**,
+  **CONFIDENCE_MEDIUM_LISTINGS = 5**, and **CONFIDENCE_AGE_FRACTION = 0.5**.
+  Low reasons: DATA-05 stale/future evidence (inspection only); output *thin* under the existing
+  Sell/CRAFT-09 rule below; no positive competing listing; auction material purchases strictly above
+  CONFIDENCE_LOW_SHARE_PERCENT of that material's scan units. Medium reasons: age strictly above
+  CONFIDENCE_AGE_FRACTION × configured freshness limit; output listings strictly below
+  CONFIDENCE_MEDIUM_LISTINGS; auction material purchases strictly above CONFIDENCE_MEDIUM_SHARE_PERCENT;
+  any false `*_verified` marker on the selected recipe or any recipe/item in its retained route
+  (including output, crafted intermediates and purchased leaves). Yield and vendor price reasons
+  remain explicit; unused alternative routes supply no reasons. Age uses DATA-05's same basis and
+  limit, including labeled collection time when upstream scan time is unknown.
+  Material share uses whole purchased units through that row's reservation prefix (earlier planned
+  purchases count against later rows), divided by all scan-listed units including no-buyout listings.
+  Vendor purchases and materials not purchased supply no share reason. TSM/missing depth replaces
+  depth reasons with *depth not available for this source*, a Medium reason; absent depth never yields High.
+  The Craft-only **Hide Low confidence** toggle defaults off and lives only in session per source.
+  Hidden rows count as *low confidence* alongside existing hidden reasons. Filtering preserves the
+  full plan's reservations, Buy, Sell, Queue and totals.
 - **Hidden and capped:** hide invalid recipes (unsupported recipe before missing prices), no batch with
   priced supply (**insufficient listed materials**), batches where one craft exceeds remaining funds
   (**one craft exceeds funds**), and nonpositive profit or profit strictly below the minimum (**below

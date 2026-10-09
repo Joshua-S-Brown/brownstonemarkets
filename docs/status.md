@@ -6,6 +6,18 @@ _Last updated 2026-10-08._
 
 ## Implemented
 
+- **Today confidence (STORY-046, implemented and reviewed 2026-10-08):** Today v3 labels Craft rows
+  High/Medium/Low with visible reasons, carried to Sell and Queue (including merged purchases).
+  Rules and named thresholds: `requirements.md` → Today; contract: `design.md` → Today contracts.
+  The default-off session Craft filter counts *low confidence* without changing reservations,
+  shopping, Sell or Queue. Confidence age transitions preserve queue ticks. Offline boundaries,
+  retained route markers, cumulative material share, plan invariance and AppTest checks cover this.
+  Forever beta check (2026-10-08, copy of `data/`, saved settings 25g, scaled 1%, 10s floor, cap 5):
+  fresh scan `20261009T003454Z-95a884` (observed 2026-10-09 00:34:59 UTC) gives **High 0, Medium 2,
+  Low 8** over 10 rows. Reasons: unconfirmed yield 10, few listings 8, thin 7, unconfirmed vendor
+  price 4, material share >75% 1, >40% 1. Every Forever yield is unconfirmed, so no Forever row can be
+  High until yields are counted in game; thin outputs are the main Low cause.
+
 - **Skill-up demand map (STORY-047, implemented, pending review):** Skill-ups follows Recipe catalogs.
   Compatible professions default to all; session controls adjust crafts per recipe and post-launch
   inclusion. Direct/raw totals lead, profession totals follow and bands are collapsed. Catalog
@@ -158,7 +170,7 @@ _Last updated 2026-10-08._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.02% in the current macOS run: 857 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.07% in the current macOS run: 896 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.10.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.

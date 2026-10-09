@@ -272,7 +272,8 @@ def test_today_rejects_snapshot_source_or_rules_mismatch(key, value):
 
 def test_cheap_now_changes_only_annotation_and_independent_aside_caps():
     ordinary = plan()
-    cheaper = plan(metrics={1: {"unit_buyout_p25": 1000}})
+    cheaper = plan(metrics={1: {"unit_buyout_p25": 1000},
+                            3: {"min_buyout": 200, "listings": 3, "units": 8, "largest_stack_units": 3}})
     assert ordinary["craft"] == cheaper["craft"]
     listings = {i: [(2, 20, 10)] for i in range(20, 32)}
     result = plan(listings=listings, vendor_prices={i: 100 for i in listings})
@@ -355,7 +356,7 @@ def test_craft_details_reserved_costs_reconcile_across_crafts_and_vendor(monkeyp
     for buy in result['buy']:
         assert totals[(buy['item_id'], buy['method'])] == {field: buy[field] for field in totals[(1, 'buy')]}
     assert [craft_details(r)['materials'][0]['cost_copper'] for r in result['craft']] == [30, 80]
-    assert result['today_version'] == 2
+    assert result['today_version'] == 3
 
 
 def chain_catalog():

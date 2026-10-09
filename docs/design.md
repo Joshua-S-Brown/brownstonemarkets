@@ -60,7 +60,8 @@ brownstone/             importable without Streamlit
   recipe_catalogs.py    catalogs found by selection file: status, previews and the add/update writes
   selection_files.py    in-place edits of a selection file that keep its comments
   action_board.py       ranking and label policy (versioned)
-  today.py              Today v2 batch sizing, chosen-plan reservation, refill and session queue
+  today.py              Today v3 batch sizing, chosen-plan reservation, refill and session queue
+  today_confidence.py   display labels over retained routes, freshness and reserved listing depth
   today_data.py         one scoped read of prices, base/legacy listings, metrics and vendor references
   today_settings.py     validated integer settings and atomic local JSON persistence
   cli.py                `python -m brownstone`: collect or import a source; `recipes` subcommand
@@ -431,6 +432,14 @@ survive the scan crossing the freshness limit. Widgets take start values only th
 Each rerun builds the current plan once; stored default control rows supply the session choices.
 Copy as text is a per-source toggle showing a plain-text code block with Streamlit's clipboard
 control; it stays open across ticks. No disk or schema writes.
+
+STORY-046 applies `today_confidence.confidence` after the complete funded plan is chosen, using
+retained route markers, freshness, Sell metrics and each purchase's ladder prefix. Rules and named
+thresholds live in `requirements.md` → Today v3. Craft/Sell and Queue lines carry `confidence` and
+`confidence_reasons`; merged Queue buys project contributing labels. The Craft view filters only
+its displayed rows and copies hidden counts, preserving the plan and resetting selection when its
+visible rows change. Confidence fields are excluded from Queue tick fingerprints so age transitions
+leave ticks intact. No persistence, schema or pricing changes.
 
 Offline fixtures in `test_today.py`, `test_today_data.py` and `test_today_view.py` cover this contract
 without discovering local catalogs. Performance verification uses a copied database with current

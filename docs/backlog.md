@@ -53,7 +53,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
    - STORY-045 a simpler import page (Brownstone; small, display only; can go any time)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
-11. STORY-046 a confidence label on each Today row (Brownstone; small; refined for implementation 2026-10-08, next to hand off)
+11. STORY-046 a confidence label on each Today row (Brownstone; implemented and reviewed 2026-10-08)
 12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
 13. STORY-048 watchlist with target prices (Brownstone; small)
 14. STORY-043 Today: only what you can make (Brownstone; after STORY-041's beta evidence)
@@ -320,6 +320,8 @@ Acceptance:
 - **Implementation notes** (added 2026-10-07 at hand-off): read the materials from the selected craft row's existing `purchases` (the reserved quotes Today already made), never re-quote listings, so the details can't disagree with the plan. Intermediate steps come from the recipe's chosen catalog route (`crafting.py`, method `craft`); yields stay 1 (CRAFT-08). Calculation stays in `brownstone/` (no Streamlit), display in `views/today.py`. A display-only change: `TODAY_VERSION` stays 1.
 
 ### STORY-046 — A confidence label on each Today row
+
+**Implemented and reviewed (2026-10-08).** At review, the real `vendor_verified` marker reads *unconfirmed vendor price*; merged Queue buys carry the worst contributing label (`requirements.md` → Today).
 
 Added 2026-10-08 (product owner: clearer recommendations). Brownstone only; works on existing scans. Display of rules over evidence Today already has; no change to ranking, sizing or which rows appear.
 

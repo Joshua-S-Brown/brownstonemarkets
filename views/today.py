@@ -116,17 +116,20 @@ def _tables(result, names, *, arguments=None):
         if arguments is not None:
             result = _plan_controls(result, arguments)
         sells = {r["output_item_id"]: r for r in result["sell"]}
-        craft = [_craft_row(row, sells[row["output_item_id"]]) for row in result["craft"]]
+        hide_low = st.toggle("Hide Low confidence", key=f"today-hide-low-{result['source_id']}")
+        visible, hidden_counts = _filter_confidence(result, hide_low)
+        craft = [_craft_row(row, sells[row["output_item_id"]]) for row in visible]
         selected = _table(craft, result["remaining"]["craft"],
                ["Item", "Profession", "Batch", "Limited by", "Material cost (g)", "Batch profit (g)",
-                "Profit per craft (g)", "Thin"], "craft", selection_key=_selection_key(result),
+                "Profit per craft (g)", "Thin", "Confidence", "Reasons"], "craft",
+               selection_key=_selection_key({**result, "craft": visible}),
                rest_text=("more rows outside this list's 10-row limit" if result["refill"]
                           else "more crafts fit the remaining gold; refill is off"))
         if selected:
-            _craft_details(result["craft"][selected[0]])
+            _craft_details(visible[selected[0]])
         elif craft:
             st.caption("Select a craft row to see its materials and catalog craft steps.")
-        hidden = "; ".join(f"{reason}: {count}" for reason, count in sorted(result["hidden"].items()))
+        hidden = "; ".join(f"{reason}: {count}" for reason, count in sorted(hidden_counts.items()))
         st.caption("Hidden recipes: " + (hidden or "0"))
     with buy_tab:
         buy = [{"Material": names.get(r["item_id"], f"Item {r['item_id']}"), "Item ID": r["item_id"],
@@ -143,7 +146,7 @@ def _tables(result, names, *, arguments=None):
     with sell_tab:
         _table([_sell_row(row) for row in result["sell"]], result["remaining"]["sell"],
                ["Output", "Batch", "Lowest competing unit (g)", "Listings", "Units", "Undercut unit (g)",
-                "Profit at undercut for batch (g)", "Thin"], "sell")
+                "Profit at undercut for batch (g)", "Thin", "Confidence", "Reasons"], "sell")
     with vendor_tab:
         st.caption("Independent aside, not part of the craft budget.")
         _table([{"Item": names.get(r["item_id"], f"Item {r['item_id']}"),
@@ -165,7 +168,8 @@ def _craft_row(row, sell):
             "Profit per craft (g)": to_gold(row["profit_per_craft_copper"]),
             "Cautious output unit (g)": to_gold(row["sale_price_copper"]), "Listings": sell["listings"],
             "Units": sell["units"], "Thin": sell["thin"], "Availability": row["availability"],
-            "Evidence notes": "; ".join(row["evidence_notes"]), "Recipe source": row["recipe_source"], **_evidence(row)}
+            "Evidence notes": "; ".join(row["evidence_notes"]), "Recipe source": row["recipe_source"],
+            **_confidence_columns(row), **_evidence(row)}
 
 
 def _sell_row(row):
@@ -174,7 +178,7 @@ def _sell_row(row):
             "Listings": row["listings"], "Units": row["units"], "Largest stack units": row["largest_stack_units"],
             "Undercut unit (g)": to_gold(row["undercut_copper"]),
             "Profit at undercut for batch (g)": to_gold(row["undercut_batch_profit_copper"]),
-            "Thin": row["thin"], **_evidence(row)}
+            "Thin": row["thin"], **_confidence_columns(row), **_evidence(row)}
 
 
 def _selection_key(result):
@@ -313,6 +317,14 @@ def _seed(key, value):
 
 
 def _queue_line(line):
+    text = _queue_line_text(line)
+    if "confidence" in line:
+        reasons = ", ".join(line["confidence_reasons"])
+        text += f" · {line['confidence']} confidence" + (f" ({reasons})" if reasons else "")
+    return text
+
+
+def _queue_line_text(line):
     stage, name = line["stage"], line["name"]
     if stage in ("auction house", "vendor"):
         return (f"Buy at {stage}: {name} · {line['purchased_units']} units · "
@@ -326,7 +338,9 @@ def _queue_line(line):
 
 def _queue(result):
     queue = result["queue"]
-    identity = _digest({"queue": queue, "context": result.get("session_context"), "evidence": [
+    stable_queue = {**queue, "lines": [{k: v for k, v in line.items()
+                                      if k not in ("confidence", "confidence_reasons")} for line in queue["lines"]]}
+    identity = _digest({"queue": stable_queue, "context": result.get("session_context"), "evidence": [
         {k: r[k] for k in ("source_id", "market_id", "snapshot_id", "scan_id")}
         for r in result["craft"]]})
     key = f"today-queue-{identity}"
@@ -352,3 +366,15 @@ def _queue(result):
         st.caption("stale — inspect only")
     if st.toggle("Copy as text", key=f"today-queue-copy-{source}"):
         st.code("\n".join([*lines, total]), language=None)
+
+
+def _confidence_columns(row):
+    return {"Confidence": row["confidence"], "Reasons": ", ".join(row["confidence_reasons"])}
+
+
+def _filter_confidence(result, hide_low):
+    rows = [r for r in result["craft"] if not hide_low or r["confidence"] != "Low"]
+    hidden = dict(result["hidden"])
+    if hide_low and len(rows) < len(result["craft"]):
+        hidden["low confidence"] = len(result["craft"]) - len(rows)
+    return rows, hidden

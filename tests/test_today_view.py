@@ -144,11 +144,11 @@ def test_today_all_tabs_decision_columns_evidence_and_stale_state(tmp_path, monk
     assert [t.label for t in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor', 'Queue']
     columns = [
         ['Item', 'Profession', 'Batch', 'Limited by', 'Material cost (g)', 'Batch profit (g)',
-         'Profit per craft (g)', 'Thin', 'State'],
+         'Profit per craft (g)', 'Thin', 'Confidence', 'Reasons', 'State'],
         ['Material', 'Route', 'Required units', 'Purchased units', 'Cost (g)', 'Highest unit price (g)',
          'Cheap now', 'State'],
         ['Output', 'Batch', 'Lowest competing unit (g)', 'Listings', 'Units', 'Undercut unit (g)',
-         'Profit at undercut for batch (g)', 'Thin', 'State'],
+         'Profit at undercut for batch (g)', 'Thin', 'Confidence', 'Reasons', 'State'],
         ['Item', 'Units', 'Cost (g)', 'Vendor pays per unit (g)', 'Gain (g)', 'State']]
     originals = [tab.dataframe[0].value.copy() for tab in at.tabs[:4]]
     for tab, expected in zip(at.tabs[:4], columns, strict=True):
@@ -306,7 +306,8 @@ def test_today_queue_ticks_survive_evidence_turning_stale(tmp_path, monkeypatch)
 
     def aged(**args):
         result = build_today(**args)
-        result['craft'] = [{**row, 'stale': True} for row in result['craft']]
+        args['now'] += timedelta(hours=25)
+        result = build_today(**args)
         return result
     monkeypatch.setattr('views.today.build_today', aged)
     at.run()
@@ -398,3 +399,25 @@ def test_today_drops_infeasible_choice_with_note(tmp_path, monkeypatch):
     assert not at.tabs[1].dataframe and not at.tabs[2].dataframe
     assert any('dropped, not resized' in w.value for w in at.warning)
     assert not any('Session State API' in message for message in logged)
+
+
+def test_confidence_display_filter_count_and_reservations(tmp_path, monkeypatch):
+    at, _ = listing_evidence_app(tmp_path, monkeypatch, 0)
+    assert not at.exception
+    assert widget(at.toggle, 'Hide Low confidence').value is False
+    assert set(at.tabs[0].dataframe[0].value['Confidence']) == {'Low'}
+    assert set(at.tabs[2].dataframe[0].value['Confidence']) == {'Low'}
+    buy = at.tabs[1].dataframe[0].value.copy()
+    sell = at.tabs[2].dataframe[0].value.copy()
+    queue = [c.label for c in at.tabs[4].checkbox]
+    assert any('Low confidence' in line for line in queue)
+    widget(at.toggle, 'Hide Low confidence').set_value(True).run()
+    assert not at.exception and not at.tabs[0].dataframe
+    assert any('low confidence: 1' in c.value for c in at.tabs[0].caption)
+    assert at.tabs[1].dataframe[0].value.equals(buy)
+    assert at.tabs[2].dataframe[0].value.equals(sell)
+    assert [c.label for c in at.tabs[4].checkbox] == queue
+    widget(at.toggle, 'Hide Low confidence').set_value(False).run()
+    assert len(at.tabs[0].dataframe[0].value) == 1
+    again = AppTest.from_file(str(ROOT / 'app.py')).run()
+    assert widget(again.toggle, 'Hide Low confidence').value is False
