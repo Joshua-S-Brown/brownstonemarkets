@@ -28,7 +28,7 @@ def test_skills_both_apis_level_missing_and_raw_tuples():
     ''')
     fire(g, "PLAYER_LOGOUT")
     record = python_value(g.BrownstoneScanDB.snapshots)[-1]
-    assert record["level"] == 22 and record["addon_version"] == "0.11.0"
+    assert record["level"] == 22 and record["addon_version"] == "0.11.1"
     assert record["skills"]["legacy"]["rows"][1]["rank"] == 55
     assert "skill_id" not in record["skills"]["legacy"]["rows"][1]
     assert record["skills"]["modern"]["indexes"]["n"] == 3
@@ -576,3 +576,85 @@ def test_inventory_retry_after_cap_and_new_load():
     _, fresh = modern_client()
     fire(fresh, "TRADE_SKILL_SHOW")
     assert "trade_skill_api_inventory" in entries(fresh)[-1]
+
+
+def test_forever_child_name_empty_falls_through_to_base_profession():
+    lua, g = modern_client()
+    lua.execute('C_TradeSkillUI.GetChildProfessionInfo = function() return {professionName="", skillLevel=0} end')
+    fire(g, "TRADE_SKILL_SHOW")
+    state = entries(g)[-1]["known_recipes"]
+    assert state["name"] == "Tailoring" and state["rank"] == 7
+    assert state["profession"]["GetChildProfessionInfo"][1]["professionName"] == ""
+
+
+def test_forever_not_ready_or_unnamed_read_records_diagnostics_not_a_list():
+    lua, g = modern_client()
+    lua.execute('''ready = false
+        C_TradeSkillUI.IsTradeSkillReady = function() return ready end
+        C_TradeSkillUI.IsDataSourceChanging = function() return true end''')
+    fire(g, "TRADE_SKILL_SHOW")
+    record = entries(g)[-1]
+    assert "known_recipes" not in record and "trade_skill_api_inventory" in record
+    failure = record["trade_skill_read"]
+    assert failure["ready"][1] is False and failure["data_source_changing"][1] is True
+    assert failure["recipe_id_count"] == 3
+    assert failure["profession"]["GetBaseProfessionInfo"][1]["professionName"] == "Tailoring"
+    lua.execute('ready = true')
+    fire(g, "TRADE_SKILL_LIST_UPDATE")
+    assert entries(g)[-1]["known_recipes"]["name"] == "Tailoring"
+    _, unnamed = modern_client()
+    unnamed.C_TradeSkillUI.GetBaseProfessionInfo = None
+    fire(unnamed, "TRADE_SKILL_SHOW")
+    assert entries(unnamed)[-1]["trade_skill_read"]["recipe_id_count"] == 3
+
+
+def test_forever_window_opened_without_show_read_on_ready_update_and_close():
+    lua, g = modern_client()
+    lua.execute('''ready = false
+        C_TradeSkillUI.IsTradeSkillReady = function() return ready end''')
+    fire(g, "TRADE_SKILL_LIST_UPDATE")
+    fire(g, "CRAFT_UPDATE")
+    assert not entries(g)
+    lua.execute('ready = true')
+    fire(g, "TRADE_SKILL_LIST_UPDATE")
+    assert [(e["event"], "known_recipes" in e) for e in entries(g)] == [("TRADE_SKILL_LIST_UPDATE", True)]
+    fire(g, "TRADE_SKILL_CLOSE")
+    assert "known_recipes" not in entries(g)[-1] and "trade_skill_read" not in entries(g)[-1]
+    lua.execute('learned = true')
+    fire(g, "TRADE_SKILL_CLOSE")
+    state = entries(g)[-1]["known_recipes"]
+    assert entries(g)[-1]["event"] == "TRADE_SKILL_CLOSE" and professions._recipe_count(state) == 2
+    _, closed = modern_client()
+    fire(closed, "TRADE_SKILL_CLOSE")
+    assert entries(closed)[-1]["known_recipes"]["name"] == "Tailoring"
+    assert closed.actionCalls == 0
+
+
+def test_forever_close_without_modern_list_stays_plain_and_never_reads_legacy():
+    lua, g, _ = journal_client()
+    lua.execute('''legacyCalls = 0
+        function GetTradeSkillLine() legacyCalls = legacyCalls + 1 return "Mining", 1, 75 end
+        function GetNumTradeSkills() return 0 end''')
+    fire(g, "TRADE_SKILL_CLOSE")
+    assert [(e["event"], "known_recipes" in e, "trade_skill_read" in e) for e in entries(g)] == [
+        ("TRADE_SKILL_CLOSE", False, False)]
+    assert g.legacyCalls == 0
+
+
+def test_forever_close_list_and_failure_diagnostics_import_and_project(tmp_path):
+    from datetime import UTC, datetime
+
+    lua, g = modern_client()
+    lua.execute('''ready = false
+        C_TradeSkillUI.IsTradeSkillReady = function() return ready end''')
+    fire(g, "TRADE_SKILL_SHOW")
+    lua.execute('ready = true')
+    fire(g, "TRADE_SKILL_CLOSE")
+    fire(g, "PLAYER_LOGOUT")
+    raw = entries(g)
+    assert ["trade_skill_read" in e for e in raw] == [True, False]
+    path = write(tmp_path / "forever.lua", raw, python_value(g.BrownstoneScanDB.snapshots))
+    config = addon_source(tmp_path / "data", path)
+    import_scans(config, now=datetime.fromtimestamp(raw[0]["captured_at"], UTC))
+    row = next(r for r in professions.latest_rows(config) if r["Profession / skill"] == "Tailoring")
+    assert row["Recipe source"] == "window list" and row["Known recipes"] == 1

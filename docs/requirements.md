@@ -351,7 +351,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   existing non-scan lifecycle. Addon is **0.8.0**; format remains **6**, schema remains **11**:
   existing raw JSON stores the added payloads without a migration. Forever event/API support,
   default hidden recipes, ID meaning and UI completeness remain beta checks by 13 October.
-- **Forever known recipes (STORY-049, addon 0.11.0):** on an observed open profession
+- **Forever known recipes (STORY-049, addon 0.11.0; 0.11.1):** on an observed open profession
   window, prefer a guarded `C_TradeSkillUI` reader; fall back to the STORY-041 legacy reader
   when the modern reader cannot establish a profession/list surface. The Craft window
   (`CRAFT_*` events) always uses the legacy `GetCraft*` reader, because `C_TradeSkillUI` would
@@ -363,7 +363,15 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   Modern craftable `numAvailable` is ignored for change detection, retained in saved evidence.
   Guard `TRADE_SKILL_LIST_UPDATE`, `TRADE_SKILL_DATA_SOURCE_CHANGED` and `NEW_RECIPE_LEARNED`
   alongside the existing window events. Fired counts stay in diagnostics; read refreshes only
-  while the corresponding window is observed open. Report observed active filters/collapsed
+  while the corresponding window is observed open. **0.11.1 (2026-10-10 beta finding: the Forever
+  client opens a profession without `TRADE_SKILL_SHOW`):** a trade-skill refresh is also read when
+  `C_TradeSkillUI.IsTradeSkillReady()` returns true, and `TRADE_SKILL_CLOSE` attempts one last read;
+  both use the modern reader only, never the legacy reader, whose closed-window names are
+  placeholders. The profession name comes from the first non-empty, non-`UNKNOWN` name of
+  `GetBaseProfessionInfo`, `GetChildProfessionInfo`, `GetTradeSkillLine`, in that order. A read is
+  refused while `IsTradeSkillReady()` returns false. A refused or unnamed read on a show or close entry
+  carries `trade_skill_read`: the raw profession returns, ready and data-source-changing returns, and
+  the recipe ID count; never a partial list. Report observed active filters/collapsed
   categories as possibly incomplete, without changing them; unavailable reads prove no completeness.
   The first profession opening in each load carries `trade_skill_api_inventory`: sorted available
   `C_TradeSkillUI` function names and accepted candidate profession-event names, even when the list

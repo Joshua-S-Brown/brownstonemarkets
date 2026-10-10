@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.11.0"
+local ADDON_VERSION = "0.11.1"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -1162,21 +1162,40 @@ function professions.modernRow(api, id, index)
     return row
 end
 
+local function usableName(name)
+    return type(name) == "string" and name ~= "" and name ~= "UNKNOWN"
+end
+
+-- True only when the client says its trade skill data is ready; nil when it can't say.
+function professions.ready()
+    local api = C_TradeSkillUI
+    if type(api) ~= "table" or type(api.IsTradeSkillReady) ~= "function" then return nil end
+    return safe(api.IsTradeSkillReady) == true
+end
+
+-- Returns the list state, or nil and what the client answered so a failed read leaves evidence.
 function professions.modern()
     local api = C_TradeSkillUI
     if type(api) ~= "table" or type(api.GetAllRecipeIDs) ~= "function" then return end
     local raw, name, rank, maxRank = {}, nil, nil, nil
-    for _, fn in ipairs({ "GetChildProfessionInfo", "GetBaseProfessionInfo", "GetTradeSkillLine" }) do
+    -- Base first: Classic-era professions have no child skill line, whose name can come back empty.
+    for _, fn in ipairs({ "GetBaseProfessionInfo", "GetChildProfessionInfo", "GetTradeSkillLine" }) do
         local values = journal.read(api[fn])
         raw[fn] = values
         local info = values and values[1]
-        if not name and type(info) == "table" then
+        if not name and type(info) == "table" and usableName(info.professionName) then
             name, rank, maxRank = info.professionName, info.skillLevel, info.maxSkillLevel
-        elseif not name and type(info) == "string" then
+        elseif not name and usableName(info) then
             name, rank, maxRank = info, values[2], values[3]
         end
     end
-    if not name or name == "" or name == "UNKNOWN" then return end
+    local ready = professions.ready()
+    if not name or ready == false then
+        local ids = safe(api.GetAllRecipeIDs)
+        return nil, { profession = raw, ready = journal.read(api.IsTradeSkillReady),
+            data_source_changing = journal.read(api.IsDataSourceChanging),
+            recipe_id_count = type(ids) == "table" and #ids or nil }
+    end
     local ids = safe(api.GetAllRecipeIDs)
     local state = { api = "C_TradeSkillUI", profession = raw, name = name, rank = rank,
         max_rank = maxRank, recipe_ids = journal.copy(ids), rows = {}, filters = {}, possibly_incomplete = false }
@@ -1236,11 +1255,14 @@ function professions.legacy(event)
     return state
 end
 
-function professions.window(event, arguments, inventory)
+-- modernOnly reads without an observed open window: legacy readers report placeholders when closed.
+function professions.window(event, arguments, inventory, modernOnly)
     -- The Craft window (Enchanting) has no modern reader; C_TradeSkillUI would report the trade skill instead.
     local craft = event == "CRAFT_SHOW" or event == "CRAFT_UPDATE"
-    local state = (not craft and professions.modern()) or professions.legacy(event)
-    if not state then return end
+    local state, failure
+    if not craft then state, failure = professions.modern() end
+    if not state and not modernOnly then state = professions.legacy(event) end
+    if not state then return nil, failure end
     local identity = characterKey()
     if not identity then return end
     local key = identity .. ":" .. state.name
@@ -1344,8 +1366,11 @@ function journal.observe(event, ...)
         event == "TRADE_SKILL_LIST_UPDATE" or event == "TRADE_SKILL_DATA_SOURCE_CHANGED" or
         event == "NEW_RECIPE_LEARNED" then
         -- Closed windows report placeholder names (Classic: "UNKNOWN"); only read an open one.
+        -- The Forever client can open a profession without TRADE_SKILL_SHOW: its ready signal counts too.
         if professions.open[event == "CRAFT_UPDATE" and "craft" or "trade"] then
             professions.window(event, journal.args(...))
+        elseif event ~= "CRAFT_UPDATE" and professions.ready() then
+            professions.window(event, journal.args(...), nil, true)
         end
         return
     end
@@ -1360,11 +1385,17 @@ function journal.observe(event, ...)
     local arguments = journal.args(...)
     if event == "TRADE_SKILL_SHOW" or event == "CRAFT_SHOW" then
         local inventory = professions.inventory()
-        if professions.window(event, arguments, inventory) ~= "recorded" then
-            if journal.add(event, family, arguments, { trade_skill_api_inventory = inventory }) and inventory then
+        local result, failure = professions.window(event, arguments, inventory)
+        if result ~= "recorded" then
+            if journal.add(event, family, arguments, { trade_skill_api_inventory = inventory,
+                trade_skill_read = failure }) and inventory then
                 professions.inventoried = true
             end
         end
+    elseif event == "TRADE_SKILL_CLOSE" then
+        -- Closing always fires, even when opening didn't: a last read of a still-loaded list.
+        local result, failure = professions.window(event, arguments, nil, true)
+        if result ~= "recorded" then journal.add(event, family, arguments, { trade_skill_read = failure }) end
     elseif event == "BAG_UPDATE_DELAYED" then journal.bagChange(arguments)
     elseif event == "PLAYER_MONEY" then
         local current = journal.money()
