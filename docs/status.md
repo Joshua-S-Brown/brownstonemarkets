@@ -127,6 +127,16 @@ _Last updated 2026-10-10._
     saved as a list; 0.11.2 refuses it, and no longer saves diagnostics at close. Projections use the
     latest list, so the imported data is unaffected.
 
+- **Auction deposit, first observation (STORY-035; 2026-10-10, Claude; Basilly, addon 0.11.1):** one
+  post, not yet enough for a formula. `C_AuctionHouse.PostCommodity` posted **5 Linen Cloth** (2589,
+  vendor sell 13c from the scan's item info) at **23c** each with duration argument **3**; money went
+  **145c → 45c** in the same second (`PLAYER_MONEY`), so the deposit was **100c** and the bags lost 5
+  Linen Cloth. The Classic-style 15% of vendor value per 12 hours would give 39c for 48 hours, so either
+  the formula differs or a minimum deposit applies; which duration code 3 is isn't confirmed by the
+  file. 30 seconds later `OWNED_AUCTIONS_UPDATED` showed the auction with status 1 (sold in
+  `Enum.AuctionStatus`) and 100 seconds left. No invoice mail was captured yet, so the
+  sale-to-mailbox time stays unconfirmed. Next play steps are in `backlog.md` → STORY-035.
+
 - **Brownstone panel (STORY-044, implemented; pending in-game beta check):** addon **0.9.0**
   adds a draggable minimap coin and `/bscan panel`, opening a movable Escape-closeable
   panel with status, existing guarded actions and the manual routine. Only the minimap

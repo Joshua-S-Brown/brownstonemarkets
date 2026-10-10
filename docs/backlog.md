@@ -59,8 +59,8 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 11. STORY-046 a confidence label on each Today row (Brownstone; implemented and reviewed 2026-10-08)
 12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
 13. STORY-048 watchlist with target prices (Brownstone; small; next to hand off, refined 2026-10-10)
-14. STORY-043 Today: what each character can make (Brownstone; unblocked 2026-10-10: STORY-049 evidence in status.md)
-    - STORY-052 progression planner (Brownstone; medium; after STORY-043, STORY-047 and STORY-050)
+14. STORY-043 Today: what each character can make (Brownstone; implemented and reviewed 2026-10-10)
+    - STORY-052 progression planner (Brownstone; medium; refined 2026-10-10, ready after STORY-048)
 15. STORY-035 auction deposits (needs a beta check)
 16. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
 17. STORY-036 vendor price ceilings
@@ -168,6 +168,8 @@ Acceptance:
 - **Formula from evidence:** the beta tests under *Now* record the deposit for a few posts of known vendor price, stack size and duration. The formula is recorded in `requirements.md` with that evidence; if it can't be confirmed, deposits stay *not modeled*.
 - **Shown, not ranked:** Today's *Sell* shows the deposit for the planned post and the loss if it expires. Ranking stays on batch profit (the deposit is refunded on a sale) until sell-through data exists (STORY-034).
 - Needs the item's vendor price (STORY-031); missing vendor price shows *deposit unknown*, never zero.
+
+**Beta evidence so far (2026-10-10):** one post: 5 Linen Cloth (vendor 13c) cost a **100c** deposit, more than a Classic-style formula gives (`status.md` → *Auction deposit, first observation*). **Next play session** (play actions only; Claude checks the file): post an item worth more to a vendor (a stack of 5 and a single, for example Bolt of Linen Cloth or a crafted shirt) once at each of the three durations; post one more stack of Linen Cloth at the shortest duration; then open the mailbox after the sale and take the gold. That separates a minimum from the per-vendor-value rate and duration, and times the sale-to-mail delay.
 
 ### STORY-036 — Vendor price ceilings
 
@@ -313,16 +315,19 @@ Added 2026-10-09 (product owner: "which professions have the most profitable nea
 
 As a gold maker, I want to see, for each of my characters and professions, the profitable recipes just beyond my current skill and what it costs to reach them, so that I can decide which profession to level next.
 
-Acceptance:
-- **Its own page, *Progression*,** after Characters. Choose a character (default: the first with skills). Calculation in `brownstone/` (no Streamlit, no downloads), display in `views/`.
-- **Within reach:** for each of the character's professions, recipes with `required_skill` above the current rank and at most **25** points above it (adjustable per session, 5 to 100). Each shows profit per craft from the newest scan of the selected source, computed with Today's existing per-craft rules (cautious output price, auction cut, missing prices never free), its confidence label (STORY-046) and how it's learned (STORY-050). Recipes learned from patterns, drops or vendors are shown marked *needs pattern*, not hidden.
-- **Cost to get there:** the skill points needed and an estimate of the cheapest way to earn them: for each point, the cheapest catalog craft that still gives a skill-up at that rank (orange or yellow by `skillup_colors`), costed from the scan, plus any training costs on the way (STORY-050). Labelled once as an estimate: skill-up chances on yellow are not modelled as exact, and it assumes one point per orange craft (rule recorded in `requirements.md`). Crafts already known come first; missing material prices mark the estimate incomplete rather than free.
-- **Compare professions:** one summary row per profession: points to the best reachable recipe, estimated cost to reach it, and its profit per craft. Sorted by profit per craft, then by cost. Ties and incomplete estimates are shown, never dropped.
-- **At cap:** a profession at its max rank shows *train the next tier first* and still lists what lies beyond.
-- **Honest labels:** current-scan profit, not a forecast; sales speed and demand are unknown; beta prices.
-- **Offline tests:** reach window boundaries, a pattern recipe marked, a known recipe excluded from *within reach*, skill-up cost from colours (including a gap with no skill-up craft, shown as incomplete), training cost added, missing prices incomplete, comparison sort and ties, a profession at cap.
-- **Real-data check:** on the Forever beta source, the summary rows for each character and the best reachable recipe per profession.
-- **Docs:** a new CRAFT rule in `requirements.md` (reach window, skill-up cost estimate), `design.md`, `status.md`.
+Acceptance (refined 2026-10-10 for handoff, after STORY-043):
+- **Its own page, *Progression*,** after Characters in the navigation. Choose a character of the selected source and full market (the same choices as Today's character select, STORY-043: `today_characters.available_characters` over `professions.latest_data`); default the first. Calculation in a new `brownstone/progression.py` (no Streamlit, no downloads), display in `views/progression.py`.
+- **Professions come from recipe lists only:** a catalog recipe belongs to one of this character's professions only when its `recipe_id` is in that profession's latest list (STORY-043's matching rule; never by name or title). Each profession uses STORY-043's rank (list rank, or a newer readable bags rank for the same skill ID) and max rank from the same evidence. Catalog recipes in no list are counted per catalog as *not in a recipe list: open that profession's window*; a skill line with no list shows *recipes unknown*.
+- **Statuses reuse STORY-043** (`today_characters.recipe_status`): never a second status rule.
+- **Within reach:** recipes not Known whose `required_skill` is above the rank and at most **25** points above it (session slider, 5 to 100). Each shows required skill, points needed, profit per craft, its confidence label (STORY-046) and how it's learned (CRAFT-08 labels with training cost through `money.py`, or *cost unknown*). Recipes without trainer code 6 are shown marked *needs pattern or other source*, not hidden; Unknown statuses are shown marked, never treated as learnable.
+- **Profit per craft** from the newest snapshot of the selected source and full market, from the Action Board's existing per-craft rows (`action_board.rank_catalogs`, the same costing and cautious sale price Today ranks on; no second pricing path). A recipe the board doesn't value (an intermediate, a missing price, an invalid row) shows its board reason; missing prices are never free and never zero profit.
+- **Cost to get there**, labelled once as an estimate: for each point from the current rank up to the recipe's `required_skill`, the cheapest catalog craft of that profession that gives a skill-up at that rank by `skillup_colors` (STORY-047) and that the character can use: Known, or Train now / trainer-learnable (code 6) once its `required_skill` is reached, adding its training cost the first time it's used. Cost per craft is its material cost by CRAFT-03's cheapest route from the same snapshot (intermediates included); selling the results is not counted. Expected crafts per point: **1** while orange; while yellow, the community Classic chance (grey − rank) / (grey − yellow), recorded in the new CRAFT rule as an unconfirmed assumption; green and grey give none. A point with no qualifying craft, a missing material price, a missing colour or an unknown training cost marks the estimate **incomplete** and shows which, never free. Crossing the profession's max rank stops at the cap with *train the next tier first*.
+- **Compare professions:** one summary row per profession: rank/max, best reachable recipe (highest profit per craft in the window), its points needed, estimated cost to reach it, and its profit per craft. Sorted by profit per craft, then cost; incomplete estimates sort after complete ones at the same profit and are shown, never dropped.
+- **At cap:** a profession at max rank shows *train the next tier first* and still lists what lies beyond.
+- **Honest labels:** current-scan profit, not a forecast; sales speed and demand unknown; beta prices; skill-up chances on yellow are estimates.
+- **Offline tests:** window boundaries (exactly +25 in, +26 out, slider), a pattern recipe marked, a Known recipe excluded, an Unknown recipe marked, a recipe in no list counted not attributed, orange and yellow cost steps, a gap with no skill-up craft (incomplete), a trainer recipe used for skill-ups adding its cost once, a missing material price (incomplete), an intermediate without board profit, comparison sort with ties and incomplete rows, a profession at cap, scoping (another source's character never appears), and an AppTest of the page.
+- **Real-data check:** on the Forever beta source, the summary rows for Basilly (Tailoring 8/75) and Keenagen (Mining 3), and the best reachable recipe per profession with its cost estimate.
+- **Docs:** a new CRAFT rule in `requirements.md` (reach window, profession attribution, cost estimate and its yellow assumption), `design.md`, `status.md`.
 
 ### STORY-042 — Beta evidence report
 
@@ -484,6 +489,8 @@ Acceptance (refined 2026-10-10 for handoff):
 - **Docs:** a new *Watchlist* rule in `requirements.md` (file, hit rules, scope), `design.md` (module and page), `status.md`.
 
 ### STORY-043 — Today: what each character can make
+
+**Implemented and reviewed (2026-10-10).** Rules in `requirements.md` → *Today* (v4); a live *Train now* row awaits a trainer recipe at Basilly's rank (`status.md`).
 
 Added 2026-10-07 (product owner); reworked 2026-10-09 (product owner: "Today shows things I can't actually craft yet"). Takes the Today half of *Known recipes and skill* from Later. **Unblocked 2026-10-10:** STORY-049's beta evidence (`status.md` → STORY-049, *Confirmed on the beta with 0.11.1*) shows the client's `recipe_id` is the same spell ID as catalog `recipe_id`, each list holds every recipe of the profession with a `learned` flag, and all 429 listed catalog recipes agree on output, yield and reagents.
 
