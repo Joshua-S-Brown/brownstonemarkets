@@ -485,22 +485,25 @@ Acceptance (refined 2026-10-10 for handoff):
 
 ### STORY-043 — Today: what each character can make
 
-Added 2026-10-07 (product owner); reworked 2026-10-09 (product owner: "Today shows things I can't actually craft yet"). Depends on STORY-049's beta evidence (which IDs the client reports decides how recipes match catalogs) and STORY-050 (how recipes are learned). Takes the Today half of *Known recipes and skill* from Later.
+Added 2026-10-07 (product owner); reworked 2026-10-09 (product owner: "Today shows things I can't actually craft yet"). Takes the Today half of *Known recipes and skill* from Later. **Unblocked 2026-10-10:** STORY-049's beta evidence (`status.md` → STORY-049, *Confirmed on the beta with 0.11.1*) shows the client's `recipe_id` is the same spell ID as catalog `recipe_id`, each list holds every recipe of the profession with a `learned` flag, and all 429 listed catalog recipes agree on output, yield and reagents.
 
 As a gold maker, I want to choose one of my characters on Today and see what that character can make now or train now, so that the plan is something I can actually do.
 
-Acceptance:
-- **Choose a character** on Today: *All recipes* (the default, unchanged behaviour) or any character of this source and market with imported skills. Kept per source in the existing Today settings.
+Acceptance (refined 2026-10-10 for handoff):
+- **Choose a character** on Today: *All recipes* (the default, unchanged behaviour) or any character of the selected source and full market that has a known-recipe list or *seen crafted* evidence. Saved per source in the existing Today settings file as the character's name, realm and faction; older settings files still load (as *All recipes*), and a saved character no longer present falls back to *All recipes* with a caption.
+- **Evidence** comes from the shared profession projection (`professions.latest_data`, as the Characters page uses), never a second reader: each profession's latest window list and *seen crafted* IDs. Calculation in a new `brownstone/` module (no Streamlit); display in `views/today.py`.
+- **Matching by recipe ID only:** a catalog recipe matches a list row or *seen crafted* evidence with the same `recipe_id`. Never by name, profession title or output item. The profession and rank used for a recipe are those of the list that contains its ID, so no profession name is matched either. The rank is that list's rank, or the latest readable bags snapshot's rank for the same skill ID when that is newer (capture time, then sequence).
 - **Status per craft** for the chosen character:
-  - **Known:** the catalog recipe is in the character's latest list for that profession, or *seen crafted* (STORY-049).
-  - **Train now:** not known, learned from a trainer (STORY-050), and the character's rank is at least `required_skill`. Shows the training cost; the cost is not added to the batch profit, but shown beside it.
-  - **Not yet:** rank below `required_skill`, or learned only from a pattern, drop or vendor and not known. Hidden, and counted under the Craft tab's hidden reasons. STORY-052 shows these.
-  - **Unknown:** the profession's list is unknown or *possibly incomplete*: crafts at or below the rank stay, marked *known recipes unknown* or *list may be incomplete*. Nothing proven unknown is hidden.
-- **Matching by IDs only:** recipe or spell ID, or failing that the same created item ID and the same reagent item IDs. Never by name. The rule and IDs used are recorded in `requirements.md` → *Today* with a new `today_version`.
-- **All recipes** gains a *Who can make it* column: characters for whom the craft is Known or Train now.
-- **Catalog check:** where a known recipe's reagent counts or yield differ from the catalog, list them under the page (a pointer for CRAFT-08 confirmation). The catalog isn't changed automatically.
-- **Display only otherwise:** ranking, sizing and reservations unchanged within the filtered set; the queue lists only the chosen character's crafts.
-- **Offline tests:** each status, a training cost shown but not subtracted, matching by spell ID and by item and reagents, a name-only match rejected, unknown and possibly incomplete lists kept and marked, *seen crafted* counted as known, the *Who can make it* column, a reagent mismatch listed.
+  - **Known:** `learned == true` in the latest list containing the ID, or *seen crafted*.
+  - **Train now:** in a list, not learned, `learned_from` includes code 6 (trainer, `requirements.md` → CRAFT-08 source-code table), and rank ≥ `required_skill`. Shows `training_cost_copper` through `money.py`, or *cost unknown*; the cost is shown beside the batch profit, never subtracted from it.
+  - **Not yet** (hidden, counted under the Craft tab's hidden reasons by kind): in a list and not learned, and either rank < `required_skill`, or `learned_from` is known and has no trainer code (drop, quest, vendor or unverified codes: *needs pattern or other source*). STORY-052 shows these.
+  - **Unknown** (kept and marked, never hidden): the ID is in no list for this character; the list is *possibly incomplete*; `learned` is absent; or the recipe is not learned and `learned_from` is missing (*how it's learned is unknown*: for example Bolt of Linen Cloth has no source on its page).
+- **All recipes** gains a *Who can make it* column on the Craft tab: the characters for whom that craft is Known or Train now, by name.
+- **Catalog check:** where a matched list row's output item, `min_made`/`max_made` or required reagent item IDs and counts differ from the catalog, list it in a collapsed section under the Craft tab (a pointer for CRAFT-08 confirmation). The catalog isn't changed. Rows with optional or multi-choice reagent slots are listed as *not compared*, never as a difference.
+- **Display only otherwise:** ranking, sizing and reservations are unchanged within the filtered set, and the queue lists only the shown crafts. The rule, statuses and codes are recorded in `requirements.md` → *Today* under a new `today_version` (4).
+- **Offline tests:** each status; matching by ID with a same-named recipe of another ID rejected; a training cost shown and not subtracted; *cost unknown*; trainer plus drop codes counting as trainable; a rank from a newer bags snapshot; an unknown `learned`; a possibly incomplete list keeping unlisted crafts as Unknown; *seen crafted* counted as known; the *Who can make it* column; a reagent or yield mismatch listed and an optional slot not compared; settings round trip, an old settings file and a missing saved character; scoping (a second source's character never appears); an AppTest of Today with a character chosen.
+- **Real-data check:** on the Forever beta source, Basilly's Craft tab with Tailoring 8: the six learned recipes are Known, and trainer recipes at or below rank 8 are Train now with their costs.
+- **Docs:** `requirements.md` (*Today*, `today_version` 4), `design.md`, `status.md`.
 
 ### STORY-039 — Choose and adjust the Today plan
 
