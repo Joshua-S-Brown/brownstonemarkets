@@ -230,8 +230,7 @@ profession, ordering by capture time/shared sequence. It shows all observed skil
 inventing a profession classification, and keeps absent lists/counts unknown. If both skill surfaces
 report the same name, display deterministically prefers the modern row (which supplies skill IDs),
 labels its API/ID and keeps both originals raw; it never fills one API's holes from the other.
-Only `views/scan_import`
-uses it. Capture/display/unknown rules and the journal choice live in ADDON-11/12.
+`views/scan_import` and the Characters page use it. Capture/display/unknown rules and the journal choice live in ADDON-11/12.
 STORY-049 adds a modern `known_recipes.api = "C_TradeSkillUI"` surface: `recipe_ids`,
 count tuple, profession returns keyed by function name, dense rows with `recipe_id`, raw `info`
 and `schematic`, learned flag, links, output quantities and category evidence. Schematic reagent
@@ -242,6 +241,19 @@ retain counted return tuples. The first opening's journal payload also has `trad
 list per profession, ordered by capture time/sequence. Compatible catalog recipe IDs supply only
 profession metadata when window provenance is missing; unresolved hook IDs remain visible separately.
 The import page shows list and seen-crafted sources/counts/IDs. Rules and beta limits live in ADDON-12.
+STORY-051 adds `brownstone/characters.py` and `views/characters.py`, dispatched immediately after
+Today. `character_snapshots.latest_data` supplies scoped latest bags/bank, readable bags history and
+observation provenance; its `latest_rows` keeps the import table shape. `professions.latest_data`
+reuses those snapshots, adds scoped journal observations and projects recipe evidence;
+`data_rows` supplies plain profession data and `_rows` preserves the import table labels/values.
+`build_characters` returns newest-last-seen cards, nullable level/integer-copper gold, machine,
+relative/UTC time, freshness, profession counts/sources/times, rank progress/cap flags and long-form
+history points. Shared capture-time/sequence ordering and the ADDON-11 unreadable rule apply.
+The view uses Streamlit 1.65 bordered wrapping cards (at most two per row), metrics, progress bars,
+coloured badges and decorative skill-ID emoji. Collapsed expanders contain Altair line/point charts
+and the exact same history data in a table. No inferred class/race, tier levels, HTML or CSS.
+Page rules: requirements.md → Characters page. No new schema, importer or dependencies.
+
 Reference tuple shapes and filter index 0 come from Blizzard's
 [Classic trade skill UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua)
 and [Classic craft UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua);

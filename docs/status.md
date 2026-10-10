@@ -6,6 +6,23 @@ _Last updated 2026-10-09._
 
 ## Implemented
 
+- **Characters (STORY-051, implemented, pending review):** Characters follows Today. Scoped cards
+  show imported last-seen/machine evidence, readable level/gold, profession rank progress, recipe
+  evidence and freshness badges. Collapsed Altair charts and tables share readable snapshot history.
+  The existing addon import tables retain their shape and values. Rules/contracts:
+  `requirements.md` → Characters page; `design.md` → Character snapshots.
+  Offline tests: `tests/test_characters.py`, with import-projection regressions in
+  `test_character_snapshots.py`, `test_professions.py` and `test_app.py`.
+  Forever check (2026-10-09, copied `data/`, configured beta source): newest first, Keenagen level 5,
+  1s 40c, Mining 3/75 and recipes unknown; Cicelyna level 1, 1c, readable empty skill list;
+  Basilly level 6, 1s 70c, Tailoring 7/75, two seen-crafted recipes (2963, 3755), latest craft
+  evidence 10:01:44 UTC. All report windows-pc, Classic Beta PvE 2 / Alliance and fresh bags.
+  Basilly's level history is 4 → 6; Cicelyna stays 1; Keenagen stays 5 / Mining 3.
+  No modern window list has yet been imported; STORY-049's beta check remains pending.
+  Limitation: the legacy `GetSkillLineInfo` surface (Classic Era stand-in) reports every skill line,
+  so weapon skills and languages appear as lines and can show *at cap*; the Forever client's modern
+  surface reports professions only.
+
 - **Today confidence (STORY-046, implemented and reviewed 2026-10-08):** Today v3 labels Craft rows
   High/Medium/Low with visible reasons, carried to Sell and Queue (including merged purchases).
   Rules and named thresholds: `requirements.md` → Today; contract: `design.md` → Today contracts.
@@ -186,7 +203,7 @@ _Last updated 2026-10-09._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.21% in the current macOS run: 971 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.27% in the current macOS run: 983 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.11.0**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -226,7 +243,7 @@ _Last updated 2026-10-09._
 git diff --check
 ```
 
-Expected: 779 tests pass and one explicit PowerShell-unavailable skip on this Mac; 780 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 983 tests pass and one explicit PowerShell-unavailable skip on this Mac; 984 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 

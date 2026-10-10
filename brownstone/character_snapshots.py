@@ -182,13 +182,14 @@ def preview_rows(preview, machine: str | None = None) -> list[dict]:
                                                    preview.snapshot_known, preview.snapshot_mismatches, strict=True)]
 
 
-def latest_rows(config: Mapping[str, Any]) -> list[dict]:
+def latest_data(config: Mapping[str, Any]) -> dict[tuple, dict]:
+    """Scoped snapshots, readable history and latest evidence, without display shaping."""
     path = Path(config["data_dir"]) / "brownstone.duckdb"
     if not path.exists():
-        return []
+        return {}
     with duckdb.connect(str(path), read_only=True) as db:
         if not _has_snapshots(db):
-            return []
+            return {}
         rows = db.execute("SELECT record_json, machine FROM character_snapshots WHERE source_id=? AND " +
                           " AND ".join(f"{key}=?" for key in MARKET_KEYS) +
                           " ORDER BY captured_at, CAST(json_extract_string(record_json, '$.sequence') AS BIGINT) "
@@ -198,10 +199,17 @@ def latest_rows(config: Mapping[str, Any]) -> list[dict]:
         for raw, machine in rows.fetchall():
             r = json.loads(raw)
             key = (r["character"], r["realm"], r["faction"])
-            characters.setdefault(key, {})
+            state = characters.setdefault(key, {"history": [], "observations": []})
+            state["observations"].append((r, machine))
             if not unreadable_backpack(r):
-                characters[key][r["kind"]] = (r, machine)
-    return [_latest_row(key, value) for key, value in sorted(characters.items())]
+                state[r["kind"]] = (r, machine)
+                if r["kind"] == "bags":
+                    state["history"].append(r)
+    return characters
+
+
+def latest_rows(config: Mapping[str, Any]) -> list[dict]:
+    return [_latest_row(key, value) for key, value in sorted(latest_data(config).items())]
 
 
 def _latest_row(key: tuple, value: dict) -> dict:

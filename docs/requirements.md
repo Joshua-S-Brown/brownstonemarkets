@@ -192,7 +192,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   Missing APIs/returns stay absent; an older snapshot or unreadable skills remains *skills unknown*.
   A collapsed or unreadable legacy skill header hides lines, so `skills.legacy.possibly_incomplete`
   is set and the import page shows *possibly incomplete*; the addon never expands it.
-  The addon import page alone displays latest bags level and skill ranks/max per character;
+  The addon import page and Characters display latest readable bags level and skill ranks/max per character;
   it never infers a profession or catalog match from a name. Beta must confirm skill API shapes,
   IDs, gathering/secondary coverage and logout/reload readability.
   STORY-049 extends recipe evidence in ADDON-12; level/skill capture is unchanged.
@@ -244,6 +244,18 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   realm and faction. Missing bank never means empty; unknown slot item IDs keep the distinct-item
   total missing rather than zero. No holdings use in Today yet.
 
+
+### Characters page (STORY-051)
+
+- A card is **stale** when its latest readable bags snapshot is strictly older than **7 days**.
+  Without readable bags evidence, level/gold remain unknown and no age-based stale claim is made.
+- **Last seen** and its machine use the newest imported snapshot or journal observation for that
+  character within the selected source and full market, ordered by capture time then shared sequence.
+  Last seen does not make older bags values fresh. History includes only readable bags snapshots;
+  missing level/ranks supply no chart points.
+- Reported rank equal to reported maximum displays *at cap: train the next tier*. No character-level
+  tier requirement is inferred; such requirements need evidence under *Known Forever market facts*.
+  Existing capture, known-recipe and unreadable-read rules remain in ADDON-11/12.
 
 ### ADDON-12 Event journal (STORY-033)
 
@@ -331,7 +343,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   missing row type or unreadable row count. Never open windows, expand headers, change filters,
   train, learn or craft. Missing filter APIs cannot prove completeness; the flag describes observed
   restrictions, not a guarantee of a complete learned catalog. Capture is silent in normal play.
-  A window never observed remains *known recipes unknown*. The import page alone shows the latest
+  A window never observed remains *known recipes unknown*. The import page and Characters show the latest
   list UTC and listed non-header recipe count per profession, with the incompleteness flag;
   unreadable counts/rows remain unknown. STORY-049 below extends modern learned interpretation;
   Today/catalog eligibility remains STORY-043.
@@ -357,7 +369,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   `C_TradeSkillUI` function names and accepted candidate profession-event names, even when the list
   cannot be read. Attach it to the changed list or plain opening entry, avoiding another entry.
   Existing change detection, legacy capture, cap, clear, silent/read-only rules apply unchanged.
-- **Seen crafted (STORY-049):** the import-page projection reads existing scoped craft journal
+- **Seen crafted (STORY-049):** the shared profession projection reads existing scoped craft journal
   entries. A positive recipe ID in `C_TradeSkillUI.CraftRecipe` or the player's successful craft
   cast establishes known evidence from that observation, labelled *seen crafted*. Deduplicate IDs
   within character/profession and retain this evidence alongside the latest window list. A cast

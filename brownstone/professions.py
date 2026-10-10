@@ -1,4 +1,5 @@
-"""Scoped raw profession evidence for the addon import page; no catalog matching."""
+"""Shared scoped skill and recipe evidence, with compatible catalog profession metadata."""
+
 import json
 from pathlib import Path
 
@@ -9,45 +10,49 @@ from .recipe_catalogs import CONFIG_DIR, find_catalogs, profession_title
 from .scans import _list, _utc
 
 
-def latest_rows(config) -> list[dict]:
+def latest_data(config) -> dict[tuple, dict]:
+    """Share scoped snapshots and craft projections with the Characters page."""
+    from .character_snapshots import latest_data as snapshot_data
+
+    snapshots = snapshot_data(config)
+    characters = {
+        key: {
+            "bags": value.get("bags", ({}, None))[0],
+            "recipes": {},
+            **{field: value[field] for field in ("history", "observations")},
+        }
+        for key, value in snapshots.items()
+    }
     path = Path(config["data_dir"]) / "brownstone.duckdb"
     if not path.exists():
-        return []
-    characters: dict[tuple, dict] = {}
+        return characters
     scope = " AND ".join(["source_id=?", *(f"{k}=?" for k in MARKET_KEYS)])
     params = [config["source_id"], *[config[k] for k in MARKET_KEYS]]
     with duckdb.connect(str(path), read_only=True) as db:
-        tables = {r[0] for r in db.execute("SELECT table_name FROM information_schema.tables").fetchall()}
-        for table in ("character_snapshots", "character_journal"):
-            if table not in tables:
-                continue
-            keys = db.execute(f"SELECT DISTINCT character, character_realm, character_faction "
-                              f"FROM {table} WHERE {scope}", params).fetchall()
-            for key in keys:
-                characters.setdefault(key, {"bags": {}, "recipes": {}})
-            records = db.execute(f"SELECT character, character_realm, character_faction, record_json "
-                                 f"FROM {table} WHERE {scope} AND {_LATEST[table]}", params).fetchall()
-            for name, realm, faction, raw in records:
-                state = characters.setdefault((name, realm, faction), {"bags": {}, "recipes": {}})
-                _observe(state, json.loads(raw))
+        if db.execute("SELECT 1 FROM information_schema.tables WHERE table_name='character_journal'").fetchone():
+            records = db.execute(
+                f"SELECT character, character_realm, character_faction, record_json, machine "
+                f"FROM character_journal WHERE {scope} ORDER BY captured_at, "
+                "TRY_CAST(json_extract_string(record_json, '$.sequence') AS BIGINT) "
+                "NULLS FIRST, entry_id",
+                params,
+            ).fetchall()
+            for name, realm, faction, raw, machine in records:
+                state = characters.setdefault(
+                    (name, realm, faction), {"bags": {}, "recipes": {}, "history": [], "observations": []}
+                )
+                record = json.loads(raw)
+                state["observations"].append((record, machine))
+                if record.get("family") == "craft":
+                    _observe(state, record)
     catalog_ids = _catalog_recipe_ids(config)
     for state in characters.values():
         _project_crafts(state, catalog_ids)
-    return [row for key, state in sorted(characters.items()) for row in _rows(key, state)]
+    return characters
 
 
-_SEQUENCE = "TRY_CAST(json_extract_string(record_json, '$.sequence') AS BIGINT)"
-# character_snapshots.unreadable_backpack in SQL: a bags read with a 0-slot backpack is not evidence.
-_READABLE_BAGS = ("NOT coalesce(list_contains(list_transform(json_extract(record_json, '$.containers[*]'), "
-                  "c -> json_extract_string(c, '$.container_id') = '0' AND json_extract_string(c, '$.size') = '0'), "
-                  "true), false)")
-# The newest bags snapshot and scoped craft evidence leave the database.
-_LATEST = {
-    "character_snapshots": f"kind='bags' AND {_READABLE_BAGS} QUALIFY row_number() OVER (PARTITION BY character, "
-                           "character_realm, "
-                           f"character_faction ORDER BY captured_at DESC, {_SEQUENCE} DESC NULLS LAST) = 1",
-    "character_journal": "family='craft' ORDER BY captured_at, " + _SEQUENCE + " NULLS FIRST, entry_id",
-}
+def latest_rows(config) -> list[dict]:
+    return [row for key, state in sorted(latest_data(config).items()) for row in _rows(key, state)]
 
 
 def _order(record: dict) -> tuple:
@@ -163,7 +168,7 @@ def _readable_skills(bags: dict, skills: dict) -> bool:
     return False
 
 
-def _rows(key: tuple, state: dict) -> list[dict]:
+def data_rows(state: dict) -> list[dict]:
     bags = state["bags"]
     skills = _skills(bags)
     names = sorted(set(skills) | set(state["recipes"]) | set(state.get("seen", {})))
@@ -175,19 +180,55 @@ def _rows(key: tuple, state: dict) -> list[dict]:
         seen = state.get("seen", {}).get(name, {})
         crafted: dict = max(seen.values(), key=_order, default={})
         latest = record or crafted
-        moment = (_utc(latest["captured_at"], latest.get("captured_at_utc"), "captured_at").isoformat()
-                  if latest else "known recipes unknown")
-        result.append(dict(zip(("Character", "Realm", "Faction"), key, strict=True)) | {
-            "Level": bags.get("level"), "Skills": _skills_status(bags, skills),
-            "Profession / skill": name, "Skill API": skill.get("api"), "Skill ID": skill.get("skill_id"),
-            "Rank": skill.get("rank"), "Max rank": skill.get("max_rank"),
-            "Known recipes (UTC)": moment, "Listed recipes": _recipe_count(recipes),
-            "Recipe source": " + ".join((["window list"] if record else []) + (["seen crafted"] if seen else []))
+        moment = (
+            _utc(latest["captured_at"], latest.get("captured_at_utc"), "captured_at").isoformat()
+            if latest
+            else "known recipes unknown"
+        )
+        result.append(
+            {
+                "level": bags.get("level"),
+                "skills_status": _skills_status(bags, skills),
+                "name": name,
+                "api": skill.get("api"),
+                "skill_id": skill.get("skill_id"),
+                "rank": skill.get("rank"),
+                "max_rank": skill.get("max_rank"),
+                "recipes_at": moment,
+                "listed_count": _recipe_count(recipes),
+                "recipe_source": " + ".join((["window list"] if record else []) + (["seen crafted"] if seen else []))
                 or "unknown",
-            "Seen crafted recipes": sorted(seen), "Known recipes": _known_count(recipes, seen),
-            "Seen crafted (UTC)": _evidence_time(crafted),
-            "Possibly incomplete": recipes.get("possibly_incomplete")})
+                "seen_ids": sorted(seen),
+                "known_count": _known_count(recipes, seen),
+                "seen_at": _evidence_time(crafted),
+                "possibly_incomplete": recipes.get("possibly_incomplete"),
+            }
+        )
     return result
+
+
+def _rows(key: tuple, state: dict) -> list[dict]:
+    labels = {
+        "level": "Level",
+        "skills_status": "Skills",
+        "name": "Profession / skill",
+        "api": "Skill API",
+        "skill_id": "Skill ID",
+        "rank": "Rank",
+        "max_rank": "Max rank",
+        "recipes_at": "Known recipes (UTC)",
+        "listed_count": "Listed recipes",
+        "recipe_source": "Recipe source",
+        "seen_ids": "Seen crafted recipes",
+        "known_count": "Known recipes",
+        "seen_at": "Seen crafted (UTC)",
+        "possibly_incomplete": "Possibly incomplete",
+    }
+    return [
+        dict(zip(("Character", "Realm", "Faction"), key, strict=True))
+        | {labels[field]: value for field, value in row.items()}
+        for row in data_rows(state)
+    ]
 
 
 def _evidence_time(record: dict) -> str | None:
