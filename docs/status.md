@@ -6,7 +6,7 @@ _Last updated 2026-10-09._
 
 ## Implemented
 
-- **Characters (STORY-051, implemented, pending review):** Characters follows Today. Scoped cards
+- **Characters (STORY-051, implemented and reviewed 2026-10-10):** Characters follows Today. Scoped cards
   show imported last-seen/machine evidence, readable level/gold, profession rank progress, recipe
   evidence and freshness badges. Collapsed Altair charts and tables share readable snapshot history.
   The existing addon import tables retain their shape and values. Rules/contracts:

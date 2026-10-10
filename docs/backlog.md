@@ -53,12 +53,12 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
    - STORY-049 known recipes on the Forever client (addon; fixes STORY-041's capture; next to hand off, testable in game by 15 October)
    - STORY-045 a simpler import page (Brownstone; small, display only; refined 2026-10-09)
    - STORY-050 how each recipe is learned (catalogs; implemented and reviewed 2026-10-09)
-   - STORY-051 characters page (Brownstone; small; no game time)
+   - STORY-051 characters page (Brownstone; implemented and reviewed 2026-10-10)
 9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
 10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
 11. STORY-046 a confidence label on each Today row (Brownstone; implemented and reviewed 2026-10-08)
 12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
-13. STORY-048 watchlist with target prices (Brownstone; small)
+13. STORY-048 watchlist with target prices (Brownstone; small; next to hand off, refined 2026-10-10)
 14. STORY-043 Today: what each character can make (Brownstone; after STORY-049's beta evidence and STORY-050)
     - STORY-052 progression planner (Brownstone; medium; after STORY-043, STORY-047 and STORY-050)
 15. STORY-035 auction deposits (needs a beta check)
@@ -467,13 +467,21 @@ Added 2026-10-08 (product owner). Brownstone only; the honest first step towards
 
 As a gold maker, I want to list items with a buy-below or sell-above price and see which ones hit after each import, so that I catch the prices I care about without searching for them.
 
-Acceptance:
-- **Add and remove items** by item ID or by picking from items seen in this source's scans or catalogs (search by name for picking only; stored by ID). Each entry has an optional *buy below* and *sell above* price in g/s/c (parsed with `money.py`, integer copper) and an optional note.
-- **Stored per source** in an ignored local file in the data directory, written atomically like Today settings (`requirements.md` → *Today*); the pattern is added to `.gitignore`. Invalid files show a warning and are never silently replaced.
-- **Hits** on Today (a short panel above the tabs) and on the import result: *buy* when the newest scan's lowest unit buyout is at or below the target, with the units available at or below it; *sell* when the lowest listing is at or above the target. Each hit shows the scan time; a stale scan marks hits *stale*. No listing means *not listed*, never a hit.
-- **A watchlist table** showing every entry with its current lowest price, units listed, and hit state.
-- **Offline tests:** parsing and storage round trip, a buy hit, a sell hit, exactly at target, not listed, stale scan, a TSM source (lowest price only, units *not available*), and one source's list never shown for another.
-- **Docs:** `requirements.md` (rule and file), `design.md`, `status.md`.
+Acceptance (refined 2026-10-10 for handoff):
+- **Its own page, *Watchlist*,** after Characters in the navigation, to add, edit and remove entries and show the watchlist table. Calculation in a new `brownstone/watchlist.py` (no Streamlit, no downloads) that returns plain data; display in `views/watchlist.py`.
+- **Entries:** add by item ID or by picking from item names already known to Brownstone for this source's scans or compatible catalogs (name search is for picking only; the entry stores the item ID, never the name). Each entry has an optional *buy below* and *sell above* price as `g/s/c` text parsed with `money.py` (integer copper, positive; same input rules as Today's gold) and an optional note. At least one target is required. One entry per item ID. Items are base items: variants (ADDON-08) aren't watched separately.
+- **Stored per source** in `data_dir/watchlist.<source_id>.local.json`, written atomically through a `.tmp` sibling like Today settings (`requirements.md` → *Today*, *Opening and settings*); the pattern (with its `.tmp`) is added to `.gitignore`. A file that is invalid or unreadable shows a warning and an empty, read-only list, and is never silently replaced; saving is refused until the user fixes or removes it.
+- **Price evidence** from the newest imported snapshot of the selected source and full market only, through the existing read-only readers (`today_data.read_skillup_market` for lowest unit buyout and units; `metrics.units_below_price` for units, which is strictly below, so pass target + 1 for *at or below*). Base/legacy rows only, as in CRAFT-10's market context. Freshness from DATA-05 (`brownstone/freshness.py`).
+- **Hit states**, one per target:
+  - **Buy hit** when the lowest unit buyout is at or below *buy below*; shows the units listed at or below the target.
+  - **Sell hit** when the lowest unit buyout is at or above *sell above* (nobody is undercutting your price).
+  - **Not listed** when the item has no listing with a positive buyout: never a hit, never 0.
+  - **Stale** when the snapshot is stale or in the future by DATA-05: the hit is still shown, marked *stale*. No imported snapshot: every entry shows *no snapshot*.
+  - **TSM sources:** use TSM's lowest price; units are *not available for this source*, and a buy hit says so instead of a count.
+- **Watchlist table:** every entry with item name (when known) and ID, targets, current lowest price, units listed, hit state, note, and the snapshot time in UTC once above the table.
+- **Hits elsewhere:** a short panel above Today's tabs listing only the current hits (nothing when there are none), and the same short list after a successful addon import on the import page. Neither changes Today's numbers, ranking or the import itself.
+- **Offline tests:** parsing and storage round trip, an invalid file kept and warned about, a buy hit with its units, a sell hit, exactly at each target, not listed, a stale snapshot, no snapshot, a TSM source (lowest price only, units *not available*), one source's list never shown for another, an addon variant listing ignored, and AppTest renders of the page, the Today panel and the import result.
+- **Docs:** a new *Watchlist* rule in `requirements.md` (file, hit rules, scope), `design.md` (module and page), `status.md`.
 
 ### STORY-043 — Today: what each character can make
 
