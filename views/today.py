@@ -5,14 +5,16 @@ from datetime import UTC, datetime
 
 import streamlit as st
 
+from brownstone import professions
 from brownstone.money import format_money, parse_money, to_gold
 from brownstone.today import build_today, craft_details
+from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_data import read_today_evidence
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
 
 
-def _settings(config):
+def _settings(config, character_data):
     path = settings_path(config["data_dir"], config["source_id"])
     unreadable = False
     try:
@@ -21,14 +23,20 @@ def _settings(config):
         st.warning(f"Could not read Today settings: {error}. Defaults are shown; save to replace this file.")
         saved = TodaySettings()
         unreadable = True
+    selected = resolve_character(saved.character, character_data)
+    if saved.character is not None and selected is None:
+        st.caption("Saved character is no longer present in this source and market; showing All recipes.")
     summary = st.empty()
     with st.expander("Today settings", expanded=unreadable or saved.gold_copper == 0):
         st.caption("One funded plan · whole auction stacks are bought; surplus is shown · sales speed is unknown")
-        return _settings_form(config, path, saved, summary)
+        return _settings_form(config, path, saved, summary, character_data, selected)
 
 
-def _settings_form(config, path, saved, summary):
+def _settings_form(config, path, saved, summary, character_data, selected):
     with st.form(f"today-settings-{config['source_id']}"):
+        options = [None, *available_characters(character_data)]
+        character = st.selectbox("Character", options, index=options.index(selected),
+                                 format_func=lambda c: "All recipes" if c is None else " · ".join(c))
         gold = st.text_input("Gold available", value=format_money(saved.gold_copper))
         mode = st.selectbox("Minimum gain mode", ["scaled", "fixed"], index=["scaled", "fixed"].index(saved.mode))
         minimum = st.text_input("Fixed minimum gain", value=format_money(saved.minimum_copper))
@@ -38,7 +46,8 @@ def _settings_form(config, path, saved, summary):
         submitted = st.form_submit_button("Save Today settings")
     if submitted:
         try:
-            entered = TodaySettings(parse_money(gold), parse_money(minimum), mode, round(percent * 100), int(crafts))
+            entered = TodaySettings(parse_money(gold), parse_money(minimum), mode, round(percent * 100),
+                                    int(crafts), character)
             save_settings(path, entered)
         except (ValueError, OSError) as error:
             st.error(f"Settings not saved: {str(error).rstrip('.')}. "
@@ -46,9 +55,12 @@ def _settings_form(config, path, saved, summary):
         else:
             saved = entered
             st.success("Today settings saved locally.")
+    character_summary = ""
+    if saved.character is not None and resolve_character(saved.character, character_data) is not None:
+        character_summary = " · Character: " + " · ".join(saved.character)
     summary.caption(f"Gold available: {format_money(saved.gold_copper)} · "
                     f"Minimum batch gain: {format_money(saved.minimum_gain)} · "
-                    f"Most crafts per item: {saved.max_crafts}")
+                    f"Most crafts per item: {saved.max_crafts}{character_summary}")
     if not saved.gold_copper:
         st.info("Enter the gold you have available to size the plan. Use explicit units, for example 12g 50s.")
     return saved
@@ -57,7 +69,12 @@ def _settings_form(config, path, saved, summary):
 def render(config, catalogs):
     st.subheader("Today")
     show_context(config)
-    settings = _settings(config)
+    try:
+        character_data = professions.latest_data(config)
+    except Exception as error:
+        st.warning(f"Unable to read character evidence: {error}. Showing All recipes.")
+        character_data = {}
+    settings = _settings(config, character_data)
     manifest, sid, _ = load_latest(config, "Refresh or import a scan for this market to inspect Today.")
     if manifest is None:
         return
@@ -69,7 +86,8 @@ def render(config, catalogs):
         arguments = dict(catalogs=catalogs, observations=observations, market=config,
                          snapshot={**manifest, "snapshot_id": sid}, settings=settings, now=datetime.now(UTC),
                          listings=listings, metrics=metrics, vendor_prices=vendors,
-                         max_age_hours=config["max_age_hours"], auction_cut=config["auction_cut"])
+                         max_age_hours=config["max_age_hours"], auction_cut=config["auction_cut"],
+                         character_data=character_data)
         result = _build_session_plan(arguments)
     except Exception as error:
         st.error(f"Unable to build Today: {error}")
@@ -118,10 +136,11 @@ def _tables(result, names, *, arguments=None):
         sells = {r["output_item_id"]: r for r in result["sell"]}
         hide_low = st.toggle("Hide Low confidence", key=f"today-hide-low-{result['source_id']}")
         visible, hidden_counts = _filter_confidence(result, hide_low)
+        decision_character = ["Can make", "Learning"] if result["character"] else ["Who can make it"]
         craft = [_craft_row(row, sells[row["output_item_id"]]) for row in visible]
         selected = _table(craft, result["remaining"]["craft"],
-               ["Item", "Profession", "Batch", "Limited by", "Material cost (g)", "Batch profit (g)",
-                "Profit per craft (g)", "Thin", "Confidence", "Reasons"], "craft",
+               ["Item", "Profession", *decision_character, "Batch", "Limited by", "Material cost (g)",
+                "Batch profit (g)", "Profit per craft (g)", "Thin", "Confidence", "Reasons"], "craft",
                selection_key=_selection_key({**result, "craft": visible}),
                rest_text=("more rows outside this list's 10-row limit" if result["refill"]
                           else "more crafts fit the remaining gold; refill is off"))
@@ -131,6 +150,11 @@ def _tables(result, names, *, arguments=None):
             st.caption("Select a craft row to see its materials and catalog craft steps.")
         hidden = "; ".join(f"{reason}: {count}" for reason, count in sorted(hidden_counts.items()))
         st.caption("Hidden recipes: " + (hidden or "0"))
+        with st.expander("Catalog checks", expanded=False):
+            if result["catalog_checks"]:
+                st.dataframe(result["catalog_checks"], hide_index=True, width="stretch")
+            else:
+                st.caption("No differences in comparable matched recipe evidence.")
     with buy_tab:
         buy = [{"Material": names.get(r["item_id"], f"Item {r['item_id']}"), "Item ID": r["item_id"],
                 "Route": r["method"], "Required units": r["quantity"], "Purchased units": r["purchased_units"],
@@ -169,7 +193,17 @@ def _craft_row(row, sell):
             "Cautious output unit (g)": to_gold(row["sale_price_copper"]), "Listings": sell["listings"],
             "Units": sell["units"], "Thin": sell["thin"], "Availability": row["availability"],
             "Evidence notes": "; ".join(row["evidence_notes"]), "Recipe source": row["recipe_source"],
-            **_confidence_columns(row), **_evidence(row)}
+            **_character_columns(row), **_confidence_columns(row), **_evidence(row)}
+
+
+def _character_columns(row):
+    if "craft_status" not in row:
+        return {"Who can make it": ", ".join(row.get("who_can_make_it", [])) or "unknown"}
+    learning = row["character_reason"]
+    if row["craft_status"] == "Train now":
+        cost = row["training_cost_copper"]
+        learning = "Training: " + (format_money(cost) if cost is not None else "cost unknown")
+    return {"Can make": row["craft_status"], "Learning": learning}
 
 
 def _sell_row(row):
@@ -222,8 +256,10 @@ def _digest(value):
 
 def _context(arguments):
     # Listings, observations and metrics are read for the snapshot ID, so the snapshot identifies them.
-    return _digest({key: arguments[key] for key in ("catalogs", "market", "snapshot", "settings",
-                                                    "max_age_hours", "auction_cut")})
+    context = {key: arguments[key] for key in ("catalogs", "market", "snapshot", "settings",
+                                              "max_age_hours", "auction_cut")}
+    context["character_data"] = sorted(arguments.get("character_data", {}).items())
+    return _digest(context)
 
 
 def _session_choices(state, prefix):

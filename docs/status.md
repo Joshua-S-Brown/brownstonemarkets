@@ -2,7 +2,7 @@
 
 Current implemented state, limitations and how to verify. History lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-09._
+_Last updated 2026-10-10._
 
 ## Implemented
 
@@ -18,12 +18,36 @@ _Last updated 2026-10-09._
   Basilly level 6, 1s 70c, Tailoring 7/75, two seen-crafted recipes (2963, 3755), latest craft
   evidence 10:01:44 UTC. All report windows-pc, Classic Beta PvE 2 / Alliance and fresh bags.
   Basilly's level history is 4 → 6; Cicelyna stays 1; Keenagen stays 5 / Mining 3.
-  No modern window list has yet been imported; STORY-049's beta check remains pending.
+  Modern window evidence is now confirmed (STORY-049 below); STORY-043's check below uses the newer imports.
   Limitation: the legacy `GetSkillLineInfo` surface (Classic Era stand-in) reports every skill line,
   so weapon skills and languages appear as lines and can show *at cap*; the Forever client's modern
   surface reports professions only.
 
-- **Today confidence (STORY-046, implemented and reviewed 2026-10-08):** Today v3 labels Craft rows
+- **Today character crafts (STORY-043, implemented 2026-10-10; pending review):** Today v4 adds
+  the source/market-scoped character selector in the Save-only settings form, eligibility and learning
+  columns, All recipes' Who can make it, and collapsed catalog checks. It consumes the same
+  `professions.latest_data` as Characters; session choices reset when character evidence changes.
+  Older settings still load. Rules: `requirements.md` → Today; contracts: `design.md` → Today contracts.
+  Offline coverage is in `tests/test_today_characters.py`, with existing Today/Queue/UI regressions.
+  **Forever beta check (2026-10-10):** used the source resolved with `config/market.local.toml` and
+  copied `data/` to ignored `work/story-043/data`; all settings/preview writes stayed in that copy.
+  Basilly's latest Tailoring list is **8/75**. The projection marks all six listed learned catalog IDs
+  **Known**: 2963, 3755, 2387, 12044, 3915 and 2393. Across 1,930 compatible catalog recipes it reports
+  6 Known, 349 Not yet, 1,575 Unknown and **no catalog check differences**. Five of the Not yet
+  recipes are intermediate outputs, outside the existing finished-output board; Craft's hidden reasons
+  therefore count **343 rank below required skill** and **1 needs pattern or other source**.
+  There are **no unlearned trainer recipes at rank ≤8** in this evidence: the lowest such recipe needs
+  rank 10. White Linen Shirt is trainer / 25c / required skill 1, already Known. Train now with known
+  and unknown costs is verified offline, not claimed as a beta page observation.
+  With copied settings **25g / scaled 1% with 10s floor / cap 5**, the funded Craft page shows ten
+  **Unknown / recipe not listed** rows (top: Mithril Shield Spike, Bronze Dory, Azure Gustwoven Hood);
+  unopened professions stay visible as required. The six Known recipes don't enter that funded top ten
+  under existing price/profit rules. Scan **20261010T112018Z-54369e** is fresh at the check; missing prices,
+  unsupported routes and insufficient funds retain their existing reasons. The browser renders Basilly
+  chosen, v4 provenance, the Craft statuses and the collapsed checks; local screenshots and the plain
+  calculation report are under `work/story-043/`.
+
+- **Today confidence (STORY-046, implemented and reviewed 2026-10-08):** The confidence pass labels Craft rows
   High/Medium/Low with visible reasons, carried to Sell and Queue (including merged purchases).
   Rules and named thresholds: `requirements.md` → Today; contract: `design.md` → Today contracts.
   The default-off session Craft filter counts *low confidence* without changing reservations,
@@ -35,7 +59,7 @@ _Last updated 2026-10-09._
   price 4, material share >75% 1, >40% 1. Every Forever yield is unconfirmed, so no Forever row can be
   High until yields are counted in game; thin outputs are the main Low cause.
 
-- **Recipe learning (STORY-050, implemented and reviewed 2026-10-09):** twelve catalogs now carry optional source codes and integer-copper training costs from their existing archived pages. Recipe catalogs has a **View a catalog recipe** expander; other views do not display the new fields. CRAFT-08 records the evidence for drop, quest, vendor and trainer; unverified codes 1, 16 and 21 display *other (code N)*. Skill 1 without source remains *unknown*. Forever Tailoring's view shows Bolt of Linen Cloth: unknown / unknown cost; Linen Bag: trainer / 1s; Red Linen Bag: drop, vendor / unknown cost; Runecloth Bag: vendor / unknown cost. Existing yield/vendor and post-launch captions remain visible.
+- **Recipe learning (STORY-050, implemented and reviewed 2026-10-09):** twelve catalogs now carry optional source codes and integer-copper training costs from their existing archived pages. Recipe catalogs has a **View a catalog recipe** expander; Today now uses them for character eligibility and training costs (STORY-043 above). CRAFT-08 records the evidence for drop, quest, vendor and trainer; unverified codes 1, 16 and 21 display *other (code N)*. Skill 1 without source remains *unknown*. Forever Tailoring's view shows Bolt of Linen Cloth: unknown / unknown cost; Linen Bag: trainer / 1s; Red Linen Bag: drop, vendor / unknown cost; Runecloth Bag: vendor / unknown cost. Existing yield/vendor and post-launch captions remain visible.
   - All twelve catalogs regenerated from unchanged archived bytes. Parsed comparisons against the prior catalogs confirmed only `learned_from`, `training_cost_copper` and `catalog_version` changed; selection files changed only their version. Added source/cost field counts respectively: Classic Alchemy 33/33, Enchanting 9/9, Tailoring 5/5; Forever Alchemy 145/41, Blacksmithing 328/86, Cooking 95/8, Enchanting 15/9, Engineering 152/75, First Aid 18/11, Leatherworking 383/80, Mining 13/12, Tailoring 351/86. Repeating generation produces no changes.
 - **Skill-up demand map (STORY-047, implemented, pending review):** Skill-ups follows Recipe catalogs.
   Compatible professions default to all; session controls adjust crafts per recipe and post-launch
@@ -237,7 +261,7 @@ _Last updated 2026-10-09._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.26% in the current macOS run: 989 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.32% in the current macOS run: 1,015 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.11.2**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -277,7 +301,7 @@ _Last updated 2026-10-09._
 git diff --check
 ```
 
-Expected: 989 tests pass and one explicit PowerShell-unavailable skip on this Mac; 990 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 1,015 tests pass and one explicit PowerShell-unavailable skip on this Mac; 1,016 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 

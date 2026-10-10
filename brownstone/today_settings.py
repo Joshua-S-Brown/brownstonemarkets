@@ -11,8 +11,14 @@ class TodaySettings:
     mode: str = "scaled"
     percent_basis_points: int = 100
     max_crafts: int = 5
+    character: tuple[str, str, str] | None = None
 
     def __post_init__(self):
+        if self.character is not None:
+            if (not isinstance(self.character, (tuple, list)) or len(self.character) != 3
+                    or any(not isinstance(v, str) or not v for v in self.character)):
+                raise ValueError("Character needs name, realm and faction")
+            object.__setattr__(self, "character", tuple(self.character))
         integers = (self.gold_copper, self.minimum_copper, self.percent_basis_points, self.max_crafts)
         if any(type(value) is not int or value < 0 for value in integers):
             raise ValueError("Settings must use nonnegative integers")

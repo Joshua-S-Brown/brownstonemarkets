@@ -497,7 +497,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **One rule for every profession:** a recipe is usable only if it makes a fixed, known quantity (Wowhead lists some transmutes and oils as making 0, meaning unknown) and isn't seasonal. An item that several usable recipes make is always bought, never crafted, and those recipes can't be selected. So a catalog never chooses between recipes, and the app never asks. It changes nothing on the saved Tailoring and Enchanting pages; it exists for Alchemy's transmutes.
   - **Evidence:** every recipe records its Wowhead spell URL, the page URL, the date the page was saved and the page's SHA-256. The saved page is archived byte-for-byte under `data/recipe-sources/` with a manifest.
   - **Skill-up evidence (STORY-047):** optional recipe `skillup_colors = [orange, yellow, green, grey]` copies the saved page's `colors`: exactly four positive integers in non-decreasing order. Missing, zero, non-integer or decreasing values leave the field absent, never guessed. The loader validates it and still accepts older catalogs. Header `page_coverage = { usable, no_item, unknown_yield }` holds non-negative integer counts of non-seasonal page spells with reagents: fixed known yields, no created item, and unknown/variable yields respectively. Rank spells without reagents are excluded. These fields use the existing page provenance and catalog version policy.
-  - **Learning evidence (STORY-050):** optional recipe `learned_from` copies the saved page's `source` list in its original order (including several or unlisted codes); a non-empty list of positive integers is valid. Optional `training_cost_copper` copies an explicit positive integer `trainingcost`, in copper; a zero is left absent, never read as free. Missing or malformed values stay absent; selection notes never override either field. The loader validates both and accepts older catalogs. These fields use the existing page provenance and catalog version policy. Only the Recipe catalogs recipe view displays them, with costs formatted through `brownstone/money.py`; absent costs show *unknown*. An unverified source-code meaning shows *other (code N)*. Missing source shows *unknown*: `learnedat = 1` alone does not prove a starting recipe.
+  - **Learning evidence (STORY-050):** optional recipe `learned_from` copies the saved page's `source` list in its original order (including several or unlisted codes); a non-empty list of positive integers is valid. Optional `training_cost_copper` copies an explicit positive integer `trainingcost`, in copper; a zero is left absent, never read as free. Missing or malformed values stay absent; selection notes never override either field. The loader validates both and accepts older catalogs. These fields use the existing page provenance and catalog version policy. The Recipe catalogs recipe view displays them; Today uses them under its character eligibility rules below. Costs are formatted through `brownstone/money.py`; absent costs show *unknown*. An unverified source-code meaning shows *other (code N)*. Missing source shows *unknown*: `learnedat = 1` alone does not prove a starting recipe.
     - **Source-code evidence table:** recipe codes below come from saved `listviewspells` entries. Labels 2, 4, 5 and 6 were checked against the corresponding rendered Source cells on the existing Forever First Aid page in Safari on 2026-10-09 ([page](https://www.wowhead.com/forever/spells/secondary-skills/first-aid)); each evidence recipe has exactly one source code. Codes 1, 16 and 21 remain unlisted for labeling because their meanings were not established from that evidence. The HTML's Source **filter** options use different numbers and must not be mistaken for the recipe-code table.
 
       | Code | Label | Saved page under `data/recipe-sources/wowhead/forever/` | Recipe evidence |
@@ -530,7 +530,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Market context:** optional, read-only, newest imported snapshot of the selected source and full market. ADDON-10 base/legacy metrics supply units listed and lowest unit buyout; TSM shows its price and units *not available for this source*. No snapshot omits columns with an explanation. Scan time (or labeled collection time) and DATA-05/Today's freshness policy label stale/future evidence without hiding it. Missing/nonpositive prices stay missing. Context changes neither units nor order.
   - **Presentation:** Skill-ups follows Recipe catalogs in navigation. Totals lead, band sections are collapsed, rule/honesty text is one caption.
 
-### Today (today_version 3, STORY-025/039/046; STORY-039 reviewed 2026-10-08)
+### Today (today_version 4, STORY-025/039/043/046; STORY-039 reviewed 2026-10-08)
 
 - **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
   source during the session. Each source has its own ignored preferences file,
@@ -545,6 +545,32 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   floor. Fixed mode uses only the fixed minimum. Scaled mode is `max(fixed, ceil(gold * basis_points / 10000))`.
   Percentage is adjustable from **0 to 100%** in hundredths; most crafts per item starts at **5**, adjustable
   from **1 to 1,000** (bounded to keep interactive calculations predictable). All amounts are integer copper.
+- **Character eligibility (STORY-043, v4):** the Save-only settings form offers **All recipes**
+  (default) and characters with window-list or seen-crafted evidence in the selected source and full
+  market. Persist name, realm and faction per source; older settings mean All recipes. A missing saved
+  character falls back to All recipes with a caption, without rewriting settings.
+  Match catalog `recipe_id` to window rows and seen-crafted IDs **only by recipe ID** (the spell ID
+  confirmed in STORY-049); never match names, profession titles or output items. Use the latest list
+  containing the ID (capture time, then sequence). Rank comes from that list, or a newer readable bags
+  snapshot for the same skill ID. Evidence comes from the shared `professions.latest_data` projection.
+  - **Known:** explicit `learned == true` or seen crafted. Positive knowledge remains evidence even
+    when a window list is possibly incomplete.
+  - **Unknown**, retained and marked: no matching ID, a possibly incomplete list without positive
+    knowledge, an absent learned flag, or an unlearned recipe with missing learning source. Missing rank
+    also leaves trainer eligibility unknown. Unknown never counts as known and is never hidden by
+    character eligibility; Hide Low confidence and price/funds feasibility rules still apply.
+  - **Train now:** explicitly unlearned, complete list evidence, source includes **6** (trainer;
+    CRAFT-08's source-code evidence table), rank at least `required_skill`. Other source codes alongside
+    6 do not prevent training. Show training cost through `money.py`, or **cost unknown**, beside batch
+    profit; never subtract it from profit or reserve it from the craft budget.
+  - **Not yet:** explicitly unlearned with sufficient learning evidence, rank below required skill
+    (**rank below required skill**) or source codes without 6 (**needs pattern or other source**,
+    including unverified codes). Hide before sizing/reservations and count by kind under Craft.
+  All recipes keeps existing eligibility and adds **Who can make it**, listing names whose status is
+  Known or Train now. Ranking, sizing, route choice and reservations within the filtered set remain
+  unchanged; the Queue uses that set. Catalog checks under Craft compare matched output item, yield
+  bounds and required reagent IDs/counts against the catalog. Optional, multi-choice or variable reagent
+  slots are **not compared**. Checks are collapsed and never change catalog values (CRAFT-08).
 - **Routes and batch costs:** reuse compatible Action Board catalog-local routes under the cautious
   basis (CRAFT-03/04/05); no cross-profession routing. Routes are selected once from aggregate evidence,
   then held fixed while sizing. Today changes auction purchase costs to the exact listing ladder, ordered
@@ -612,7 +638,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   The Craft-only **Hide Low confidence** toggle defaults off and lives only in session per source.
   Hidden rows count as *low confidence* alongside existing hidden reasons. Filtering preserves the
   full plan's reservations, Buy, Sell, Queue and totals.
-- **Hidden and capped:** hide invalid recipes (unsupported recipe before missing prices), no batch with
+- **Hidden and capped:** within the character-filtered set, hide invalid recipes (unsupported recipe before missing prices), no batch with
   priced supply (**insufficient listed materials**), batches where one craft exceeds remaining funds
   (**one craft exceeds funds**), and nonpositive profit or profit strictly below the minimum (**below
   minimum gain**). Reasons are mutually exclusive in that order and describe the remaining plan budget.

@@ -60,7 +60,7 @@ brownstone/             importable without Streamlit
   recipe_catalogs.py    catalogs found by selection file: status, previews and the add/update writes
   selection_files.py    in-place edits of a selection file that keep its comments
   action_board.py       ranking and label policy (versioned)
-  today.py              Today v3 batch sizing, chosen-plan reservation, refill and session queue
+  today.py              Today v4 batch sizing, chosen-plan reservation, refill and session queue
   today_confidence.py   display labels over retained routes, freshness and reserved listing depth
   today_data.py         one scoped read of prices, base/legacy listings, metrics and vendor references
   today_settings.py     validated integer settings and atomic local JSON persistence
@@ -409,6 +409,18 @@ eligible scan's `{}`. No seller strings enter this path. Catalog compatibility r
 version; storage predicates retain source and every MARKET_KEYS field plus scan/snapshot and item
 variant state. No schema changes or migrations are needed.
 
+STORY-043 adds `brownstone/today_characters.py`: `project_recipes` consumes compatible parsed
+catalogs and the shared `professions.latest_data` result, returning recipe/catalog-keyed statuses,
+resolved character identity and catalog comparison diagnostics. `filter_candidates` runs before
+Today sizing/reservations; it attaches status/training cost or All recipes character names and counts
+excluded reasons. The module matches recipe IDs only and reads newer bags rank by skill ID from raw
+window profession provenance. No database reader, schema migration or catalog mutation is added.
+`TodaySettings.character` is nullable `(name, realm, faction)`; JSON lists normalize to tuples and
+older files default to None. `views/today.py` supplies scoped character data, saves the selector with
+the existing form, displays eligibility/cost or Who can make it, and renders collapsed catalog checks.
+Session context includes character evidence so changed evidence resets choices and Queue ticks.
+Rules/status precedence live only in `requirements.md` → Today v4.
+
 `build_today` takes catalogs, scoped evidence, `TodaySettings` and the caller's clock. It returns
 four capped lists (`craft`, `buy`, `sell`, `below_vendor`), mutually exclusive hidden reason counts,
 remaining counts, complete shopping cost, freshness and Today version. Craft rows retain board
@@ -446,7 +458,8 @@ feasible outputs left out rather than rows beyond the cap.
 in postorder, and Sell rows; its copper totals never re-quote. Missing undercut totals remain null.
 The view adds source-scoped checkbox/batch controls and a Queue tab. Session fingerprints cover catalogs,
 source/market, snapshot (manifest and snapshot ID, which determine the stored evidence read), settings,
-freshness limit and auction cut, excluding the caller clock; the evidence itself is not re-serialised. Choice values and queue ticks are
+freshness limit, auction cut and scoped character evidence, excluding the caller clock;
+auction evidence is identified by the snapshot rather than re-serialised. Choice values and queue ticks are
 retained separately from widget state so Streamlit widget cleanup on navigation cannot lose them.
 The queue fingerprint includes plan/context but excludes control bookkeeping and staleness, so ticks
 survive the scan crossing the freshness limit. Widgets take start values only through session state
@@ -457,7 +470,7 @@ control; it stays open across ticks. No disk or schema writes.
 
 STORY-046 applies `today_confidence.confidence` after the complete funded plan is chosen, using
 retained route markers, freshness, Sell metrics and each purchase's ladder prefix. Rules and named
-thresholds live in `requirements.md` → Today v3. Craft/Sell and Queue lines carry `confidence` and
+thresholds live in `requirements.md` → Today. Craft/Sell and Queue lines carry `confidence` and
 `confidence_reasons`; merged Queue buys project contributing labels. The Craft view filters only
 its displayed rows and copies hidden counts, preserving the plan and resetting selection when its
 visible rows change. Confidence fields are excluded from Queue tick fingerprints so age transitions

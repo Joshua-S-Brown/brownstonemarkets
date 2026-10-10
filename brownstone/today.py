@@ -1,4 +1,4 @@
-"""Today v3: transparent batch estimates and one funded, supply-reserved plan.
+"""Today v4: transparent batch estimates and one funded, supply-reserved plan.
 
 Routes remain catalog-local board choices. Prefix ladders price complete stacks in O(log n),
 without expanding units; the clock and all scoped evidence are supplied by the caller.
@@ -10,10 +10,11 @@ from decimal import Decimal
 from .action_board import catalog_for_row, compatible_catalogs, rank_catalogs
 from .freshness import assess
 from .markets import MARKET_KEYS
+from .today_characters import filter_candidates, project_recipes
 from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 
-TODAY_VERSION = 3
+TODAY_VERSION = 4
 ROW_LIMIT = 10
 
 
@@ -113,15 +114,15 @@ def _batch(row, settings, ladders, reserved, funds):
             "limiting_factor": limit, "feasible_size": largest, "purchases": quotes[size]}, None
 
 
-def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut):
+def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut, projection):
     selected = compatible_catalogs(catalogs, market)
     if not selected:
         return [], Counter()
     board = rank_catalogs(selected, observations, market, snapshot, now=now,
                           max_age_hours=max_age_hours, auction_cut=auction_cut)
-    hidden: Counter[str] = Counter()
+    filtered, hidden = filter_candidates(board["rows"], projection)
     rows = []
-    for row in board["rows"]:
+    for row in filtered:
         if not row["valid"]:
             hidden[row["action"]] += 1
             continue
@@ -291,7 +292,7 @@ def _vendor(ladders, vendor_prices, minimum):
 
 def build_today(catalogs, observations, market, snapshot, settings: TodaySettings, *, now,
                 listings=None, metrics=None, vendor_prices=None, max_age_hours=24, auction_cut=.05,
-                choices=None, refill=True):
+                choices=None, refill=True, character_data=None):
     if any(snapshot.get(key) != market.get(key) for key in MARKET_KEYS):
         raise ValueError("The snapshot belongs to a different market")
     for key in ("source_id", "rules_version"):
@@ -299,7 +300,9 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
             raise ValueError(f"The snapshot belongs to a different {key}")
     freshness = assess(snapshot, now, max_age_hours)
     ladders = {i: Ladder(rows) for i, rows in listings.items()} if listings is not None else None
-    candidates, hidden = _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut)
+    projection = project_recipes(compatible_catalogs(catalogs, market), character_data or {}, settings.character)
+    candidates, hidden = _candidates(catalogs, observations, market, snapshot, now,
+                                     max_age_hours, auction_cut, projection)
     dropped, limits = [], {}
     if choices is None:
         crafts, excluded, rest = _select(candidates, settings, ladders)
@@ -321,6 +324,7 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
                 "scan_id": snapshot.get("scan_id"), "today_version": TODAY_VERSION}
     lists = {"craft": crafts, "buy": shopping, "sell": sells, "below_vendor": vendors}
     return {**{name: [{**row, **evidence} for row in rows[:ROW_LIMIT]] for name, rows in lists.items()},
+            "character": projection["character"], "catalog_checks": projection["catalog_checks"],
             "hidden": dict(hidden), "remaining": {**{name: max(0, len(rows) - ROW_LIMIT)
                                                       for name, rows in lists.items()}, "craft": rest},
             "freshness": freshness, "listing_evidence_available": ladders is not None,

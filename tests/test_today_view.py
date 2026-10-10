@@ -143,7 +143,7 @@ def test_today_all_tabs_decision_columns_evidence_and_stale_state(tmp_path, monk
     assert not at.exception
     assert [t.label for t in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor', 'Queue']
     columns = [
-        ['Item', 'Profession', 'Batch', 'Limited by', 'Material cost (g)', 'Batch profit (g)',
+        ['Item', 'Profession', 'Who can make it', 'Batch', 'Limited by', 'Material cost (g)', 'Batch profit (g)',
          'Profit per craft (g)', 'Thin', 'Confidence', 'Reasons', 'State'],
         ['Material', 'Route', 'Required units', 'Purchased units', 'Cost (g)', 'Highest unit price (g)',
          'Cheap now', 'State'],
