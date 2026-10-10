@@ -351,7 +351,7 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   existing non-scan lifecycle. Addon is **0.8.0**; format remains **6**, schema remains **11**:
   existing raw JSON stores the added payloads without a migration. Forever event/API support,
   default hidden recipes, ID meaning and UI completeness remain beta checks by 13 October.
-- **Forever known recipes (STORY-049, addon 0.11.0; 0.11.1):** on an observed open profession
+- **Forever known recipes (STORY-049, addon 0.11.0; 0.11.1/0.11.2):** on an observed open profession
   window, prefer a guarded `C_TradeSkillUI` reader; fall back to the STORY-041 legacy reader
   when the modern reader cannot establish a profession/list surface. The Craft window
   (`CRAFT_*` events) always uses the legacy `GetCraft*` reader, because `C_TradeSkillUI` would
@@ -369,8 +369,9 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   both use the modern reader only, never the legacy reader, whose closed-window names are
   placeholders. The profession name comes from the first non-empty, non-`UNKNOWN` name of
   `GetBaseProfessionInfo`, `GetChildProfessionInfo`, `GetTradeSkillLine`, in that order. A read is
-  refused while `IsTradeSkillReady()` returns false. A refused or unnamed read on a show or close entry
-  carries `trade_skill_read`: the raw profession returns, ready and data-source-changing returns, and
+  refused while `IsTradeSkillReady()` returns false or `GetAllRecipeIDs` returns no IDs (0.11.2: the
+  first opening per login reports an empty list before the data arrives). A refused or unnamed read on a
+  show entry carries `trade_skill_read`: the raw profession returns, ready and data-source-changing returns, and
   the recipe ID count; never a partial list. Report observed active filters/collapsed
   categories as possibly incomplete, without changing them; unavailable reads prove no completeness.
   The first profession opening in each load carries `trade_skill_api_inventory`: sorted available

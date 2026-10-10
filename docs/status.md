@@ -82,7 +82,26 @@ _Last updated 2026-10-09._
   **Fix in 0.11.1 (2026-10-10, Claude):** reads on the client's ready signal and on close, not only
   after a show; tries the base profession name before the child one (an empty child name stopped
   the 0.11.0 reader); refuses a not-ready read; and saves `trade_skill_read` diagnostics when a read
-  fails. Pending the next play check (`addon/README.md`); STORY-043 waits on it.
+  fails.
+  **Confirmed on the beta with 0.11.1 (2026-10-10, Claude; windows-pc drop 20261010T120510Z):**
+  STORY-049's play check passed, so STORY-043 can start.
+  - **Lists:** Basilly's Tailoring lists **471** recipe IDs (all recipes, learned or not), **6 learned**
+    after training one (Bolt of Linen Cloth 2963, Linen Bag 3755, Linen Cloak 2387, Simple Linen Pants
+    12044, Brown Linen Shirt 3915, White Linen Shirt 2393). Keenagen's Mining lists 18, 1 learned
+    (Smelt Copper 2657). No filters or collapsed categories were reported (*possibly incomplete* false).
+  - **IDs:** `recipe_id` is the spell ID, the same ID as catalog `recipe_id` and as the
+    `C_TradeSkillUI.CraftRecipe` hook argument. Each row carries its output `item_id`, `min_made`/
+    `max_made` and schematic reagent item IDs/counts.
+  - **Catalog agreement:** 429 listed IDs are in the Forever catalogs (412 Tailoring, 17 Mining), and
+    every one agrees on output item, yield and reagents. 60 aren't in catalogs (59 Tailoring, such as
+    Stormcloth and 7-digit Forever IDs, plus Smelt Obsidian-Infused Thorium Bar).
+  - **Events:** the list arrives with `TRADE_SKILL_DATA_SOURCE_CHANGED` right after
+    `TRADE_SKILL_SHOW`; later shows read it directly. A craft triggers `TRADE_SKILL_LIST_UPDATE`
+    with the new rank (Tailoring 7 → 8 after crafting 2963). `GetBaseProfessionInfo` names the
+    profession while open and is empty with `IsTradeSkillReady()` false at close.
+  - **Fixed in 0.11.2:** the first opening per login reported an empty list (0 IDs), which 0.11.1
+    saved as a list; 0.11.2 refuses it, and no longer saves diagnostics at close. Projections use the
+    latest list, so the imported data is unaffected.
 
 - **Brownstone panel (STORY-044, implemented; pending in-game beta check):** addon **0.9.0**
   adds a draggable minimap coin and `/bscan panel`, opening a movable Escape-closeable
@@ -218,9 +237,9 @@ _Last updated 2026-10-09._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.26% in the current macOS run: 988 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.26% in the current macOS run: 989 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
-- **Scanning addon:** `addon/BrownstoneScan/` is version **0.11.1**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
+- **Scanning addon:** `addon/BrownstoneScan/` is version **0.11.2**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
   - **Offline verified:** shipped Lua executes under Lua 5.1 with modern and legacy WoW stubs, including missing/erroring optional APIs, seller fallback, one reference lookup per ID, manual start, timeout and partial close. Delayed/synchronous answers, failed requests/answers, timeout and late events, missing API/rejected event, house close during the pass, pre-pass save and reload-mid-pass import, first-pass preservation and maintenance guards are verified. Resulting scans import; mixed formats 1–4, raw archive bytes, deduplication, variant prices/scope/depth/comparison, migration backup/replay and reference nulls are tested. Lupa is a declared, pinned dev dependency; Python coverage does not measure Lua branches.
   - **Reload and Clear saved scans buttons** sit beside the scan button on the auction house window, with Clear protected like `/bscan clear` and both disabled during a scan; behaviour and decisions are in `addon/README.md` → *Reload and clear controls*.
@@ -258,7 +277,7 @@ _Last updated 2026-10-09._
 git diff --check
 ```
 
-Expected: 988 tests pass and one explicit PowerShell-unavailable skip on this Mac; 989 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 989 tests pass and one explicit PowerShell-unavailable skip on this Mac; 990 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 

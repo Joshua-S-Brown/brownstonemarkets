@@ -50,7 +50,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 6. STORY-041 your professions and known recipes (addon; beta; must be testable by 13 October)
 7. STORY-042 beta evidence report (Brownstone CLI; Claude runs it after each play session)
 8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
-   - STORY-049 known recipes on the Forever client (addon; fixes STORY-041's capture; next to hand off, testable in game by 15 October)
+   - STORY-049 known recipes on the Forever client (addon; confirmed on the beta 2026-10-10 with 0.11.1, empty first read fixed in 0.11.2)
    - STORY-045 a simpler import page (Brownstone; small, display only; refined 2026-10-09)
    - STORY-050 how each recipe is learned (catalogs; implemented and reviewed 2026-10-09)
    - STORY-051 characters page (Brownstone; implemented and reviewed 2026-10-10)
@@ -59,7 +59,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 11. STORY-046 a confidence label on each Today row (Brownstone; implemented and reviewed 2026-10-08)
 12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
 13. STORY-048 watchlist with target prices (Brownstone; small; next to hand off, refined 2026-10-10)
-14. STORY-043 Today: what each character can make (Brownstone; after STORY-049's beta evidence and STORY-050)
+14. STORY-043 Today: what each character can make (Brownstone; unblocked 2026-10-10: STORY-049 evidence in status.md)
     - STORY-052 progression planner (Brownstone; medium; after STORY-043, STORY-047 and STORY-050)
 15. STORY-035 auction deposits (needs a beta check)
 16. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
@@ -250,7 +250,7 @@ Acceptance:
 
 ### STORY-049 — Known recipes on the Forever client
 
-**Implemented offline (2026-10-09); pending Forever beta play check.** Capture/projection
+**Implemented (2026-10-09); confirmed on the Forever beta 2026-10-10 (addon 0.11.1; 0.11.2 refuses the empty first read).** Capture/projection
 contracts live in [ADDON-12](requirements.md#addon-12-event-journal-story-033); play actions in
 [addon/README.md](../addon/README.md#forever-known-recipes-play-checklist-story-049--by-15-october).
 

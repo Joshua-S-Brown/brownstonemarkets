@@ -28,7 +28,7 @@ def test_skills_both_apis_level_missing_and_raw_tuples():
     ''')
     fire(g, "PLAYER_LOGOUT")
     record = python_value(g.BrownstoneScanDB.snapshots)[-1]
-    assert record["level"] == 22 and record["addon_version"] == "0.11.1"
+    assert record["level"] == 22 and record["addon_version"] == "0.11.2"
     assert record["skills"]["legacy"]["rows"][1]["rank"] == 55
     assert "skill_id" not in record["skills"]["legacy"]["rows"][1]
     assert record["skills"]["modern"]["indexes"]["n"] == 3
@@ -658,3 +658,18 @@ def test_forever_close_list_and_failure_diagnostics_import_and_project(tmp_path)
     import_scans(config, now=datetime.fromtimestamp(raw[0]["captured_at"], UTC))
     row = next(r for r in professions.latest_rows(config) if r["Profession / skill"] == "Tailoring")
     assert row["Recipe source"] == "window list" and row["Known recipes"] == 1
+
+
+def test_forever_first_opening_empty_list_is_not_ready_then_data_source_list_saved():
+    lua, g = modern_client()
+    lua.execute('''loaded = false
+        C_TradeSkillUI.GetAllRecipeIDs = function() if loaded then return {2963, 3755, 999} end return {} end''')
+    fire(g, "TRADE_SKILL_SHOW")
+    record = entries(g)[-1]
+    assert "known_recipes" not in record and record["trade_skill_read"]["recipe_id_count"] == 0
+    lua.execute('loaded = true')
+    fire(g, "TRADE_SKILL_DATA_SOURCE_CHANGED")
+    assert professions._recipe_count(entries(g)[-1]["known_recipes"]) == 1
+    lua.execute('C_TradeSkillUI.IsTradeSkillReady = function() return false end')
+    fire(g, "TRADE_SKILL_CLOSE")
+    assert [k for k in ("known_recipes", "trade_skill_read") if k in entries(g)[-1]] == []

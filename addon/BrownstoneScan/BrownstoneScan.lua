@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.11.1"
+local ADDON_VERSION = "0.11.2"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -1190,13 +1190,14 @@ function professions.modern()
         end
     end
     local ready = professions.ready()
-    if not name or ready == false then
-        local ids = safe(api.GetAllRecipeIDs)
+    local ids = safe(api.GetAllRecipeIDs)
+    -- Forever's first opening per login reports an empty list before the data source arrives:
+    -- a profession always lists recipes (learned or not), so an empty list is not ready, not "none known".
+    if not name or ready == false or (type(ids) == "table" and #ids == 0) then
         return nil, { profession = raw, ready = journal.read(api.IsTradeSkillReady),
             data_source_changing = journal.read(api.IsDataSourceChanging),
             recipe_id_count = type(ids) == "table" and #ids or nil }
     end
-    local ids = safe(api.GetAllRecipeIDs)
     local state = { api = "C_TradeSkillUI", profession = raw, name = name, rank = rank,
         max_rank = maxRank, recipe_ids = journal.copy(ids), rows = {}, filters = {}, possibly_incomplete = false }
     if type(ids) == "table" then
@@ -1394,8 +1395,8 @@ function journal.observe(event, ...)
         end
     elseif event == "TRADE_SKILL_CLOSE" then
         -- Closing always fires, even when opening didn't: a last read of a still-loaded list.
-        local result, failure = professions.window(event, arguments, nil, true)
-        if result ~= "recorded" then journal.add(event, family, arguments, { trade_skill_read = failure }) end
+        -- The 0.11.1 beta file showed the client is never ready at close, so a failure there is not saved.
+        if professions.window(event, arguments, nil, true) ~= "recorded" then journal.add(event, family, arguments) end
     elseif event == "BAG_UPDATE_DELAYED" then journal.bagChange(arguments)
     elseif event == "PLAYER_MONEY" then
         local current = journal.money()
