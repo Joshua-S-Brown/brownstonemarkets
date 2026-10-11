@@ -2,6 +2,7 @@
 from copy import deepcopy
 from pathlib import Path
 
+from navigation_helpers import navigate
 from test_today import catalog
 from test_today_view import app, listing_evidence_app, widget
 
@@ -9,9 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def open_skillups(at):
-    at.radio[0].set_value('Skill-ups').run()
+    navigate(at, 'Skill-ups')
     assert not at.exception
-    assert at.radio[0].options.index('Skill-ups') == at.radio[0].options.index('Recipe catalogs') + 1
+    assert next(w for w in at.radio if w.label == "View").value == 'Market'
+    assert at.get('button_group')[0].value == 'Skill-up demand'
     return at
 
 

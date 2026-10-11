@@ -3,7 +3,10 @@ import altair as alt
 import streamlit as st
 
 from brownstone.characters import build_characters
+from brownstone.config import ADDON_PROVIDER
 from brownstone.money import format_money
+from views.common import show_context
+from views.navigation import QUESTIONS
 
 
 def _utc(text: str | None) -> str:
@@ -17,6 +20,12 @@ ICONS = {171: "⚗️", 164: "⚒️", 333: "✨", 202: "⚙️", 165: "🪡", 1
 
 def render(config) -> None:
     st.subheader("Characters")
+    st.caption(QUESTIONS["Characters"])
+    show_context(config)
+    if config["provider"] != ADDON_PROVIDER:
+        st.info("Characters needs imported addon observations; this source's price feed has no character data. "
+                "Use Today or Market for this source.")
+        return
     st.caption("Who can do what · imported character evidence")
     try:
         cards = build_characters(config)

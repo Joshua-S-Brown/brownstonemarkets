@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from navigation_helpers import navigate
 from streamlit.testing.v1 import AppTest
 from test_character_snapshots import snapshot
 from test_journal import entry, write
@@ -115,8 +116,8 @@ def test_apptest_navigation_cards_chart_and_empty(tmp_path, monkeypatch):
     monkeypatch.setattr("brownstone.config.read_sources", lambda *a: [config])
     monkeypatch.setattr("brownstone.recipe_catalogs.find_catalogs", lambda *a: [])
     at = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py")).run()
-    assert at.radio[0].options[:2] == ["Today", "Characters"]
-    at.radio[0].set_value("Characters").run()
+    assert next(w for w in at.radio if w.label == "View").options[:2] == ["Today", "Team"]
+    navigate(at, "Characters")
     assert not at.exception
     assert [m.value for m in at.metric] == ["9", "1g 23s 45c", "unknown", "1g 23s 45c"]
     assert any("Known recipes: 2" in c.value for c in at.caption)
@@ -129,6 +130,10 @@ def test_apptest_navigation_cards_chart_and_empty(tmp_path, monkeypatch):
     assert not at.metric
 
 
+RENDER = ('from views.characters import render\n'
+          'render({"source_id": "s", "market_id": "m", "provider": "addon", "game_version": "forever"})')
+
+
 def test_apptest_unknown_gold_badges_and_error(tmp_path, monkeypatch):
     config = fixture(tmp_path)
     cards = characters.build_characters(config, NOW + timedelta(days=8))
@@ -136,7 +141,7 @@ def test_apptest_unknown_gold_badges_and_error(tmp_path, monkeypatch):
     cards[0]["professions"][0].update(at_cap=True, progress=None, rank=None)
     cards[1]["professions"] = [{**cards[0]["professions"][0], "recipe_source": "seen crafted"}]
     monkeypatch.setattr("views.characters.build_characters", lambda _: cards)
-    at = AppTest.from_string('from views.characters import render\nrender({"source_id": "s", "market_id": "m"})').run()
+    at = AppTest.from_string(RENDER).run()
     assert not at.exception and at.metric[1].value == "unknown"
     markdown = " ".join(m.value for m in at.markdown)
     assert "stale" in markdown and "at cap" in markdown and "possibly incomplete" in markdown
@@ -155,7 +160,7 @@ def test_apptest_unreadable_only_and_readable_empty_skill_list(tmp_path, monkeyp
     import_scans(config, now=NOW)
     cards = characters.build_characters(config, NOW)
     monkeypatch.setattr("views.characters.build_characters", lambda _: cards)
-    at = AppTest.from_string('from views.characters import render\nrender({"source_id": "s", "market_id": "m"})').run()
+    at = AppTest.from_string(RENDER).run()
     assert not at.exception and [m.value for m in at.metric] == ["unknown", "unknown"]
     assert any("No readable bags" in c.value for c in at.caption)
     assert any("No readable level" in c.value for c in at.caption)
@@ -177,3 +182,10 @@ def test_apptest_unreadable_only_and_readable_empty_skill_list(tmp_path, monkeyp
     assert not at.exception and cards[0]["professions"][0]["known_count"] is None
     assert any("Known recipes: unknown" in c.value for c in at.caption)
     assert "at cap: train the next tier" in " ".join(m.value for m in at.markdown)
+
+
+def test_apptest_non_addon_source_explains_no_character_data(monkeypatch):
+    monkeypatch.setattr("views.characters.build_characters", lambda _: pytest.fail("must not read characters"))
+    at = AppTest.from_string(RENDER.replace('"addon"', '"tsm"')).run()
+    assert not at.exception and not at.metric
+    assert any("no character data" in i.value for i in at.info)

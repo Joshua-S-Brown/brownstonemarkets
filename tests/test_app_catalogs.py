@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import pytest
+from navigation_helpers import navigate
 from test_app import classic_sources
 from test_recipe_catalogs import CHANGED_PAGE, LEATHER_PAGE, make_workspace, tree
 
@@ -28,7 +29,7 @@ def open_page(tmp_path, monkeypatch, experience="forever", forever_rules=True):
     monkeypatch.setattr("brownstone.recipe_catalogs.ARCHIVE_DIR", archive)
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=30).run()
     widget(at.selectbox, "Experience").set_value(experience).run()
-    at.radio[0].set_value("Recipe catalogs").run()
+    navigate(at, "Recipe catalogs")
     assert not at.exception
     return at, config
 
@@ -66,7 +67,7 @@ def test_catalogs_page_follows_the_sidebar_experience(tmp_path, monkeypatch):
     assert any(c.value.startswith("No WoW Forever catalog yet: alchemy") and "tailoring" not in c.value
                for c in at.caption)
     widget(at.selectbox, "Experience").set_value("classic").run()
-    at.radio[0].set_value("Recipe catalogs").run()  # Each source remembers its own view.
+    navigate(at, "Recipe catalogs")  # Each source remembers its own view.
     assert not at.exception
     assert any(c.value.startswith("Showing **Classic Era**") for c in at.caption)
     assert any(m.value == "#### Classic Era catalogs" for m in at.markdown)
@@ -75,7 +76,7 @@ def test_catalogs_page_follows_the_sidebar_experience(tmp_path, monkeypatch):
     assert any("No Classic Era catalogs yet" in i.value for i in at.info)
     widget(at.selectbox, "Experience").set_value("retail").run()
     widget(at.selectbox, "Data source").set_value(0).run()
-    at.radio[0].set_value("Recipe catalogs").run()
+    navigate(at, "Recipe catalogs")
     assert not at.exception
     assert any("Retail (regression) has no recipe catalogs" in i.value for i in at.info)
     assert not at.dataframe and not at.tabs
@@ -220,7 +221,7 @@ def test_crafting_without_any_catalog_points_to_the_catalogs_page(tmp_path, monk
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
     monkeypatch.setattr("brownstone.recipe_catalogs.CONFIG_DIR", tmp_path / "config")
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=30).run()
-    at.radio[0].set_value("Crafting").run()
+    navigate(at, "Crafting")
     assert not at.exception
     assert any("Add or update a profession" in i.value for i in at.info)
 
@@ -234,7 +235,7 @@ def test_a_broken_selection_file_leaves_the_other_views_working(tmp_path, monkey
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=30).run()
     assert not at.exception
     assert any("Recipe catalogs unavailable" in w.value for w in at.warning)
-    at.radio[0].set_value("Recipe catalogs").run()
+    navigate(at, "Recipe catalogs")
     assert any("Could not read the selection files" in e.value for e in at.error)
 
 
@@ -255,7 +256,7 @@ def test_learning_details_only_on_catalog_recipe_view(tmp_path, monkeypatch):
     widget(at.selectbox, 'Catalog recipe').set_value(2963).run()
     assert 'Learned from: unknown' in [c.value for c in at.caption]
     assert 'Training cost: unknown' in [c.value for c in at.caption]
-    widget(at.radio, 'View').set_value('Crafting').run()
+    navigate(at, 'Crafting')
     assert not at.exception
     assert not any(c.value.startswith(('Learned from:', 'Training cost:')) for c in at.caption)
 

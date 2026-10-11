@@ -1,4 +1,5 @@
 """Watchlist UI and hit panels on offline TSM and addon fixtures."""
+from navigation_helpers import navigate
 from test_today_view import app, listing_evidence_app, widget
 
 from brownstone.watchlist import Entry, load_entries, save_entries, watchlist_path
@@ -6,9 +7,10 @@ from brownstone.watchlist import Entry, load_entries, save_entries, watchlist_pa
 
 def test_page_add_edit_remove_and_tsm(tmp_path, monkeypatch):
     at, config, _ = app(tmp_path, monkeypatch)
-    at.radio[0].set_value('Watchlist').run()
+    navigate(at, 'Watchlist')
     assert not at.exception
-    assert at.radio[0].options.index('Watchlist') == at.radio[0].options.index('Characters') + 1
+    assert next(w for w in at.radio if w.label == "View").value == 'Market'
+    assert at.get('button_group')[0].value == 'Watchlist'
     widget(at.text_input, 'Buy below').set_value('10c')
     widget(at.text_input, 'Sell above').set_value('10c')
     widget(at.button, 'Save entry').click().run()
@@ -39,7 +41,7 @@ def test_invalid_unreadable_file_warning_and_no_editor(tmp_path, monkeypatch):
     at, config, _ = app(tmp_path, monkeypatch)
     path = watchlist_path(config['data_dir'], config['source_id'])
     path.write_text('bad json')
-    at.radio[0].set_value('Watchlist').run()
+    navigate(at, 'Watchlist')
     assert not at.exception and any('read-only' in w.value for w in at.warning)
     assert not any(b.label == 'Save entry' for b in at.button)
     assert path.read_text() == 'bad json'
@@ -68,16 +70,17 @@ def test_addon_page_and_successful_import_panel(tmp_path, monkeypatch):
     at, config = listing_evidence_app(tmp_path, monkeypatch, -25)
     path = watchlist_path(config['data_dir'], config['source_id'])
     save_entries(path, [Entry(1, 10)])
-    at.radio[0].set_value('Watchlist').run()
+    navigate(at, 'Watchlist')
     assert not at.exception
     assert at.dataframe[0].value.iloc[0]['Units at or below buy target'] == 2
     assert 'stale' in at.dataframe[0].value.iloc[0]['Buy state']
+    navigate(at, 'Data')
     at.session_state['scan_import_result'] = [('success', 'Imported fixture')]
     at.run()
     assert any('Watchlist hits' in m.value for m in at.markdown)
     assert any('2 units at or below target' in c.value for c in at.caption)
-    # The panel's states say stale; only the page warns once.
-    assert sum('stale or future-dated' in w.value for w in at.warning) == 1
+    # Data's hit panel labels stale evidence; the Watchlist page's warning is not rendered here.
+    assert sum('stale or future-dated' in w.value for w in at.warning) == 0
     assert any('Imported fixture' in s.value for s in at.success)
     at.run()
     assert not any('Watchlist hits' in m.value for m in at.markdown)
@@ -86,7 +89,7 @@ def test_addon_page_and_successful_import_panel(tmp_path, monkeypatch):
 def test_save_failure_duplicate_and_evidence_failure(tmp_path, monkeypatch):
     at, config, _ = app(tmp_path, monkeypatch)
     save_entries(watchlist_path(config['data_dir'], config['source_id']), [Entry(1, 10)])
-    at.radio[0].set_value('Watchlist').run()
+    navigate(at, 'Watchlist')
     widget(at.text_input, 'Buy below').set_value('10c')
     widget(at.button, 'Save entry').click().run()
     assert any('already has an entry' in e.value for e in at.error)
@@ -104,7 +107,7 @@ def test_save_failure_duplicate_and_evidence_failure(tmp_path, monkeypatch):
 def test_source_list_not_shown_for_other(tmp_path, monkeypatch):
     at, config, _ = app(tmp_path, monkeypatch)
     save_entries(watchlist_path(config['data_dir'], 'another-source'), [Entry(1, 10)])
-    at.radio[0].set_value('Watchlist').run()
+    navigate(at, 'Watchlist')
     assert not at.dataframe and any('No watchlist entries' in i.value for i in at.info)
 
 
@@ -112,7 +115,7 @@ def test_no_snapshot_page_known_catalog_picker(tmp_path, monkeypatch):
     at, config, _ = app(tmp_path, monkeypatch)
     save_entries(watchlist_path(config['data_dir'], config['source_id']), [Entry(1, 10)])
     monkeypatch.setattr('brownstone.watchlist.latest_snapshot', lambda *args: (None, None, 0))
-    at.radio[0].set_value('Watchlist').run()
+    navigate(at, 'Watchlist')
     row = at.dataframe[0].value.iloc[0]
     assert row['Buy state'] == row['Units listed'] == row['Units at or below buy target'] == 'no snapshot'
     assert not at.exception
@@ -127,9 +130,10 @@ def test_actual_addon_import_shows_new_hits(tmp_path, monkeypatch):
     save_entries(watchlist_path(config['data_dir'], config['source_id']), [Entry(1, 10)])
     finish = int(datetime.now(UTC).timestamp())
     write_scans(config['scan_path'], scan('watch-new', finish, [listing(1, 7, 70)]))
+    navigate(at, 'Data')
     widget(at.button, 'Preview addon scans').click().run()
     widget(at.button, 'Import addon scan').click().run()
     assert not at.exception and any('Imported.' in s.value for s in at.success)
     assert any('7 units at or below target' in c.value for c in at.caption)
-    at.radio[0].set_value('Watchlist').run()
+    navigate(at, 'Watchlist')
     assert at.dataframe[0].value.iloc[0]['Units at or below buy target'] == 7

@@ -6,10 +6,12 @@ from brownstone.money import to_gold
 from brownstone.skillups import build_skillups, material_totals
 from brownstone.today_data import read_skillup_market
 from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
+from views.navigation import QUESTIONS
 
 
 def render(config, catalogs):
-    st.subheader('Skill-ups')
+    st.subheader("Skill-up demand")
+    st.caption(QUESTIONS["Skill-up demand"])
     show_context(config)
     st.caption('Expectation from catalog data and an assumed number of crafts per recipe, not observed demand '
                'or a forecast. Real levellers craft some recipes more and skip others. Unknown skill-up ranges '

@@ -3,8 +3,10 @@ import polars as pl
 import streamlit as st
 
 from brownstone.analysis import browse, rank, screenable_count
+from brownstone.config import ADDON_PROVIDER
 from brownstone.money import COPPER_PER_GOLD
 from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
+from views.navigation import QUESTIONS
 
 EMPTY = "No completed snapshot yet. Click Refresh from TSM or Import addon scan to collect this market."
 
@@ -18,6 +20,7 @@ def _header(config, manifest, count):
 
 def render_browse(config):
     st.subheader("Browse market")
+    st.caption(QUESTIONS["Browse market"])
     show_context(config)
     search = st.sidebar.text_input("Find an item", placeholder="Name or item ID")
     limit = st.sidebar.selectbox("Show up to", [100, 500, 2000])
@@ -50,8 +53,13 @@ def render_browse(config):
 
 
 def render_opportunities(config):
-    st.subheader("Price opportunities")
+    st.subheader("Below usual price")
+    st.caption(QUESTIONS["Below usual price"])
     show_context(config)
+    if config["provider"] == ADDON_PROVIDER:
+        st.info("Below usual price cannot run: addon scans have no historical values yet. "
+                "Use Browse market, Skill-up demand or Watchlist in Market.")
+        return
     st.sidebar.divider()
     discount = st.sidebar.slider("Minimum discount (%)", 0, 90, int(config["min_discount"] * 100), 5)
     limit = st.sidebar.selectbox("Show up to", [20, 50, 100])
@@ -73,7 +81,7 @@ def render_opportunities(config):
         st.info("This source has no items with market, recent and historical prices all available "
                 "(Classic feeds report historical values as zero, and a single addon scan has no history), "
                 "so the discount screen cannot run. "
-                "Use Crafting or Browse market instead.")
+                "Use Today’s All recipes or Market’s Browse market instead.")
         return
     if results.is_empty():
         st.info("No items match these filters. Try reducing the minimum discount or clearing the search.")

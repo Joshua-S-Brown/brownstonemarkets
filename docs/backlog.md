@@ -60,7 +60,8 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
 13. STORY-048 watchlist with target prices (Brownstone; small; implemented and reviewed 2026-10-11)
 14. STORY-043 Today: what each character can make (Brownstone; implemented and reviewed 2026-10-10)
-15. STORY-053 three questions: Today, Team, Market (Brownstone; small, display only; next to hand off)
+15. STORY-053 three questions: Today, Team, Market (Brownstone; small, display only; implemented and reviewed 2026-10-11)
+   - SPIKE-009 Today in NiceGUI, side by side (Brownstone; small, timeboxed; next to hand off). Its decision sets how STORY-054 onwards are built.
 16. STORY-054 Today as craft cards (Brownstone; medium, display only)
 17. STORY-052 progression planner, on the Team page (Brownstone; medium; refined 2026-10-11)
 18. STORY-055 market brief (Brownstone; medium)
@@ -109,6 +110,22 @@ Acceptance:
 - **Unchanged:** every value, table, calculation, setting file and the import itself; existing widget keys where possible so saved per-source state still loads.
 - **Offline tests:** AppTest that each place renders for a TSM and an addon source; each old page is reachable from its new place; a fresh session opens on Today and the last place is remembered per source; the Below usual price reason on an addon source; the Data group holds import and catalogs. Update existing tests that select pages by the old radio labels.
 - **Docs:** replace the navigation-order rules (*Skill-ups follows Recipe catalogs*, *Watchlist follows Characters*, Characters after Today) with one navigation rule in `requirements.md` → UI-01; `design.md` (page map); `status.md`.
+
+### SPIKE-009 — Today in NiceGUI, side by side
+
+Added 2026-10-11 (product owner: "Streamlit's been difficult… I want to make sure what's been developed is going to be a better experience"). Brownstone only; a trial, not a migration. The Streamlit app stays the app until the product owner decides.
+
+Question: is NiceGUI a better place than Streamlit for the pages still to come (STORY-054 onwards)? Every calculation already lives in `brownstone/` without Streamlit (`design.md`: dependencies point inward), so a switch would replace only `app.py` and `views/`. This spike rebuilds one page, Today, to decide on evidence instead of opinion.
+
+Acceptance:
+- **A second app, `nicegui_app.py`, runs beside the Streamlit app** on its own port, bound to `127.0.0.1` only, with no change to the Streamlit app's behaviour or `launch.py`. It shows the Today page for the selected experience and source, resolved exactly as the Streamlit sidebar does (Forever first; never merges sources).
+- **One loading path for both apps:** the evidence-gathering now in `views/today.render` (latest snapshot, scoped reads, `build_today` arguments) moves into a Streamlit-free function in `brownstone/` that both apps call. No second pricing, scoping or freshness path; the Streamlit Today page shows the same values as before, and its tests still pass.
+- **Today in NiceGUI shows** the settings summary and the settings form (same `today-settings.<source_id>.local.json` file, through `today_settings`), the character choice, freshness and the stale warning, the listing-evidence notice, the Watchlist hits panel, and the Craft, Buy, Sell and Below vendor tabs with the same rows, order, 10-row limit and *N more* counts. Money through `money.py`. Clicking a craft row opens its details (STORY-038's materials and intermediate steps) without reloading the page. Out of scope: the session queue and plan adjustments (STORY-039), which stay in Streamlit for now.
+- **What the product owner will judge:** the plan is visible on the first screen without scrolling; a click updates only what it changes; a browser refresh keeps the selected source and tab; tables sort and filter; it looks like a finished tool, not a developer demo (a consistent theme, no framework branding).
+- **Offline tests with NiceGUI's own testing tools** (its simulated `user` fixture, plus at most one real-browser test if it adds something): the page renders for a TSM and an addon source; values match `build_today` for the same fixture; stale evidence stays labelled; saving settings writes the same file the Streamlit page reads; a row click shows that craft's materials. They run in CI on macOS and Windows from the lock file and don't change how the existing tests run.
+- **Dependencies:** NiceGUI as a new optional extra in `pyproject.toml`, pinned with its dependencies in `requirements.lock.txt`; a fresh environment installed from the lock file passes `pip check` and every test.
+- **Real-data check:** both apps on a copy of the Forever beta data, with Basilly chosen: the same crafts, numbers and labels in each, with screenshots of both.
+- **Findings in the report:** what was easier or harder than Streamlit (state, layout, tests, test speed), anything NiceGUI couldn't do, and a rough size for migrating the remaining pages. No rule changes in `requirements.md`; a short *SPIKE-009 (trial)* note in `status.md` saying how to start it.
 
 ### STORY-054 — Today as craft cards
 

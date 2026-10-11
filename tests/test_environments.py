@@ -7,6 +7,7 @@ from pathlib import Path
 import duckdb
 import pytest
 from conftest import make_source
+from navigation_helpers import navigate
 from test_scan_changes import import_pair
 from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
 
@@ -251,7 +252,7 @@ def test_app_startup_migrates_v3_for_any_selected_source(tmp_path, monkeypatch, 
     assert database.with_name("brownstone.v3.backup.duckdb").exists()
     if selected == "beta":
         for view in ("Crafting", "Browse market", "Opportunities", "Scan changes"):
-            at.radio[0].set_value(view).run()
+            navigate(at, view)
             assert not at.exception and not at.error
             assert any(config["market_id"] in caption.value for caption in at.caption)
 

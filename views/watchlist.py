@@ -16,6 +16,7 @@ from brownstone.watchlist import (
     watchlist_path,
 )
 from views.common import gold_columns, read_db, show_context
+from views.navigation import QUESTIONS
 
 
 def _load(config):
@@ -39,7 +40,8 @@ def _evidence(config, entries, catalogs, with_names=True):
 
 
 def render(config, catalogs):
-    st.subheader('Watchlist')
+    st.subheader("Watchlist")
+    st.caption(QUESTIONS["Watchlist"])
     show_context(config)
     st.caption('Base items only; targets are per unit. Names help pick an item; entries store its ID.')
     path, entries, readonly = _load(config)

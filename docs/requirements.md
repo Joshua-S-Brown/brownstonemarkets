@@ -528,7 +528,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Totals:** per band, per profession and across shown professions, direct and raw. Profession/combined totals count each shown recipe once regardless of how many bands it spans; show using professions and bands, sorted by units descending (item ID breaks ties). Post-launch recipes remain listed but contribute no units by default; a toggle includes them and the excluded count is shown.
   - **Coverage:** state “Catalog holds X of Y usable recipes on its saved page (saved <date>); Z recipes on the page create no item and aren't counted”, using catalog recipe count and `page_coverage`. Older catalogs say *coverage unknown; regenerate the catalog*. Incomplete coverage labels totals as only the catalog's recipes.
   - **Market context:** optional, read-only, newest imported snapshot of the selected source and full market. ADDON-10 base/legacy metrics supply units listed and lowest unit buyout; TSM shows its price and units *not available for this source*. No snapshot omits columns with an explanation. Scan time (or labeled collection time) and DATA-05/Today's freshness policy label stale/future evidence without hiding it. Missing/nonpositive prices stay missing. Context changes neither units nor order.
-  - **Presentation:** Skill-ups follows Recipe catalogs in navigation. Totals lead, band sections are collapsed, rule/honesty text is one caption.
+  - **Presentation:** Totals lead, band sections are collapsed, rule/honesty text is one caption.
 
 ### Watchlist (STORY-048)
 
@@ -546,7 +546,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   with the strictly-below unit reader); sell hits at or above the target. Each target has its own state.
   Stale or future evidence retains hits marked **stale**. TSM uses its lowest price and labels units
   **not available for this source**, including buy hits.
-- **Display:** Watchlist follows Characters in navigation and supports add, edit and remove; editing
+- **Display:** Watchlist supports add, edit and remove; editing
   keeps the entry's item ID (pick or type an ID only when adding). Its
   table shows name when known, ID, targets, lowest price, listed units, target units/states and note;
   snapshot time in UTC appears once above it. A short current-hits panel appears above Today's tabs
@@ -699,7 +699,16 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
 
 
 ### Interface
-- **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** after the read-only preview (addon sources; ADDON-06) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden. The sidebar lists experiences WoW Forever first, then Classic Era, then Retail, whatever order `market.toml` uses, so Forever opens by default. The shared sidebar experience choice resolves its source and market together when there is one enabled source for that experience. If there are several, an explicit sidebar source choice is required; sources are never merged. Every view follows the selection, including Recipe catalogs. Each page names the selected experience, source and market under its title. The sidebar contains navigation and collection actions; source ID, label, market ID, feed type and the `market.toml` hint stay in a collapsed **Source details** expander (STORY-030).
+- **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** after the read-only preview (addon sources; ADDON-06) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden. The sidebar lists experiences WoW Forever first, then Classic Era, then Retail, whatever order `market.toml` uses, so Forever opens by default. The shared sidebar experience choice resolves its source and market together when there is one enabled source for that experience. If there are several, an explicit sidebar source choice is required; sources are never merged. Every view follows the selection, including Recipe catalogs. Each page names the selected experience, source and market under its title. Collection actions live in Data; the sidebar contains place navigation; source ID, label, market ID, feed type and the `market.toml` hint stay in a collapsed **Source details** expander (STORY-030).
+  - **Navigation (STORY-053):** four sidebar places in order: **Today**, **Team**, **Market**,
+    then visually separate **Data**. Sections use tabs or a segmented control inside the place:
+    Today → Today plan, All recipes (Action Board); Team → Characters (progression when built);
+    Market → Browse market, Skill-up demand, Watchlist, Below usual price (formerly Opportunities);
+    Data → addon import or Refresh from TSM, Recipe catalogs, Scan changes. Every place and section
+    has one plain business question under its title. Unsupported sections explain why up front;
+    addon Below usual price has no historical values and points to Market's other sections.
+    Opening and remembered per-source place follow *Today → Opening and settings*; existing widget
+    keys are preserved where possible. Values, calculations, settings and import behavior are unchanged.
   - **Today layout (STORY-030):** one visible settings summary (gold available, minimum batch gain,
     most crafts per item) and the existing Save-only form in a **Today settings** expander, automatically
     expanded when gold is 0c or the settings file is unreadable. An expander keeps the existing form in
@@ -714,7 +723,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
     not be evaluated** table (output, profession, catalog, reason). One board provenance caption remains
     visible, as do DATA-05 freshness captions and warnings. Recipe details retain their existing behavior.
 - **UI-02:** Browse market finds items regardless of price or discount. Categories are not inferred from names or commodity status.
-- **UI-03:** the discount screen (Opportunities) explains when a source cannot support it, for example Classic historical values being zero. Its spread is integer copper: the reference price after the auction cut rounds down, as in CRAFT-07. Search filters the ranked list without renumbering it.
+- **UI-03:** the discount screen (Below usual price, formerly Opportunities) explains when a source cannot support it, for example Classic historical values being zero. Its spread is integer copper: the reference price after the auction cut rounds down, as in CRAFT-07. Search filters the ranked list without renumbering it.
 - **UI-04:** Crafting has no catalog selector. Incompatible catalogs for the selected game version remain inspectable without pricing; their catalog and source `rules_version` mismatch is explained. If none is compatible, the view explains this and offers navigation to Recipe catalogs. Recipe catalogs shows the sidebar experience's catalogs and has no game-version switch of its own (decided 2026-10-04); an experience without catalogs (Retail) says so.
 - **UI-06 Scan changes:** compare two distinct complete, non-partial, priced addon scans within the sidebar's selected source and full market identity (DATA-03/DATA-08). Choices come from scan IDs, never import manifests, newest finish first; the newest two are the default. Display both finish times in UTC, their gap and freshness (DATA-05); only the later scan carries the stale warning, since the earlier one is deliberately historical. Show per-unit minimum buyout and market value, listing counts and units for each scan, and later-minus-earlier changes. An item is listed if any listing exists, including one without a buyout. Absent items show **not listed**, with blank changes; listed items without usable prices show **no buyout** or **no market value**, never free. New and vanished items have separate lists. Shared items are changed if any price or supply metric differs. The catalog filter uses only item IDs from catalogs compatible with the selected source (UI-04). A non-addon source or fewer than two eligible scans explains why no comparison is available.
 - **UI-05:** the launcher reuses a running server only if its code is current. It restarts its own outdated server and never stops a server it did not start.

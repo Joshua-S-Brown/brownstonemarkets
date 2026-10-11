@@ -18,6 +18,7 @@ from brownstone.money import format_money
 from brownstone.recipe_import import archived_saved_at
 from views.common import EXPERIENCES, show_context
 from views.crafting import _materials, _recipe_heading
+from views.navigation import QUESTIONS
 
 GAMES = {game: EXPERIENCES[game] for game in rc.CATALOG_PREFIXES}  # Experiences that have catalogs.
 KINDS = {"yield": "yield", "vendor": "vendor status and price", "post-launch": "post-launch"}
@@ -29,6 +30,7 @@ NEW = "new:"  # Profession choices without a catalog yet are "new:<profession>";
 
 def render(config, sources, config_dir, archive_dir):
     st.subheader("Recipe catalogs")
+    st.caption(QUESTIONS["Recipe catalogs"])
     show_context(config)
     st.caption("One catalog per game version and profession, generated from a Wowhead page you save in your "
                "browser. Brownstone never downloads from Wowhead.")

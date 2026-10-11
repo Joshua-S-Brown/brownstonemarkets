@@ -15,12 +15,14 @@ from brownstone.crafting import PRICE_BASES, basis_prices, evaluate_recipe, mate
 from brownstone.money import format_money, to_gold
 from brownstone.storage import listing_depth, price_observations
 from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
+from views.navigation import QUESTIONS
 
 BASIS_LABELS = {"cautious": "Cautious (recommended)", "listed": "Cheapest listing"}
 
 
 def render(config, catalogs):
-    st.subheader("Crafting")
+    st.subheader("All recipes")
+    st.caption(QUESTIONS["All recipes"])
     show_context(config)
     selected = compatible_catalogs(catalogs, config)
     _incompatible_catalogs(config, catalogs)

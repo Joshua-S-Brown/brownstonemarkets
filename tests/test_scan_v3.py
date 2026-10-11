@@ -5,6 +5,7 @@ import json
 import duckdb
 import polars as pl
 import pytest
+from navigation_helpers import navigate
 from test_scans import FINISHED, NOW, addon_source, listing, packed, scan, write_scans
 
 from brownstone import scan_details, scans, variants
@@ -333,7 +334,7 @@ def test_browse_and_scan_changes_show_variant_identity(tmp_path, monkeypatch):
     table = app.dataframe[0].value
     assert len(table) == 4 and set(table["Variant state"]) == {"variant", "base", "unresolved"}
     assert table["Variant"].notna().sum() == 2
-    app.radio[0].set_value("Browse market").run()
+    navigate(app, "Browse market")
     assert not app.exception
     assert len(app.dataframe[0].value) == 4
     assert "Variant" in app.dataframe[0].value.columns

@@ -2,11 +2,30 @@
 
 Current implemented state, limitations and how to verify. History lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-10._
+_Last updated 2026-10-11._
 
 ## Implemented
 
-- **Characters (STORY-051, implemented and reviewed 2026-10-10):** Characters follows Today. Scoped cards
+- **Three questions (STORY-053, implemented and reviewed 2026-10-11):** Today, Team, Market and visually
+  separated Data replace the flat page list. In-page segmented controls keep every old page reachable;
+  collection and catalogs live in Data. Business questions introduce places and sections. Addon
+  Below usual price explains the missing history before loading prices. Per-source place keys survive
+  source switches; old page names migrate to place/section pairs. Rules: `requirements.md` → UI-01;
+  structure: `design.md` → Page map. Offline checks: `tests/test_navigation.py` and existing view/import
+  AppTests updated to navigate place and section controls.
+  Forever beta check (2026-10-11): resolved `config/market.local.toml`, copied `data/` to ignored
+  `work/story-053/data`, then rendered every place and section without importing or refreshing.
+  Today retains copied 25g settings and scan `20261011T105714Z-cf2f26`, with nine funded crafts;
+  Bronze Dory leads (five crafts, 12g 22s 9c batch profit). Team shows Basilly level 6 / Tailoring
+  8/75 / six known recipes, Cicelyna level 1, and Keenagen level 5 / Mining 3/75 / one known recipe.
+  Browse market shows 7,715 items and 18 saved snapshots. Skill-up demand and catalogs remain
+  inspectable, Watchlist shows its source-local empty state, Below usual price explains missing
+  history, and Scan changes compares eligible saved scans. Data exposes preview/import controls
+  and collapsed imported character evidence. Screenshots and read-only AppTest observations are
+  under `work/story-053/`; the original data and local configuration are untouched.
+
+
+- **Characters (STORY-051, implemented and reviewed 2026-10-10):** Characters lives in Team. Scoped cards
   show imported last-seen/machine evidence, readable level/gold, profession rank progress, recipe
   evidence and freshness badges. Collapsed Altair charts and tables share readable snapshot history.
   The existing addon import tables retain their shape and values. Rules/contracts:
@@ -61,7 +80,7 @@ _Last updated 2026-10-10._
 
 - **Recipe learning (STORY-050, implemented and reviewed 2026-10-09):** twelve catalogs now carry optional source codes and integer-copper training costs from their existing archived pages. Recipe catalogs has a **View a catalog recipe** expander; Today now uses them for character eligibility and training costs (STORY-043 above). CRAFT-08 records the evidence for drop, quest, vendor and trainer; unverified codes 1, 16 and 21 display *other (code N)*. Skill 1 without source remains *unknown*. Forever Tailoring's view shows Bolt of Linen Cloth: unknown / unknown cost; Linen Bag: trainer / 1s; Red Linen Bag: drop, vendor / unknown cost; Runecloth Bag: vendor / unknown cost. Existing yield/vendor and post-launch captions remain visible.
   - All twelve catalogs regenerated from unchanged archived bytes. Parsed comparisons against the prior catalogs confirmed only `learned_from`, `training_cost_copper` and `catalog_version` changed; selection files changed only their version. Added source/cost field counts respectively: Classic Alchemy 33/33, Enchanting 9/9, Tailoring 5/5; Forever Alchemy 145/41, Blacksmithing 328/86, Cooking 95/8, Enchanting 15/9, Engineering 152/75, First Aid 18/11, Leatherworking 383/80, Mining 13/12, Tailoring 351/86. Repeating generation produces no changes.
-- **Skill-up demand map (STORY-047, implemented, pending review):** Skill-ups follows Recipe catalogs.
+- **Skill-up demand map (STORY-047, implemented, pending review):** Skill-up demand lives in Market.
   Compatible professions default to all; session controls adjust crafts per recipe and post-launch
   inclusion. Direct/raw totals lead, profession totals follow and bands are collapsed. Catalog
   regeneration adds page coverage and skill-up evidence without changing existing values; older
@@ -250,7 +269,7 @@ _Last updated 2026-10-10._
     board, and board explanations in How to read this board. Board provenance and freshness stay visible;
     recipe summaries in g/s/c and expandable recipe evidence retain their existing behavior. UI rules
     and the layout choices are in `requirements.md` → UI-01 and Today → Evidence and honesty.
-  - Browse market, Opportunities, Recipe catalogs, Skill-ups and Scan changes are also available. Opportunities explains when a source can't support it.
+  - Market also holds Browse market, Skill-up demand, Watchlist and Below usual price; Data holds import, Recipe catalogs and Scan changes (STORY-053 above). Below usual price explains when a source can't support it.
   - All money is displayed in gold.
 - **Launcher:** `launch.py` (via `Start Brownstone.command` / `.cmd`) restarts its own server when the code has changed.
 - **Catalogs:**
@@ -590,7 +609,7 @@ professions). Full check output is local-only under ignored `work/story047/real-
 
 ## STORY-048 — Watchlist with target prices
 
-Implemented: source-local target entries, Watchlist after Characters, base-item price states and
+Implemented: source-local target entries, Watchlist inside Market, base-item price states and
 unit counts, and current-hit panels on Today and successful addon import results. Invalid files stay
 read-only and preserved. Rules: `requirements.md` → Watchlist; contracts: `design.md` → Watchlist.
 Offline verification is in `tests/test_watchlist.py` and `tests/test_watchlist_view.py`.

@@ -29,7 +29,6 @@ def render(config):
     if config.get("drop_folder"):
         _render_inputs(config)
         return
-    _reset_identity(config)
     if st.button("Preview addon scans", help=f"Reads {config['scan_path']}", width="stretch"):
         for key in _STATE:
             st.session_state.pop(key, None)
@@ -205,7 +204,6 @@ def _import(config, preview):
 
 
 def _render_inputs(config):
-    _reset_identity(config)
     if st.button("Preview addon scans", width="stretch"):
         for key in _STATE:
             st.session_state.pop(key, None)
@@ -308,7 +306,7 @@ def _import_inputs(config, preview):
         st.session_state["scan_import_result"] = [("error", f"Import failed: {error}. Preview again.")]
 
 
-def _reset_identity(config):
+def reset_identity(config):
     identity = preview_configuration(config)
     # One active review only: switching away and back cannot resurrect an old selection or result.
     if st.session_state.get("scan_import_identity") != identity:

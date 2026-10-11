@@ -14,7 +14,8 @@ from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
 from brownstone.storage import upgrade_database
 from views import catalogs as catalogs_view
 from views import characters, crafting, market, scan_changes, scan_import, skillups, today, watchlist
-from views.common import EXPERIENCES
+from views.common import EXPERIENCES, show_context
+from views.navigation import QUESTIONS, retain_state, section, sidebar
 
 ROOT = Path(__file__).resolve().parent
 st.set_page_config(page_title="Brownstone Markets", page_icon="📊", layout="wide")
@@ -44,6 +45,7 @@ if not sources:
              "config/market.local.toml, then reload.")
     st.stop()
 
+retain_state()
 with st.sidebar:
     st.header("Market")
     order = list(EXPERIENCES)
@@ -68,17 +70,22 @@ with st.sidebar:
                    + (" · region-wide commodities" if config["scope"] == "region" else "")
                    + " · edit config/market.toml to change sources")
     addon = config["provider"] == ADDON_PROVIDER
-    refresh = False
+    view = sidebar(config["source_id"])
+    # Every rerun, not only on Import, so a source switch discards a review before it is shown again.
     if addon:
-        scan_import.render(config)
+        scan_import.reset_identity(config)
     else:
         st.session_state.pop("scan_import_identity", None)
+
+page = section(view, config["source_id"])
+refresh = False
+if page == "Import":
+    st.subheader("Addon import" if addon else "Refresh from TSM")
+    st.caption(QUESTIONS["Import"])
+    show_context(config)
+    if not addon:
         refresh = st.button("Refresh from TSM", type="primary", width="stretch")
-    views = ["Today", "Characters", "Watchlist", "Crafting", "Browse market", "Opportunities",
-             "Recipe catalogs", "Skill-ups", "Scan changes"]
-    # Every source starts on Today and remembers subsequent navigation.
-    view_key = f"view-{config['source_id']}"
-    view = st.radio("View", views, index=0, key=view_key)
+
 
 # Views open the database read-only, so bring an existing older database up to date first. This never
 # creates one, and Preview itself never migrates (ADDON-06).
@@ -106,21 +113,24 @@ if refresh:
         except Exception as error:
             st.error(f"Refresh failed: {error}. Your previous successful snapshot remains available.")
 
-if view == "Today":
+if page == "Today plan":
     today.render(config, catalogs)
-elif view == "Characters":
-    characters.render(config)
-elif view == "Watchlist":
-    watchlist.render(config, catalogs)
-elif view == "Crafting":
+elif page == "All recipes":
     crafting.render(config, catalogs)
-elif view == "Browse market":
+elif page == "Characters":
+    characters.render(config)
+elif page == "Watchlist":
+    watchlist.render(config, catalogs)
+elif page == "Browse market":
     market.render_browse(config)
-elif view == "Scan changes":
+elif page == "Scan changes":
     scan_changes.render(config, catalogs)
-elif view == "Skill-ups":
+elif page == "Skill-up demand":
     skillups.render(config, catalogs)
-elif view == "Recipe catalogs":
+elif page == "Recipe catalogs":
     catalogs_view.render(config, sources, CONFIG_DIR, ARCHIVE_DIR)
+elif page == "Import":
+    if addon:
+        scan_import.render(config)
 else:
     market.render_opportunities(config)

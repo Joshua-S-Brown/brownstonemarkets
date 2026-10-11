@@ -23,19 +23,41 @@ catalog TOML ──load──▶ crafting / action_board ◀── price_observa
 
 CLI collection bytes are written before validation, so failures stay inspectable; addon previews and stale reviewed imports write nothing (DATA-01/ADDON-06). DuckDB writes are transactional, but silver, DuckDB and gold together are not one atomic operation (see `status.md` for recovery).
 
+## Page map (STORY-053)
+
+UI-01 in `requirements.md` owns navigation rules. `views/navigation.py` renders one sidebar radio
+with Data visually separated, then a required single-choice segmented control inside each place.
+Only the selected section renders, keeping Today’s nested tabs and existing widget identities intact.
+
+| Place | Sections and view modules |
+| --- | --- |
+| Today | Today plan (`today`), All recipes (`crafting`) |
+| Team | Characters (`characters`); future progression belongs here |
+| Market | Browse market (`market`), Skill-up demand (`skillups`), Watchlist (`watchlist`), Below usual price (`market`) |
+| Data | Import (`scan_import`) or Refresh from TSM (`app.py`), Recipe catalogs (`catalogs`), Scan changes (`scan_changes`) |
+
+`view-<source_id>` still stores the remembered place; `section-<source_id>-<place>` stores the
+section. Reassigning those session keys prevents Streamlit widget cleanup from discarding another
+source's selection. The existing `scan_import_selection` key is also retained when Data is hidden;
+Source/configuration changes still invalidate the review through the existing identity check.
+Old page values migrate to their new place/section. Collection controls move
+into Data without changing the reviewed import path or refresh function. Addon Below usual price
+explains the missing historical values before querying prices, even without a saved snapshot.
+
 ## Modules
 
 ```text
-app.py                  Streamlit entry: sidebar, Refresh, view dispatch
+app.py                  Streamlit entry: source selection, place/section dispatch, explicit collection
 views/                  Streamlit only; display, no calculations
+  navigation.py         Four places, business questions, per-source place/section session keys
   common.py             snapshot loading, freshness display, gold columns
   crafting.py           Action Board and recipe explanation
   today.py              Settings, session plan controls, queue and optional evidence columns
   skillups.py           Skill-up totals first, collapsed bands, optional scoped market context
   catalogs.py           Recipe catalogs page: status, one add-or-update flow (live review, then Save)
-  market.py             Browse market and Opportunities
+  market.py             Browse market and Below usual price
   scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
-  scan_import.py        Sidebar addon preview, new-scan selection and explicit reviewed import
+  scan_import.py        Data addon preview, new-scan selection and explicit reviewed import
 brownstone/             importable without Streamlit
   config.py             market.toml (+ untracked market.local.toml overrides) → list[Source] (typed, validated)
   markets.py            market identity: MARKET_KEYS, derived market_id, validation, legacy upgrade
@@ -289,7 +311,7 @@ Windows scripts copy the whole account file unchanged. No other view consumes th
 - `scan_changes.eligible_scans(db, config)` reads the selected source's completed, non-partial, priced `addon_scans` rows, ordered by finish time and scan ID descending. Finish times are normalized to UTC independently of DuckDB's session timezone.
 - `compare_scans(db, config, first_id, second_id, item_ids=None)` validates distinct eligible IDs and orders them chronologically. DuckDB reads `scan_metrics` facts per exact identity, scoped by source, market, scan ID, snapshot ID and metrics version. `market_snapshots` and a name-only `scan_listings` aggregation provide labels, with the same scope; neither supplies numeric metrics. A full outer join returns only item aggregates to Python, never raw listings.
 - The result carries earlier/later scan metadata, their time gap, shared `items`, `new` and `vanished`. Each row has item ID/name, earlier/later metric dictionaries (minimum buyout, market value, listings, units), later-minus-earlier changes and a changed flag. A missing side is `None`; unavailable prices and changes are `None`, with integer copper for all valid prices. Optional item IDs filter every list; an empty list matches nothing.
-- `views/scan_changes.py` renders UI-06, using `compatible_catalogs` for the item-ID filter, shared context/freshness display and money helpers. The sidebar registers it as **Scan changes**. Existing calculation pages keep their contracts.
+- `views/scan_changes.py` renders UI-06, using `compatible_catalogs` for the item-ID filter, shared context/freshness display and money helpers. Data registers it as the **Scan changes** section. Existing calculation pages keep their contracts.
 
 ## Crafting calculation
 
@@ -344,7 +366,7 @@ Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `b
 - Batch preflight and per-file reviewed imports parse files repeatedly and retain their bytes in memory. Large retained drop folders increase preview cost; manual cleanup bounds it. Rename completion is local only and cannot guarantee Google Drive's remote visibility or offline availability.
 
 - **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Opportunities with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 93% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Below usual price with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 93% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
 - `views/` is not type-checked.
 - `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.
@@ -408,8 +430,8 @@ clock. `read_watchlist` uses `latest_snapshot`, `today_data.read_skillup_market`
 `metrics.units_below_price` for each base/legacy identity. Name choices read scoped base observations
 and compatible catalogs (newest name per item, aggregated in SQL), without using another source's
 derived name lookup. The hit panels read names only when there is a hit. No schema change.
-`views/watchlist.py` renders the editor/table and shared hit panel; `app.py` registers Watchlist after
-Characters. Today calls the panel above its tabs; scan import calls it when rendering successful
+`views/watchlist.py` renders the editor/table and shared hit panel; `app.py` registers Watchlist
+inside Market. Today calls the panel above its tabs; scan import calls it when rendering successful
 results. Both panels read evidence without changing their host page's calculations or import path.
 
 ## Today contracts (STORY-025)

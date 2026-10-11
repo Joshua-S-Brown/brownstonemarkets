@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import pytest
+from navigation_helpers import navigate
 
 from brownstone.config import read_sources
 from brownstone.pipeline import run
@@ -26,8 +27,8 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert not any(w.label == "Recipe catalog" for w in at.selectbox)
-    assert at.radio[0].value == "Today"
-    at.radio[0].set_value("Crafting").run()
+    assert next(w for w in at.radio if w.label == "View").value == "Today"
+    navigate(at, "Crafting")
     assert any(m.value == "#### Action Board" for m in at.markdown)
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert set(table["Profession"]) == {"Alchemy", "Enchanting", "Tailoring"}
@@ -47,13 +48,13 @@ def test_action_board_saved_snapshot_and_retail_browse(tmp_path, monkeypatch):
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert table.iloc[0]["Item"] == "Woolen Bag"
     assert any(m.label == "Break-even sale price" for m in at.metric)
-    at.radio[0].set_value("Opportunities").run()
+    navigate(at, "Opportunities")
     assert not at.exception
     assert any("cannot run" in i.value for i in at.info)  # Classic historical values are zero.
     next(w for w in at.selectbox if w.label == "Experience").set_value("retail").run()  # Retail still works.
     assert any("several enabled sources" in i.value for i in at.info)  # Area 52 and region commodities.
     next(w for w in at.selectbox if w.label == "Data source").set_value(0).run()
-    at.radio[0].set_value("Browse market").run()
+    navigate(at, "Browse market")
     assert not at.exception
     assert not any(m.value == "#### Action Board" for m in at.markdown)
     assert any(h.value == "Browse market" for h in at.subheader)
@@ -70,13 +71,14 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert any("Refresh or import" in i.value for i in at.info)  # Nothing imported until clicked.
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     assert any("Imported" in s.value for s in at.success)
     assert not any(w.label == "Recipe catalog" for w in at.selectbox)
-    assert at.radio[0].value == "Today"
-    at.radio[0].set_value("Crafting").run()
+    assert next(w for w in at.radio if w.label == "View").value == "Data"
+    navigate(at, "Crafting")
     combined = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert {"Alchemy", "Tailoring"} <= set(combined["Profession"])  # Plus any professions added in the app.
     alchemy = combined[combined["Profession"] == "Alchemy"]
@@ -108,10 +110,13 @@ def test_addon_source_imports_on_click_and_prices_the_forever_board(tmp_path, mo
                  house={"zone": "Stormwind City", "npc_name": "Auctioneer Fitch"})
     addon["scan_path"] = write_scans(tmp_path / "older.lua", older)
     at.run()  # Without a plain rerun, AppTest does not register a second click on the same button.
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
     assert any("older completed: imported" in s.value for s in at.success)
+    navigate(at, "Crafting")
+    next(w for w in at.selectbox if w.label == "Profession").set_value("tailoring").run()
     after = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert after.equals(table)
 
@@ -131,7 +136,7 @@ def test_browse_market_lists_saved_items_blanks_zero_prices_and_searches(tmp_pat
     run(sources[0], items)
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
     at = AppTest.from_file(str(ROOT / "app.py")).run()
-    at.radio[0].set_value("Browse market").run()
+    navigate(at, "Browse market")
     assert not at.exception
     table = at.dataframe[0].value
     assert list(table["Item"]) == ["Silk Cloth", "Wool Cloth"]
@@ -156,8 +161,10 @@ def test_refresh_reports_success_and_failure_without_losing_saved_data(tmp_path,
     monkeypatch.setattr("brownstone.pipeline.run", offline)
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not calls  # Opening the app never downloads (UI-01).
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Refresh from TSM").click().run()
     assert any("Refresh failed: network unreachable" in e.value for e in at.error)
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Refresh from TSM").click().run()
     assert any("refreshed and saved" in s.value for s in at.success)
     assert calls == ["classic-us-mankrik-alliance"] * 2
@@ -172,6 +179,7 @@ def test_import_of_a_file_without_a_complete_scan_says_prices_are_unchanged(tmp_
     addon.update(enabled=True, data_dir=tmp_path / "data", scan_path=scan_file)
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [addon])
     at = AppTest.from_file(str(ROOT / "app.py")).run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
@@ -192,9 +200,11 @@ def test_importing_nothing_new_warns_to_reload_instead_of_claiming_success(tmp_p
                  scan_evidence={"faction": "Alliance"})
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [addon])
     at = AppTest.from_file(str(ROOT / "app.py")).run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert any("/bscan clear" in i.value for i in at.info)  # Something new was saved: clearing is safe.
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not any(b.label == "Import addon scan" for b in at.button)
     assert not at.success
@@ -222,8 +232,8 @@ def test_combined_board_duplicate_recipe_selection_uses_own_catalog(tmp_path, mo
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert not any(w.label in {"Recipe catalog", "Data source"} for w in at.selectbox)
-    assert at.radio[0].value == "Today"
-    at.radio[0].set_value("Crafting").run()
+    assert next(w for w in at.radio if w.label == "View").value == "Today"
+    navigate(at, "Crafting")
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert len(table) == 6 and set(table["Profession"]) == {"Tailoring", "Alchemy"}
     wool = table[table["Item"] == "Woolen Bag"].set_index("Profession")
@@ -297,7 +307,7 @@ def test_incompatible_catalogs_inspect_without_prices_and_link_to_management(tmp
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [source])
     monkeypatch.setattr("brownstone.recipe_catalogs.ARCHIVE_DIR", tmp_path / "archive")
     at = AppTest.from_file(str(ROOT / "app.py")).run()
-    at.radio[0].set_value("Crafting").run()
+    navigate(at, "Crafting")
     assert not at.exception
     assert any("No compatible recipe catalog for classic / classic-new-rules" in i.value for i in at.info)
     mismatches = [i.value for i in at.info if "Rules mismatch" in i.value]
@@ -335,33 +345,34 @@ def test_sidebar_experience_resolves_source_and_market_on_every_market_page(tmp_
     assert any(f"Market {addon['market_id']}" in c.value for c in details.caption)
     assert not any(c.value.startswith(("Source ", "Market "))
                    for c in at.sidebar.children.values() if c.type == "caption")
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception
-    assert at.radio[0].value == "Today"
+    assert next(w for w in at.radio if w.label == "View").value == "Data"
     context = f"Showing **WoW Forever** · source {addon.get('label', addon['source_id'])} · market {addon['market_id']}"
     for page in ["Today", "Crafting", "Browse market", "Opportunities", "Recipe catalogs", "Scan changes"]:
-        next(w for w in at.radio if w.label == "View").set_value(page).run()
+        navigate(at, page)
         assert not at.exception
         assert any(c.value == context for c in at.main.caption)
         details = next(e for e in at.sidebar.expander if e.label == "Source details")
         assert not details.proto.expanded
         assert not any(c.value.startswith(("Source ", "Market "))
                        for c in at.sidebar.children.values() if c.type == "caption")
-    next(w for w in at.radio if w.label == "View").set_value("Crafting").run()
+    navigate(at, "Crafting")
     table = next(t.value for t in at.dataframe if "Action" in t.value.columns)
     assert {"Alchemy", "Tailoring"} <= set(table["Profession"])
     forever = f"Showing **WoW Forever** · source {addon.get('label', addon['source_id'])} · market {addon['market_id']}"
     assert any(c.value == forever for c in at.caption)  # On the page itself, not only the sidebar.
-    next(w for w in at.radio if w.label == "View").set_value("Browse market").run()
+    navigate(at, "Browse market")
     assert not at.exception
     assert any(c.value == forever for c in at.caption)
     assert any("Runecloth Bag" in list(t.value["Item"]) for t in at.dataframe if "Item" in t.value.columns)
-    next(w for w in at.radio if w.label == "View").set_value("Opportunities").run()
+    navigate(at, "Opportunities")
     assert any(c.value == forever for c in at.caption)
     assert any("cannot run" in i.value for i in at.info)
     next(w for w in at.selectbox if w.label == "Experience").set_value("classic").run()
-    next(w for w in at.radio if w.label == "View").set_value("Browse market").run()
+    navigate(at, "Browse market")
     assert not at.exception
     assert any(c.value.startswith(f"Showing **Classic Era** · source {classic.get('label', classic['source_id'])} · "
                                   f"market {classic['market_id']}") for c in at.caption)
@@ -386,8 +397,8 @@ def test_multiple_sources_for_one_experience_require_explicit_sidebar_selection(
     assert not any(c.value.startswith(("Source ", "Market ")) for c in at.caption)
     next(w for w in at.selectbox if w.label == "Data source").set_value(0).run()
     assert not at.exception
-    assert at.radio[0].value == "Today"
-    at.radio[0].set_value("Crafting").run()
+    assert next(w for w in at.radio if w.label == "View").value == "Today"
+    navigate(at, "Crafting")
     assert any("Action" in t.value.columns for t in at.dataframe)
     next(w for w in at.selectbox if w.label == "Data source").set_value(1).run()
     assert not at.exception
@@ -415,6 +426,7 @@ def preview_addon(tmp_path, monkeypatch, records=None, sources_count=1):
 def test_preview_subset_empty_selection_and_remaining_guidance(tmp_path, monkeypatch):
     at, addon = preview_addon(tmp_path, monkeypatch)
     assert not any(b.label == "Import addon scan" for b in at.button)
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not addon["data_dir"].exists()
     table = next(t.value for t in at.dataframe if "Scan ID" in t.value.columns)
@@ -430,6 +442,7 @@ def test_preview_subset_empty_selection_and_remaining_guidance(tmp_path, monkeyp
     # The result replaces the reviewed table, which would otherwise still show the imported scan as New.
     assert not any("Scan ID" in t.value.columns for t in at.dataframe)
     assert not any(b.label == "Import addon scan" for b in at.button)
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert at.multiselect[0].value == ["two"]
     table = next(t.value for t in at.dataframe if "Scan ID" in t.value.columns)
@@ -441,10 +454,12 @@ def test_preview_retryable_error_then_stale_file_invalidates_without_writes(tmp_
     at, addon = preview_addon(tmp_path, monkeypatch)
     original = addon["scan_path"].read_bytes()
     addon["scan_path"].write_text("BrownstoneScanDB = {")
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert any("Preview failed" in e.value and "Preview again" in e.value for e in at.error)
     assert not any(b.label == "Import addon scan" for b in at.button)
     addon["scan_path"].write_bytes(original)
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     addon["scan_path"].write_bytes(original + b"\n")
     next(b for b in at.button if b.label == "Import addon scan").click().run()
@@ -452,6 +467,7 @@ def test_preview_retryable_error_then_stale_file_invalidates_without_writes(tmp_
     assert not addon["data_dir"].exists()
     at.run()
     assert not any(b.label == "Import addon scan" for b in at.button)
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert at.success and not at.exception
@@ -459,12 +475,14 @@ def test_preview_retryable_error_then_stale_file_invalidates_without_writes(tmp_
 
 def test_source_and_configuration_switch_discard_review_and_selection(tmp_path, monkeypatch):
     at, addon = preview_addon(tmp_path, monkeypatch, sources_count=2)
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     at.multiselect[0].set_value(["one"]).run()
     next(w for w in at.selectbox if w.label == "Data source").set_value(1).run()
     assert not at.multiselect and not any(b.label == "Import addon scan" for b in at.button)
     next(w for w in at.selectbox if w.label == "Data source").set_value(0).run()
     assert not at.multiselect
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert at.multiselect[0].value == ["one", "two"]
     addon["max_age_hours"] += 1
@@ -478,6 +496,7 @@ def test_preview_marks_other_house_scans_and_imports_the_rest(tmp_path, monkeypa
     at, addon = preview_addon(tmp_path, monkeypatch, records=[
         scan("ours", finished_now(), [listing(1, 1, 50)]),
         scan("horde", finished_now(), [listing(2, 1, 50)], faction={"player": "Horde"})])
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not at.error
     table = next(t.value for t in at.dataframe if "Scan ID" in t.value.columns)
@@ -486,6 +505,7 @@ def test_preview_marks_other_house_scans_and_imports_the_rest(tmp_path, monkeypa
     assert at.multiselect[0].options == ["ours"]
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert at.success and any("another auction house" in i.value for i in at.info)
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert any(w.value.startswith("Nothing new") for w in at.caption)
     assert not at.exception
@@ -518,6 +538,7 @@ def test_drop_import_page_machine_files_cleanup_and_stale_review(tmp_path, monke
                       scan("win", finished_now(), [listing(2, 1, 80)]))
     (folder / "copy.partial").write_bytes(b"partial")
     at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     files = next(t.value for t in at.dataframe if "File" in t.value.columns)
     assert set(files["Machine"].dropna()) == {"mac", "windows-pc"}
@@ -558,6 +579,7 @@ def test_character_snapshot_import_page_unknown_bank_and_snapshot_only_files(tmp
         path = folder / "windows-pc-20261007T004900Z-BrownstoneScan.lua"
     write(path, [r])
     at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not at.exception
     snapshots = next(t.value for t in at.dataframe if "Snapshot ID" in t.value.columns)
@@ -589,6 +611,7 @@ def test_journal_only_import_page_counts_latest_duplicates_and_reload_guidance(t
         path = folder / "windows-pc-20261007T004900Z-BrownstoneScan.lua"
     write(path, [r])
     at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not at.exception and not at.error
     table = next(t.value for t in at.dataframe if "Family" in t.value.columns)
@@ -603,6 +626,7 @@ def test_journal_only_import_page_counts_latest_duplicates_and_reload_guidance(t
         assert latest["Fully imported"].iloc[0]
     else:
         assert any(m.value.startswith("Imported character records") for m in at.success)
+        navigate(at, 'Data')
         next(b for b in at.button if b.label == "Preview addon scans").click().run()
         assert any("Nothing new" in m.value and "/reload" in m.value for m in at.caption)
 
@@ -629,6 +653,7 @@ def test_active_auctions_import_page_latest_and_unknown(tmp_path, monkeypatch, d
         path = folder / "windows-pc-20261007T004900Z-BrownstoneScan.lua"
     write(path, [r], [bob])
     at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception and not at.error
@@ -665,6 +690,7 @@ def test_professions_import_page_rows_and_unknown(tmp_path, monkeypatch, drop_fo
         path = folder / "windows-pc-20261007T004900Z-BrownstoneScan.lua"
     write(path, [r], [alice, bob])
     at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     next(b for b in at.button if b.label == "Import addon scan").click().run()
     assert not at.exception and not at.error
@@ -700,12 +726,13 @@ def test_simple_import_clean_summary_button_and_collapsed_tables(tmp_path, monke
     r.pop("captured_at_utc")
     write(addon["scan_path"], [r], scans=[scan("clean", finished_now(), [listing(1, 1, 50)])])
     at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not at.exception and not at.warning
     assert any("local file: 1 new scan, 1 character record" in c.value for c in at.caption)
     assert not import_details(at).proto.expanded
     assert not next(e for e in at.expander if e.label == "Imported character data").proto.expanded
-    assert len(import_details(at).dataframe) == len([t for t in at.sidebar.dataframe])
+    assert len(import_details(at).dataframe) == len([t for t in at.main.dataframe])
     assert not import_details(at).button
     assert at.multiselect[0].value == ([str(addon["scan_path"]), str(new)] if drop_folder else ["clean"])
     assert any(b.label == "Import addon scan" for b in at.button)
@@ -721,6 +748,7 @@ def test_simple_import_clean_summary_button_and_collapsed_tables(tmp_path, monke
     assert any("/bscan clear is safe" in c.value for c in at.caption)
     holdings = next(e for e in at.expander if e.label == "Imported character data")
     assert holdings.dataframe and not holdings.proto.expanded
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert sum(c.value.startswith("Nothing new") for c in at.caption) == 1
     assert not any(b.label == "Import addon scan" for b in at.button)
@@ -752,6 +780,7 @@ def test_simple_import_problem_warning_opens_details(tmp_path, monkeypatch, prob
         addon["drop_folder"] = folder
         write_scans(folder / "windows-pc-20261008T130000Z-BrownstoneScan.lua", record)
         at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not at.exception
     if problem in ("read", "parse", "conflict"):
@@ -781,6 +810,7 @@ def test_simple_import_stale_error_shown_once_without_writes(tmp_path, monkeypat
         folder.mkdir()
         addon["drop_folder"] = folder
         at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     addon["scan_path"].write_bytes(addon["scan_path"].read_bytes() + b"\n")
     next(b for b in at.button if b.label == "Import addon scan").click().run()
@@ -800,6 +830,7 @@ def test_simple_import_quiet_empty_local_and_machine_cleanup(tmp_path, monkeypat
                        scan("win", finished_now(), [listing(1, 1, 50)]))
     raw = drop.read_bytes()
     at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert any("Local scan_path file has no scans" in c.value for c in at.caption)
     assert all("preview.lua" not in w.value for w in at.warning)
@@ -848,6 +879,7 @@ def test_simple_drop_problems_name_file_and_preserve_good_import(tmp_path, monke
         write(bad, [r])
     raw = bad.read_bytes()
     at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert import_details(at).proto.expanded
     expected = {"read": "still syncing", "parse": "not fully imported", "conflict": "conflict",
@@ -869,6 +901,7 @@ def test_simple_import_details_stay_open_after_selection_restored(tmp_path, monk
         folder.mkdir()
         addon["drop_folder"] = folder
         at.run()
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     default = at.multiselect[0].value
     assert not import_details(at).proto.expanded
@@ -876,5 +909,6 @@ def test_simple_import_details_stay_open_after_selection_restored(tmp_path, monk
     assert import_details(at).proto.expanded
     at.multiselect[0].set_value(default).run()
     assert not at.warning and import_details(at).proto.expanded
+    navigate(at, 'Data')
     next(b for b in at.button if b.label == "Preview addon scans").click().run()
     assert not import_details(at).proto.expanded

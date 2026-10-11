@@ -4,6 +4,7 @@ from pathlib import Path
 import duckdb
 import pytest
 from conftest import make_source
+from navigation_helpers import navigate
 from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
 
 from brownstone import recipe_catalogs as rc
@@ -119,7 +120,7 @@ def app_for(config, monkeypatch):
     from streamlit.testing.v1 import AppTest
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [config])
     at = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py")).run()
-    at.radio[0].set_value("Scan changes").run()
+    navigate(at, "Scan changes")
     assert not at.exception
     return at
 

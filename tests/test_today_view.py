@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from conftest import make_source
+from navigation_helpers import navigate
 from test_today import catalog
 
 from brownstone.pipeline import run
@@ -41,7 +42,7 @@ def widget(widgets, label):
 
 def test_today_default_settings_save_rejection_and_new_session(tmp_path, monkeypatch):
     at, _, path = app(tmp_path, monkeypatch)
-    assert not at.exception and at.radio[0].value == 'Today'
+    assert not at.exception and next(w for w in at.radio if w.label == "View").value == 'Today'
     assert any('not available for this source' in i.value for i in at.info)
     assert [tab.label for tab in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor', 'Queue']
     settings = next(e for e in at.expander if e.label == 'Today settings')
@@ -199,7 +200,7 @@ def test_crafting_groups_unsupported_recipes_and_explanations(tmp_path, monkeypa
     unsupported['recipes'] = list(unsupported['recipes_by_id'].values())
     entries = [{'name': name, 'catalog': deepcopy(unsupported)} for name in ['one', 'two', 'three']]
     monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs', lambda *args: entries)
-    at.radio[0].set_value('Crafting').run()
+    navigate(at, 'Crafting')
     assert not at.exception
     errors = next(e for e in at.expander if e.label == '3 recipes could not be evaluated')
     assert not errors.proto.expanded

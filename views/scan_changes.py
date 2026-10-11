@@ -6,12 +6,14 @@ from brownstone.config import ADDON_PROVIDER
 from brownstone.money import GOLD_TABLE_FORMAT, to_gold
 from brownstone.scan_changes import METRICS, compare_scans, eligible_scans
 from views.common import read_db, show_context, show_freshness
+from views.navigation import QUESTIONS
 
 LABELS = {"min_buyout": "Min buyout", "market_value": "Market value", "listings": "Listings", "units": "Units"}
 
 
 def render(config, catalogs):
     st.subheader("Scan changes")
+    st.caption(QUESTIONS["Scan changes"])
     show_context(config)
     if config["provider"] != ADDON_PROVIDER:
         st.info("Scan changes requires an addon source. TSM snapshots have no addon scans to compare.")

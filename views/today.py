@@ -12,6 +12,7 @@ from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_data import read_today_evidence
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
+from views.navigation import QUESTIONS
 from views.watchlist import render_hits
 
 
@@ -68,7 +69,8 @@ def _settings_form(config, path, saved, summary, character_data, selected):
 
 
 def render(config, catalogs):
-    st.subheader("Today")
+    st.subheader("Today plan")
+    st.caption(QUESTIONS["Today plan"])
     show_context(config)
     try:
         character_data = professions.latest_data(config)
