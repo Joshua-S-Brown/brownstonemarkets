@@ -26,7 +26,8 @@ def _character_columns(row):
     if row["craft_status"] == "Train now":
         cost = row["training_cost_copper"]
         learning = "Training: " + (format_money(cost) if cost is not None else "cost unknown")
-    return {"Can make": row["craft_status"], "Learning": learning}
+    team = {"Who can make it": ", ".join(row.get("who_can_make_it", [])) or "unknown"} if row.get("team") else {}
+    return team | {"Can make": row["craft_status"], "Learning": learning}
 
 
 def sell_row(row):

@@ -4,9 +4,52 @@ from collections import Counter
 from .professions import _first, _order
 from .scans import _list
 
+# Evidence: requirements.md → Character eligibility → Profession skill-line IDs.
+PROFESSION_SKILL_IDS = {
+    "alchemy": 171, "blacksmithing": 164, "cooking": 185, "enchanting": 333,
+    "engineering": 202, "first-aid": 129, "leatherworking": 165, "mining": 186, "tailoring": 197,
+}
+NO_CHARACTER_EVIDENCE = "No character evidence exists for this source; showing every catalog recipe."
+
+
+def _complete_skills(api: dict, modern: bool) -> bool:
+    if api.get("possibly_incomplete"):
+        return False
+    rows = _list(api.get("rows"), "skill rows")
+    if modern:
+        if not _complete_indexes(api, rows):
+            return False
+    else:
+        count = _first(api.get("counts"))
+        if type(count) is not int or count < 0 or len(rows) != count:
+            return False
+    return all(r.get("is_header") in (True, 1) or
+               (type(r.get("skill_id")) is int and r["skill_id"] > 0) for r in rows)
+
+
+def _complete_indexes(api: dict, rows: list) -> bool:
+    indexes = api.get("indexes") or {}
+    if not isinstance(indexes, dict) or type(indexes.get("n")) is not int or indexes["n"] < 0:
+        return False
+    values = [indexes.get(str(i), indexes.get(i)) for i in range(1, indexes["n"] + 1)]
+    if any(v is not None and (type(v) is not int or v <= 0) for v in values):
+        return False
+    expected = [int(v) for v in values if v is not None]
+    return sorted(r.get("index", -1) for r in rows) == sorted(expected)
+
+
+def _lacks_profession(recipe: dict, state: dict) -> bool:
+    skill_id = PROFESSION_SKILL_IDS.get(recipe.get("profession", ""))
+    if skill_id is None:
+        return False
+    surfaces = state.get("bags", {}).get("skills") or {}
+    complete = [api for name, api in surfaces.items() if _complete_skills(api, name == "modern")]
+    return bool(complete) and all(row.get("skill_id") != skill_id for api in complete
+                                  for row in _list(api.get("rows"), "skill rows"))
+
 
 def available_characters(data: dict) -> list[tuple]:
-    return sorted(key for key, state in data.items() if state["recipes"] or any(state.get("seen", {}).values()))
+    return sorted(data)
 
 
 def resolve_character(character: tuple | None, data: dict) -> tuple | None:
@@ -42,8 +85,12 @@ def _rank(state: dict, record: dict) -> int | None:
 
 
 def recipe_status(recipe: dict, state: dict) -> dict:
-    """Positive observed knowledge wins; missing/incomplete evidence never excludes a craft."""
+    """Resolve one status from exact recipe IDs and complete skill-ID evidence."""
     record, row = _match(state, recipe["recipe_id"])
+    # A window list newer than the skills snapshot (profession learned since) outranks its absence.
+    if _lacks_profession(recipe, state) and (not row or _order(state.get("bags", {})) > _order(record)):
+        return {"craft_status": "Not yet", "character_reason": "no character has this profession",
+                "training_cost_copper": None}
     if row.get("learned") is True or any(recipe["recipe_id"] in ids for ids in state.get("seen", {}).values()):
         return {"craft_status": "Known", "character_reason": "", "training_cost_copper": None}
     surface = record.get("known_recipes", {})
@@ -107,7 +154,19 @@ def catalog_check(recipe: dict, row: dict) -> list[str]:
     return reasons
 
 
-def project_recipes(catalogs: list, data: dict, character: tuple | None) -> dict:
+def _team_status(statuses: list[dict]) -> dict:
+    if any(s["craft_status"] in ("Known", "Train now") for s in statuses):
+        return {}
+    unknown = any(s["craft_status"] == "Unknown" for s in statuses)
+    reason = "unknown for every character" if unknown else next(
+        reason for reason in ("rank below required skill", "needs pattern or other source",
+                               "no character has this profession")
+         if any(s["character_reason"] == reason for s in statuses))
+    return {"craft_status": "Unknown" if unknown else "Not yet", "character_reason": reason,
+            "training_cost_copper": None}
+
+
+def project_recipes(catalogs: list, data: dict, character: tuple | None, include_unknown: bool = False) -> dict:
     """Catalog-scoped statuses and diagnostics, independent of prices or batch sizing."""
     selected = resolve_character(character, data)
     characters = available_characters(data)
@@ -115,16 +174,20 @@ def project_recipes(catalogs: list, data: dict, character: tuple | None) -> dict
     for catalog in catalogs:
         for recipe in catalog["recipes_by_id"].values():
             key = (catalog["catalog_id"], recipe["recipe_id"])
-            statuses[key] = (recipe_status(recipe, data[selected]) if selected else {}) | {
-                "who_can_make_it": [c[0] for c in characters
-                                    if recipe_status(recipe, data[c])["craft_status"] in ("Known", "Train now")]}
+            evidence = {c: recipe_status(recipe, data[c]) for c in characters}
+            status = evidence[selected] if selected else (_team_status(list(evidence.values())) if evidence else {})
+            statuses[key] = status | {"who_can_make_it": [c[0] for c, s in evidence.items()
+                                                        if s["craft_status"] in ("Known", "Train now")],
+                                      "team": selected is None}
             for c in ([selected] if selected else characters):
                 _, row = _match(data[c], recipe["recipe_id"])
                 reasons = catalog_check(recipe, row) if row else []
                 if reasons:
                     checks.append({"Character": c[0], "Catalog": catalog["catalog_id"],
                                    "Recipe": recipe["recipe_id"], "Check": "; ".join(reasons)})
-    return {"character": selected, "statuses": statuses, "catalog_checks": checks}
+    return {"character": selected, "statuses": statuses, "catalog_checks": checks,
+            "include_unknown": include_unknown,
+            "character_note": "" if characters else NO_CHARACTER_EVIDENCE}
 
 
 def filter_candidates(rows: list, projection: dict) -> tuple[list, Counter]:
@@ -132,7 +195,8 @@ def filter_candidates(rows: list, projection: dict) -> tuple[list, Counter]:
     hidden: Counter[str] = Counter()
     for row in rows:
         status = projection["statuses"].get((row["catalog_id"], row["recipe_id"]), {})
-        if status.get("craft_status") == "Not yet":
+        if status.get("craft_status") == "Not yet" or (
+                status.get("craft_status") == "Unknown" and not projection["include_unknown"]):
             hidden[status["character_reason"]] += 1
         else:
             kept.append(row | status)

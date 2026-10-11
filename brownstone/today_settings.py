@@ -14,8 +14,11 @@ class TodaySettings:
     character: tuple[str, str, str] | None = None
 
     gold_override: bool = False
+    include_unknown: bool = False
 
     def __post_init__(self):
+        if type(self.include_unknown) is not bool:
+            raise ValueError("Include unknown recipes must be a boolean")
         if type(self.gold_override) is not bool:
             raise ValueError("Gold override must be a boolean")
         if self.character is not None:

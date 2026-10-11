@@ -95,7 +95,7 @@ def test_training_cost_display_not_subtracted_and_unknown_cost():
 def test_filter_before_plan_reservations_and_queue_unknown_kept():
     c = catalog()
     c["recipes_by_id"][30].update(learned_from=[6], required_skill=9)
-    settings = TodaySettings(10000, 1, "fixed", character=CHARACTER)
+    settings = TodaySettings(10000, 1, "fixed", character=CHARACTER, include_unknown=True)
     result = plan(settings, catalogs=[c], character_data={CHARACTER: state()})
     assert not result["craft"] and not result["queue"]["lines"] and not result["buy"]
     assert result["hidden"]["rank below required skill"] == 1
@@ -123,7 +123,7 @@ def test_who_can_make_it_and_missing_character_fallback():
     projection = project_recipes([c], data, None)
     assert projection["statuses"][("fixture", 30)]["who_can_make_it"] == ["Basilly", "Other"]
     assert resolve_character(("Gone", "Beta", "Alliance"), data) is None
-    assert len(available_characters(data)) == 2
+    assert len(available_characters(data)) == 3
     result = plan(catalogs=[c], character_data=data)
     assert _character_columns(result["craft"][0])["Who can make it"] == "Basilly, Other"
 
@@ -166,7 +166,7 @@ def test_settings_round_trip_old_files_invalid_identity(tmp_path):
 def test_shared_projection_scopes_source_and_market(tmp_path):
     config = fixture(tmp_path)
     data = latest_data(config)
-    assert available_characters(data) == [("Alice", "Beta", "Alliance")]
+    assert available_characters(data) == [("Alice", "Beta", "Alliance"), ("Bob", "Beta", "Alliance")]
     assert not available_characters(latest_data(config | {"source_id": "other"}))
     assert not available_characters(latest_data(config | {"realm": "other"}))
 

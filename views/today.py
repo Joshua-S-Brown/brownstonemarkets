@@ -29,7 +29,7 @@ def _settings(config, character_data):
         unreadable = True
     selected = resolve_character(saved.character, character_data)
     if saved.character is not None and selected is None:
-        st.caption("Saved character is no longer present in this source and market; showing All recipes.")
+        st.caption("Saved character is no longer present in this source and market; showing Our team.")
     summary = st.empty()
     funds = resolve_funds(saved, character_data, datetime.now(UTC), config["max_age_hours"])
     with st.expander("Today settings", expanded=unreadable or funds.settings.gold_copper == 0):
@@ -41,7 +41,8 @@ def _settings_form(config, path, saved, summary, character_data, selected):
     with st.form(f"today-settings-{config['source_id']}"):
         options = [None, *available_characters(character_data)]
         character = st.selectbox("Character", options, index=options.index(selected),
-                                 format_func=lambda c: "All recipes" if c is None else " · ".join(c))
+                                 format_func=lambda c: "Our team" if c is None else " · ".join(c))
+        unknown = st.toggle("Include unknown recipes", value=saved.include_unknown)
         override = st.toggle("Enter an amount instead", value=saved.gold_override,
                              key=f"today-gold-override-{config['source_id']}")
         gold = st.text_input("Gold available", value=format_money(saved.gold_copper))
@@ -54,7 +55,7 @@ def _settings_form(config, path, saved, summary, character_data, selected):
     if submitted:
         try:
             entered = TodaySettings(parse_money(gold), parse_money(minimum), mode, round(percent * 100),
-                                    int(crafts), character, override)
+                                    int(crafts), character, override, unknown)
             save_settings(path, entered)
         except (ValueError, OSError) as error:
             st.error(f"Settings not saved: {str(error).rstrip('.')}. "
@@ -114,7 +115,7 @@ def _table(rows, rest, decisions, key, *, selection_key=None, rest_text="more ro
         columns = [*decisions, "State"]
         if evidence:
             columns.extend(name for name in rows[0] if name not in columns)
-        displayed = [{name: row[name] for name in columns} for row in rows]
+        displayed = [{name: row.get(name, "") for name in columns} for row in rows]
         gold = [name for name in columns if name.endswith("(g)")]
         options = ({"key": selection_key, "on_select": "rerun", "selection_mode": "single-row"}
                    if selection_key else {})
@@ -132,10 +133,14 @@ def _tables(result, names, *, arguments=None):
     with craft_tab:
         if arguments is not None:
             result = _plan_controls(result, arguments)
+        if result["character_note"]:
+            st.caption(result["character_note"])
         sells = {r["output_item_id"]: r for r in result["sell"]}
         hide_low = st.toggle("Hide Low confidence", key=f"today-hide-low-{result['source_id']}")
         visible, hidden_counts = _filter_confidence(result, hide_low)
         decision_character = ["Can make", "Learning"] if result["character"] else ["Who can make it"]
+        if not result["character"] and any(r.get("craft_status") == "Unknown" for r in visible):
+            decision_character += ["Can make", "Learning"]
         craft = [_craft_row(row, sells[row["output_item_id"]]) for row in visible]
         selected = _table(craft, result["remaining"]["craft"],
                ["Item", "Profession", *decision_character, "Batch", "Limited by", "Material cost (g)",

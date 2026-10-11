@@ -1,4 +1,4 @@
-"""Today v4: transparent batch estimates and one funded, supply-reserved plan.
+"""Today v5: transparent batch estimates and one funded, supply-reserved plan.
 
 Routes remain catalog-local board choices. Prefix ladders price complete stacks in O(log n),
 without expanding units; the clock and all scoped evidence are supplied by the caller.
@@ -14,7 +14,7 @@ from .today_characters import filter_candidates, project_recipes
 from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 
-TODAY_VERSION = 4
+TODAY_VERSION = 5
 ROW_LIMIT = 10
 
 
@@ -300,7 +300,8 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
             raise ValueError(f"The snapshot belongs to a different {key}")
     freshness = assess(snapshot, now, max_age_hours)
     ladders = {i: Ladder(rows) for i, rows in listings.items()} if listings is not None else None
-    projection = project_recipes(compatible_catalogs(catalogs, market), character_data or {}, settings.character)
+    projection = project_recipes(compatible_catalogs(catalogs, market), character_data or {},
+                                 settings.character, settings.include_unknown)
     candidates, hidden = _candidates(catalogs, observations, market, snapshot, now,
                                      max_age_hours, auction_cut, projection)
     dropped, limits = [], {}
@@ -324,7 +325,8 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
                 "scan_id": snapshot.get("scan_id"), "today_version": TODAY_VERSION}
     lists = {"craft": crafts, "buy": shopping, "sell": sells, "below_vendor": vendors}
     return {**{name: [{**row, **evidence} for row in rows[:ROW_LIMIT]] for name, rows in lists.items()},
-            "character": projection["character"], "catalog_checks": projection["catalog_checks"],
+            "character": projection["character"], "character_note": projection["character_note"],
+            "catalog_checks": projection["catalog_checks"],
             "hidden": dict(hidden), "remaining": {**{name: max(0, len(rows) - ROW_LIMIT)
                                                       for name, rows in lists.items()}, "craft": rest},
             "freshness": freshness, "listing_evidence_available": ladders is not None,

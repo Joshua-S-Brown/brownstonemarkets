@@ -35,4 +35,4 @@ def load_today_characters(config):
     try:
         return professions.latest_data(config), None
     except Exception as error:
-        return {}, f"Unable to read character evidence: {error}. Showing All recipes."
+        return {}, f"Unable to read character evidence: {error}. Showing every catalog recipe."

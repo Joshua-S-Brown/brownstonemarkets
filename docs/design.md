@@ -82,7 +82,7 @@ brownstone/             importable without Streamlit
   recipe_catalogs.py    catalogs found by selection file: status, previews and the add/update writes
   selection_files.py    in-place edits of a selection file that keep its comments
   action_board.py       ranking and label policy (versioned)
-  today.py              Today v4 batch sizing, chosen-plan reservation, refill and session queue
+  today.py              Today v5 batch sizing, chosen-plan reservation, refill and session queue
   today_confidence.py   display labels over retained routes, freshness and reserved listing depth
   today_data.py         one scoped read of prices, base/legacy listings, metrics and vendor references
   today_settings.py     validated integer settings and atomic local JSON persistence
@@ -457,14 +457,22 @@ variant state. No schema changes or migrations are needed.
 STORY-043 adds `brownstone/today_characters.py`: `project_recipes` consumes compatible parsed
 catalogs and the shared `professions.latest_data` result, returning recipe/catalog-keyed statuses,
 resolved character identity and catalog comparison diagnostics. `filter_candidates` runs before
-Today sizing/reservations; it attaches status/training cost or All recipes character names and counts
+Today sizing/reservations; it attaches status/training cost or team character names and counts
 excluded reasons. The module matches recipe IDs only and reads newer bags rank by skill ID from raw
 window profession provenance. No database reader, schema migration or catalog mutation is added.
 `TodaySettings.character` is nullable `(name, realm, faction)`; JSON lists normalize to tuples and
 older files default to None. The shared loader supplies scoped character data; `views/today.py` saves the selector with
 the existing form, displays eligibility/cost or Who can make it, and renders collapsed catalog checks.
 Session context includes character evidence so changed evidence resets choices and Queue ticks.
-Rules/status precedence live only in `requirements.md` → Today v4.
+Rules/status precedence live only in `requirements.md` → Today.
+
+STORY-057 extends that same projection with complete bags skill surfaces and the documented
+profession-to-skill-ID map. Bags-only characters are selectable. Team statuses aggregate the same
+`recipe_status` results, and `filter_candidates` excludes Unknown unless `TodaySettings.include_unknown`
+is enabled. The projection supplies the no-character notice to both apps; the result retains it as
+`character_note`. Unknown team rows retain their mark and Who can make it column. Both settings forms
+persist the flag in the existing atomic file. Today version is 5; no pricing, storage or schema change.
+Rules and source evidence live in `requirements.md` → *Character eligibility*.
 
 STORY-056 adds `brownstone/today_funds.py`: `resolve_funds` consumes that scoped projection,
 preferences, clock and scan stale window, returning effective settings plus a shared summary and

@@ -47,36 +47,28 @@ _Last updated 2026-10-11._
   Summary shows capture provenance, stale age, pooled-funds mailing notice or missing-gold fallback.
   Rules: `requirements.md` → *Opening and settings*; contracts: `design.md` → *Today contracts*.
   Offline tests: `tests/test_today_funds.py` and `tests/ui_trial/test_nicegui_today.py`.
-  Forever beta check on `work/story056/data` copied from `data/`, source resolved through
-  `config/market.local.toml`: both rendered pages match the shared plan with Basilly chosen.
-  Summary: **2s 55c**, captured **2026-10-11 10:57 UTC**, minimum gain 10s, cap 5; the old entered
-  25g remains saved but unused. Two crafts (Spotted Yellowtail ×5, Rough Dynamite ×3), three Buy
-  rows, two Sell rows, no Below vendor hits; shopping **1s 91c**, within the **255c** balance.
-  Both crafts remain **Unknown** under the existing eligibility rule (STORY-057 is separate).
-  Local check output: `work/story056/realcheck.json`; original data/configuration were untouched.
-- **Today character crafts (STORY-043, implemented 2026-10-10; pending review):** Today v4 adds
-  the source/market-scoped character selector in the Save-only settings form, eligibility and learning
-  columns, All recipes' Who can make it, and collapsed catalog checks. It consumes the same
-  `professions.latest_data` as Characters; session choices reset when character evidence changes.
-  Older settings still load. Rules: `requirements.md` → Today; contracts: `design.md` → Today contracts.
-  Offline coverage is in `tests/test_today_characters.py`, with existing Today/Queue/UI regressions.
-  **Forever beta check (2026-10-10):** used the source resolved with `config/market.local.toml` and
-  copied `data/` to ignored `work/story-043/data`; all settings/preview writes stayed in that copy.
-  Basilly's latest Tailoring list is **8/75**. The projection marks all six listed learned catalog IDs
-  **Known**: 2963, 3755, 2387, 12044, 3915 and 2393. Across 1,930 compatible catalog recipes it reports
-  6 Known, 349 Not yet, 1,575 Unknown and **no catalog check differences**. Five of the Not yet
-  recipes are intermediate outputs, outside the existing finished-output board; Craft's hidden reasons
-  therefore count **343 rank below required skill** and **1 needs pattern or other source**.
-  There are **no unlearned trainer recipes at rank ≤8** in this evidence: the lowest such recipe needs
-  rank 10. White Linen Shirt is trainer / 25c / required skill 1, already Known. Train now with known
-  and unknown costs is verified offline, not claimed as a beta page observation.
-  With copied settings **25g / scaled 1% with 10s floor / cap 5**, the funded Craft page shows ten
-  **Unknown / recipe not listed** rows (top: Mithril Shield Spike, Bronze Dory, Azure Gustwoven Hood);
-  unopened professions stay visible as required. The six Known recipes don't enter that funded top ten
-  under existing price/profit rules. Scan **20261010T112018Z-54369e** is fresh at the check; missing prices,
-  unsupported routes and insufficient funds retain their existing reasons. The browser renders Basilly
-  chosen, v4 provenance, the Craft statuses and the collapsed checks; local screenshots and the plain
-  calculation report are under `work/story-043/`.
+  Current Forever beta page verification is recorded under STORY-057 below.
+
+- **Today team crafts (STORY-043/057, implemented; pending review):** Today v5 uses the shared
+  source/full-market profession projection for character eligibility in both apps. The selector includes
+  bags-only characters, and both apps show the same excluded-reason counts and evidence notice.
+  Session choices reset when character evidence changes. Rules and skill-ID source evidence:
+  `requirements.md` → *Character eligibility*; contracts: `design.md` → *Today contracts*.
+  Offline checks: `tests/test_today_team.py`, `tests/test_today_characters.py`,
+  `tests/ui_trial/test_nicegui_today.py`, plus existing Today/Queue/funds regressions.
+  **Forever beta check (2026-10-11):** source resolved through `config/market.local.toml`; a complete
+  temporary copy of `data/` isolates app initialization and all potential writes. Streamlit AppTest and
+  the live NiceGUI browser page both render **Our team**, Include unknown recipes off, and funds
+  **3s 96c across 3 characters**, minimum gain **10s**, cap **5**. Both show **no crafts**:
+  six known Tailoring recipes for Basilly (rank 8) and Smelt Copper for Keenagen (rank 3) are the
+  eligible set; none clears current price/gain checks. No unlearned trainer recipe qualifies at these
+  ranks. Cicelyna's complete empty profession list contributes no eligible recipe. The plan is empty,
+  which is the honest answer for this team and these settings.
+  Hidden counts match: **1,427 no character has this profession**, **351 rank below required skill**,
+  **1 needs pattern or other source**, **60 unknown for every character**, **1 missing prices** and
+  **4 below minimum gain**. Shopping is **0c**, with no Buy/Sell/Below vendor rows. Scan
+  `20261011T105714Z-cf2f26` is fresh; older Cicelyna/Keenagen gold captures retain stale age labels.
+  No catalog check differences. The original data, saved settings and configuration are untouched.
 
 - **Today confidence (STORY-046, implemented and reviewed 2026-10-08):** The confidence pass labels Craft rows
   High/Medium/Low with visible reasons, carried to Sell and Queue (including merged purchases).

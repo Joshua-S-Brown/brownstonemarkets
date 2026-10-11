@@ -553,7 +553,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   and after a successful addon import, and is absent when there are no hits. It changes neither
   Today's numbers/ranking nor the import.
 
-### Today (today_version 4, STORY-025/039/043/046; STORY-039 reviewed 2026-10-08)
+### Today (today_version 5, STORY-025/039/043/046/057; STORY-039 reviewed 2026-10-08)
 
 - **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
   source during the session. Each source has its own ignored preferences file,
@@ -565,48 +565,81 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   **Gold available (STORY-056):** recorded gold is the default, including older settings files with
   a typed amount. For a chosen character, use `gold_copper` from its newest readable bags snapshot
   in the selected source and full market, labelled with the character and UTC capture time. With
-  All recipes, sum each scoped character's newest captured gold and label *across N characters;
+  Our team, sum each scoped character's newest captured gold and label *across N characters;
   gold must be mailed to the crafter*. Characters with missing gold are excluded with a note. A saved
-  character no longer in this source and market plans as All recipes, so its funds are the All recipes total.
+  character no longer in this source and market plans as Our team, so its funds are the team total.
   **Enter an amount instead** enables the optional saved override (default off), labelled *entered
   amount*. A chosen character without captured gold (or no captured gold across the source) falls
   back to the entered amount with a one-line note; missing/unreadable gold never becomes a known
   zero or another character's gold. A zero capture is not known funds. Captures older
   than the scan's stale window remain usable but display their age and stale label. The entered
   amount starts at **0c**. Funds resolution changes no ranking, sizing or reservation rule, and
-  `today_version` stays 4. Explicit integer `g/s/c`
+  STORY-056 did not change `today_version`; STORY-057 advances it to 5. Explicit integer `g/s/c`
   text is required (case-insensitive, optional spaces, each unit at most once; properly grouped thousands
   commas accepted). Bare numbers get a units hint. The parser round-trips signed money display; settings
   reject negative amounts. Minimum mode starts **scaled**, **1%** (**100 basis points**) with a **10s**
   floor. Fixed mode uses only the fixed minimum. Scaled mode is `max(fixed, ceil(gold * basis_points / 10000))`.
   Percentage is adjustable from **0 to 100%** in hundredths; most crafts per item starts at **5**, adjustable
   from **1 to 1,000** (bounded to keep interactive calculations predictable). All amounts are integer copper.
-- **Character eligibility (STORY-043, v4):** the Save-only settings form offers **All recipes**
-  (default) and characters with window-list or seen-crafted evidence in the selected source and full
-  market. Persist name, realm and faction per source; older settings mean All recipes. A missing saved
-  character falls back to All recipes with a caption, without rewriting settings.
+- **Character eligibility (STORY-043/057, v5):** the Save-only settings form offers **Our team**
+  (default) and all characters with snapshot or profession evidence in the selected source and full
+  market. Persist name, realm and faction per source; older settings mean Our team. A missing saved
+  character falls back to Our team with a caption, without rewriting settings.
   Match catalog `recipe_id` to window rows and seen-crafted IDs **only by recipe ID** (the spell ID
   confirmed in STORY-049); never match names, profession titles or output items. Use the latest list
   containing the ID (capture time, then sequence). Rank comes from that list, or a newer readable bags
   snapshot for the same skill ID. Evidence comes from the shared `professions.latest_data` projection.
-  - **Known:** explicit `learned == true` or seen crafted. Positive knowledge remains evidence even
-    when a window list is possibly incomplete.
-  - **Unknown**, retained and marked: no matching ID, a possibly incomplete list without positive
-    knowledge, an absent learned flag, or an unlearned recipe with missing learning source. Missing rank
-    also leaves trainer eligibility unknown. Unknown never counts as known and is never hidden by
-    character eligibility; Hide Low confidence and price/funds feasibility rules still apply.
+  - **No profession (STORY-057):** a complete readable skill
+    surface in the newest readable bags snapshot that lacks the catalog's profession skill-line ID
+    proves **Not yet: no character has this profession**. Missing/unreadable lists or unmapped
+    catalog professions stay Unknown. Legacy counts must match readable rows, with no collapsed or
+    unreadable headers (`possibly_incomplete`); modern rows must cover every reported non-nil
+    profession index. Non-header rows need reported skill IDs. Names never establish a match.
+  - **Known:** explicit `learned == true` or seen crafted, unless complete skill evidence proves
+    no profession as above and that bags snapshot is newer than the matching window list (a list
+    captured after it, such as a profession learned since, wins). Positive knowledge remains evidence even when a window list is
+    possibly incomplete.
+  - **Unknown:** no matching ID, a possibly incomplete list without positive knowledge, an absent
+    learned flag, or an unlearned recipe with missing learning source. Missing rank also leaves trainer
+    eligibility unknown. Unknown never counts as known. It is excluded by default; the saved
+    **Include unknown recipes** switch (default off, including older settings files) retains it with
+    its mark. Hide Low confidence and price/funds feasibility rules still apply.
   - **Train now:** explicitly unlearned, complete list evidence, source includes **6** (trainer;
     CRAFT-08's source-code evidence table), rank at least `required_skill`. Other source codes alongside
     6 do not prevent training. Show training cost through `money.py`, or **cost unknown**, beside batch
     profit; never subtract it from profit or reserve it from the craft budget.
-  - **Not yet:** explicitly unlearned with sufficient learning evidence, rank below required skill
-    (**rank below required skill**) or source codes without 6 (**needs pattern or other source**,
-    including unverified codes). Hide before sizing/reservations and count by kind under Craft.
-  All recipes keeps existing eligibility and adds **Who can make it**, listing names whose status is
-  Known or Train now. Ranking, sizing, route choice and reservations within the filtered set remain
-  unchanged; the Queue uses that set. Catalog checks under Craft compare matched output item, yield
-  bounds and required reagent IDs/counts against the catalog. Optional, multi-choice or variable reagent
-  slots are **not compared**. Checks are collapsed and never change catalog values (CRAFT-08).
+  - **Not yet:** no profession as above, or explicitly unlearned with sufficient learning evidence,
+    rank below required skill (**rank below required skill**) or source codes without 6
+    (**needs pattern or other source**, including unverified codes). Never planned on Today, even
+    with Include unknown recipes; STORY-052's progression is where it belongs.
+  Our team plans the union of Known or Train now recipes and **Who can make it** names those
+  characters. If nobody qualifies, an Unknown status keeps the recipe unknown for the team;
+  otherwise it is Not yet. Count excluded recipes once by reason under Craft: no character has this
+  profession, rank below required skill, needs pattern or other source, or unknown for every character.
+  When characters have different Not yet reasons, use rank, then pattern, then no profession (the
+  closest available learning evidence). With no character evidence at all, retain every catalog recipe
+  and state that no character evidence exists for this source.
+  Ranking, sizing, route choice and reservations within the filtered set remain unchanged; the Queue
+  uses that set. Catalog checks under Craft compare matched output item, yield bounds and required
+  reagent IDs/counts against the catalog. Optional, multi-choice or variable reagent slots are
+  **not compared**. Checks are collapsed and never change catalog values (CRAFT-08).
+
+  **Profession skill-line IDs (STORY-057):** checked 2026-10-11 against the named Wowhead Classic
+  skill pages below (page identity and `skill` ID; used for the shared Classic/Forever profession IDs).
+  This maps catalog metadata to reported IDs; it never matches client names or changes catalog values.
+
+  | Catalog profession | Skill-line ID | Source evidence |
+  | --- | --- | --- |
+  | alchemy | 171 | [Alchemy](https://www.wowhead.com/classic/skill=171/alchemy) |
+  | blacksmithing | 164 | [Blacksmithing](https://www.wowhead.com/classic/skill=164/blacksmithing) |
+  | cooking | 185 | [Cooking](https://www.wowhead.com/classic/skill=185/cooking) |
+  | enchanting | 333 | [Enchanting](https://www.wowhead.com/classic/skill=333/enchanting) |
+  | engineering | 202 | [Engineering](https://www.wowhead.com/classic/skill=202/engineering) |
+  | first-aid | 129 | [First Aid](https://www.wowhead.com/classic/skill=129/first-aid) |
+  | leatherworking | 165 | [Leatherworking](https://www.wowhead.com/classic/skill=165/leatherworking) |
+  | mining | 186 | [Mining](https://www.wowhead.com/classic/skill=186/mining) |
+  | tailoring | 197 | [Tailoring](https://www.wowhead.com/classic/skill=197/tailoring) |
+
 - **Routes and batch costs:** reuse compatible Action Board catalog-local routes under the cautious
   basis (CRAFT-03/04/05); no cross-profession routing. Routes are selected once from aggregate evidence,
   then held fixed while sizing. Today changes auction purchase costs to the exact listing ladder, ordered

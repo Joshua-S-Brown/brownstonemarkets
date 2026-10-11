@@ -177,3 +177,66 @@ async def test_all_recipes_recorded_total_summary(user, tmp_path, monkeypatch):
     await user.open('/')
     await user.should_see('Gold available: 2s 55c (across 1 characters; gold must be mailed to the crafter)')
     assert load_settings(path).gold_copper == 100000
+
+
+async def test_team_unknown_switch_counts_and_no_evidence_notice(user, tmp_path, monkeypatch):
+    from test_today_characters import CHARACTER
+    from test_today_team import skills_state
+
+    from brownstone.today_characters import NO_CHARACTER_EVIDENCE
+    data = {CHARACTER: skills_state([197])}
+    monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: data)
+    _, _, path = app(tmp_path, monkeypatch)
+    await user.open('/')
+    choices = next(e for e in user.find(ui.select).elements if e.label == 'Character')
+    assert choices.options['0'] == 'Our team'
+    await user.should_see('unknown for every character: 1')
+    assert not next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows
+    user.find('Include unknown recipes').click()
+    user.find('Save Today settings').click()
+    await user.should_see('Today settings saved locally.')
+    assert load_settings(path).include_unknown
+    craft = next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows[0]
+    assert craft['Can make'] == 'Unknown' and craft['Who can make it'] == 'unknown'
+    data.clear()
+    await user.open('/')
+    await user.should_see(NO_CHARACTER_EVIDENCE)
+
+
+async def test_team_only_plans_capable_names(user, tmp_path, monkeypatch):
+    from test_today_characters import CHARACTER, state
+    from test_today_team import skills_state
+    data = {CHARACTER: state(learned=True), ('Other', 'Beta', 'Alliance'): skills_state()}
+    monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: data)
+    app(tmp_path, monkeypatch)
+    await user.open('/')
+    craft = next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows[0]
+    assert craft['Who can make it'] == 'Basilly'
+
+
+async def test_mixed_team_keeps_unknown_column_after_known_row(user, tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    from test_today import output_catalog
+    from test_today_characters import CHARACTER, state
+
+    from brownstone.pipeline import run
+    from brownstone.today_settings import save_settings
+    monkeypatch.setattr('brownstone.today_loading.professions.latest_data',
+                        lambda config: {CHARACTER: state(learned=True)})
+    first, unknown = catalog(), output_catalog(4, 'unknown')
+    unknown['recipes_by_id'][31] = unknown['recipes_by_id'].pop(30) | {'recipe_id': 31}
+    unknown['recipe_for_output'][4] = 31
+    unknown['recipes'][0]['recipe_id'] = 31
+    _, source, path = app(tmp_path, monkeypatch)
+    csv = tmp_path / 'mixed.csv'
+    csv.write_text('itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n'
+                   '1,Material,20,10,0,0,\n3,Known,2000,2000,0,0,\n4,Unknown,2000,2000,0,0,\n')
+    run(source, csv)
+    monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs', lambda *args: [
+        {'name': c['catalog_id'], 'catalog': c} for c in (first, unknown)])
+    save_settings(path, replace(load_settings(path), include_unknown=True))
+    await user.open('/')
+    craft = next(t for t in user.find(ui.table).elements if 'Craft' in t._markers)
+    assert any(r.get('Can make') == 'Unknown' for r in craft.rows)
+    assert any(c['name'] == 'Can make' for c in craft.columns)

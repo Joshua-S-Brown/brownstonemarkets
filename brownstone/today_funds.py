@@ -38,7 +38,7 @@ def resolve_funds(settings: TodaySettings, data: dict, now: datetime, max_age_ho
     """
     if settings.gold_override:
         return TodayFunds(settings, "entered amount")
-    # A saved character missing from this source and market plans as All recipes, so funds follow.
+    # A saved character missing from this source and market plans as Our team, so funds follow.
     selected = settings.character if settings.character in data else None
     characters = [selected] if selected is not None else sorted(data)
     captures = []

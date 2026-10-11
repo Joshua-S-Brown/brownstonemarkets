@@ -333,7 +333,8 @@ def test_sidebar_experience_resolves_source_and_market_on_every_market_page(tmp_
     addon.update(enabled=True, data_dir=tmp_path / "forever",
                  scan_path=forever_scan_file(tmp_path, finished_now()), scan_evidence={"faction": "Alliance"})
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [classic, addon])
-    at = AppTest.from_file(str(ROOT / "app.py")).run()
+    # Full catalog pages can exceed Streamlit's 3-second default under coverage.
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=10).run()
     experience = next(w for w in at.selectbox if w.label == "Experience")
     assert experience.options == ["WoW Forever", "Classic Era"]
     experience.set_value("forever").run()

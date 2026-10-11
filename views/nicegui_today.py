@@ -19,7 +19,7 @@ TABS = ['Craft', 'Buy', 'Sell', 'Below vendor']
 
 def table(rows, *, label, row_key='id'):
     rows = [{**row, 'id': i} for i, row in enumerate(rows)]
-    keys = [key for key in rows[0] if key != 'id'] if rows else []
+    keys = list(dict.fromkeys(key for row in rows for key in row if key != 'id'))
     decisions = {
         'Craft': ['Item', 'State', 'Can make', 'Who can make it', 'Batch', 'Material cost (g)',
                   'Batch profit (g)', 'Profit per craft (g)', 'Confidence'],
@@ -132,14 +132,15 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
     identities = [None, *available_characters(character_data)]
     selected = resolve_character(saved.character, character_data)
     if saved.character is not None and selected is None:
-        ui.label('Saved character is no longer present in this source and market; showing All recipes.')
+        ui.label('Saved character is no longer present in this source and market; showing Our team.')
     funds = resolve_funds(saved, character_data, datetime.now(UTC), config['max_age_hours'])
     with ui.expansion('Today settings', value=unreadable or funds.settings.gold_copper == 0).classes('w-full'):
         ui.label('One funded plan · whole auction stacks are bought; surplus is shown · sales speed is unknown')
         with ui.row():
-            character = ui.select({str(i): 'All recipes' if c is None else ' · '.join(c)
+            character = ui.select({str(i): 'Our team' if c is None else ' · '.join(c)
                                    for i, c in enumerate(identities)}, value=str(identities.index(selected)),
                                   label='Character')
+            unknown = ui.switch('Include unknown recipes', value=saved.include_unknown)
             override = ui.switch('Enter an amount instead', value=saved.gold_override)
             gold = ui.input('Gold available', value=format_money(saved.gold_copper))
             mode = ui.select(['scaled', 'fixed'], value=saved.mode, label='Minimum gain mode')
@@ -156,7 +157,7 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
                     raise ValueError('Most crafts per item must be an integer')
                 entered = TodaySettings(parse_money(gold.value), parse_money(minimum.value), mode.value,
                                         round(float(percent.value) * 100), int(count),
-                                        identities[int(character.value)], override.value)
+                                        identities[int(character.value)], override.value, unknown.value)
                 save_settings(settings_path(config['data_dir'], config['source_id']), entered)
             except (ValueError, TypeError, OSError) as error:
                 message.set_text(f'Settings not saved: {error}. Tables still use the last saved settings.')
@@ -177,6 +178,8 @@ def plan_tables(result, names, active_tab, config):
         'game': config['game_version'], 'source': config['source_id'], 'tab': e.value})))
     with ui.tab_panels(tabs, value=active_tab).classes('w-full'):
         with ui.tab_panel('Craft'):
+            if result['character_note']:
+                ui.label(result['character_note'])
             widget = table(crafts, label='Craft')
             widget.on('rowClick', lambda e: details_dialog(result['craft'][e.args[1]['id']]))
             ui.label(f"{result['remaining']['craft']} more rows outside this list's 10-row limit.")
