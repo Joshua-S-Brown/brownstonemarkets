@@ -61,7 +61,10 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 13. STORY-048 watchlist with target prices (Brownstone; small; implemented and reviewed 2026-10-11)
 14. STORY-043 Today: what each character can make (Brownstone; implemented and reviewed 2026-10-10)
 15. STORY-053 three questions: Today, Team, Market (Brownstone; small, display only; implemented and reviewed 2026-10-11)
-   - SPIKE-009 Today in NiceGUI, side by side (Brownstone; small, timeboxed; next to hand off). Its decision sets how STORY-054 onwards are built.
+   - SPIKE-009 Today in NiceGUI, side by side (Brownstone; trial implemented and reviewed 2026-10-11; the product owner finds it an improvement, judgement continues with SPIKE-009b)
+   - STORY-056 gold available from the chosen character (Brownstone; small; next to hand off)
+   - STORY-057 Today shows only what our team can make (Brownstone; small; follows STORY-056)
+   - SPIKE-009b the interactive Today in NiceGUI: adjustments, queue and craft cards (Brownstone; follows STORY-057). Its decision sets how STORY-054 onwards are built.
 16. STORY-054 Today as craft cards (Brownstone; medium, display only)
 17. STORY-052 progression planner, on the Team page (Brownstone; medium; refined 2026-10-11)
 18. STORY-055 market brief (Brownstone; medium)
@@ -113,6 +116,8 @@ Acceptance:
 
 ### SPIKE-009 — Today in NiceGUI, side by side
 
+**Trial implemented and reviewed (2026-10-11).** The product owner finds it an improvement; the decision continues with SPIKE-009b. Start and findings: `status.md` → *SPIKE-009 (trial)*.
+
 Added 2026-10-11 (product owner: "Streamlit's been difficult… I want to make sure what's been developed is going to be a better experience"). Brownstone only; a trial, not a migration. The Streamlit app stays the app until the product owner decides.
 
 Question: is NiceGUI a better place than Streamlit for the pages still to come (STORY-054 onwards)? Every calculation already lives in `brownstone/` without Streamlit (`design.md`: dependencies point inward), so a switch would replace only `app.py` and `views/`. This spike rebuilds one page, Today, to decide on evidence instead of opinion.
@@ -126,6 +131,55 @@ Acceptance:
 - **Dependencies:** NiceGUI as a new optional extra in `pyproject.toml`, pinned with its dependencies in `requirements.lock.txt`; a fresh environment installed from the lock file passes `pip check` and every test.
 - **Real-data check:** both apps on a copy of the Forever beta data, with Basilly chosen: the same crafts, numbers and labels in each, with screenshots of both.
 - **Findings in the report:** what was easier or harder than Streamlit (state, layout, tests, test speed), anything NiceGUI couldn't do, and a rough size for migrating the remaining pages. No rule changes in `requirements.md`; a short *SPIKE-009 (trial)* note in `status.md` saying how to start it.
+
+### STORY-056 — Gold available from the chosen character
+
+Added 2026-10-11 (product owner: "it's showing 25g available on Today but I do not have that much"). Brownstone only. Today's *Gold available* is a number typed into settings (`requirements.md` → *Opening and settings*: "Gold starts at 0c, because funds cannot be inferred"). That rule predates STORY-032, which now captures each character's gold. On 2026-10-11 the Forever source's saved setting said 25g (typed on 2026-10-06) while Basilly's latest capture was 2s 55c, so the plan assumed about ten times the real funds.
+
+As the owner, I want Today to size the plan from the gold my chosen character actually has, so that I'm never shown a plan I can't afford.
+
+Acceptance:
+- **With a character chosen,** Gold available defaults to that character's gold from its newest captured snapshot (`gold_copper`) for the selected source and full market. Never another source's or market's character. The settings summary says where it came from and when: *Gold available: 2s 55c (Basilly, captured 2026-10-11 10:57 UTC)*.
+- **Recorded gold is the default everywhere,** including existing settings files: a typed amount saved before this story is not used unless the owner turns the override on. With *All recipes* (no character), Gold available is the total of this source's characters' newest captured gold, labelled *across N characters; gold must be mailed to the crafter*. Decided with the product owner 2026-10-11: "why wouldn't we want Today to know my funds?"
+- **Typing an amount is an optional override** (an *Enter an amount instead* switch in settings), for keeping a reserve or planning ahead. While it is on, the summary says *entered amount* rather than naming a character.
+- **Honest gaps:** a character with no captured gold falls back to the entered amount with a one-line note saying so; never 0 treated as known, never another character's gold. A capture older than the scan's stale window is used but labelled with its age.
+- **One rule for both apps:** the funds resolution is a Streamlit-free function in `brownstone/` (beside `today_characters`), used by the Streamlit Today page and the NiceGUI trial alike. Ranking, sizing and reservations are unchanged given the funds; `today_version` unchanged.
+- **Offline tests:** character gold used; the override; *All recipes* totals this source's characters only; no captured gold falls back with the note; an old settings file with a typed amount now uses recorded gold; another source's character never used; the summary text in both apps.
+- **Real-data check:** Today on the Forever beta source with Basilly chosen shows 2s 55c (or the newest capture) and a plan sized to it.
+- **Docs:** replace the *funds cannot be inferred* sentence in `requirements.md` → *Opening and settings* with the new rule; `design.md`; `status.md`.
+
+### STORY-057 — Today shows only what our team can make
+
+Added 2026-10-11 (product owner: "the recipes, shouldn't they be those that are available to me on one of my characters?"). Brownstone only; changes which rows Today considers, not how they are priced or sized. Revises STORY-043's rule (`requirements.md` → *Character eligibility*) that Unknown is never hidden.
+
+On 2026-10-11 the Forever source's characters had: Basilly Tailoring 8, Keenagen Mining 3, Cicelyna no professions (each from a readable `GetProfessionInfo` skills list in its newest bags snapshot). Yet all ten Today crafts were Blacksmithing, Engineering or Alchemy recipes marked *Unknown*: STORY-043 treats a recipe with no matching list row as Unknown, even when the character's complete profession list shows it doesn't have that profession at all.
+
+As the owner, I want Today to recommend only crafts one of my characters can actually make (or train now), so that the plan is something we can do today.
+
+Acceptance:
+- **No profession is a known fact:** when a character's newest readable skills list is complete (STORY-041/049's completeness rules) and lacks the recipe's profession, that recipe is **Not yet: no character has this profession** for that character, not Unknown. The catalog profession is matched to the skills list by **skill line ID** through a small table recorded with source evidence (Wowhead skill pages, for example 164 Blacksmithing, 197 Tailoring), never by name. A missing or unreadable skills list stays Unknown.
+- **Team is the default:** with no character chosen, Today plans only recipes whose status is Known or Train now for **at least one** character of this source and full market, and *Who can make it* names them. The choice is renamed from *All recipes* to **Our team**; choosing one character works as STORY-043 but with the rule above.
+- **Unknown and Not yet are counted, not planned:** Craft shows how many recipes were left out and why (*no character has this profession*, *rank below required skill*, *needs pattern*, *unknown for every character*) under the existing hidden-reasons line. One switch, **Include unknown recipes**, puts Unknown back into the plan with its mark, for when the addon hasn't captured a list yet. Not yet is never planned on Today (STORY-052's progression is where it belongs).
+- **No characters at all** (a TSM source or no snapshots): Today plans every catalog recipe as now, with one line saying no character evidence exists for this source.
+- **One rule for both apps:** in `brownstone/today_characters.py`; the Streamlit page and the NiceGUI trial both use it. Ranking, sizing and reservations unchanged within the filtered set; new `today_version` 5.
+- **Offline tests:** no-profession becomes Not yet only with a complete list; an unreadable list stays Unknown; the skill-ID table, never names; team union (one character Known, another Not yet → planned, named); the include-unknown switch; counts per reason; the no-character fallback; another source's characters never count.
+- **Real-data check:** Today on the Forever beta source with *Our team*: only Tailoring recipes Basilly knows or can train at rank 8 (and any Mining ones Keenagen can make), with the left-out counts. Say plainly if the plan is short; that is the honest answer for these characters.
+- **Docs:** `requirements.md` → *Character eligibility* (the revised Unknown rule and the team default) and the skill-ID table with its evidence; `design.md`; `status.md`.
+
+### SPIKE-009b — The interactive Today in NiceGUI
+
+Added 2026-10-11 (product owner, after trying SPIKE-009: "it seems a little nicer… I don't see a way for me to set quantities"). Brownstone only; still a trial beside Streamlit, not a migration. Builds on SPIKE-009's `nicegui_app.py` and shared loader.
+
+Question: SPIKE-009 copied Today's tables, so both apps look alike. Is NiceGUI clearly better at what Streamlit does worst: a page you change by clicking (reruns on every click) and a layout that isn't a stack of tables? This round adds the interactive half of Today and a first look at STORY-054's cards, so the owner can decide on a page that is actually used, not one that is only read.
+
+Acceptance:
+- **Plan adjustments (STORY-039's rules, unchanged):** each craft row gets a tick and a batch size bounded by `choice_limits`, plus the *Refill freed gold* switch and *Hide Low confidence*, as in Streamlit. A change rebuilds the plan through `build_today(..., choices=..., refill=...)` and updates only the plan (Craft, Buy, Sell, shopping total and queue) without reloading the page or losing the open tab. Dropped choices show their reason, as in Streamlit. Choices live per browser tab and per source, and reset with a note when the scan, settings, catalogs or character evidence change (the same context rule as `views/today.py`). No second plan or reservation path.
+- **Session queue:** the same checklist as Streamlit from `session_queue`: buys, crafts in route order, posts, totals, with ticks that survive plan-unrelated clicks and reset with the plan.
+- **Craft cards preview:** the Craft tab offers *Cards* beside *Table*. Each of the first three or more crafts is a styled card: headline (item, batch, batch profit, profit per craft, confidence, can make), a why line from existing values, what to buy (its reserved materials summing exactly to the card's cost) and where to sell (Sell's undercut values). This previews STORY-054's content; it doesn't replace that story. Styling through NiceGUI/Quasar props and Tailwind classes is allowed this round; the goal is a page that looks like a finished tool.
+- **Unchanged:** Streamlit behaviour, `launch.py`, every calculation, `today_version`, settings files.
+- **Offline tests (NiceGUI user fixture):** unticking a craft and changing a batch updates Buy and the shopping total to match `build_today` with the same choices; refill on and off; a dropped choice's reason; the reset note when settings change; queue ticks; a card's materials sum to its cost; stale and Unknown labels on cards.
+- **Real-data check:** on a copy of the Forever beta data with Basilly: untick one craft, shrink another, and confirm both apps give the same plan for the same choices; screenshots of the cards.
+- **Findings in the report:** how adjustments compared with Streamlit (responsiveness, state, code size), what the cards needed, and an updated migration size. `status.md` → *SPIKE-009 (trial)* updated; no rule changes.
 
 ### STORY-054 — Today as craft cards
 

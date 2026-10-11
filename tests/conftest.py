@@ -21,3 +21,9 @@ def make_source(data_dir, **overrides):
     entry = dict(source_id="test", provider="tsm", source_url="https://example.com/items.csv",
                  game_version="retail", region="us", scope="house", realm="area-52")
     return build_source(shared, {**entry, **overrides})
+
+
+def pytest_addoption(parser):
+    # Only register the main-file option. NiceGUI's fixtures are local to tests/ui_trial;
+    # importing its plugin globally would reset application state in unrelated tests.
+    parser.addini('main_file', 'NiceGUI trial entry point', default='nicegui_app.py')

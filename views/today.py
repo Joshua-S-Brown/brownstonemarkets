@@ -5,14 +5,15 @@ from datetime import UTC, datetime
 
 import streamlit as st
 
-from brownstone import professions
 from brownstone.money import format_money, parse_money, to_gold
 from brownstone.today import build_today, craft_details
 from brownstone.today_characters import available_characters, resolve_character
-from brownstone.today_data import read_today_evidence
+from brownstone.today_loading import load_today, load_today_characters
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
-from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
+from views.common import gold_columns, show_context, show_freshness
 from views.navigation import QUESTIONS
+from views.today_rows import craft_row as _craft_row
+from views.today_rows import sell_row as _sell_row
 from views.watchlist import render_hits
 
 
@@ -72,25 +73,17 @@ def render(config, catalogs):
     st.subheader("Today plan")
     st.caption(QUESTIONS["Today plan"])
     show_context(config)
-    try:
-        character_data = professions.latest_data(config)
-    except Exception as error:
-        st.warning(f"Unable to read character evidence: {error}. Showing All recipes.")
-        character_data = {}
+    character_data, character_warning = load_today_characters(config)
+    if character_warning:
+        st.warning(character_warning)
     settings = _settings(config, character_data)
-    manifest, sid, _ = load_latest(config, "Refresh or import a scan for this market to inspect Today.")
-    if manifest is None:
-        return
-    show_freshness(config, manifest)
     try:
-        ids = sorted({item for c in catalogs for item in c["items_by_id"]})
-        with read_db(config) as db:
-            observations, listings, metrics, vendors = read_today_evidence(db, config, sid, ids)
-        arguments = dict(catalogs=catalogs, observations=observations, market=config,
-                         snapshot={**manifest, "snapshot_id": sid}, settings=settings, now=datetime.now(UTC),
-                         listings=listings, metrics=metrics, vendor_prices=vendors,
-                         max_age_hours=config["max_age_hours"], auction_cut=config["auction_cut"],
-                         character_data=character_data)
+        manifest, arguments = load_today(config, catalogs, settings, character_data, datetime.now(UTC))
+        if manifest is None:
+            st.info("Refresh or import a scan for this market to inspect Today.")
+            return
+        show_freshness(config, manifest)
+        sid = arguments["snapshot"]["snapshot_id"]
         result = _build_session_plan(arguments)
     except Exception as error:
         st.error(f"Unable to build Today: {error}")
@@ -186,37 +179,6 @@ def _tables(result, names, *, arguments=None):
 
     with queue_tab:
         _queue(result)
-
-
-def _craft_row(row, sell):
-    return {"Item": row["output_name"], "Profession": row["profession"].title(), "Catalog": row["catalog_id"],
-            "Recipe": row["recipe_id"], "Batch": row["batch_size"], "Limited by": row["limiting_factor"],
-            "Material cost (g)": to_gold(row["batch_cost_copper"]),
-            "Batch profit (g)": to_gold(row["batch_profit_copper"]),
-            "Profit per craft (g)": to_gold(row["profit_per_craft_copper"]),
-            "Cautious output unit (g)": to_gold(row["sale_price_copper"]), "Listings": sell["listings"],
-            "Units": sell["units"], "Thin": sell["thin"], "Availability": row["availability"],
-            "Evidence notes": "; ".join(row["evidence_notes"]), "Recipe source": row["recipe_source"],
-            **_character_columns(row), **_confidence_columns(row), **_evidence(row)}
-
-
-def _character_columns(row):
-    if "craft_status" not in row:
-        return {"Who can make it": ", ".join(row.get("who_can_make_it", [])) or "unknown"}
-    learning = row["character_reason"]
-    if row["craft_status"] == "Train now":
-        cost = row["training_cost_copper"]
-        learning = "Training: " + (format_money(cost) if cost is not None else "cost unknown")
-    return {"Can make": row["craft_status"], "Learning": learning}
-
-
-def _sell_row(row):
-    return {"Output": row["output_name"], "Catalog": row["catalog_id"], "Recipe": row["recipe_id"],
-            "Batch": row["batch_size"], "Lowest competing unit (g)": to_gold(row["lowest_copper"]),
-            "Listings": row["listings"], "Units": row["units"], "Largest stack units": row["largest_stack_units"],
-            "Undercut unit (g)": to_gold(row["undercut_copper"]),
-            "Profit at undercut for batch (g)": to_gold(row["undercut_batch_profit_copper"]),
-            "Thin": row["thin"], **_confidence_columns(row), **_evidence(row)}
 
 
 def _selection_key(result):
@@ -406,10 +368,6 @@ def _queue(result):
         st.caption("stale — inspect only")
     if st.toggle("Copy as text", key=f"today-queue-copy-{source}"):
         st.code("\n".join([*lines, total]), language=None)
-
-
-def _confidence_columns(row):
-    return {"Confidence": row["confidence"], "Reasons": ", ".join(row["confidence_reasons"])}
 
 
 def _filter_confidence(result, hide_low):

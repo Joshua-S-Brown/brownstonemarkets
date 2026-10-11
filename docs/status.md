@@ -290,7 +290,7 @@ _Last updated 2026-10-11._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.32% in the current macOS run: 1,015 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.27% after the full macOS run and focused UI verification: 1,079 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.11.2**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -620,3 +620,27 @@ there. Scan `20261010T134347Z-51ff02` (2026-10-10 13:43:54 UTC) shows Tough Jerk
 (159) at 13c, 189 / 6. Equal buy/sell targets hit for each; an absent ID stays not listed. Browser
 inspection also confirms Today's short hit panel. Screenshots and check output are local artifacts
 under `work/story048/`. This checks imported evidence, not current in-game availability.
+
+
+### SPIKE-009 (trial)
+
+Today also runs in NiceGUI 3.18.0 beside Streamlit; the product owner's migration judgement is pending.
+After installing `requirements.lock.txt`, run `.venv/bin/python nicegui_app.py` (Windows:
+`.venv\Scripts\python.exe nicegui_app.py`) and open `http://127.0.0.1:8081`. `--port` changes the
+port; `--data-dir PATH` selects a copied data folder and its preferences. The host always stays
+loopback. `app.py`, `launch.py` and rules are unchanged. Both presentations use the shared loader
+in `design.md` → *Today contracts*. Queue/adjustments remain in Streamlit.
+
+Native tables sort/filter, tabs retain source/tab in the URL, and row dialogs show reserved materials.
+The default Craft columns are compact; the evidence switch reveals every field. The copied Forever
+beta check with Basilly matches all four lists: 10 crafts (5 more), 10 Buy rows (8 more), 10 Sell rows,
+no Below vendor hits, and 24g 84s 38c shopping. Local screenshots/check output are ignored under
+`work/spike009-screenshots/` and `work/spike009-realcheck.json`.
+
+Callbacks/dialogs simplify local updates. Async fixture setup and wide evidence tables need more care;
+NiceGUI's user fixture is local to `tests/ui_trial/`, with browser checks for layout/client sorting.
+Eight trial tests take about 8 seconds; three warm synthetic renders have medians of 0.168s in
+NiceGUI and 0.182s in AppTest (a small fixture, not a general benchmark). Remaining nine sections plus
+Queue/adjustments are roughly 10–15 development days including tests. Windows execution awaits CI
+(the lock excludes uvloop there). Reload after importing elsewhere or leaving a plan open a long time;
+upgrade older databases through the existing app first. This trial reads them without migrations.

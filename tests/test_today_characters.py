@@ -17,7 +17,8 @@ from brownstone.today_characters import (
     resolve_character,
 )
 from brownstone.today_settings import TodaySettings, load_settings, save_settings
-from views.today import _character_columns, _filter_confidence
+from views.today import _filter_confidence
+from views.today_rows import _character_columns
 
 CHARACTER = ("Basilly", "Beta", "Alliance")
 
@@ -174,7 +175,7 @@ def test_today_apptest_character_save_status_cost_checks_and_missing(tmp_path, m
     data = {CHARACTER: state()}
     c = catalog()
     c["recipes_by_id"][30].update(learned_from=[6], training_cost_copper=100)
-    monkeypatch.setattr("views.today.professions.latest_data", lambda config: data)
+    monkeypatch.setattr("brownstone.today_loading.professions.latest_data", lambda config: data)
     at, _, path = app(tmp_path, monkeypatch)
     monkeypatch.setattr("brownstone.recipe_catalogs.find_catalogs", lambda *args: [{"name": "fixture", "catalog": c}])
     at.run()
@@ -196,7 +197,7 @@ def test_today_apptest_character_save_status_cost_checks_and_missing(tmp_path, m
 def test_today_apptest_unreadable_character_evidence_still_shows_all_recipes(tmp_path, monkeypatch):
     def broken(config):
         raise OSError("journal locked")
-    monkeypatch.setattr("views.today.professions.latest_data", broken)
+    monkeypatch.setattr("brownstone.today_loading.professions.latest_data", broken)
     at, _, _ = app(tmp_path, monkeypatch)
     assert not at.exception and not at.error
     assert any("journal locked" in w.value for w in at.warning)
@@ -238,7 +239,7 @@ def test_today_apptest_unknown_cost_catalog_differences_and_changed_evidence(tmp
     c["recipes_by_id"][30].update(learned_from=[6])
     row = data[CHARACTER]["recipes"]["Arbitrary title"]["known_recipes"]["rows"][0]
     row.update(item_id=4, min_made=2)
-    monkeypatch.setattr("views.today.professions.latest_data", lambda config: data)
+    monkeypatch.setattr("brownstone.today_loading.professions.latest_data", lambda config: data)
     at, _, path = app(tmp_path, monkeypatch)
     monkeypatch.setattr("brownstone.recipe_catalogs.find_catalogs", lambda *args: [{"name": "fixture", "catalog": c}])
     save_settings(path, replace(load_settings(path), character=CHARACTER))

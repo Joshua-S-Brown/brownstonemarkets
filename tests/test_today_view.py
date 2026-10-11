@@ -128,13 +128,13 @@ def listing_evidence_app(tmp_path, monkeypatch, hours):
     monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [source])
     monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs',
                         lambda *args: [{'name': 'fixture', 'catalog': catalog()}])
-    original = __import__('views.today', fromlist=['read_today_evidence']).read_today_evidence
+    original = __import__('brownstone.today_loading', fromlist=['read_today_evidence']).read_today_evidence
 
     def evidence(db, config, sid, ids):
         observations, listings, metrics, _ = original(db, config, sid, ids)
         return observations, listings, metrics, {1: 21}
 
-    monkeypatch.setattr('views.today.read_today_evidence', evidence)
+    monkeypatch.setattr('brownstone.today_loading.read_today_evidence', evidence)
     return AppTest.from_file(str(ROOT / 'app.py')).run(), source
 
 
@@ -333,11 +333,11 @@ def test_today_source_scoping_and_scan_reset(tmp_path, monkeypatch):
     widget(at.selectbox, 'Data source').set_value(0).run()
     assert widget(at.number_input, 'Batch for Fixture 3').value == 2
     assert at.tabs[4].checkbox[0].value
-    original = __import__('views.today', fromlist=['load_latest']).load_latest
-    def changed(config, message):
-        manifest, sid, count = original(config, message)
+    original = __import__('brownstone.today_loading', fromlist=['latest_snapshot']).latest_snapshot
+    def changed(config):
+        manifest, sid, count = original(config)
         return {**manifest, 'scan_id': 'new-scan'}, sid, count
-    monkeypatch.setattr('views.today.load_latest', changed)
+    monkeypatch.setattr('brownstone.today_loading.latest_snapshot', changed)
     at.run()
     assert not at.exception and widget(at.number_input, 'Batch for Fixture 3').value == 5
     assert not any(w.value for w in at.tabs[4].checkbox)

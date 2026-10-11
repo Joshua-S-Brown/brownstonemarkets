@@ -436,6 +436,16 @@ results. Both panels read evidence without changing their host page's calculatio
 
 ## Today contracts (STORY-025)
 
+SPIKE-009 adds `brownstone/today_loading.py`: `load_today_characters` reads the shared profession
+projection and retains a warning on failure; `load_today` selects the latest scoped snapshot, opens
+the database read-only and assembles the existing `build_today` arguments using the caller's clock.
+Both `views/today.py` and `views/nicegui_today.py` call these loaders. Session choices remain in
+Streamlit. Framework-free Craft/Sell projections live in `views/today_rows.py` and are shared.
+`nicegui_app.py` is an optional loopback-only trial entry point; source and tab live in the URL,
+settings still use `today_settings`, and row dialogs project retained purchases through
+`craft_details`. It uses native NiceGUI components, without custom HTML or CSS.
+Start instructions and trial findings: `status.md` → *SPIKE-009 (trial)*.
+
 Rules and decisions live in `requirements.md` → Today. `read_today_evidence` returns
 `(observations, listings, metrics, vendor_sell_prices)` for one source and analytical snapshot.
 Listings are grouped base/legacy catalog identities with `(quantity, full buyout, unit ceil)` tuples;
@@ -451,7 +461,7 @@ Today sizing/reservations; it attaches status/training cost or All recipes chara
 excluded reasons. The module matches recipe IDs only and reads newer bags rank by skill ID from raw
 window profession provenance. No database reader, schema migration or catalog mutation is added.
 `TodaySettings.character` is nullable `(name, realm, faction)`; JSON lists normalize to tuples and
-older files default to None. `views/today.py` supplies scoped character data, saves the selector with
+older files default to None. The shared loader supplies scoped character data; `views/today.py` saves the selector with
 the existing form, displays eligibility/cost or Who can make it, and renders collapsed catalog checks.
 Session context includes character evidence so changed evidence resets choices and Queue ticks.
 Rules/status precedence live only in `requirements.md` → Today v4.
