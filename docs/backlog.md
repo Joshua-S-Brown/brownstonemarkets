@@ -58,20 +58,30 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
 11. STORY-046 a confidence label on each Today row (Brownstone; implemented and reviewed 2026-10-08)
 12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
-13. STORY-048 watchlist with target prices (Brownstone; small; next to hand off, refined 2026-10-10)
+13. STORY-048 watchlist with target prices (Brownstone; small; implemented and reviewed 2026-10-11)
 14. STORY-043 Today: what each character can make (Brownstone; implemented and reviewed 2026-10-10)
-    - STORY-052 progression planner (Brownstone; medium; refined 2026-10-10, ready after STORY-048)
-15. STORY-035 auction deposits (needs a beta check)
-16. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-17. STORY-036 vendor price ceilings
-18. STORY-027 removed listings
-19. STORY-015b crafting across professions
-20. STORY-021 item page and charts
-21. STORY-026 scan coverage and rhythm
-22. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-23. STORY-006 replay
+15. STORY-053 three questions: Today, Team, Market (Brownstone; small, display only; next to hand off)
+16. STORY-054 Today as craft cards (Brownstone; medium, display only)
+17. STORY-052 progression planner, on the Team page (Brownstone; medium; refined 2026-10-11)
+18. STORY-055 market brief (Brownstone; medium)
+19. STORY-035 auction deposits (needs a beta check)
+20. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+21. STORY-036 vendor price ceilings
+22. STORY-027 removed listings
+23. STORY-015b crafting across professions
+24. STORY-021 item page and charts
+25. STORY-026 scan coverage and rhythm
+26. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+27. STORY-006 replay
 
 STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
+
+**Added 2026-10-11 (product owner, after using the app end to end: "a lot of hopping around… I don't know what materials go to what… Characters doesn't help me know how to progress… no idea what the point of Watchlist or Opportunities is"):** the data and calculations are connected, but each story added its own page around one kind of data, so the owner assembles the answer by hopping between pages. The app is reorganised around the three questions of running the business, decided with the product owner:
+1. **Today: what should our company do today?** One card per craft, with why, what to buy for it and where to sell (STORY-054).
+2. **Team: how do we progress our employees?** Each character with its next step per profession (STORY-052, moved onto the Team page).
+3. **Market: what are the market indicators, and how do they affect our strategy?** One brief that ties what moved to what it means for our plan (STORY-055).
+
+STORY-053 sets up the navigation first, so each later story has a home. New feature stories wait behind these four. Display and wiring only unless a story says otherwise: no change to calculations, ranking or `today_version`.
 
 **Added 2026-10-09 (product owner: "Today shows things I can't craft yet… how do I plan my progression?"):** three questions: what can I craft for profit now (STORY-043), which professions have the most profitable recipes just within reach (STORY-052), and which character can do what (STORY-051). The 2026-10-09 Windows file showed levels and profession ranks are captured, but opening Tailoring recorded no recipe list: the Forever client answers the modern `C_TradeSkillUI` API, not the `GetTradeSkill*` functions STORY-041 reads. STORY-049 fixes that first because only the beta can confirm it. Saved Wowhead pages already say how each recipe is learned (`source`, `trainingcost`), which STORY-050 brings into catalogs. Decided with the product owner: *nearly achievable* defaults to the next **25** skill points (Skill-ups' band width), adjustable; recipes learned from patterns are shown marked *needs pattern*, not hidden.
 
@@ -80,6 +90,67 @@ STORY-030 and STORY-025 are implemented and pending review; review them alongsid
 **Added 2026-10-06 (product owner, after using Today on real data):** STORY-038 and STORY-039 follow the beta-capture stories because they need no game access and work on scans already taken. Character gold and inventory (STORY-032) and the second machine (STORY-037) are needed soon for multiple characters, so STORY-037 moves up to follow STORY-032: both machines will be played in the beta, and the journal (STORY-033) is most useful once both machines' files come in; *Restock* under Later is what lets Today use them.
 
 **Reordered 2026-10-06 (product owner, after reviewing outside design notes):** reading your own character's data is approved (`requirements.md` → *Product direction*). Everything that must be captured in game moves to the top, because the beta closes after 21 October and its behaviour (event names, mail contents, deposits) has to be observed there before launch. The addon side records raw evidence first (STORY-032, STORY-033) and Brownstone interprets it later (STORY-034), so nothing is lost if the interpretation is wrong. Earlier: Today came first because it is the first page that answers what to do; STORY-027 and STORY-015b unblock its biggest gaps (sales speed; chains such as ore → bars → armor). The launch runbook (STORY-020a/b) is in Later.
+
+### STORY-053 — Three questions: Today, Team, Market
+
+Added 2026-10-11 (product owner). Brownstone only; display and navigation, no calculation, storage or schema change.
+
+As the owner of a gold-making business, I want the app organised around what to do today, how to progress my characters and what the market is telling me, so that I stop hopping between pages to piece an answer together.
+
+Acceptance:
+- **Four places in the sidebar,** in this order: **Today**, **Team**, **Market**, then a visually separate **Data** group. Every existing page stays reachable; nothing is deleted:
+  - **Today:** the Today plan, then *All recipes* (the current Crafting page / Action Board).
+  - **Team:** Characters (and STORY-052's progression once built).
+  - **Market:** Browse market, Skill-up demand (the current Skill-ups page: what levellers will buy), Watchlist, and Opportunities renamed **Below usual price**.
+  - **Data:** addon import (or Refresh from TSM), Recipe catalogs, Scan changes.
+  Sections within a place are tabs or a segmented control on that page, not more sidebar entries. Every source still opens on Today and remembers its last place per source (`requirements.md` → *Today*, *Opening and settings*).
+- **Each place and section says what it answers** in one plain line under its title, written as a business question, for example: *Below usual price: items listed under their recent and historical price, possible flips.* *Watchlist: prices you've chosen to be told about.* *Skill-up demand: materials levellers will need, by skill band.*
+- **Sections that can't work for this source say so up front** and are shown dimmed or with a short reason instead of an empty screen. Below usual price needs historical values, which addon scans don't have yet (UI-03); on a Forever source it says so in one line and points to Market's other sections.
+- **Unchanged:** every value, table, calculation, setting file and the import itself; existing widget keys where possible so saved per-source state still loads.
+- **Offline tests:** AppTest that each place renders for a TSM and an addon source; each old page is reachable from its new place; a fresh session opens on Today and the last place is remembered per source; the Below usual price reason on an addon source; the Data group holds import and catalogs. Update existing tests that select pages by the old radio labels.
+- **Docs:** replace the navigation-order rules (*Skill-ups follows Recipe catalogs*, *Watchlist follows Characters*, Characters after Today) with one navigation rule in `requirements.md` → UI-01; `design.md` (page map); `status.md`.
+
+### STORY-054 — Today as craft cards
+
+Added 2026-10-11 (product owner: "all the information on why that item, what mats I need to buy for it… even going to the Buy tab I don't know what materials go to what"). Brownstone only; display of what Today already calculates. Builds on STORY-038's per-craft `purchases` and intermediate steps, STORY-043's character status and STORY-046's confidence label.
+
+As the owner, I want each recommended craft on Today as one card that says why it's worth doing, exactly what to buy for it and where to sell, so that I can act on it without cross-referencing tabs.
+
+Acceptance:
+- **The Craft tab becomes a list of cards,** one per shown craft in the existing plan order, the same 10-row limit and "N more" count. Each card:
+  - **Headline:** output item, batch size, batch profit and profit per craft (through `money.py`), the confidence label, and who can make it (or the chosen character's status).
+  - **Why:** one line from values already on the row: cautious sale price, competing listings and units, what limits the batch (funds, cap, supply), and *thin* when it applies. No new reasoning text is generated beyond these values.
+  - **What to buy:** the craft's own materials from its reserved `purchases` (STORY-038): material, route (auction house or vendor), units to buy, cost and the highest unit price to pay, with intermediate steps indented. Rows sum exactly to the card's material cost in integer copper.
+  - **Where to sell:** the undercut price, listings and units competing, and profit at the undercut (the Sell tab's values for that output).
+  - **State:** stale evidence still reads *stale — inspect only* on every card; Unknown character status stays marked.
+  Cards are collapsed to the headline and why line by default; one click opens what to buy and where to sell.
+- **The Buy tab says what each material is for:** a *For* column listing the crafts (by output name, with units each) that need it, from the same per-craft purchases. The total is unchanged and still equals the sum of the cards.
+- **A table view stays one click away** (a *Table* toggle showing today's Craft table) for comparing many rows at once.
+- **Unchanged:** ranking, sizing, reservations, the queue, settings, `today_version`.
+- **Offline tests:** a card's materials sum to its cost; the Buy tab's *For* column across two crafts sharing a material adds up to the merged units; a vendor route and an intermediate step on a card; stale and Unknown labels on cards; the table toggle; an AppTest of Today with cards. Update existing Craft tab tests.
+- **Real-data check:** Today on the Forever beta source with Basilly chosen: each card's materials and the Buy tab's *For* column.
+- **Docs:** `requirements.md` → *Today* presentation bullet; `design.md`; `status.md`.
+
+### STORY-055 — Market brief
+
+Added 2026-10-11 (product owner: "what market indicators are there and how is it influencing our strategy"). Brownstone only; read-only over values already computed. Depends on STORY-053 (the Market place).
+
+As the owner, I want the Market page to open with a short brief of what moved and what it means for our plan, so that market data turns into decisions instead of tables I have to interpret.
+
+Acceptance:
+- **The Market place opens with a brief** for the newest snapshot of the selected source and full market, with its UTC time and freshness. Each line is one indicator tied to our plan, sorted by its effect on the plan in copper (largest first), at most 10 lines with "N more":
+  - **Our inputs:** materials in Today's current buy list that are *cheap now* (below scan p25) or that rose since the previous imported snapshot, with the plan's units and the copper difference.
+  - **Our outputs:** crafts in Today's plan whose output is *thin*, or whose lowest competing price fell since the previous snapshot, with the profit change per craft.
+  - **Watchlist hits** (STORY-048).
+  - **Skill-up demand:** the top materials levellers will need in the next bands (STORY-047) that we can supply from a recipe in our catalogs.
+  - **Below usual price:** only when the source supports it (UI-03).
+  Each line links (or names the section) where the detail lives.
+- **Changes since the previous snapshot** compare only snapshots of the same source and full market (Scan changes' existing rules); with one snapshot, change lines say *no earlier snapshot* and the rest still show.
+- **Honest labels:** a brief describes the scanned listings, not sales or demand; no forecast; missing prices never become zero or a change.
+- **Calculation** in a new `brownstone/market_brief.py` (no Streamlit) that composes existing outputs (`build_today`, scan changes, watchlist, skill-up map); no second pricing path. Display in the Market place.
+- **Offline tests:** each indicator kind; sort by copper effect; the 10-line limit; one snapshot only; a TSM source (no listing-based indicators, says so); a stale snapshot; scoping (another source's snapshot never compared); an AppTest of the brief.
+- **Real-data check:** the brief on the Forever beta source across its two newest scans.
+- **Docs:** a *Market brief* rule in `requirements.md`, `design.md`, `status.md`.
 
 ### STORY-031 — Item info pass after a scan
 
@@ -315,8 +386,8 @@ Added 2026-10-09 (product owner: "which professions have the most profitable nea
 
 As a gold maker, I want to see, for each of my characters and professions, the profitable recipes just beyond my current skill and what it costs to reach them, so that I can decide which profession to level next.
 
-Acceptance (refined 2026-10-10 for handoff, after STORY-043):
-- **Its own page, *Progression*,** after Characters in the navigation. Choose a character of the selected source and full market (the same choices as Today's character select, STORY-043: `today_characters.available_characters` over `professions.latest_data`); default the first. Calculation in a new `brownstone/progression.py` (no Streamlit, no downloads), display in `views/progression.py`.
+Acceptance (refined 2026-10-10 for handoff, after STORY-043; placed on the Team page 2026-10-11):
+- **On the Team page** (STORY-053), under the characters: each character card gains a *Next step* line per profession (best reachable recipe, points needed, estimated cost, or *train the next tier first*), and a Progression section shows the detail below. Choose a character of the selected source and full market (the same choices as Today's character select, STORY-043: `today_characters.available_characters` over `professions.latest_data`); default the first. Calculation in a new `brownstone/progression.py` (no Streamlit, no downloads), display in `views/progression.py`.
 - **Professions come from recipe lists only:** a catalog recipe belongs to one of this character's professions only when its `recipe_id` is in that profession's latest list (STORY-043's matching rule; never by name or title). Each profession uses STORY-043's rank (list rank, or a newer readable bags rank for the same skill ID) and max rank from the same evidence. Catalog recipes in no list are counted per catalog as *not in a recipe list: open that profession's window*; a skill line with no list shows *recipes unknown*.
 - **Statuses reuse STORY-043** (`today_characters.recipe_status`): never a second status rule.
 - **Within reach:** recipes not Known whose `required_skill` is above the rank and at most **25** points above it (session slider, 5 to 100). Each shows required skill, points needed, profit per craft, its confidence label (STORY-046) and how it's learned (CRAFT-08 labels with training cost through `money.py`, or *cost unknown*). Recipes without trainer code 6 are shown marked *needs pattern or other source*, not hidden; Unknown statuses are shown marked, never treated as learnable.
