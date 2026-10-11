@@ -8,6 +8,7 @@ import streamlit as st
 from brownstone.money import format_money, parse_money, to_gold
 from brownstone.today import build_today, craft_details
 from brownstone.today_characters import available_characters, resolve_character
+from brownstone.today_funds import resolve_funds
 from brownstone.today_loading import load_today, load_today_characters
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from views.common import gold_columns, show_context, show_freshness
@@ -30,7 +31,8 @@ def _settings(config, character_data):
     if saved.character is not None and selected is None:
         st.caption("Saved character is no longer present in this source and market; showing All recipes.")
     summary = st.empty()
-    with st.expander("Today settings", expanded=unreadable or saved.gold_copper == 0):
+    funds = resolve_funds(saved, character_data, datetime.now(UTC), config["max_age_hours"])
+    with st.expander("Today settings", expanded=unreadable or funds.settings.gold_copper == 0):
         st.caption("One funded plan · whole auction stacks are bought; surplus is shown · sales speed is unknown")
         return _settings_form(config, path, saved, summary, character_data, selected)
 
@@ -40,6 +42,8 @@ def _settings_form(config, path, saved, summary, character_data, selected):
         options = [None, *available_characters(character_data)]
         character = st.selectbox("Character", options, index=options.index(selected),
                                  format_func=lambda c: "All recipes" if c is None else " · ".join(c))
+        override = st.toggle("Enter an amount instead", value=saved.gold_override,
+                             key=f"today-gold-override-{config['source_id']}")
         gold = st.text_input("Gold available", value=format_money(saved.gold_copper))
         mode = st.selectbox("Minimum gain mode", ["scaled", "fixed"], index=["scaled", "fixed"].index(saved.mode))
         minimum = st.text_input("Fixed minimum gain", value=format_money(saved.minimum_copper))
@@ -50,7 +54,7 @@ def _settings_form(config, path, saved, summary, character_data, selected):
     if submitted:
         try:
             entered = TodaySettings(parse_money(gold), parse_money(minimum), mode, round(percent * 100),
-                                    int(crafts), character)
+                                    int(crafts), character, override)
             save_settings(path, entered)
         except (ValueError, OSError) as error:
             st.error(f"Settings not saved: {str(error).rstrip('.')}. "
@@ -58,15 +62,13 @@ def _settings_form(config, path, saved, summary, character_data, selected):
         else:
             saved = entered
             st.success("Today settings saved locally.")
-    character_summary = ""
-    if saved.character is not None and resolve_character(saved.character, character_data) is not None:
-        character_summary = " · Character: " + " · ".join(saved.character)
-    summary.caption(f"Gold available: {format_money(saved.gold_copper)} · "
-                    f"Minimum batch gain: {format_money(saved.minimum_gain)} · "
-                    f"Most crafts per item: {saved.max_crafts}{character_summary}")
-    if not saved.gold_copper:
+    funds = resolve_funds(saved, character_data, datetime.now(UTC), config["max_age_hours"])
+    summary.caption(funds.summary)
+    for note in funds.notes:
+        st.caption(note)
+    if not funds.settings.gold_copper:
         st.info("Enter the gold you have available to size the plan. Use explicit units, for example 12g 50s.")
-    return saved
+    return funds.settings
 
 
 def render(config, catalogs):

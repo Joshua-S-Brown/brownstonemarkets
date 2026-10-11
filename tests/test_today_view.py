@@ -47,7 +47,7 @@ def test_today_default_settings_save_rejection_and_new_session(tmp_path, monkeyp
     assert [tab.label for tab in at.tabs] == ['Craft', 'Buy', 'Sell', 'Below vendor', 'Queue']
     settings = next(e for e in at.expander if e.label == 'Today settings')
     assert not settings.proto.expanded and len(settings.text_input) == 2
-    assert any(c.value == 'Gold available: 10g · Minimum batch gain: 1c · Most crafts per item: 5'
+    assert any(c.value == 'Gold available: 10g (entered amount) · Minimum batch gain: 1c · Most crafts per item: 5'
                for c in at.caption)
     assert any('Batch profit (g)' in t.value.columns for t in at.dataframe)
     widget(at.text_input, 'Gold available').set_value('12')

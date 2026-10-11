@@ -106,7 +106,7 @@ async def test_character_watchlist_and_failed_save_keep_plan(user, tmp_path, mon
     user.find(kind=ui.select, content='Character').click()
     user.find('Basilly · Beta · Alliance').click()
     user.find('Save Today settings').click()
-    await user.should_see('Character: Basilly')
+    await user.should_see('No captured gold for Basilly; using the entered amount.')
     assert load_settings(path).character == CHARACTER
     row = next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows[0]
     assert row['Can make'] == 'Known'
@@ -144,3 +144,36 @@ async def test_forever_first_disabled_and_no_snapshot(user, tmp_path, monkeypatc
     experiences = next(s for s in user.find(ui.select).elements if s.label == 'Experience')
     assert list(experiences.options) == ['forever', 'classic']
     await user.should_not_see('disabled')
+
+
+async def test_recorded_funds_summary_plan_override_and_missing(user, tmp_path, monkeypatch):
+    from test_today_characters import CHARACTER
+    from test_today_funds import funds_data
+
+    from brownstone.today_settings import TodaySettings, save_settings
+    data = funds_data()
+    monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: data)
+    _, _, path = app(tmp_path, monkeypatch)
+    save_settings(path, TodaySettings(250000, 1, 'fixed', character=CHARACTER))
+    await user.open('/')
+    await user.should_see('Gold available: 2s 55c (Basilly, captured 2026-10-11 10:57 UTC')
+    buy = next(t for t in user.find(ui.table).elements if 'Buy' in t._markers)
+    assert sum(round(r['Cost (g)'] * 10000) for r in buy.rows) <= 255
+    user.find('Enter an amount instead').click()
+    user.find(kind=ui.input, content='Gold available').clear().type('1s')
+    user.find('Save Today settings').click()
+    await user.should_see('Gold available: 1s (entered amount)')
+    assert load_settings(path).gold_override
+    data[CHARACTER]['bags'] = {}
+    user.find('Enter an amount instead').click()
+    user.find('Save Today settings').click()
+    await user.should_see('No captured gold for Basilly; using the entered amount.')
+
+
+async def test_all_recipes_recorded_total_summary(user, tmp_path, monkeypatch):
+    from test_today_funds import funds_data
+    monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: funds_data())
+    _, _, path = app(tmp_path, monkeypatch)
+    await user.open('/')
+    await user.should_see('Gold available: 2s 55c (across 1 characters; gold must be mailed to the crafter)')
+    assert load_settings(path).gold_copper == 100000

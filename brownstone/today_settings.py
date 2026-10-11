@@ -13,7 +13,11 @@ class TodaySettings:
     max_crafts: int = 5
     character: tuple[str, str, str] | None = None
 
+    gold_override: bool = False
+
     def __post_init__(self):
+        if type(self.gold_override) is not bool:
+            raise ValueError("Gold override must be a boolean")
         if self.character is not None:
             if (not isinstance(self.character, (tuple, list)) or len(self.character) != 3
                     or any(not isinstance(v, str) or not v for v in self.character)):

@@ -15,8 +15,8 @@ _Last updated 2026-10-11._
   AppTests updated to navigate place and section controls.
   Forever beta check (2026-10-11): resolved `config/market.local.toml`, copied `data/` to ignored
   `work/story-053/data`, then rendered every place and section without importing or refreshing.
-  Today retains copied 25g settings and scan `20261011T105714Z-cf2f26`, with nine funded crafts;
-  Bronze Dory leads (five crafts, 12g 22s 9c batch profit). Team shows Basilly level 6 / Tailoring
+  Today uses recorded character funds by default (STORY-056 below);
+  Team shows Basilly level 6 / Tailoring
   8/75 / six known recipes, Cicelyna level 1, and Keenagen level 5 / Mining 3/75 / one known recipe.
   Browse market shows 7,715 items and 18 saved snapshots. Skill-up demand and catalogs remain
   inspectable, Watchlist shows its source-local empty state, Below usual price explains missing
@@ -42,6 +42,18 @@ _Last updated 2026-10-11._
   so weapon skills and languages appear as lines and can show *at cap*; the Forever client's modern
   surface reports professions only.
 
+- **Today funds (STORY-056, implemented 2026-10-11; pending review):** both apps use recorded gold
+  from the shared scoped character projection; older typed settings require the explicit override.
+  Summary shows capture provenance, stale age, pooled-funds mailing notice or missing-gold fallback.
+  Rules: `requirements.md` → *Opening and settings*; contracts: `design.md` → *Today contracts*.
+  Offline tests: `tests/test_today_funds.py` and `tests/ui_trial/test_nicegui_today.py`.
+  Forever beta check on `work/story056/data` copied from `data/`, source resolved through
+  `config/market.local.toml`: both rendered pages match the shared plan with Basilly chosen.
+  Summary: **2s 55c**, captured **2026-10-11 10:57 UTC**, minimum gain 10s, cap 5; the old entered
+  25g remains saved but unused. Two crafts (Spotted Yellowtail ×5, Rough Dynamite ×3), three Buy
+  rows, two Sell rows, no Below vendor hits; shopping **1s 91c**, within the **255c** balance.
+  Both crafts remain **Unknown** under the existing eligibility rule (STORY-057 is separate).
+  Local check output: `work/story056/realcheck.json`; original data/configuration were untouched.
 - **Today character crafts (STORY-043, implemented 2026-10-10; pending review):** Today v4 adds
   the source/market-scoped character selector in the Save-only settings form, eligibility and learning
   columns, All recipes' Who can make it, and collapsed catalog checks. It consumes the same

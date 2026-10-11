@@ -8,6 +8,7 @@ from nicegui import ui
 from brownstone.money import format_money, parse_money, to_gold
 from brownstone.today import build_today, craft_details
 from brownstone.today_characters import available_characters, resolve_character
+from brownstone.today_funds import resolve_funds
 from brownstone.today_loading import load_today
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from brownstone.watchlist import known_names, load_entries, read_watchlist, watchlist_path
@@ -132,12 +133,14 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
     selected = resolve_character(saved.character, character_data)
     if saved.character is not None and selected is None:
         ui.label('Saved character is no longer present in this source and market; showing All recipes.')
-    with ui.expansion('Today settings', value=unreadable or saved.gold_copper == 0).classes('w-full'):
+    funds = resolve_funds(saved, character_data, datetime.now(UTC), config['max_age_hours'])
+    with ui.expansion('Today settings', value=unreadable or funds.settings.gold_copper == 0).classes('w-full'):
         ui.label('One funded plan · whole auction stacks are bought; surplus is shown · sales speed is unknown')
         with ui.row():
             character = ui.select({str(i): 'All recipes' if c is None else ' · '.join(c)
                                    for i, c in enumerate(identities)}, value=str(identities.index(selected)),
                                   label='Character')
+            override = ui.switch('Enter an amount instead', value=saved.gold_override)
             gold = ui.input('Gold available', value=format_money(saved.gold_copper))
             mode = ui.select(['scaled', 'fixed'], value=saved.mode, label='Minimum gain mode')
             minimum = ui.input('Fixed minimum gain', value=format_money(saved.minimum_copper))
@@ -153,7 +156,7 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
                     raise ValueError('Most crafts per item must be an integer')
                 entered = TodaySettings(parse_money(gold.value), parse_money(minimum.value), mode.value,
                                         round(float(percent.value) * 100), int(count),
-                                        identities[int(character.value)])
+                                        identities[int(character.value)], override.value)
                 save_settings(settings_path(config['data_dir'], config['source_id']), entered)
             except (ValueError, TypeError, OSError) as error:
                 message.set_text(f'Settings not saved: {error}. Tables still use the last saved settings.')
@@ -215,13 +218,13 @@ def render(config, catalogs, character_data, active_tab='Craft'):
 
     def update(settings):
         nonlocal current_tab
-        summary.set_text(f'Gold available: {format_money(settings.gold_copper)} · '
-                         f'Minimum batch gain: {format_money(settings.minimum_gain)} · '
-                         f'Most crafts per item: {settings.max_crafts}'
-                         + (f' · Character: {" · ".join(settings.character)}'
-                            if resolve_character(settings.character, character_data) else ''))
+        funds = resolve_funds(settings, character_data, datetime.now(UTC), config['max_age_hours'])
+        settings = funds.settings
+        summary.set_text(funds.summary)
         plan.clear()
         with plan:
+            for note in funds.notes:
+                ui.label(note)
             if not settings.gold_copper:
                 ui.label('Enter the gold you have available to size the plan. Use explicit units, for example 12g 50s.')
             try:

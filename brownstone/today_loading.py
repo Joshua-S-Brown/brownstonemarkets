@@ -6,6 +6,7 @@ import duckdb
 from brownstone import professions
 from brownstone.storage import latest_snapshot
 from brownstone.today_data import read_today_evidence
+from brownstone.today_funds import resolve_funds
 
 
 def load_today(config, catalogs, settings, character_data, now: datetime):
@@ -20,6 +21,7 @@ def load_today(config, catalogs, settings, character_data, now: datetime):
     ids = sorted({item for catalog in catalogs for item in catalog["items_by_id"]})
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb"), read_only=True) as db:
         observations, listings, metrics, vendors = read_today_evidence(db, config, sid, ids)
+    settings = resolve_funds(settings, character_data, now, config["max_age_hours"]).settings
     arguments = dict(catalogs=catalogs, observations=observations, market=config,
                      snapshot={**manifest, "snapshot_id": sid}, settings=settings, now=now,
                      listings=listings, metrics=metrics, vendor_prices=vendors,

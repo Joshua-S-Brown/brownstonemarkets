@@ -561,7 +561,20 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   source's funds are its own. It is written atomically (through a `.tmp` sibling, also ignored) only on
   Save; the pattern is also ignored for custom data directories. Invalid or unreadable settings show a
   warning and defaults, never silently replace the file. A rejected or failed Save shows an error and the
-  tables stay visible, still sized by the last saved settings. Gold starts at **0c**, because funds cannot be inferred. Explicit integer `g/s/c`
+  tables stay visible, still sized by the last saved settings.
+  **Gold available (STORY-056):** recorded gold is the default, including older settings files with
+  a typed amount. For a chosen character, use `gold_copper` from its newest readable bags snapshot
+  in the selected source and full market, labelled with the character and UTC capture time. With
+  All recipes, sum each scoped character's newest captured gold and label *across N characters;
+  gold must be mailed to the crafter*. Characters with missing gold are excluded with a note. A saved
+  character no longer in this source and market plans as All recipes, so its funds are the All recipes total.
+  **Enter an amount instead** enables the optional saved override (default off), labelled *entered
+  amount*. A chosen character without captured gold (or no captured gold across the source) falls
+  back to the entered amount with a one-line note; missing/unreadable gold never becomes a known
+  zero or another character's gold. A zero capture is not known funds. Captures older
+  than the scan's stale window remain usable but display their age and stale label. The entered
+  amount starts at **0c**. Funds resolution changes no ranking, sizing or reservation rule, and
+  `today_version` stays 4. Explicit integer `g/s/c`
   text is required (case-insensitive, optional spaces, each unit at most once; properly grouped thousands
   commas accepted). Bare numbers get a units hint. The parser round-trips signed money display; settings
   reject negative amounts. Minimum mode starts **scaled**, **1%** (**100 basis points**) with a **10s**

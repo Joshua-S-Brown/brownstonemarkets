@@ -466,6 +466,15 @@ the existing form, displays eligibility/cost or Who can make it, and renders col
 Session context includes character evidence so changed evidence resets choices and Queue ticks.
 Rules/status precedence live only in `requirements.md` → Today v4.
 
+STORY-056 adds `brownstone/today_funds.py`: `resolve_funds` consumes that scoped projection,
+preferences, clock and scan stale window, returning effective settings plus a shared summary and
+notes. It uses only the latest readable bags record retained by `professions.latest_data` /
+`character_snapshots.latest_data`; it neither reads storage nor persists the effective balance.
+`TodaySettings.gold_override` defaults to false, including old JSON. Both apps render its provenance
+and notes; `load_today` supplies the effective settings to the existing calculation path. Settings
+forms continue to save the entered amount separately from the resolved balance. No migration or
+Today version change. Funds rules live in `requirements.md` → *Opening and settings*.
+
 `build_today` takes catalogs, scoped evidence, `TodaySettings` and the caller's clock. It returns
 four capped lists (`craft`, `buy`, `sell`, `below_vendor`), mutually exclusive hidden reason counts,
 remaining counts, complete shopping cost, freshness and Today version. Craft rows retain board
