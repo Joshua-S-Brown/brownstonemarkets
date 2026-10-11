@@ -587,3 +587,17 @@ Totals remain an all-recipe expectation, not a gathering recommendation or launc
 The 107 unknown Tailoring ranges include page colour arrays containing zero; validity remains
 strict rather than interpreting zero. Saved pages are October 4 (Alchemy) or October 6 (other Forever
 professions). Full check output is local-only under ignored `work/story047/real-data.json`.
+
+## STORY-048 — Watchlist with target prices
+
+Implemented: source-local target entries, Watchlist after Characters, base-item price states and
+unit counts, and current-hit panels on Today and successful addon import results. Invalid files stay
+read-only and preserved. Rules: `requirements.md` → Watchlist; contracts: `design.md` → Watchlist.
+Offline verification is in `tests/test_watchlist.py` and `tests/test_watchlist_view.py`.
+
+Forever beta check uses a copy of `data/` in ignored `work/story048/data`, with targets added only
+there. Scan `20261010T134347Z-51ff02` (2026-10-10 13:43:54 UTC) shows Tough Jerky (117) at 3c,
+96 listed units / 64 at target; Minor Healing Potion (118) at 6c, 846 / 582; Refreshing Spring Water
+(159) at 13c, 189 / 6. Equal buy/sell targets hit for each; an absent ID stays not listed. Browser
+inspection also confirms Today's short hit panel. Screenshots and check output are local artifacts
+under `work/story048/`. This checks imported evidence, not current in-game availability.

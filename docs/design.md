@@ -399,6 +399,19 @@ observations: explicitly rebuild after changing stored evidence. Manual writes b
 key calculation; imports/rebuilds are the supported writers. No dependency was added.
 
 
+## Watchlist contracts (STORY-048)
+
+Rules live in `requirements.md` → Watchlist. `brownstone/watchlist.py` validates `Entry` values,
+parses targets with `money.parse_money`, persists source-local JSON atomically, and refuses to
+replace unreadable or invalid files. `build_watchlist` returns plain rows and freshness with a caller
+clock. `read_watchlist` uses `latest_snapshot`, `today_data.read_skillup_market` and
+`metrics.units_below_price` for each base/legacy identity. Name choices read scoped base observations
+and compatible catalogs (newest name per item, aggregated in SQL), without using another source's
+derived name lookup. The hit panels read names only when there is a hit. No schema change.
+`views/watchlist.py` renders the editor/table and shared hit panel; `app.py` registers Watchlist after
+Characters. Today calls the panel above its tabs; scan import calls it when rendering successful
+results. Both panels read evidence without changing their host page's calculations or import path.
+
 ## Today contracts (STORY-025)
 
 Rules and decisions live in `requirements.md` → Today. `read_today_evidence` returns

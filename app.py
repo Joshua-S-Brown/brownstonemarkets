@@ -13,7 +13,7 @@ from brownstone.pipeline import run
 from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
 from brownstone.storage import upgrade_database
 from views import catalogs as catalogs_view
-from views import characters, crafting, market, scan_changes, scan_import, skillups, today
+from views import characters, crafting, market, scan_changes, scan_import, skillups, today, watchlist
 from views.common import EXPERIENCES
 
 ROOT = Path(__file__).resolve().parent
@@ -74,7 +74,7 @@ with st.sidebar:
     else:
         st.session_state.pop("scan_import_identity", None)
         refresh = st.button("Refresh from TSM", type="primary", width="stretch")
-    views = ["Today", "Characters", "Crafting", "Browse market", "Opportunities",
+    views = ["Today", "Characters", "Watchlist", "Crafting", "Browse market", "Opportunities",
              "Recipe catalogs", "Skill-ups", "Scan changes"]
     # Every source starts on Today and remembers subsequent navigation.
     view_key = f"view-{config['source_id']}"
@@ -110,6 +110,8 @@ if view == "Today":
     today.render(config, catalogs)
 elif view == "Characters":
     characters.render(config)
+elif view == "Watchlist":
+    watchlist.render(config, catalogs)
 elif view == "Crafting":
     crafting.render(config, catalogs)
 elif view == "Browse market":

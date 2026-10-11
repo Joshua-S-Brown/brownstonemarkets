@@ -22,3 +22,7 @@ today-settings.*.local.json*
 
 # Windows drop script settings contain personal SavedVariables and Drive paths.
 tools/windows/drop-settings.local.json
+
+# Watchlist targets and atomic temporary saves stay local.
+watchlist.*.local.json
+watchlist.*.local.json.tmp

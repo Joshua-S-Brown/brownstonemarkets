@@ -12,6 +12,7 @@ from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_data import read_today_evidence
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from views.common import gold_columns, load_latest, read_db, show_context, show_freshness
+from views.watchlist import render_hits
 
 
 def _settings(config, character_data):
@@ -102,6 +103,7 @@ def render(config, catalogs):
                f"market {config['market_id']} · snapshot {sid} · "
                f"scan {manifest.get('scan_id', 'not available for this source')} · "
                f"evidence {freshness['observed_at']} (UTC) · time basis {freshness['basis']}")
+    render_hits(config, catalogs)
     _tables(result, names, arguments=arguments)
 
 

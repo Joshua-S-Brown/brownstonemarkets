@@ -16,6 +16,7 @@ from brownstone.scan_inputs import (
     latest_rows,
     preview_inputs,
 )
+from views.watchlist import render_hits
 
 _STATE = ("scan_import_preview", "scan_import_selection", "scan_import_result", "scan_import_details")
 # Prefix of the pipeline error for a SavedVariables file the game hasn't written scans to yet.
@@ -39,7 +40,7 @@ def render(config):
                 "may be busy: wait for /reload or logout to finish and for any other Brownstone import to end, "
                 "then Preview again.")]
     # The import runs in the button's callback, before this rerun, so the result replaces the reviewed table.
-    messages, failed = _show_results()
+    messages, failed = _show_results(config)
     preview = st.session_state.get("scan_import_preview")
     if preview is None:
         _result_details(messages, failed)
@@ -64,11 +65,13 @@ def render(config):
             st.button("Import addon scan", type="primary", width="stretch", on_click=_import, args=(config, preview))
 
 
-def _show_results():
+def _show_results(config):
     messages = st.session_state.pop("scan_import_result", [])
     for kind, message in messages:
         if kind != "info":
             getattr(st, kind)(message)
+    if any(kind == "success" for kind, _ in messages):
+        render_hits(config)
     return messages, any(kind == "error" for kind, _ in messages)
 
 
@@ -207,7 +210,7 @@ def _render_inputs(config):
         for key in _STATE:
             st.session_state.pop(key, None)
         st.session_state["scan_import_preview"] = preview_inputs(config)
-    messages, failed = _show_results()
+    messages, failed = _show_results(config)
     preview = st.session_state.get("scan_import_preview")
     if preview is None:
         _result_details(messages, failed)

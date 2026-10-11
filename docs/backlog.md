@@ -468,6 +468,8 @@ Acceptance:
 
 ### STORY-048 — Watchlist with target prices
 
+**Implemented and reviewed (2026-10-11).** Rules in `requirements.md` → *Watchlist*; verification in `status.md`.
+
 Added 2026-10-08 (product owner). Brownstone only; the honest first step towards *Alerts* (end of the *History chain*), on prices you set rather than history.
 
 As a gold maker, I want to list items with a buy-below or sell-above price and see which ones hit after each import, so that I catch the prices I care about without searching for them.

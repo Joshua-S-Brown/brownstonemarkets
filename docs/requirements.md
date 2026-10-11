@@ -530,6 +530,29 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Market context:** optional, read-only, newest imported snapshot of the selected source and full market. ADDON-10 base/legacy metrics supply units listed and lowest unit buyout; TSM shows its price and units *not available for this source*. No snapshot omits columns with an explanation. Scan time (or labeled collection time) and DATA-05/Today's freshness policy label stale/future evidence without hiding it. Missing/nonpositive prices stay missing. Context changes neither units nor order.
   - **Presentation:** Skill-ups follows Recipe catalogs in navigation. Totals lead, band sections are collapsed, rule/honesty text is one caption.
 
+### Watchlist (STORY-048)
+
+- **Entries and storage:** one base-item entry per positive item ID, with an optional note and at
+  least one positive integer-copper buy-below or sell-above target. Input uses Today's explicit
+  `g/s/c` money rules. Names are for picking only, from this source's scans or compatible catalogs;
+  entries store IDs. Variants are not watched separately.
+  `data_dir/watchlist.<source_id>.local.json` is saved only on an explicit edit, atomically through
+  a `.tmp` sibling; both patterns are ignored even in custom data directories. Invalid or unreadable
+  files show a warning and an empty read-only list. Saving is refused until the file is fixed or removed.
+- **Scope and evidence:** newest imported snapshot of the selected source and full market only;
+  CRAFT-10's base/legacy lowest unit buyout and units, with DATA-05 freshness. Missing or nonpositive
+  buyouts mean **not listed**, never zero or a hit. Without a snapshot, each target says **no snapshot**.
+- **Targets:** buy hits at or below the target and shows units at or below it (integer threshold + 1
+  with the strictly-below unit reader); sell hits at or above the target. Each target has its own state.
+  Stale or future evidence retains hits marked **stale**. TSM uses its lowest price and labels units
+  **not available for this source**, including buy hits.
+- **Display:** Watchlist follows Characters in navigation and supports add, edit and remove; editing
+  keeps the entry's item ID (pick or type an ID only when adding). Its
+  table shows name when known, ID, targets, lowest price, listed units, target units/states and note;
+  snapshot time in UTC appears once above it. A short current-hits panel appears above Today's tabs
+  and after a successful addon import, and is absent when there are no hits. It changes neither
+  Today's numbers/ranking nor the import.
+
 ### Today (today_version 4, STORY-025/039/043/046; STORY-039 reviewed 2026-10-08)
 
 - **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
