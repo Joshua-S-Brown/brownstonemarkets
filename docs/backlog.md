@@ -61,24 +61,28 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 13. STORY-048 watchlist with target prices (Brownstone; small; implemented and reviewed 2026-10-11)
 14. STORY-043 Today: what each character can make (Brownstone; implemented and reviewed 2026-10-10)
 15. STORY-053 three questions: Today, Team, Market (Brownstone; small, display only; implemented and reviewed 2026-10-11)
-   - SPIKE-009 Today in NiceGUI, side by side (Brownstone; trial implemented and reviewed 2026-10-11; the product owner finds it an improvement, judgement continues with SPIKE-009b)
-   - STORY-056 gold available from the chosen character (Brownstone; small; next to hand off)
-   - STORY-057 Today shows only what our team can make (Brownstone; small; follows STORY-056)
-   - SPIKE-009b the interactive Today in NiceGUI: adjustments, queue and craft cards (Brownstone; follows STORY-057). Its decision sets how STORY-054 onwards are built.
-16. STORY-054 Today as craft cards (Brownstone; medium, display only)
-17. STORY-052 progression planner, on the Team page (Brownstone; medium; refined 2026-10-11)
-18. STORY-055 market brief (Brownstone; medium)
-19. STORY-035 auction deposits (needs a beta check)
-20. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-21. STORY-036 vendor price ceilings
-22. STORY-027 removed listings
-23. STORY-015b crafting across professions
-24. STORY-021 item page and charts
-25. STORY-026 scan coverage and rhythm
-26. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-27. STORY-006 replay
+   - SPIKE-009 Today in NiceGUI, side by side (Brownstone; trial implemented and reviewed 2026-10-11)
+   - STORY-056 gold available from the chosen character (Brownstone; implemented 2026-10-11)
+   - STORY-057 Today shows only what our team can make (Brownstone; implemented 2026-10-11)
+   - SPIKE-009b the interactive Today in NiceGUI (Brownstone; implemented and reviewed 2026-10-12). Decided: NiceGUI becomes the app, with four places only (*Added 2026-10-12* below).
+16. STORY-058 the new app: NiceGUI with Today and Import (Brownstone; medium; next to hand off)
+17. STORY-054 Today as craft cards (Brownstone; medium, display only; in the new app)
+18. STORY-052 Team: roster and progression planner (Brownstone; medium-large; in the new app)
+19. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
+20. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
+21. STORY-035 auction deposits (needs a beta check)
+22. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+23. STORY-036 vendor price ceilings
+24. STORY-027 removed listings
+25. STORY-015b crafting across professions
+26. STORY-021 item page and charts (would live in the Market explorer)
+27. STORY-026 scan coverage and rhythm
+28. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+29. STORY-006 replay
 
 STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
+
+**Added 2026-10-12 (product owner, after SPIKE-009b: "instead of migrating all the pages… what do we really need?"):** NiceGUI becomes the app, but only for what running the business needs. Four places move, each a story: **Today** (STORY-058, then STORY-054's cards), **Team**: the employee roster, their skills and where to invest (STORY-052, then STORY-059), **Market**: an explorer for browsing materials, crafts and supply chains, plus what moved since the last scan, kept for now to judge its use (STORY-055), and **Data**: Import (STORY-058). Everything else (All recipes, Watchlist, Below usual price, Scan changes, Recipe catalogs) stays in the Streamlit app, which is kept, unchanged and reachable, but gets no new features. The new app is built for WoW Forever; Classic stays development test data with no features of its own (`requirements.md` → *Interface*). This supersedes the Streamlit placements in STORY-053 for future work.
 
 **Added 2026-10-11 (product owner, after using the app end to end: "a lot of hopping around… I don't know what materials go to what… Characters doesn't help me know how to progress… no idea what the point of Watchlist or Opportunities is"):** the data and calculations are connected, but each story added its own page around one kind of data, so the owner assembles the answer by hopping between pages. The app is reorganised around the three questions of running the business, decided with the product owner:
 1. **Today: what should our company do today?** One card per craft, with why, what to buy for it and where to sell (STORY-054).
@@ -183,9 +187,29 @@ Acceptance:
 - **Dependencies:** pywebview (and anything it needs on macOS and Windows) added to the optional `nicegui` extra and pinned in `requirements.lock.txt`; a fresh install from the lock passes `pip check` on both platforms in CI.
 - **Findings in the report:** how adjustments compared with Streamlit (responsiveness, state, code size), what the cards needed, how the native window behaved (start time, closing, a second launch), and an updated migration size. `status.md` → *SPIKE-009 (trial)* updated; no rule changes.
 
+### STORY-058 — The new app: NiceGUI with Today and Import
+
+Added 2026-10-12 (product owner decision after SPIKE-009b). Brownstone only; display, navigation and launching. No calculation, storage, schema or import-rule change. Builds on SPIKE-009b's `nicegui_app.py`, `views/nicegui_today.py`, `launch_trial.py` and the trial launchers.
+
+As the owner, I want one app I open by double-click every day, where I import my scans and see Today, so that I stop needing the old app for daily work.
+
+Acceptance:
+- **The NiceGUI app becomes Brownstone's main app** with four places in its sidebar, in this order: **Today**, **Team**, **Market**, then a visually separate **Data**. Each place shows its business question under its title (the wording in `views/navigation.py`'s `QUESTIONS`). Team and Market show one line saying what is coming (STORY-052, STORY-055) until those stories land. The selected place, source and Today tab survive a browser refresh. Experiences and sources resolve as UI-01 says (Forever first, never merged); no *trial* wording remains anywhere in the app.
+- **Today** is SPIKE-009b's page, unchanged in behaviour.
+- **Data → Import** brings the Streamlit import page's flow over without changing it: read-only preview first, new-scan selection, the explicit Import button, the result replacing the reviewed table, drop-folder files with per-file results and cleanup evidence, and the clear guidance (ADDON-06, OPS-03, STORY-045's summary-then-details layout). It calls the same `brownstone/` functions as `views/scan_import.py` (`pipeline.preview_scans`/`import_scans`, `scan_inputs`); any logic now in that view that the new page also needs moves into a Streamlit-free `brownstone/` function both use, never a copy. A TSM source shows one line pointing to the old app's Refresh from TSM.
+- **Launchers:** `Start Brownstone.command` / `.cmd` now open the new app in its own window (SPIKE-009b's native launcher, renamed from `launch_trial.py` and the trial launchers). The Streamlit app moves to `Start Brownstone (old app).command` / `.cmd`, still started by `launch.py` and otherwise unchanged; README's start instructions say which is which.
+- **A second launch after updating the code opens the new code** (UI-05 for the new launcher): a running app started from older code is closed and restarted, never just focused; a running app it did not start is never stopped.
+- **Browser fallback doesn't linger:** when the app had to fall back to the browser, it stops itself once no browser tab has been connected for 5 minutes. Native mode still stops when its window closes.
+- **Unchanged:** every calculation, Today's rules and `today_version`, settings files, the import rules, the Streamlit app's pages and behaviour (only its launcher's name changes).
+- **Offline tests (NiceGUI user fixture):** the four places and their order; the placeholders; place/source/tab kept on refresh; import preview, selection and import on an addon fixture writing the same records as the Streamlit path; a drop-folder fixture with one importable and one rejected file; a TSM source's pointer line; the launcher's restart-on-new-code, never-stop-a-foreign-app and browser-idle stop (without opening a window). Existing Streamlit import tests still pass.
+- **Real-data check:** on a copy of `data/` with the Forever beta source: preview and import the latest addon file through the new app, compare the imported records with the same import through the Streamlit page on a second copy, then open Today with Basilly. Double-click the new launcher on macOS; the Windows launchers are checked by the product owner on the second machine.
+- **Docs:** `requirements.md` → *Interface* (UI-07, the launcher and fallback rules), `design.md` (page map and modules for the new app), `status.md` (replace *SPIKE-009 (trial)* with how to start the app), README start instructions.
+
 ### STORY-054 — Today as craft cards
 
 Added 2026-10-11 (product owner: "all the information on why that item, what mats I need to buy for it… even going to the Buy tab I don't know what materials go to what"). Brownstone only; display of what Today already calculates. Builds on STORY-038's per-craft `purchases` and intermediate steps, STORY-043's character status and STORY-046's confidence label.
+
+**Revised 2026-10-12:** built in the new app only (`views/nicegui_today.py`, after STORY-058); the Streamlit Today page is not changed. SPIKE-009b's card preview is the starting point; this story finishes it to the criteria below and makes Cards the default view.
 
 As the owner, I want each recommended craft on Today as one card that says why it's worth doing, exactly what to buy for it and where to sell, so that I can act on it without cross-referencing tabs.
 
@@ -200,30 +224,37 @@ Acceptance:
 - **The Buy tab says what each material is for:** a *For* column listing the crafts (by output name, with units each) that need it, from the same per-craft purchases. The total is unchanged and still equals the sum of the cards.
 - **A table view stays one click away** (a *Table* toggle showing today's Craft table) for comparing many rows at once.
 - **Unchanged:** ranking, sizing, reservations, the queue, settings, `today_version`.
-- **Offline tests:** a card's materials sum to its cost; the Buy tab's *For* column across two crafts sharing a material adds up to the merged units; a vendor route and an intermediate step on a card; stale and Unknown labels on cards; the table toggle; an AppTest of Today with cards. Update existing Craft tab tests.
+- **Offline tests (NiceGUI user fixture):** a card's materials sum to its cost; the Buy tab's *For* column across two crafts sharing a material adds up to the merged units; a vendor route and an intermediate step on a card; stale and Unknown labels on cards; the table toggle; cards follow plan adjustments. Update the existing trial card tests.
 - **Real-data check:** Today on the Forever beta source with Basilly chosen: each card's materials and the Buy tab's *For* column.
 - **Docs:** `requirements.md` → *Today* presentation bullet; `design.md`; `status.md`.
 
-### STORY-055 — Market brief
+### STORY-055 — Market explorer
 
-Added 2026-10-11 (product owner: "what market indicators are there and how is it influencing our strategy"). Brownstone only; read-only over values already computed. Depends on STORY-053 (the Market place).
+Added 2026-10-11 as *Market brief*; **rewritten 2026-10-12** (product owner: "the broader views of the materials and crafting market and supply chains… so that I can browse certain things and explore the data myself"; on what moved since the last scan: "keep it for now and I'll see how useful it is"). Brownstone only; read-only over values already computed. Built in the new app's Market place (after STORY-058). Supply chains here mean materials → crafts → outputs from our catalogs, not sellers (STORY-028).
 
-As the owner, I want the Market page to open with a short brief of what moved and what it means for our plan, so that market data turns into decisions instead of tables I have to interpret.
+As the owner, I want to look up any item and see where it sits in our crafting: what it costs, what it's used for and what it makes, so that I can explore the market myself instead of only reading Today's answer.
 
 Acceptance:
-- **The Market place opens with a brief** for the newest snapshot of the selected source and full market, with its UTC time and freshness. Each line is one indicator tied to our plan, sorted by its effect on the plan in copper (largest first), at most 10 lines with "N more":
-  - **Our inputs:** materials in Today's current buy list that are *cheap now* (below scan p25) or that rose since the previous imported snapshot, with the plan's units and the copper difference.
-  - **Our outputs:** crafts in Today's plan whose output is *thin*, or whose lowest competing price fell since the previous snapshot, with the profit change per craft.
-  - **Watchlist hits** (STORY-048).
-  - **Skill-up demand:** the top materials levellers will need in the next bands (STORY-047) that we can supply from a recipe in our catalogs.
-  - **Below usual price:** only when the source supports it (UI-03).
-  Each line links (or names the section) where the detail lives.
-- **Changes since the previous snapshot** compare only snapshots of the same source and full market (Scan changes' existing rules); with one snapshot, change lines say *no earlier snapshot* and the rest still show.
-- **Honest labels:** a brief describes the scanned listings, not sales or demand; no forecast; missing prices never become zero or a change.
-- **Calculation** in a new `brownstone/market_brief.py` (no Streamlit) that composes existing outputs (`build_today`, scan changes, watchlist, skill-up map); no second pricing path. Display in the Market place.
-- **Offline tests:** each indicator kind; sort by copper effect; the 10-line limit; one snapshot only; a TSM source (no listing-based indicators, says so); a stale snapshot; scoping (another source's snapshot never compared); an AppTest of the brief.
-- **Real-data check:** the brief on the Forever beta source across its two newest scans.
-- **Docs:** a *Market brief* rule in `requirements.md`, `design.md`, `status.md`.
+- **Find any item** of the newest snapshot of the selected source and full market, by name or ID, regardless of price (UI-02). The page states the snapshot's UTC time and freshness once.
+- **An item's page** shows, from that snapshot: lowest buyout and market value per unit, listings and units, and the item's vendor buy and sell price when known. Then its place in the chain, from compatible catalogs (UI-04) only:
+  - **Made from:** if a catalog recipe makes it, its materials with quantities and current cost by CRAFT-03's cheapest route, intermediates indented (`crafting.material_plan`), and its profit per craft from the Action Board rows (`action_board.rank_catalogs`), with the board's reason when it isn't valued.
+  - **Used in:** every catalog recipe that consumes it, with quantity per craft, that recipe's output and profit per craft, sorted by profit per craft. Who on the team can make each (STORY-043 statuses), Unknown marked.
+  - **Skill-up demand:** the bands where levellers need it (STORY-047's map), if any.
+  Every item named in a chain opens its own page in one click, so you can walk the chain in either direction.
+- **What moved since the last scan** (kept on trial; the owner will judge its use): a section comparing the newest two complete scans of the same source and full market (UI-06's rules), listing at most 10 items whose lowest buyout or units changed most, limited to items in our catalogs' chains, each with its change in copper and units and a link to its page. With one scan, it says *no earlier scan*. A TSM source says it has no scan comparison.
+- **Honest labels:** listings, not sales or demand; no forecast; missing prices never free or zero; stale evidence labelled.
+- **Calculation** in a new `brownstone/market_explorer.py` (no NiceGUI or Streamlit) composing existing outputs: `analysis` browse queries, `crafting`, `action_board.rank_catalogs`, `today_characters`, `skillups`, `scan_changes`. No second pricing path. Display in a new `views/nicegui_market.py`.
+- **Offline tests (NiceGUI user fixture where it's display):** search by name and ID; an item with made-from, used-in and skill-up sections; an item in no catalog (price only, says so); a missing price (never free); walking from a material to an output and back; what-moved with two scans, one scan, and a TSM source; scoping (another source's snapshot never used); a stale snapshot.
+- **Real-data check:** on the Forever beta source: Linen Cloth's used-in list, Bolt of Linen Cloth's made-from, and what moved across the two newest scans.
+- **Docs:** a *Market explorer* rule in `requirements.md`, `design.md`, `status.md`.
+
+### STORY-059 — Should we add a character?
+
+Added 2026-10-12 (product owner: "or if I need to get another character with a different profession stack"). Brownstone only. Draft: refine with the product owner before handoff; depends on STORY-052.
+
+As the owner, I want to compare what our team can make now with what one more character, or a profession change, would add, so that I know whether to invest in a new employee and with which professions.
+
+To refine: which professions and ranks a new character is assumed to reach (and by when); how its profit is shown when nobody on the team has the profession (catalog recipes priced on the current snapshot, with STORY-052's cost-to-reach estimate from rank 1); whether profession pairs that feed each other (gathering → crafting) are scored together; honest labels (current prices, no sales speed, Unknown never assumed). Built in the new app's Team place.
 
 ### STORY-031 — Item info pass after a scan
 
@@ -453,11 +484,13 @@ Acceptance (refined 2026-10-09 for handoff):
 - **Offline tests:** two characters on two machines, a character with no skills (unknown), unknown gold not shown as 0, a profession at cap, recipe counts from a window list and from *seen crafted*, rank history across snapshots skipping an unreadable one, a stale card, the empty state, scoping by source and full market (a second source's character never appears), and an AppTest render of the page.
 - **Docs:** `design.md` (new module and page), `status.md`; the stale threshold and any other new rule in `requirements.md`.
 
-### STORY-052 — Progression planner
+### STORY-052 — Team: roster and progression planner
 
 Added 2026-10-09 (product owner: "which professions have the most profitable nearly achievable recipes that I need to push my level to get next"). Depends on STORY-043 (known/learnable status), STORY-047 (skill-up colours) and STORY-050 (how recipes are learned).
 
 As a gold maker, I want to see, for each of my characters and professions, the profitable recipes just beyond my current skill and what it costs to reach them, so that I can decide which profession to level next.
+
+**Revised 2026-10-12:** built in the new app's Team place (after STORY-058). First bring the Characters page over (STORY-051's cards and rules, `requirements.md` → *Characters page*) as the roster, reusing `brownstone/characters.py`; the Streamlit Characters page is not changed. Then the progression below. *Should we add a character?* is STORY-059, not this story. The *AppTest* in the tests below means the NiceGUI user fixture.
 
 Acceptance (refined 2026-10-10 for handoff, after STORY-043; placed on the Team page 2026-10-11):
 - **On the Team page** (STORY-053), under the characters: each character card gains a *Next step* line per profession (best reachable recipe, points needed, estimated cost, or *train the next tier first*), and a Progression section shows the detail below. Choose a character of the selected source and full market (the same choices as Today's character select, STORY-043: `today_characters.available_characters` over `professions.latest_data`); default the first. Calculation in a new `brownstone/progression.py` (no Streamlit, no downloads), display in `views/progression.py`.

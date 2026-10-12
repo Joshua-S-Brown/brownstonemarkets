@@ -2,7 +2,7 @@
 
 Current implemented state, limitations and how to verify. History lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-11._
+_Last updated 2026-10-12._
 
 ## Implemented
 
@@ -628,8 +628,9 @@ under `work/story048/`. This checks imported evidence, not current in-game avail
 
 ### SPIKE-009 (trial)
 
-Today runs in NiceGUI 3.18.0 beside Streamlit; SPIKE-009b's interactive trial is implemented,
-pending owner review. Install `requirements.lock.txt`, then double-click
+Today runs in NiceGUI 3.18.0 beside Streamlit; SPIKE-009b's interactive trial is implemented
+and reviewed (2026-10-12). Decided: the NiceGUI app becomes Brownstone's app for four places
+(`requirements.md` → UI-07); STORY-058 turns this trial into it. Install `requirements.lock.txt`, then double-click
 `Start Brownstone (trial).command` on macOS or `Start Brownstone (trial).cmd` on Windows.
 The launcher opens a pywebview native window on a free loopback port, reuses it on a second
 launch, and falls back to the browser with a one-line explanation if native startup fails.

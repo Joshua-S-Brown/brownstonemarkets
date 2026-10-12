@@ -44,6 +44,23 @@ Old page values migrate to their new place/section. Collection controls move
 into Data without changing the reviewed import path or refresh function. Addon Below usual price
 explains the missing historical values before querying prices, even without a saved snapshot.
 
+### New app (decided 2026-10-12; UI-07)
+
+Brownstone's main app moves to NiceGUI, beside the Streamlit app rather than replacing it page by page.
+`nicegui_app.py` is the entry; its views are `views/nicegui_*.py` (today; import from STORY-058, team
+from STORY-052, market from STORY-055). Both apps call the same `brownstone/` functions: when the new
+app needs logic that lives in a Streamlit view, it moves into a framework-free `brownstone/` module
+both use, never a copy (as SPIKE-009 did with `today_loading` and SPIKE-009b with `today_session`).
+The Streamlit app keeps the page map above, frozen. Shared, framework-free row shaping stays in
+`views/today_rows.py`-style modules importable by both.
+
+| Place | New app | Built by |
+| --- | --- | --- |
+| Today | Today plan with cards | SPIKE-009b, STORY-054 |
+| Team | Roster, progression, and later *should we add a character?* | STORY-052, STORY-059 |
+| Market | Item explorer with supply chains and what moved | STORY-055 |
+| Data | Import (TSM refresh stays in the old app) | STORY-058 |
+
 ## Modules
 
 ```text
