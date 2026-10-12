@@ -7,14 +7,14 @@ from pathlib import Path
 import streamlit as st
 
 from brownstone.config import ADDON_PROVIDER, LOCAL_OVERRIDES, read_sources
-from brownstone.crafting import parse_recipe_catalog
 from brownstone.item_names import seed_catalog_names
+from brownstone.navigation import EXPERIENCES, experiences
 from brownstone.pipeline import run
-from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs
+from brownstone.recipe_catalogs import ARCHIVE_DIR, CONFIG_DIR, find_catalogs, parse_catalogs
 from brownstone.storage import upgrade_database
 from views import catalogs as catalogs_view
 from views import characters, crafting, market, scan_changes, scan_import, skillups, today, watchlist
-from views.common import EXPERIENCES, show_context
+from views.common import show_context
 from views.navigation import QUESTIONS, retain_state, section, sidebar
 
 ROOT = Path(__file__).resolve().parent
@@ -28,18 +28,15 @@ try:
 except Exception as error:
     st.error(f"Could not read configuration: {error}")
     st.stop()
-catalogs = []
 try:
     # Every profession's catalog, found by its selection file (STORY-014).
-    entries = [entry for entry in find_catalogs(CONFIG_DIR) if entry["catalog"]]
+    entries = find_catalogs(CONFIG_DIR)
 except Exception as error:  # Unreadable selection files must not hide the other views.
     st.warning(f"Recipe catalogs unavailable: {error}")
     entries = []
-for entry in entries:
-    try:  # One bad catalog must not hide the others on the combined board.
-        catalogs.append({**parse_recipe_catalog(entry["catalog"]), "catalog_id": entry["name"]})
-    except Exception as error:
-        st.warning(f"Recipe catalog {entry['name']} unavailable: {error}")
+catalogs, catalog_errors = parse_catalogs(entries)
+for message in catalog_errors:
+    st.warning(message)
 if not sources:
     st.error("No enabled data source. Set enabled = true for a source in config/market.toml or "
              "config/market.local.toml, then reload.")
@@ -48,10 +45,7 @@ if not sources:
 retain_state()
 with st.sidebar:
     st.header("Market")
-    order = list(EXPERIENCES)
-    games = sorted(dict.fromkeys(source["game_version"] for source in sources),
-                   key=lambda game: order.index(game) if game in order else len(order))
-    game = st.selectbox("Experience", games, format_func=lambda game: EXPERIENCES.get(game, game))
+    game = st.selectbox("Experience", experiences(sources), format_func=lambda game: EXPERIENCES.get(game, game))
     experience_sources = [source for source in sources if source["game_version"] == game]
     selected: int | None = 0
     if len(experience_sources) > 1:  # Several observers of one experience: never pick one silently.

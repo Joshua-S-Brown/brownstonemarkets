@@ -96,6 +96,7 @@ def test_streamlit_recorded_summary_sizing_override_and_fallback(tmp_path, monke
     at = AppTest.from_file(str(ROOT / "app.py")).run()
     assert not at.exception
     assert any("Gold available: 2s 55c (Basilly, captured" in c.value for c in at.caption)
+    assert load_settings(path).gold_copper == 250000  # Resolved funds are never saved automatically.
     assert sum(round(v * 10000) for v in at.tabs[1].dataframe[0].value['Cost (g)']) <= 255
     widget(at.toggle, "Enter an amount instead").set_value(True)
     widget(at.text_input, "Gold available").set_value("1s")
@@ -121,15 +122,6 @@ def test_newest_gold_sequence_bank_independence_and_duplicate_import(tmp_path):
     assert len(data[('Alice', 'Beta', 'Alliance')]['history']) == 2
     funds = resolve_funds(TodaySettings(), data, NOW, 24)
     assert funds.settings.gold_copper == 22
-
-
-def test_streamlit_all_recipes_recorded_total_summary(tmp_path, monkeypatch):
-    monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: funds_data())
-    at, _, path = app(tmp_path, monkeypatch)
-    assert not at.exception
-    assert any('Gold available: 2s 55c (across 1 characters; gold must be mailed to the crafter)'
-               in c.value for c in at.caption)
-    assert load_settings(path).gold_copper == 100000  # Resolved funds are never saved automatically.
 
 
 def test_shared_loader_matches_plan_with_same_funds(tmp_path, monkeypatch):

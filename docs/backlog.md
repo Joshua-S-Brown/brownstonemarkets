@@ -20,7 +20,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted on the beta with addon 0.3.1; the measurement record is in `addon/README.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
 **Through the last full beta testing day, 21 October** (manual, in game):
-- **Keep scanning.** Seven complete scans of the Normal Alliance house are imported; dates and counts are in `status.md` → *Limitations*. Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
+- **Keep scanning.** Sixteen complete scans of the Normal Alliance house are imported (`status.md` → *Limitations*). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
 - **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result by hand in `config/recipe-selections/forever-tailoring.toml` with the date, then regenerate on the Recipe catalogs page. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
 - **Widen the Forever catalogs** (manual, on the Recipe catalogs page): the rest of Tailoring, then the professions you plan to level at launch. The board and Today's *Craft* list only cover catalog recipes, so this is what gives them something to show.
 - **If any yield is more than 1** (now unlikely: Wowhead's "(2)" is an effect number, not a count; see `requirements.md` → CRAFT-08), *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
@@ -42,45 +42,22 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-031 item info pass (addon; beta, small)
-2. STORY-032 character snapshots: gold, bags, bank (addon + import; beta)
-3. STORY-037 a second machine's files (implemented and reviewed; first Windows round trip passed 2026-10-07)
-4. STORY-033 event journal (addon; beta)
-5. STORY-040 your active auctions (addon; beta; implemented and reviewed)
-6. STORY-041 your professions and known recipes (addon; beta; must be testable by 13 October)
-7. STORY-042 beta evidence report (Brownstone CLI; Claude runs it after each play session)
-8. STORY-044 Brownstone panel from a minimap button (addon; wanted before the next play session)
-   - STORY-049 known recipes on the Forever client (addon; confirmed on the beta 2026-10-10 with 0.11.1, empty first read fixed in 0.11.2)
-   - STORY-045 a simpler import page (Brownstone; small, display only; refined 2026-10-09)
-   - STORY-050 how each recipe is learned (catalogs; implemented and reviewed 2026-10-09)
-   - STORY-051 characters page (Brownstone; implemented and reviewed 2026-10-10)
-9. STORY-038 Today craft details (Brownstone; implemented and reviewed)
-10. STORY-039 choose and adjust the Today plan, with a session queue (Brownstone; implemented and reviewed)
-11. STORY-046 a confidence label on each Today row (Brownstone; implemented and reviewed 2026-10-08)
-12. STORY-047 skill-up demand map (Brownstone; implemented and reviewed 2026-10-08)
-13. STORY-048 watchlist with target prices (Brownstone; small; implemented and reviewed 2026-10-11)
-14. STORY-043 Today: what each character can make (Brownstone; implemented and reviewed 2026-10-10)
-15. STORY-053 three questions: Today, Team, Market (Brownstone; small, display only; implemented and reviewed 2026-10-11)
-   - SPIKE-009 Today in NiceGUI, side by side (Brownstone; trial implemented and reviewed 2026-10-11)
-   - STORY-056 gold available from the chosen character (Brownstone; implemented 2026-10-11)
-   - STORY-057 Today shows only what our team can make (Brownstone; implemented 2026-10-11)
-   - SPIKE-009b the interactive Today in NiceGUI (Brownstone; implemented and reviewed 2026-10-12). Decided: NiceGUI becomes the app, with four places only (*Added 2026-10-12* below).
-16. STORY-058 the new app: NiceGUI with Today and Import (Brownstone; implemented and reviewed 2026-10-12; no Windows launcher check: the app runs on the Mac only)
-17. STORY-054 Today as craft cards (Brownstone; implemented and reviewed 2026-10-12)
-18. STORY-052 Team: roster and progression planner (Brownstone; medium-large; in the new app)
-19. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
-20. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
-21. STORY-035 auction deposits (needs a beta check)
-22. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-23. STORY-036 vendor price ceilings
-24. STORY-027 removed listings
-25. STORY-015b crafting across professions
-26. STORY-021 item page and charts (would live in the Market explorer)
-27. STORY-026 scan coverage and rhythm
-28. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-29. STORY-006 replay
+1. STORY-052 Team: roster and progression planner (Brownstone; medium-large; in the new app)
+2. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
+3. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
+4. STORY-035 auction deposits (needs a beta check)
+5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+6. STORY-036 vendor price ceilings
+7. STORY-027 removed listings
+8. STORY-015b crafting across professions
+9. STORY-021 item page and charts (would live in the Market explorer)
+10. STORY-026 scan coverage and rhythm
+11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+12. STORY-006 replay
 
-STORY-030 and STORY-025 are implemented and pending review; review them alongside the above.
+**Pending review:** STORY-025, STORY-030, STORY-042, STORY-056 and STORY-057. **Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040 and STORY-044 (checklists in `addon/README.md`).
+
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-037, 038, 039, 041, 043, 045, 046, 047, 048, 049, 050, 051, 053, 054, 058 and SPIKE-009/009b.
 
 **Added 2026-10-12 (product owner, after SPIKE-009b: "instead of migrating all the pages… what do we really need?"):** NiceGUI becomes the app, but only for what running the business needs. Four places move, each a story: **Today** (STORY-058, then STORY-054's cards), **Team**: the employee roster, their skills and where to invest (STORY-052, then STORY-059), **Market**: an explorer for browsing materials, crafts and supply chains, plus what moved since the last scan, kept for now to judge its use (STORY-055), and **Data**: Import (STORY-058). Everything else (All recipes, Watchlist, Below usual price, Scan changes, Recipe catalogs) stays in the Streamlit app, which is kept, unchanged and reachable, but gets no new features. The new app is built for WoW Forever; Classic stays development test data with no features of its own (`requirements.md` → *Interface*). This supersedes the Streamlit placements in STORY-053 for future work.
 
@@ -90,51 +67,6 @@ STORY-030 and STORY-025 are implemented and pending review; review them alongsid
 3. **Market: what are the market indicators, and how do they affect our strategy?** One brief that ties what moved to what it means for our plan (STORY-055).
 
 STORY-053 sets up the navigation first, so each later story has a home. New feature stories wait behind these four. Display and wiring only unless a story says otherwise: no change to calculations, ranking or `today_version`.
-
-**Added 2026-10-09 (product owner: "Today shows things I can't craft yet… how do I plan my progression?"):** three questions: what can I craft for profit now (STORY-043), which professions have the most profitable recipes just within reach (STORY-052), and which character can do what (STORY-051). The 2026-10-09 Windows file showed levels and profession ranks are captured, but opening Tailoring recorded no recipe list: the Forever client answers the modern `C_TradeSkillUI` API, not the `GetTradeSkill*` functions STORY-041 reads. STORY-049 fixes that first because only the beta can confirm it. Saved Wowhead pages already say how each recipe is learned (`source`, `trainingcost`), which STORY-050 brings into catalogs. Decided with the product owner: *nearly achievable* defaults to the next **25** skill points (Skill-ups' band width), adjustable; recipes learned from patterns are shown marked *needs pattern*, not hidden.
-
-**Added 2026-10-08 (product owner, while waiting to play again):** clearer recommendations without new game data. STORY-039 gains a *session queue* (one ordered checklist for the next visit to the game). STORY-046, STORY-047 and STORY-048 are new and work on scans and catalogs already imported. Timing, volatility and sales speed stay in Later: they need live history. STORY-047 is time-critical, because launch-week demand comes before any history exists.
-
-**Added 2026-10-06 (product owner, after using Today on real data):** STORY-038 and STORY-039 follow the beta-capture stories because they need no game access and work on scans already taken. Character gold and inventory (STORY-032) and the second machine (STORY-037) are needed soon for multiple characters, so STORY-037 moves up to follow STORY-032: both machines will be played in the beta, and the journal (STORY-033) is most useful once both machines' files come in; *Restock* under Later is what lets Today use them.
-
-**Reordered 2026-10-06 (product owner, after reviewing outside design notes):** reading your own character's data is approved (`requirements.md` → *Product direction*). Everything that must be captured in game moves to the top, because the beta closes after 21 October and its behaviour (event names, mail contents, deposits) has to be observed there before launch. The addon side records raw evidence first (STORY-032, STORY-033) and Brownstone interprets it later (STORY-034), so nothing is lost if the interpretation is wrong. Earlier: Today came first because it is the first page that answers what to do; STORY-027 and STORY-015b unblock its biggest gaps (sales speed; chains such as ore → bars → armor). The launch runbook (STORY-020a/b) is in Later.
-
-### STORY-053 — Three questions: Today, Team, Market
-
-Added 2026-10-11 (product owner). Brownstone only; display and navigation, no calculation, storage or schema change.
-
-As the owner of a gold-making business, I want the app organised around what to do today, how to progress my characters and what the market is telling me, so that I stop hopping between pages to piece an answer together.
-
-Acceptance:
-- **Four places in the sidebar,** in this order: **Today**, **Team**, **Market**, then a visually separate **Data** group. Every existing page stays reachable; nothing is deleted:
-  - **Today:** the Today plan, then *All recipes* (the current Crafting page / Action Board).
-  - **Team:** Characters (and STORY-052's progression once built).
-  - **Market:** Browse market, Skill-up demand (the current Skill-ups page: what levellers will buy), Watchlist, and Opportunities renamed **Below usual price**.
-  - **Data:** addon import (or Refresh from TSM), Recipe catalogs, Scan changes.
-  Sections within a place are tabs or a segmented control on that page, not more sidebar entries. Every source still opens on Today and remembers its last place per source (`requirements.md` → *Today*, *Opening and settings*).
-- **Each place and section says what it answers** in one plain line under its title, written as a business question, for example: *Below usual price: items listed under their recent and historical price, possible flips.* *Watchlist: prices you've chosen to be told about.* *Skill-up demand: materials levellers will need, by skill band.*
-- **Sections that can't work for this source say so up front** and are shown dimmed or with a short reason instead of an empty screen. Below usual price needs historical values, which addon scans don't have yet (UI-03); on a Forever source it says so in one line and points to Market's other sections.
-- **Unchanged:** every value, table, calculation, setting file and the import itself; existing widget keys where possible so saved per-source state still loads.
-- **Offline tests:** AppTest that each place renders for a TSM and an addon source; each old page is reachable from its new place; a fresh session opens on Today and the last place is remembered per source; the Below usual price reason on an addon source; the Data group holds import and catalogs. Update existing tests that select pages by the old radio labels.
-- **Docs:** replace the navigation-order rules (*Skill-ups follows Recipe catalogs*, *Watchlist follows Characters*, Characters after Today) with one navigation rule in `requirements.md` → UI-01; `design.md` (page map); `status.md`.
-
-### SPIKE-009 — Today in NiceGUI, side by side
-
-**Trial implemented and reviewed (2026-10-11).** The product owner finds it an improvement; the decision continues with SPIKE-009b. Start and findings: `status.md` → *SPIKE-009 (trial)*.
-
-Added 2026-10-11 (product owner: "Streamlit's been difficult… I want to make sure what's been developed is going to be a better experience"). Brownstone only; a trial, not a migration. The Streamlit app stays the app until the product owner decides.
-
-Question: is NiceGUI a better place than Streamlit for the pages still to come (STORY-054 onwards)? Every calculation already lives in `brownstone/` without Streamlit (`design.md`: dependencies point inward), so a switch would replace only `app.py` and `views/`. This spike rebuilds one page, Today, to decide on evidence instead of opinion.
-
-Acceptance:
-- **A second app, `nicegui_app.py`, runs beside the Streamlit app** on its own port, bound to `127.0.0.1` only, with no change to the Streamlit app's behaviour or `launch.py`. It shows the Today page for the selected experience and source, resolved exactly as the Streamlit sidebar does (Forever first; never merges sources).
-- **One loading path for both apps:** the evidence-gathering now in `views/today.render` (latest snapshot, scoped reads, `build_today` arguments) moves into a Streamlit-free function in `brownstone/` that both apps call. No second pricing, scoping or freshness path; the Streamlit Today page shows the same values as before, and its tests still pass.
-- **Today in NiceGUI shows** the settings summary and the settings form (same `today-settings.<source_id>.local.json` file, through `today_settings`), the character choice, freshness and the stale warning, the listing-evidence notice, the Watchlist hits panel, and the Craft, Buy, Sell and Below vendor tabs with the same rows, order, 10-row limit and *N more* counts. Money through `money.py`. Clicking a craft row opens its details (STORY-038's materials and intermediate steps) without reloading the page. Out of scope: the session queue and plan adjustments (STORY-039), which stay in Streamlit for now.
-- **What the product owner will judge:** the plan is visible on the first screen without scrolling; a click updates only what it changes; a browser refresh keeps the selected source and tab; tables sort and filter; it looks like a finished tool, not a developer demo (a consistent theme, no framework branding).
-- **Offline tests with NiceGUI's own testing tools** (its simulated `user` fixture, plus at most one real-browser test if it adds something): the page renders for a TSM and an addon source; values match `build_today` for the same fixture; stale evidence stays labelled; saving settings writes the same file the Streamlit page reads; a row click shows that craft's materials. They run in CI on macOS and Windows from the lock file and don't change how the existing tests run.
-- **Dependencies:** NiceGUI as a new optional extra in `pyproject.toml`, pinned with its dependencies in `requirements.lock.txt`; a fresh environment installed from the lock file passes `pip check` and every test.
-- **Real-data check:** both apps on a copy of the Forever beta data, with Basilly chosen: the same crafts, numbers and labels in each, with screenshots of both.
-- **Findings in the report:** what was easier or harder than Streamlit (state, layout, tests, test speed), anything NiceGUI couldn't do, and a rough size for migrating the remaining pages. No rule changes in `requirements.md`; a short *SPIKE-009 (trial)* note in `status.md` saying how to start it.
 
 ### STORY-056 — Gold available from the chosen character
 
@@ -169,64 +101,6 @@ Acceptance:
 - **Offline tests:** no-profession becomes Not yet only with a complete list; an unreadable list stays Unknown; the skill-ID table, never names; team union (one character Known, another Not yet → planned, named); the include-unknown switch; counts per reason; the no-character fallback; another source's characters never count.
 - **Real-data check:** Today on the Forever beta source with *Our team*: only Tailoring recipes Basilly knows or can train at rank 8 (and any Mining ones Keenagen can make), with the left-out counts. Say plainly if the plan is short; that is the honest answer for these characters.
 - **Docs:** `requirements.md` → *Character eligibility* (the revised Unknown rule and the team default) and the skill-ID table with its evidence; `design.md`; `status.md`.
-
-### SPIKE-009b — The interactive Today in NiceGUI
-
-Added 2026-10-11 (product owner, after trying SPIKE-009: "it seems a little nicer… I don't see a way for me to set quantities"). Brownstone only; still a trial beside Streamlit, not a migration. Builds on SPIKE-009's `nicegui_app.py` and shared loader.
-
-Question: SPIKE-009 copied Today's tables, so both apps look alike. Is NiceGUI clearly better at what Streamlit does worst: a page you change by clicking (reruns on every click) and a layout that isn't a stack of tables? This round adds the interactive half of Today and a first look at STORY-054's cards, so the owner can decide on a page that is actually used, not one that is only read.
-
-Acceptance:
-- **Plan adjustments (STORY-039's rules, unchanged):** each craft row gets a tick and a batch size bounded by `choice_limits`, plus the *Refill freed gold* switch and *Hide Low confidence*, as in Streamlit. A change rebuilds the plan through `build_today(..., choices=..., refill=...)` and updates only the plan (Craft, Buy, Sell, shopping total and queue) without reloading the page or losing the open tab. Dropped choices show their reason, as in Streamlit. Choices live per browser tab and per source, and reset with a note when the scan, settings, catalogs or character evidence change (the same context rule as `views/today.py`). No second plan or reservation path.
-- **Session queue:** the same checklist as Streamlit from `session_queue`: buys, crafts in route order, posts, totals, with ticks that survive plan-unrelated clicks and reset with the plan.
-- **Craft cards preview:** the Craft tab offers *Cards* beside *Table*. Each of the first three or more crafts is a styled card: headline (item, batch, batch profit, profit per craft, confidence, can make), a why line from existing values, what to buy (its reserved materials summing exactly to the card's cost) and where to sell (Sell's undercut values). This previews STORY-054's content; it doesn't replace that story. Styling through NiceGUI/Quasar props and Tailwind classes is allowed this round; the goal is a page that looks like a finished tool.
-- **Its own window, started by double-click** (product owner 2026-10-11: "I don't like that I have to run this on a port"): a new `Start Brownstone (trial).command` / `.cmd` pair, beside the existing Streamlit ones, opens the NiceGUI app in a native desktop window (NiceGUI's `native=True`, through pywebview) with no browser tab, address or terminal to keep open. Closing the window stops the app. A second double-click while it is running focuses or reopens the window rather than failing on a busy port: let NiceGUI choose a free loopback port, never a fixed one. If native mode can't start (pywebview missing or failing), the launcher says so in one line and opens the same app in the browser instead. `python nicegui_app.py` (browser mode, `--port`, `--data-dir`) keeps working for development and tests. Still bound to `127.0.0.1` only.
-- **Unchanged:** Streamlit behaviour, `launch.py`, the existing `Start Brownstone` launchers, every calculation, `today_version`, settings files.
-- **Offline tests (NiceGUI user fixture):** unticking a craft and changing a batch updates Buy and the shopping total to match `build_today` with the same choices; refill on and off; a dropped choice's reason; the reset note when settings change; queue ticks; a card's materials sum to its cost; stale and Unknown labels on cards; the launcher's argument handling and browser fallback (without opening a window).
-- **Real-data check:** on a copy of the Forever beta data with Basilly: untick one craft, shrink another, and confirm both apps give the same plan for the same choices; screenshots of the cards. Start the trial by double-clicking on macOS and confirm the native window opens; the Windows launcher is checked by the product owner on the second machine.
-- **Dependencies:** pywebview (and anything it needs on macOS and Windows) added to the optional `nicegui` extra and pinned in `requirements.lock.txt`; a fresh install from the lock passes `pip check` on both platforms in CI.
-- **Findings in the report:** how adjustments compared with Streamlit (responsiveness, state, code size), what the cards needed, how the native window behaved (start time, closing, a second launch), and an updated migration size. `status.md` → *SPIKE-009 (trial)* updated; no rule changes.
-
-### STORY-058 — The new app: NiceGUI with Today and Import
-
-Added 2026-10-12 (product owner decision after SPIKE-009b). Brownstone only; display, navigation and launching. No calculation, storage, schema or import-rule change. Builds on SPIKE-009b's `nicegui_app.py`, `views/nicegui_today.py`, `launch_trial.py` and the trial launchers.
-
-As the owner, I want one app I open by double-click every day, where I import my scans and see Today, so that I stop needing the old app for daily work.
-
-Acceptance:
-- **The NiceGUI app becomes Brownstone's main app** with four places in its sidebar, in this order: **Today**, **Team**, **Market**, then a visually separate **Data**. Each place shows its business question under its title (the wording in `views/navigation.py`'s `QUESTIONS`). Team and Market show one line saying what is coming (STORY-052, STORY-055) until those stories land. The selected place, source and Today tab survive a browser refresh. Experiences and sources resolve as UI-01 says (Forever first, never merged); no *trial* wording remains anywhere in the app.
-- **Today** is SPIKE-009b's page, unchanged in behaviour.
-- **Data → Import** brings the Streamlit import page's flow over without changing it: read-only preview first, new-scan selection, the explicit Import button, the result replacing the reviewed table, drop-folder files with per-file results and cleanup evidence, and the clear guidance (ADDON-06, OPS-03, STORY-045's summary-then-details layout). It calls the same `brownstone/` functions as `views/scan_import.py` (`pipeline.preview_scans`/`import_scans`, `scan_inputs`); any logic now in that view that the new page also needs moves into a Streamlit-free `brownstone/` function both use, never a copy. A TSM source shows one line pointing to the old app's Refresh from TSM.
-- **Launchers:** `Start Brownstone.command` / `.cmd` now open the new app in its own window (SPIKE-009b's native launcher, renamed from `launch_trial.py` and the trial launchers). The Streamlit app moves to `Start Brownstone (old app).command` / `.cmd`, still started by `launch.py` and otherwise unchanged; README's start instructions say which is which.
-- **A second launch after updating the code opens the new code** (UI-05 for the new launcher): a running app started from older code is closed and restarted, never just focused; a running app it did not start is never stopped.
-- **Browser fallback doesn't linger:** when the app had to fall back to the browser, it stops itself once no browser tab has been connected for 5 minutes. Native mode still stops when its window closes.
-- **Unchanged:** every calculation, Today's rules and `today_version`, settings files, the import rules, the Streamlit app's pages and behaviour (only its launcher's name changes).
-- **Offline tests (NiceGUI user fixture):** the four places and their order; the placeholders; place/source/tab kept on refresh; import preview, selection and import on an addon fixture writing the same records as the Streamlit path; a drop-folder fixture with one importable and one rejected file; a TSM source's pointer line; the launcher's restart-on-new-code, never-stop-a-foreign-app and browser-idle stop (without opening a window). Existing Streamlit import tests still pass.
-- **Real-data check:** on a copy of `data/` with the Forever beta source: preview and import the latest addon file through the new app, compare the imported records with the same import through the Streamlit page on a second copy, then open Today with Basilly. Double-click the new launcher on macOS; the Windows launchers are checked by the product owner on the second machine.
-- **Docs:** `requirements.md` → *Interface* (UI-07, the launcher and fallback rules), `design.md` (page map and modules for the new app), `status.md` (replace *SPIKE-009 (trial)* with how to start the app), README start instructions.
-
-### STORY-054 — Today as craft cards
-
-Added 2026-10-11 (product owner: "all the information on why that item, what mats I need to buy for it… even going to the Buy tab I don't know what materials go to what"). Brownstone only; display of what Today already calculates. Builds on STORY-038's per-craft `purchases` and intermediate steps, STORY-043's character status and STORY-046's confidence label.
-
-**Revised 2026-10-12:** built in the new app only (`views/nicegui_today.py`, after STORY-058); the Streamlit Today page is not changed. SPIKE-009b's card preview is the starting point; this story finishes it to the criteria below and makes Cards the default view.
-
-As the owner, I want each recommended craft on Today as one card that says why it's worth doing, exactly what to buy for it and where to sell, so that I can act on it without cross-referencing tabs.
-
-Acceptance:
-- **The Craft tab becomes a list of cards,** one per shown craft in the existing plan order, the same 10-row limit and "N more" count. Each card:
-  - **Headline:** output item, batch size, batch profit and profit per craft (through `money.py`), the confidence label, and who can make it (or the chosen character's status).
-  - **Why:** one line from values already on the row: cautious sale price, competing listings and units, what limits the batch (funds, cap, supply), and *thin* when it applies. No new reasoning text is generated beyond these values.
-  - **What to buy:** the craft's own materials from its reserved `purchases` (STORY-038): material, route (auction house or vendor), units to buy, cost and the highest unit price to pay, with intermediate steps indented. Rows sum exactly to the card's material cost in integer copper.
-  - **Where to sell:** the undercut price, listings and units competing, and profit at the undercut (the Sell tab's values for that output).
-  - **State:** stale evidence still reads *stale — inspect only* on every card; Unknown character status stays marked.
-  Cards are collapsed to the headline and why line by default; one click opens what to buy and where to sell.
-- **The Buy tab says what each material is for:** a *For* column listing the crafts (by output name, with units each) that need it, from the same per-craft purchases. The total is unchanged and still equals the sum of the cards.
-- **A table view stays one click away** (a *Table* toggle showing today's Craft table) for comparing many rows at once.
-- **Unchanged:** ranking, sizing, reservations, the queue, settings, `today_version`.
-- **Offline tests (NiceGUI user fixture):** a card's materials sum to its cost; the Buy tab's *For* column across two crafts sharing a material adds up to the merged units; a vendor route and an intermediate step on a card; stale and Unknown labels on cards; the table toggle; cards follow plan adjustments. Update the existing trial card tests.
-- **Real-data check:** Today on the Forever beta source with Basilly chosen: each card's materials and the Buy tab's *For* column.
-- **Docs:** `requirements.md` → *Today* presentation bullet; `design.md`; `status.md`.
 
 ### STORY-055 — Market explorer
 
@@ -344,7 +218,7 @@ Acceptance:
 - **Shown, not ranked:** Today's *Sell* shows the deposit for the planned post and the loss if it expires. Ranking stays on batch profit (the deposit is refunded on a sale) until sell-through data exists (STORY-034).
 - Needs the item's vendor price (STORY-031); missing vendor price shows *deposit unknown*, never zero.
 
-**Beta evidence so far (2026-10-10):** one post: 5 Linen Cloth (vendor 13c) cost a **100c** deposit, more than a Classic-style formula gives (`status.md` → *Auction deposit, first observation*). **Next play session** (play actions only; Claude checks the file): post an item worth more to a vendor (a stack of 5 and a single, for example Bolt of Linen Cloth or a crafted shirt) once at each of the three durations; post one more stack of Linen Cloth at the shortest duration; then open the mailbox after the sale and take the gold. That separates a minimum from the per-vendor-value rate and duration, and times the sale-to-mail delay.
+**Beta evidence so far (2026-10-10):** one post: 5 Linen Cloth (vendor 13c) cost a **100c** deposit, more than a Classic-style formula gives (`PostCommodity` with duration argument 3; money went 145c → 45c; status 1 *sold* 30 s later, no invoice mail captured yet). **Next play session** (play actions only; Claude checks the file): post an item worth more to a vendor (a stack of 5 and a single, for example Bolt of Linen Cloth or a crafted shirt) once at each of the three durations; post one more stack of Linen Cloth at the shortest duration; then open the mailbox after the sale and take the gold. That separates a minimum from the per-vendor-value rate and duration, and times the sale-to-mail delay.
 
 ### STORY-036 — Vendor price ceilings
 
@@ -357,32 +231,6 @@ Acceptance:
 - **Buying:** already capped by CRAFT-03's cheapest route; Today's *Buy* never lists an auction purchase above the vendor price.
 - **Selling:** a sale value above the vendor price is capped at it, with a label, and the rule is recorded in `requirements.md`.
 - **Limited stock** (if the vendor has any) is noted, since vendor stock is otherwise *not modeled*.
-
-### STORY-037 — A second machine's files
-
-**Implemented and reviewed.** The first real round trip passed on 2026-10-07: a Windows beta scan went through the drop script and Google Drive and was imported on the Mac as `windows-pc`.
-
-Added 2026-10-06; refined 2026-10-07 for implementation. Decisions are under OPS-03 in `requirements.md`: Google Drive drop folder (installed and signed in on both machines), Windows scans accepted, Brownstone and `data/` only on the Mac, and the Windows PC has the repository cloned.
-
-As a gold maker who plays characters on both the Mac and the Windows PC, I want both machines' addon files in Brownstone, so that scans now, and character data and the ledger later, cover every character.
-
-Acceptance:
-- **Machine names, never inferred:** every addon input carries a machine name from configuration: `machine` for the Mac's own `scan_path`, and the name embedded in each dropped file's name. Lowercase letters, digits and hyphens only. A machine is provenance, not part of `MARKET_KEYS`: scans from both machines of the same house are one market.
-- **Drop folder setting:** an optional `drop_folder` on the addon source, set only in the untracked `config/market.local.toml` (the Google Drive path contains the account email). Without it, everything behaves as today. Brownstone only reads the drop folder: it never writes, renames or deletes files there.
-- **Windows drop script** in the repository (for example `tools/windows/`), PowerShell with a double-click `.cmd` wrapper, needing nothing installed. Its settings (SavedVariables path, drop folder, machine name) live in an untracked local file next to it, with a tracked example. It:
-  - refuses while the game is running (the game writes the file only on logout or `/reload`) and when the source file is missing;
-  - copies the file to `<machine>-<UTC time>-BrownstoneScan.lua`, writing a temporary name first and renaming when complete, so Drive never syncs a half-written file under the final name;
-  - never overwrites, verifies the copy's SHA-256 against the source, and says *nothing new* without copying when the bytes match that machine's latest drop;
-  - only reads the SavedVariables file.
-- **Preview and import on the Mac** (app and CLI):
-  - Preview lists the Mac's own file plus every dropped file matching the naming pattern, each with machine, drop time and its scans (new, duplicate, other house). Other files (partial copies, Drive conflict copies such as `name (1).lua`, unrelated files) are listed as ignored, with the reason.
-  - A file that can't be read (still syncing, Drive offline, truncated) is reported on its own row and doesn't block the other files.
-  - Each imported file is archived byte-for-byte in bronze as its own collection, with its machine and original file name in the manifest. Every imported scan is stored with its machine (a new numbered migration; scans imported before this story keep machine missing, never guessed).
-  - The existing rules apply unchanged per file: house evidence, invalidation of a reviewed preview, scan-ID/hash deduplication and conflicts, partial scans unpriced.
-- **Clean-up guidance:** for each dropped file, whether every scan in it is imported, so it can be deleted from the drop folder by hand. For each machine, the latest drop and whether it is fully imported, with the reminder that `/bscan clear` on that machine is safe only if you haven't played there since that drop.
-- **Docs:** Windows setup in `addon/README.md` (installing the addon from the repository, Drive for desktop, the script's settings, and the routine: log out → run the script → import on the Mac → clear in game next session); the rules in `requirements.md`; contracts in `design.md`; current state in `status.md`.
-- **Offline tests:** naming and ignored files, machine validation, two machines' scans of the same house in one market, duplicate and conflicting scan IDs across files, an unreadable drop beside a good one, other-house drops, clean-up status, the migration (backup, replay, missing machine for older scans), CLI and the import page. The script's tests run where PowerShell is available (Windows CI) and are skipped elsewhere, with the skip visible.
-- **Moved out:** the mail cross-check between characters on different machines needs the event journal; it is now part of STORY-034.
 
 ### STORY-040 — Your active auctions
 
@@ -403,86 +251,6 @@ Acceptance:
 - **Seen in Brownstone:** on the addon import page, per character, the latest observed active-auction list: time (UTC), number of auctions, and how many the client marked sold, or *active auctions unknown*. No other views; interpretation is STORY-034.
 - **Offline tests** with Lua stubs for the modern and legacy APIs: a list with several auctions including a sold one, an unchanged list (no new entry), a changed list, an empty list, missing values, no request functions ever called, a rejected event, and the import page's latest row and unknown case.
 - **Checklist** in `addon/README.md`: open the Auctions tab before posting, post two small stacks, open it again, cancel one, open it again, and after a sale (before and after taking the mail) open it again. Note whether the list arrived without the tab, and save the recordings as fixtures before 21 October.
-
-### STORY-041 — Your professions and known recipes
-
-**Implemented (2026-10-07); level and skill capture confirmed on the beta 2026-10-09; known-recipe capture failed there and moves to STORY-049.** Contracts and implementation choices
-live in [ADDON-11/12](requirements.md#addon-11-character-snapshots-story-032); play checklist in
-[addon/README.md](../addon/README.md#professions-beta-checklist-story-041--by-13-october-mac-and-windows).
-
-Added 2026-10-07 (product owner: "what can I actually do?"). Must be testable in game by 13 October (*Now*). Captures raw evidence only; Today uses it in STORY-043. Takes the capture half of *Known recipes and skill* from Later.
-
-As a gold maker, I want the addon to record each character's level, professions and known recipes, so that Today can later show only crafts that character can actually make.
-
-Acceptance:
-- **Level and skills in every bags snapshot** (STORY-032's logout and `/reload` snapshot): character level, and every skill line the client reports (professions, gathering, secondary skills such as Cooking and First Aid) with its current rank, maximum rank and any skill ID, as reported, with the API used. Which API answers (the legacy `GetNumSkillLines`/`GetSkillLineInfo`, or modern `GetProfessions`/`GetProfessionInfo`) is a **beta check**: read each one that exists, guarded. Missing stays missing, never zero.
-- **Known recipes when you open a profession window:** on the client's trade skill or craft window events (`TRADE_SKILL_SHOW`/`TRADE_SKILL_UPDATE`; `CRAFT_SHOW`/`CRAFT_UPDATE`, which Classic uses for Enchanting), read every row the window lists with read-only APIs: the profession name and rank the window reports, and per row its index, name, type (header or recipe), difficulty, number craftable now, the recipe link and created item link as reported, any recipe or spell ID, minimum and maximum made, and each reagent's item link or ID and count. One record per profession per character, recorded only when it differs from the last one recorded this session (as for the mailbox).
-- **Filtered or collapsed windows are flagged, never changed:** the addon doesn't expand headers, clear filters or open windows. It records which headers are collapsed and any filter state the client reports, and marks the list *possibly incomplete* when any is set. Whether the beta window hides recipes by default is a **beta check**.
-- **Unknown is not none:** a profession whose window was never opened has *known recipes unknown*; a character with no snapshot since 0.8.0 has *skills unknown*.
-- **Never acts, and stays silent:** no crafting, training, learning, window opening or filter changes; nothing in chat in normal play.
-- **Import:** through the shared non-scan import (STORY-033): skills go in the existing snapshot; known-recipe lists as a new snapshot kind or journal entry (implementer's choice, recorded in ADDON-11/12 with why). New storage only through a numbered migration. Bump the addon version; bump the file format only if import needs it (record which).
-- **Seen in Brownstone:** on the addon import page, per character: level, each profession with rank/max, and for each profession the time of the latest known-recipe list and its recipe count, or *unknown*. No other views; matching to catalogs is STORY-043.
-- **Offline tests** with Lua stubs for both skill APIs and both window APIs: several professions, a header row, a collapsed header (flagged), a reagent with a missing link, an unchanged list (no new entry), a changed list after learning a recipe, a missing API, a rejected event, no action or filter functions called, and the import page's rows and unknown cases.
-- **Checklist** in `addon/README.md`, in play terms only (the product owner plays, Claude checks; see *Now*): open each profession window, learn a recipe and reopen it, gain a skill point, log out. Mining and Engineering on one character; Tailoring and Enchanting on the druid.
-
-### STORY-049 — Known recipes on the Forever client
-
-**Implemented (2026-10-09); confirmed on the Forever beta 2026-10-10 (addon 0.11.1; 0.11.2 refuses the empty first read).** Capture/projection
-contracts live in [ADDON-12](requirements.md#addon-12-event-journal-story-033); play actions in
-[addon/README.md](../addon/README.md#forever-known-recipes-play-checklist-story-049--by-15-october).
-
-Added 2026-10-09 (beta finding). Fixes STORY-041's known-recipe capture on the Forever client. Must be testable in game by **15 October**, so the beta can confirm it before 21 October.
-
-**Evidence:** on 2026-10-09 (Windows, addon 0.10.1, Basilly, Tailoring 7/75) `TRADE_SKILL_SHOW` fired but no `known_recipes` list was saved: `GetTradeSkillLine` returned nothing. The same client crafted through `C_TradeSkillUI.CraftRecipe(2963, 1)` and `CraftRecipe(3755, 1)`, whose first argument is the catalog's recipe ID. `TRADE_SKILL_UPDATE`/`CRAFT_UPDATE` never fired. Level and skill lines (modern API) were captured correctly and stay unchanged.
-
-As a gold maker, I want the addon to record which recipes each character knows on the Forever client, so that Today and the planner can tell what I can actually make.
-
-Acceptance:
-- **Modern window API first:** when a profession window opens or its list changes, read the recipe list through `C_TradeSkillUI` when the client has it, and fall back to STORY-041's `GetTradeSkill*`/`GetCraft*` reader otherwise. Candidate functions (each guarded; which exist is a **beta check**): `GetAllRecipeIDs`, `GetRecipeInfo` (name, learned flag, category, craftable count), `GetRecipeSchematic` (output item ID, min/max made, reagent item IDs and counts), `GetBaseProfessionInfo`/`GetChildProfessionInfo`/`GetTradeSkillLine` (profession name, rank, max rank), and recipe/item link functions. Preserve raw values as reported, with the API used, as ADDON-12 already does for the legacy reader.
-- **Known means learned:** the modern list can include unlearned recipes. Record every row with its learned flag; only `learned == true` counts as known. A missing flag leaves that row's status unknown, never known.
-- **Events:** keep the existing window events and add the modern list events guarded (for example `TRADE_SKILL_LIST_UPDATE`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`), recording which fired. Same change detection as STORY-041 (ignore craftable counts; one entry per changed list).
-- **API inventory:** the first time a profession window opens in each load, record once which `C_TradeSkillUI` functions and events the client offers (names only), so a failed read still tells us what to use.
-- **Crafts as evidence:** Brownstone's import projection treats a recipe ID seen in a `CraftRecipe` hook or a successful craft cast by that character as known from that time, labelled *seen crafted*, alongside any list. No addon change is needed for this; it reads existing journal entries.
-- **Unchanged:** read-only and silent; no crafting, training, filter changes or window opening. Filtered or collapsed lists are flagged *possibly incomplete* as in STORY-041. Bump the addon version; file format only if import needs it (record which). New storage only through a numbered migration.
-- **Seen in Brownstone:** STORY-041's import-page row per character and profession shows the latest list's time and known-recipe count, or *unknown*, and now also the source (*window list* or *seen crafted*).
-- **Offline tests** with Lua stubs for the modern API: learned and unlearned rows, a schematic with reagents, a missing function, a list that changes after learning a recipe, an unchanged reopen (no new entry), the API inventory, the legacy fallback still working, no action functions called; and Brownstone projection tests for *seen crafted*.
-- **Checklist** in `addon/README.md`, play actions only: open each profession window, learn one recipe at a trainer and reopen the window, craft one thing, log out. Claude checks the file.
-- **Docs:** ADDON-11/12 in `requirements.md` (modern reader, learned rule, inventory, *seen crafted*), `status.md`.
-
-### STORY-050 — How each recipe is learned
-
-**Implemented and reviewed (2026-10-09).** Added 2026-10-09. Catalogs only; no game time. Same shape as STORY-047's catalog fields.
-
-As a gold maker, I want each catalog recipe to say how it's learned and what training costs, so that plans can tell "train it now" from "find a pattern".
-
-**Evidence:** the saved Wowhead list pages carry `source` codes and `trainingcost` per spell (Linen Bag: `source [6]`, `trainingcost 100`; Red Linen Bag: `[2,5]`; Runecloth Bag: `[5]`; Bolt of Linen Cloth: none, a starting recipe).
-
-Acceptance:
-- **Catalog fields** (CRAFT-08, a catalog value change with evidence): `learned_from` (the page's source codes as listed) and `training_cost_copper` (integer copper) when the page gives them; absent when it doesn't, never guessed. The code-to-label table (*trainer*, *vendor*, *drop*, *quest*, …) is recorded once in `requirements.md` with its evidence; an unlisted code shows as *other (code N)*. A recipe with no source and `learnedat` 1 is labelled *starting recipe* only if the page evidence supports it; otherwise *unknown*.
-- **Regenerate** every Forever catalog from its archived page under `data/recipe-sources/` and confirm each diff holds only the new fields and the version bump. Classic catalogs too if their pages carry the fields.
-- **Shown** on the Recipe catalogs page's recipe view. No other views; STORY-043 and STORY-052 use the fields.
-- **Offline tests:** each code, several codes, a missing source, a training cost, a malformed value left absent, older catalogs still loading.
-- **Docs:** CRAFT-08 in `requirements.md`, `design.md`, `status.md`.
-
-### STORY-051 — Characters page
-
-Added 2026-10-09 (product owner: "which character can do what"). Brownstone only; works on imported snapshots and journals.
-
-As a gold maker, I want one page listing my characters with their level and professions, and how those change over time, so that I know who can do what without logging in.
-
-Acceptance (refined 2026-10-09 for handoff):
-- **Its own page, *Characters*,** after Today in the navigation. Calculation in a new `brownstone/characters.py` (no Streamlit) that returns plain data; display in `views/characters.py`. Reuse the existing projections rather than re-reading records a second way: `character_snapshots` (latest readable bags, unreadable-backpack rule) and `professions` (skills, known recipes, *seen crafted*). Refactor them into data plus display shaping if needed, keeping the addon import page's tables unchanged.
-- **One card per character** of the selected source and full market (never pooled across sources), newest *last seen* first:
-  - **Header:** name and realm, machine, and *last seen* as a relative time with the UTC time beside it.
-  - **Level and gold** as two headline numbers. Gold through `brownstone/money.py`; *unknown* when no readable bags snapshot exists, never 0.
-  - **Professions:** one line each with a rank/max progress bar and the known-recipe count and its source (*window list* or *seen crafted*) with its time, or *unknown*. Never zero for unknown. A *possibly incomplete* skill or recipe list keeps that label. A character with no readable skills since addon 0.8.0 shows *skills unknown* instead of bars.
-  - **Freshness:** a card whose latest readable bags snapshot is older than 7 days is marked *stale* (the threshold recorded in `requirements.md`).
-- **At cap:** a profession whose rank equals its reported maximum is marked *at cap: train the next tier*. Which character level each tier needs is not assumed; it's shown only once recorded with evidence in `requirements.md` (*Known Forever market facts*).
-- **Progress over time** (collapsed by default, per character): a line chart of level and each profession's rank at each readable imported snapshot (Altair, already pinned), with the same values as a small table for exact reading. Unreadable snapshots are left out, never drawn as a drop to 0 or level 1.
-- **Look and feel** (product owner: "Streamlit's pretty boring"): make it the most visual page in the app using only Streamlit 1.65 and Altair, no new packages and no custom HTML/CSS injection. Bordered card containers in a responsive grid (two per row on a wide screen), headline numbers, progress bars, small coloured badges for *at cap*, *stale*, *skills unknown* and *possibly incomplete*, and profession emoji or Material icons (decorative only, chosen by profession ID or the catalog's profession, never inferred for any calculation). Class, race and portraits aren't captured, so they aren't shown or invented; adding capture is a separate addon story.
-- **Empty state:** no characters for this source shows a short message pointing to the addon import page, not an empty table.
-- **Offline tests:** two characters on two machines, a character with no skills (unknown), unknown gold not shown as 0, a profession at cap, recipe counts from a window list and from *seen crafted*, rank history across snapshots skipping an unreadable one, a stale card, the empty state, scoping by source and full market (a second source's character never appears), and an AppTest render of the page.
-- **Docs:** `design.md` (new module and page), `status.md`; the stale threshold and any other new rule in `requirements.md`.
 
 ### STORY-052 — Team: roster and progression planner
 
@@ -509,7 +277,7 @@ Acceptance (refined 2026-10-10 for handoff, after STORY-043; placed on the Team 
 ### STORY-042 — Beta evidence report
 
 **Implemented (2026-10-07); pending review and real format-5/6 beta evidence.** Run instructions and
-current limits are in [status.md](status.md#beta-evidence-report-story-042); module boundaries and
+current limits are in [status.md](status.md#beta-evidence-report); module boundaries and
 load-session inference are in [design.md](design.md#beta-evidence-report-story-042).
 
 Added 2026-10-07 (product owner: "I'll rely on you and scripts to do the testing"). Brownstone only; no addon change. Needed while the beta runs, so the product owner can just play and Claude checks each session's file. **Refined 2026-10-07 for implementation** (after the STORY-041 review); aim to have it working by 13 October.
@@ -550,167 +318,6 @@ Acceptance:
 - **Brownstone:** preview, import and `beta-report` ignore the `ui` table; a test proves a format-6 file with `ui` imports and reports exactly as without it.
 - **Offline tests** in the existing Lua harness (`tests/test_addon.py`, `tests/fixtures/addon_harness.lua`): the panel's buttons call the same functions as the auction-house buttons (Clear refuses with an unsaved scan, shows the popup otherwise; Reload calls `ReloadUI`; Start is disabled with the house closed and during a scan); the status numbers, the 8,000 highlight and the overflow skipped count; the saved angle survives a reload; `/bscan panel` toggles; opening the panel adds no journal entry, snapshot or scan.
 - **Docs:** `addon/README.md` gets a short *Panel* section (replacing the visibility decision) and an in-game check written as play actions only: click the minimap button, open and close the panel, drag the button and reload, press each button once. `requirements.md` records the panel as a convenience view with the existing guards; `status.md` describes the current state.
-
-### STORY-045 — A simpler import page
-
-Added 2026-10-08 (product owner: "I just want to import. I do need to see all that, just really if there's an issue"). Display only in `views/scan_import.py`; no change to preview, stale checks, import, archiving or the CLI.
-
-As the product owner, I want the import page to tell me in a line or two what's new and let me import it, so that I only read the details when something is wrong.
-
-Acceptance:
-- **Summary first:** after **Preview addon scans**, one short line per file with something new, for example "windows-pc, dropped 08 Oct 13:00 UTC: 1 new scan, 12 character records". Files with nothing new are counted in one line ("2 files already imported"). When nothing at all is new, a single line says so, with the existing /reload hint. The local `scan_path` file having no scans is a quiet note in that line, not a problem, when other files are readable.
-- **One button:** **Import addon scan** sits directly under the summary, with the existing default selection (every file or scan with something new). The review step stays: Preview, then Import. No one-click import.
-- **Details collapsed:** every table and note shown today (file status, per-file scan tables, character snapshots and journal previews, latest drop per machine, the partial-scan and other-house captions, the cleanup reminder) and the file/scan selection move unchanged into a collapsed **Details** expander. The already-imported holdings tables at the top (skills, active auctions, journal, snapshots) go into their own collapsed **Imported character data** expander.
-- **Problems open the details:** the Details expander starts open, and a warning line under the summary names the problem, when any file has a read, parse or conflict error, a new scan is partial, any record is from another house, or the selection the user would import differs from the default. Import results keep today's messages; an error result also opens Details.
-- **Clear guidance in one line:** after an import, one line per machine says whether it's safe to /bscan clear there (its latest drop is fully imported) instead of the full reminder, which stays in Details.
-- **Drop clean-up in one line** (added 2026-10-09): drops are deleted by hand (OPS-03), so the folder grows between sessions. One line says how many dropped files are fully imported and can be deleted from the drop folder by hand, for example "5 dropped files are fully imported and can be deleted from the drop folder". Files not fully imported are named in the problem warning. Display only: Brownstone still never deletes or moves a drop.
-- **Unchanged:** ADDON-06 and OPS-03 behavior, every stale-preview and conflict check, messages from `brownstone/`, the CLI `--preview` output, both the single-file and drop-folder paths.
-- **Offline tests** (`tests/test_app.py` AppTest): a clean preview shows the summary, the drop clean-up line and the button with Details collapsed; each problem kind opens Details and shows the warning; nothing new shows the single line and no button; an import still succeeds and still raises the stale error after a changed file.
-- **Docs:** ADDON-06 in `requirements.md` says the preview columns are in a Details section that opens on problems; `design.md` (`views/scan_import`) and `status.md` describe the current page.
-
-### STORY-038 — Today craft details
-
-**Implemented and reviewed (2026-10-07).** Row selection checked in a live browser on the Forever beta scan.
-
-Added 2026-10-06 (product owner feedback on Today). Display of what the plan already calculates; no change to sizing, ranking or Today's rules.
-
-As a gold maker, I want to pick a craft on Today and see exactly what it needs, so that I know what to buy for that item without working it out from the merged shopping list.
-
-Acceptance:
-- **Select a row** in the Craft tab (Streamlit row selection); a details table appears under it. Nothing is selected by default, and the selection clears when the plan changes.
-- **Materials for that craft only:** each material for the selected batch with route (auction house or vendor), required units, purchased units, cost and highest unit price, from the same reserved listings the plan used. The rows sum exactly to the craft's material cost, in integer copper.
-- **Intermediate steps** the catalog route uses (for example thread → bolt → armor) appear as indented steps with their own quantities, so the chain is visible. Nothing beyond the catalog's own routes (cross-profession chains stay STORY-015b).
-- **Unchanged:** the Buy tab's merged list, staleness labels (*stale — inspect only* still shows) and the 10-row limit.
-- **Offline tests:** per-craft materials add up to the craft's cost and to the merged Buy list across crafts; a vendor route; an intermediate step; stale evidence.
-- **Implementation notes** (added 2026-10-07 at hand-off): read the materials from the selected craft row's existing `purchases` (the reserved quotes Today already made), never re-quote listings, so the details can't disagree with the plan. Intermediate steps come from the recipe's chosen catalog route (`crafting.py`, method `craft`); yields stay 1 (CRAFT-08). Calculation stays in `brownstone/` (no Streamlit), display in `views/today.py`. A display-only change: `TODAY_VERSION` stays 1.
-
-### STORY-046 — A confidence label on each Today row
-
-**Implemented and reviewed (2026-10-08).** At review, the real `vendor_verified` marker reads *unconfirmed vendor price*; merged Queue buys carry the worst contributing label (`requirements.md` → Today).
-
-Added 2026-10-08 (product owner: clearer recommendations). Brownstone only; works on existing scans. Display of rules over evidence Today already has; no change to ranking, sizing or which rows appear.
-
-As a gold maker, I want each recommendation labeled *High*, *Medium* or *Low* confidence with its reasons, so that I can tell at a glance which ones to trust without reading every number.
-
-Acceptance:
-- **One label per Craft row** (and carried to its Sell and Queue lines): *Low* if any Low reason applies, else *Medium* if any Medium reason applies, else *High*. Reasons are shown in the row as short words (for example "thin, unconfirmed vendor price"). Calculation in `brownstone/` (no Streamlit), display in `views/today.py`.
-- **Starting rules** (recorded in `requirements.md` → *Today* under `today_version` 3, every threshold named there):
-  - *Low:* the scan is stale (as today: inspection only); the output is *thin* (CRAFT-09's existing rule); the output has no competing listing to price against; a material's batch buys more than **75%** of that material's listed units.
-  - *Medium:* the scan is older than half the freshness limit; the output has fewer than **5** listings; a material's batch buys more than **40%** of its listed units; a route uses a catalog value marked unconfirmed (the existing `*_verified` markers, `crafting.py`, on the recipe or any item its route uses).
-  - **Ages** use the same freshness basis and limit Today already shows (DATA-05), including its labeled collection time when the scan time is unknown.
-  - **Material share** is the batch's planned purchase units for that material (the reservations STORY-039 already makes, so earlier rows' purchases count against later ones as they do now) over all its listed units in the scan (CRAFT-09: including no-buyout listings). Materials bought from a vendor or not bought at all give no share reason.
-- **Only evidence Today already computes:** no new prices, no history, no AI. A TSM source shows depth-based reasons (thin, listing count, material share) as *depth not available for this source*, and that reason alone makes the row at best *Medium*: missing depth never yields High.
-- **Display only:** labels never change ranking, batch sizes, refill, reservations, queue order or which rows appear, apart from the filter below.
-- **A filter** on the Craft tab to hide Low rows (off by default, session only; hidden rows counted under the existing hidden reasons as *low confidence*). Hiding a row doesn't free its reservations or change other rows.
-- **Offline tests:** each reason on its own, including the exact thresholds (75%/40% of listed units, 5 listings, half the freshness limit); the worst-reason rule; stale and TSM sources; unconfirmed vendor price and unconfirmed yield; a material share across two rows using the same material; labels unchanged rankings and sizes (same rows and order with labels as without); the filter's count; the label on Sell and Queue lines.
-- **Real-data check:** on the Forever beta source, the number of High, Medium and Low rows and the most common reasons.
-- **Docs:** `requirements.md` (*Today*, new version), `status.md`.
-
-### STORY-047 — Skill-up demand map
-
-**Implemented and reviewed (2026-10-08).** At review, raw expansion covers all N crafts at once and selections can mark an item `raw_material` (CRAFT-08), used for Forever leather tiers.
-
-Added 2026-10-08 (product owner); moved from *Recipe coverage* under Later. Refined 2026-10-08 for implementation. Brownstone only, from catalogs; scans optional. Must be usable before 4 November: launch-week demand comes before any price history exists.
-
-As a gold maker, I want to see which materials levelling crafters will need at each skill band, so that I know what to gather, keep or buy early in launch week.
-
-**Why skill-up colours (found at refinement):** a recipe is crafted for skill-ups from the level it turns orange until it turns green, not only in the band where it's learned (Bolt of Linen Cloth: learned at 1, orange from 1, yellow from 25, green from 37, grey from 50). The saved Wowhead pages already carry these four thresholds (`colors`, on 463 of 471 Forever Tailoring spells), but catalogs don't record them yet. Coverage also varies: the Forever Enchanting catalog holds 28 of the page's 270 spells, because enchants that create no item can't be catalog recipes (CRAFT-08), so its map would look complete without a coverage line.
-
-Acceptance:
-- **Catalogs record skill-up thresholds** (CRAFT-08, a catalog value change with evidence):
-  - The generator copies each recipe's Wowhead `colors` into an optional `skillup_colors = [orange, yellow, green, grey]`, from the same saved page as every other value (its SHA-256 is already on each recipe). A recipe whose page entry has no `colors`, a zero or non-integer value, or values that decrease gets no field (unknown), never a guess.
-  - The catalog header gets `page_coverage`: counts from the saved page of non-seasonal spells that have reagents, split into *usable* (a fixed, known yield; CRAFT-08's rule), *no item* (create nothing, such as enchants) and *unknown yield*. Spells without reagents (profession rank spells) aren't counted.
-  - `parse_recipe_catalog` accepts both optional fields and validates them (four positive integers, non-decreasing; non-negative counts). Older catalogs without them still load.
-  - Regenerate every catalog that has a saved page (Forever and Classic Era) through the existing generator; the `catalog_version` bump follows CRAFT-08. The only content changes in the diff are the two new fields and the version; the report confirms this per catalog. The Recipe catalogs page's **Save catalog** writes the same fields through the same code.
-- **Its own page, *Skill-ups*,** after Recipe catalogs in the view list (Recipe catalogs is an editing page). Calculation in a new `brownstone/skillups.py` (no Streamlit, no downloads); display in `views/skillups.py`. The page uses the selected source's compatible catalogs (same game version and `rules_version`, as the board does), one profession per catalog, all shown by default with a profession filter.
-- **Bands and placement:** skill bands of **25** points (1–24, 25–49, …, up to the highest band any recipe reaches). A recipe belongs to every band that overlaps its **skill-up range**, from orange (inclusive) to green (exclusive): the levels where a craft gives a point every time or usually. A recipe without `skillup_colors` is placed only in the band of its `required_skill` and labeled *skill-up range unknown*. A recipe without `required_skill` either goes in a separate *skill unknown* group, never band 1. A zero-width range (orange equals green) is shown as *no reliable skill-ups* in its learned band and adds no units.
-- **Assumed crafts:** one setting, **N crafts per recipe** (default **5**, whole numbers 1–50), kept for the session only and shown in every heading that uses it ("assuming 5 crafts of each recipe"). Nothing is written to disk.
-- **Per band and profession:** the recipes in that band (name, learned at, orange/yellow/green/grey, unconfirmed markers from the existing `*_verified` fields and `availability`), then two material tables for N crafts of each of those recipes:
-  - **Direct materials:** the recipe inputs as listed.
-  - **Raw materials:** intermediates the catalog crafts (bolts, thread, bars made in the same catalog) expanded through the catalog's own routes (`material_plan` in `crafting.py`), so what you gather or buy is visible. Routes never cross catalogs: Blacksmithing's bars stay bars (cross-profession chains are STORY-015b). If expansion fails (cycle or fractional yield), that recipe shows the error and adds no raw units, never zero cost or a partial count.
-  Units are integers. Each table names its material by catalog name and item ID.
-- **Totals** across bands, per profession and across all shown professions: each material's units for **one crafter making N of every recipe shown once** (a recipe spanning several bands counts once in totals), the professions and bands that use it, sorted by total units, direct and raw as above. *post-launch* recipes are listed with their marker but left out of totals by default, with a toggle to include them and a count of what was left out.
-- **Coverage, stated:** under each profession's heading, "Catalog holds X of Y usable recipes on its saved page (saved <date>); Z recipes on the page create no item and aren't counted", from `page_coverage`. A catalog without `page_coverage` says *coverage unknown; regenerate the catalog*. When X < Y the totals heading says they cover only the catalog's recipes.
-- **Optional market context:** when the selected source has an imported snapshot, each material row shows units listed and lowest unit buyout from the newest snapshot (ADDON-10 metrics; TSM shows the price it has and units *not available for this source*), labeled with the scan time and *stale* when past the freshness limit. Never hidden because of staleness; missing prices stay missing and are never zero. No snapshot: the columns are absent and one line says so. Market context never changes units or order.
-- **Honest labels:** the page states once, at the top, that this is an expectation from catalog data and an assumed number of crafts per recipe, not observed demand or a forecast; that real levellers craft some recipes more and skip others; and that unknown skill-up ranges are placed by learned level only. Never infer a material's role or a recipe's use from its name.
-- **Decision first (STORY-030):** the totals table leads; bands are collapsed sections; rule text sits in one caption.
-- **Offline tests** (synthetic catalogs and saved-page fixtures, no `data/`):
-  - Generator: colours copied; missing, zero and decreasing colours give no field; `page_coverage` counts (usable, no item, unknown yield, rank spells excluded, seasonal excluded); parser accepts and rejects the new fields; a catalog without them still loads; regeneration from an unchanged page changes nothing else.
-  - Map: band boundaries (24/25, 49/50); a range spanning three bands; orange-to-green exclusive at green; unknown range placed by learned level; no `required_skill` in *skill unknown*; zero-width range; intermediate expansion (thread → bolt → item) and a fractional-yield error; a recipe in several bands counted once in totals; totals across two professions sharing a material; N = 1, 5, 50 and rejected 0/51; post-launch excluded then included; coverage line with and without `page_coverage`.
-  - Page (AppTest): renders with and without a snapshot, stale scan labeled, TSM units *not available*, profession filter, N change updates units.
-- **Docs:** CRAFT-08 in `requirements.md` gains the two catalog fields; a new **CRAFT-10 Skill-up map** holds the placement, N, totals, coverage and market-context rules. `design.md` describes `brownstone/skillups.py`, the view and the catalog fields; `status.md` describes the page and the real-data check.
-- **Real-data check:** on the Forever beta source, report per profession X of Y coverage, the number of recipes with unknown range, the top 10 raw materials in totals at N = 5, and one band's tables (Tailoring 50–74), with market columns from the newest scan.
-
-**Not in this story:** how each recipe is learned (trainer, vendor, drop). The pages carry Wowhead source codes, but their meanings aren't confirmed from evidence here; a later story can add a trainer-only filter once they are. Enchants that create no item stay out of catalogs.
-
-### STORY-048 — Watchlist with target prices
-
-**Implemented and reviewed (2026-10-11).** Rules in `requirements.md` → *Watchlist*; verification in `status.md`.
-
-Added 2026-10-08 (product owner). Brownstone only; the honest first step towards *Alerts* (end of the *History chain*), on prices you set rather than history.
-
-As a gold maker, I want to list items with a buy-below or sell-above price and see which ones hit after each import, so that I catch the prices I care about without searching for them.
-
-Acceptance (refined 2026-10-10 for handoff):
-- **Its own page, *Watchlist*,** after Characters in the navigation, to add, edit and remove entries and show the watchlist table. Calculation in a new `brownstone/watchlist.py` (no Streamlit, no downloads) that returns plain data; display in `views/watchlist.py`.
-- **Entries:** add by item ID or by picking from item names already known to Brownstone for this source's scans or compatible catalogs (name search is for picking only; the entry stores the item ID, never the name). Each entry has an optional *buy below* and *sell above* price as `g/s/c` text parsed with `money.py` (integer copper, positive; same input rules as Today's gold) and an optional note. At least one target is required. One entry per item ID. Items are base items: variants (ADDON-08) aren't watched separately.
-- **Stored per source** in `data_dir/watchlist.<source_id>.local.json`, written atomically through a `.tmp` sibling like Today settings (`requirements.md` → *Today*, *Opening and settings*); the pattern (with its `.tmp`) is added to `.gitignore`. A file that is invalid or unreadable shows a warning and an empty, read-only list, and is never silently replaced; saving is refused until the user fixes or removes it.
-- **Price evidence** from the newest imported snapshot of the selected source and full market only, through the existing read-only readers (`today_data.read_skillup_market` for lowest unit buyout and units; `metrics.units_below_price` for units, which is strictly below, so pass target + 1 for *at or below*). Base/legacy rows only, as in CRAFT-10's market context. Freshness from DATA-05 (`brownstone/freshness.py`).
-- **Hit states**, one per target:
-  - **Buy hit** when the lowest unit buyout is at or below *buy below*; shows the units listed at or below the target.
-  - **Sell hit** when the lowest unit buyout is at or above *sell above* (nobody is undercutting your price).
-  - **Not listed** when the item has no listing with a positive buyout: never a hit, never 0.
-  - **Stale** when the snapshot is stale or in the future by DATA-05: the hit is still shown, marked *stale*. No imported snapshot: every entry shows *no snapshot*.
-  - **TSM sources:** use TSM's lowest price; units are *not available for this source*, and a buy hit says so instead of a count.
-- **Watchlist table:** every entry with item name (when known) and ID, targets, current lowest price, units listed, hit state, note, and the snapshot time in UTC once above the table.
-- **Hits elsewhere:** a short panel above Today's tabs listing only the current hits (nothing when there are none), and the same short list after a successful addon import on the import page. Neither changes Today's numbers, ranking or the import itself.
-- **Offline tests:** parsing and storage round trip, an invalid file kept and warned about, a buy hit with its units, a sell hit, exactly at each target, not listed, a stale snapshot, no snapshot, a TSM source (lowest price only, units *not available*), one source's list never shown for another, an addon variant listing ignored, and AppTest renders of the page, the Today panel and the import result.
-- **Docs:** a new *Watchlist* rule in `requirements.md` (file, hit rules, scope), `design.md` (module and page), `status.md`.
-
-### STORY-043 — Today: what each character can make
-
-**Implemented and reviewed (2026-10-10).** Rules in `requirements.md` → *Today* (v4); a live *Train now* row awaits a trainer recipe at Basilly's rank (`status.md`).
-
-Added 2026-10-07 (product owner); reworked 2026-10-09 (product owner: "Today shows things I can't actually craft yet"). Takes the Today half of *Known recipes and skill* from Later. **Unblocked 2026-10-10:** STORY-049's beta evidence (`status.md` → STORY-049, *Confirmed on the beta with 0.11.1*) shows the client's `recipe_id` is the same spell ID as catalog `recipe_id`, each list holds every recipe of the profession with a `learned` flag, and all 429 listed catalog recipes agree on output, yield and reagents.
-
-As a gold maker, I want to choose one of my characters on Today and see what that character can make now or train now, so that the plan is something I can actually do.
-
-Acceptance (refined 2026-10-10 for handoff):
-- **Choose a character** on Today: *All recipes* (the default, unchanged behaviour) or any character of the selected source and full market that has a known-recipe list or *seen crafted* evidence. Saved per source in the existing Today settings file as the character's name, realm and faction; older settings files still load (as *All recipes*), and a saved character no longer present falls back to *All recipes* with a caption.
-- **Evidence** comes from the shared profession projection (`professions.latest_data`, as the Characters page uses), never a second reader: each profession's latest window list and *seen crafted* IDs. Calculation in a new `brownstone/` module (no Streamlit); display in `views/today.py`.
-- **Matching by recipe ID only:** a catalog recipe matches a list row or *seen crafted* evidence with the same `recipe_id`. Never by name, profession title or output item. The profession and rank used for a recipe are those of the list that contains its ID, so no profession name is matched either. The rank is that list's rank, or the latest readable bags snapshot's rank for the same skill ID when that is newer (capture time, then sequence).
-- **Status per craft** for the chosen character:
-  - **Known:** `learned == true` in the latest list containing the ID, or *seen crafted*.
-  - **Train now:** in a list, not learned, `learned_from` includes code 6 (trainer, `requirements.md` → CRAFT-08 source-code table), and rank ≥ `required_skill`. Shows `training_cost_copper` through `money.py`, or *cost unknown*; the cost is shown beside the batch profit, never subtracted from it.
-  - **Not yet** (hidden, counted under the Craft tab's hidden reasons by kind): in a list and not learned, and either rank < `required_skill`, or `learned_from` is known and has no trainer code (drop, quest, vendor or unverified codes: *needs pattern or other source*). STORY-052 shows these.
-  - **Unknown** (kept and marked, never hidden): the ID is in no list for this character; the list is *possibly incomplete*; `learned` is absent; or the recipe is not learned and `learned_from` is missing (*how it's learned is unknown*: for example Bolt of Linen Cloth has no source on its page).
-- **All recipes** gains a *Who can make it* column on the Craft tab: the characters for whom that craft is Known or Train now, by name.
-- **Catalog check:** where a matched list row's output item, `min_made`/`max_made` or required reagent item IDs and counts differ from the catalog, list it in a collapsed section under the Craft tab (a pointer for CRAFT-08 confirmation). The catalog isn't changed. Rows with optional or multi-choice reagent slots are listed as *not compared*, never as a difference.
-- **Display only otherwise:** ranking, sizing and reservations are unchanged within the filtered set, and the queue lists only the shown crafts. The rule, statuses and codes are recorded in `requirements.md` → *Today* under a new `today_version` (4).
-- **Offline tests:** each status; matching by ID with a same-named recipe of another ID rejected; a training cost shown and not subtracted; *cost unknown*; trainer plus drop codes counting as trainable; a rank from a newer bags snapshot; an unknown `learned`; a possibly incomplete list keeping unlisted crafts as Unknown; *seen crafted* counted as known; the *Who can make it* column; a reagent or yield mismatch listed and an optional slot not compared; settings round trip, an old settings file and a missing saved character; scoping (a second source's character never appears); an AppTest of Today with a character chosen.
-- **Real-data check:** on the Forever beta source, Basilly's Craft tab with Tailoring 8: the six learned recipes are Known, and trainer recipes at or below rank 8 are Train now with their costs.
-- **Docs:** `requirements.md` (*Today*, `today_version` 4), `design.md`, `status.md`.
-
-### STORY-039 — Choose and adjust the Today plan
-
-**Implemented and reviewed (2026-10-08).** Checked in a live browser on the Forever beta scan; first in-game use of the Queue awaits a fresh scan. Added 2026-10-06 (product owner feedback on Today). Depends on STORY-038.
-
-As a gold maker, I want to tick the crafts I'll actually make and change their batch sizes, so that Buy and Sell match what I'm really going to do.
-
-Acceptance:
-- **Choose:** each Craft row has a tick box (all ticked by default) and an editable batch size, at least 1 and at most the row's feasible size under Today's rules (funds, listed supply, per-item cap).
-- **Recalculate:** Buy, Sell and the shopping total use only ticked crafts at their chosen sizes, re-reserving listings in plan order, so the list stays payable and cheap listings aren't counted twice.
-- **Freed gold:** by default, gold freed by unticking or shrinking a craft goes to the next-best crafts under the existing greedy rules. A toggle keeps the plan to exactly what was ticked instead. Record the rule in `requirements.md` → *Today* with a new `today_version`.
-- **Kept for the session only** and per source; choices reset when the scan or settings change, and nothing is written to disk unless a later decision says so.
-- **Honest numbers:** a smaller batch than the profit-best size shows its lower profit; a choice that is no longer feasible after a new scan is dropped with a note, never silently resized.
-- **Session queue** (added 2026-10-08, product owner): a *Queue* tab lists the chosen plan as one checklist in the order you'd do it in game: 1. buy at the auction house (one line per material: units, highest unit price, total); 2. buy at vendors; 3. craft (recipe, batch size, in route order, so intermediates such as bolts come before the items that use them); 4. post (item, units, the undercut price from *Sell*, profit at that price). A total line shows gold needed and expected profit. Each line has a tick box; ticks are kept for the session with the plan and reset with it, and ticking never changes the plan or its numbers. A *Copy as text* button gives the same list as plain text (for a second screen or a note).
-- **Offline tests:** untick with and without refill, a shrunk and a grown batch, infeasible sizes rejected, reserved listings never shared between crafts, the queue's order (auction house, vendor, craft in route order, post) and its totals matching Buy and Sell, and ticks reset when the plan changes.
-
-STORY-016 (backup) is deferred to Later (product owner, 2026-10-06).
-
-STORY-011a is a bounded research task for any convenient gap. Tailoring yield and vendor checks run alongside all of this; a confirmed multi-yield requirement takes priority.
-
-**Archive care meanwhile:** nothing required; migrations copy the database first (OPS-02). The tested backup procedure is STORY-016, deferred to Later; its destination is still an open decision. Market isolation is implemented; see DATA-03 in `requirements.md`.
 
 ### STORY-030 — Less text, less scrolling
 

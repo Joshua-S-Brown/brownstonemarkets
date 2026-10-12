@@ -17,6 +17,18 @@ def plan_context(arguments):
     return digest(context)
 
 
+def stable_queue(queue):
+    """Queue identity without confidence labels, so age transitions keep ticks."""
+    return {**queue, "lines": [{k: v for k, v in line.items() if k not in ("confidence", "confidence_reasons")}
+                               for line in queue["lines"]]}
+
+
+def queue_total(queue):
+    profit = queue["expected_profit_copper"]
+    return (f"Gold needed: {format_money(queue['gold_needed_copper'])} · "
+            f"Expected profit at undercut: {format_money(profit) if profit is not None else 'unavailable'}")
+
+
 def queue_line(line):
     text = queue_line_text(line)
     if "confidence" in line:

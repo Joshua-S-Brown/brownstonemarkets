@@ -5,12 +5,10 @@ from datetime import UTC, datetime
 import duckdb
 import streamlit as st
 
-from brownstone.freshness import assess
+from brownstone.freshness import STALE_WARNING, age_caption, assess
 from brownstone.money import GOLD_TABLE_FORMAT
+from brownstone.navigation import EXPERIENCES
 from brownstone.storage import latest_snapshot
-
-# Sidebar order: Forever, the target, opens by default whatever order market.toml lists sources in.
-EXPERIENCES = {"forever": "WoW Forever", "classic": "Classic Era", "retail": "Retail (regression)"}
 
 
 def show_context(config):
@@ -39,18 +37,12 @@ def show_freshness(config, manifest, warn=True):
     Pass warn=False for a deliberately historical scan, where "refresh" is not the remedy.
     """
     freshness = assess(manifest, datetime.now(UTC), config["max_age_hours"])
-    if freshness["upstream_known"]:
-        st.caption(f"Prices scanned {freshness['age_hours']:.1f} hours ago "
-                   f"({freshness['observed_at']:%Y-%m-%d %H:%M} UTC) · stale after {config['max_age_hours']} hours")
-    else:
-        st.caption(f"Price age unknown: this source gives no scan time. Downloaded "
-                   f"{freshness['age_hours']:.1f} hours ago; prices may be older. Stale after "
-                   f"{config['max_age_hours']} hours since download.")
+    st.caption(age_caption(freshness, config["max_age_hours"]))
     if manifest.get("scan_id"):
         st.caption(f"Addon scan {manifest['scan_id']} · complete scans only feed prices; "
                    "stacks are priced per unit, rounded up when the buyout does not divide evenly")
     if warn and freshness["stale"]:
-        st.warning("Saved prices are stale or future-dated. Refresh before acting on them.")
+        st.warning(STALE_WARNING)
     return freshness
 
 

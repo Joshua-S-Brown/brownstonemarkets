@@ -141,7 +141,7 @@ def test_missing_and_unreadable_files_do_not_create_data(tmp_path, monkeypatch):
 def test_conflict_and_shared_house_future_listing_validation(tmp_path):
     config = addon_source(tmp_path / "data")
     import_scans(config, now=NOW)
-    records = pipeline.scans.read_saved_variables(config["scan_path"].read_bytes())
+    records = pipeline.scans.read_addon_records(config["scan_path"].read_bytes())[0]
     records[0]["label"] = "changed"
     path = write_scans(tmp_path / "conflict.lua", *records)
     before = tree(tmp_path)

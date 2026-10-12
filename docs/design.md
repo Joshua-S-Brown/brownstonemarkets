@@ -23,107 +23,75 @@ catalog TOML ──load──▶ crafting / action_board ◀── price_observa
 
 CLI collection bytes are written before validation, so failures stay inspectable; addon previews and stale reviewed imports write nothing (DATA-01/ADDON-06). DuckDB writes are transactional, but silver, DuckDB and gold together are not one atomic operation (see `status.md` for recovery).
 
-## Page map (STORY-053)
+## Apps and page map
 
-UI-01 in `requirements.md` owns navigation rules. `views/navigation.py` renders one sidebar radio
-with Data visually separated, then a required single-choice segmented control inside each place.
-Only the selected section renders, keeping Today’s nested tabs and existing widget identities intact.
+Two apps call the same `brownstone/` functions. Logic one app needs from the other moves into a
+framework-free module both use, never a copy: `brownstone/` for calculations and evidence
+(`today_loading`, `today_session`, `import_review`, `navigation`), `views/today_rows.py` for Today
+table projections and wording.
 
-| Place | Sections and view modules |
-| --- | --- |
-| Today | Today plan (`today`), All recipes (`crafting`) |
-| Team | Characters (`characters`); future progression belongs here |
-| Market | Browse market (`market`), Skill-up demand (`skillups`), Watchlist (`watchlist`), Below usual price (`market`) |
-| Data | Import (`scan_import`) or Refresh from TSM (`app.py`), Recipe catalogs (`catalogs`), Scan changes (`scan_changes`) |
-
-`view-<source_id>` still stores the remembered place; `section-<source_id>-<place>` stores the
-section. Reassigning those session keys prevents Streamlit widget cleanup from discarding another
-source's selection. The existing `scan_import_selection` key is also retained when Data is hidden;
-Source/configuration changes still invalidate the review through the existing identity check.
-Old page values migrate to their new place/section. Collection controls move
-into Data without changing the reviewed import path or refresh function. Addon Below usual price
-explains the missing historical values before querying prices, even without a saved snapshot.
-
-### New app (decided 2026-10-12; UI-07)
-
-Brownstone's main app moves to NiceGUI, beside the Streamlit app rather than replacing it page by page.
-`nicegui_app.py` is the entry; its views are `views/nicegui_*.py` (today and import from STORY-058; team
-from STORY-052, market from STORY-055). Both apps call the same `brownstone/` functions: when the new
-app needs logic that lives in a Streamlit view, it moves into a framework-free `brownstone/` module
-both use, never a copy (as SPIKE-009 did with `today_loading` and SPIKE-009b with `today_session`).
-`brownstone/navigation.py` holds the questions shared by both navigation views. NiceGUI stores
-place/source/tab in the URL, preserves the active Today tab through place changes, and invalidates
-its volatile import review when source/configuration changes. Its responsive header opens the drawer.
-`views/nicegui_import.py` uses `pipeline.preview_scans`/`import_scans` for local files and
-`scan_inputs` for drop inventories and imports. `brownstone/import_review.py` owns shared summary,
-problem, scan-row, cleanup and outcome/error projections used by both Import pages. NiceGUI's
-ImportPage owns callbacks and replaces the review container with import results; drop imports
-refresh file/cleanup evidence. Details opens on problems and stays open during the review.
-TSM sources point to the old app. No calculation, import-rule or schema changes.
-
-The Streamlit app keeps the page map above, frozen. Shared, framework-free row shaping stays in
-`views/today_rows.py`-style modules importable by both.
+**Main app (NiceGUI, UI-07).** `nicegui_app.py` is the entry; views are `views/nicegui_today.py`
+and `views/nicegui_import.py`. Place, source and Today tab live in the URL; the active Today tab
+survives place changes. Session state is per-tab `app.storage.tab`: Today choices, refill, display
+preferences and queue ticks per source, and one import review that a source/configuration change
+discards. ImportPage replaces the review with results; drop imports refresh their file evidence.
 
 | Place | New app | Built by |
 | --- | --- | --- |
-| Today | Today plan with cards | SPIKE-009b, STORY-054 |
+| Today | Today plan with cards | STORY-054 |
 | Team | Roster, progression, and later *should we add a character?* | STORY-052, STORY-059 |
 | Market | Item explorer with supply chains and what moved | STORY-055 |
 | Data | Import (TSM refresh stays in the old app) | STORY-058 |
 
+**Old app (Streamlit, frozen).** `views/navigation.py` renders one sidebar radio (Data visually
+separated) and a segmented control per place; only the selected section renders. `view-<source_id>`
+stores the place and `section-<source_id>-<place>` the section; reassigning them each run stops
+widget cleanup from discarding another source's choice, and old page names migrate (`LEGACY`).
+
+| Place | Sections and view modules |
+| --- | --- |
+| Today | Today plan (`today`), All recipes (`crafting`) |
+| Team | Characters (`characters`) |
+| Market | Browse market (`market`), Skill-up demand (`skillups`), Watchlist (`watchlist`), Below usual price (`market`) |
+| Data | Import (`scan_import`) or Refresh from TSM (`app.py`), Recipe catalogs (`catalogs`), Scan changes (`scan_changes`) |
+
 ## Modules
 
 ```text
-app.py                  Streamlit entry: source selection, place/section dispatch, explicit collection
-nicegui_app.py          Main NiceGUI entry: loopback, source/place URL, launch lifecycle
-launch_nicegui.py        Detached native launcher, code fingerprint, authenticated focus/restart, fallback
-views/                  Display, no calculations
-  nicegui_today.py       Today native controls and shared plan projections
-  nicegui_import.py      Data addon review and results through the shared import pipeline
-  navigation.py         Four places, business questions, per-source place/section session keys
-  common.py             snapshot loading, freshness display, gold columns
-  crafting.py           Action Board and recipe explanation
-  today.py              Settings, session plan controls, queue and optional evidence columns
-  skillups.py           Skill-up totals first, collapsed bands, optional scoped market context
-  catalogs.py           Recipe catalogs page: status, one add-or-update flow (live review, then Save)
-  market.py             Browse market and Below usual price
-  scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
-  scan_import.py        Data addon preview, new-scan selection and explicit reviewed import
-brownstone/             importable without Streamlit
-  import_review.py      Shared Import summaries, evidence rows, cleanup and result messages
-  navigation.py         Shared business-question wording
-  config.py             market.toml (+ untracked market.local.toml overrides) → list[Source] (typed, validated)
-  markets.py            market identity: MARKET_KEYS, derived market_id, validation, legacy upgrade
-  sources.py            HTTP download
-  scans.py              BrownstoneScan SavedVariables: parse, validate, house check, unit and item prices
-  drop_files.py          shared Windows/Python naming contract and machine validation
-  scan_inputs.py         independent input files, reviewed batch import and cleanup evidence
-  scan_details.py       format-3/4 reference/pass validation, effective values and local availability counts
-  metrics.py            versioned aggregate calculator, transactional rebuild and scoped readers
-  variants.py           conservative link parser and canonical item identity (ADDON-08)
-  normalization.py      CSV → validated frame
-  pipeline.py           run (TSM CSV), read-only preview_scans and shared reviewed/CLI import_scans
-  scan_changes.py       Eligible scan IDs and scoped SQL per-item historical comparisons
-  storage.py            DuckDB schema and migrations, load/dedup, manifests, scoped price and depth reads
-  item_names.py         keeps derived version-scoped labels current on import, catalog seeding and app start
-  analysis.py           browse and discount screen queries
-  freshness.py          the one staleness policy
-  money.py              explicit g/s/c parser and copper ↔ gold display helpers
-  skillups.py           pure catalog placement, direct/raw quantities and unique-recipe totals
-  crafting.py           catalog loading, expansion, route costs, price bases
-  recipe_import.py      saved Wowhead profession page → archive, extract, catalog TOML (no network)
-  recipe_catalogs.py    catalogs found by selection file: status, previews and the add/update writes
-  selection_files.py    in-place edits of a selection file that keep its comments
-  action_board.py       ranking and label policy (versioned)
-  today.py              Today v5 batch sizing, chosen-plan reservation, refill and session queue
-  today_confidence.py   display labels over retained routes, freshness and reserved listing depth
-  today_data.py         one scoped read of prices, base/legacy listings, metrics and vendor references
-  today_settings.py     validated integer settings and atomic local JSON persistence
-  cli.py                `python -m brownstone`: collect or import a source; `recipes` subcommand
-launch.py               local server launcher with code-fingerprint restart
+app.py / launch.py              Streamlit entry and its launcher (code-fingerprint restart)
+nicegui_app.py / launch_nicegui.py   Main NiceGUI entry (loopback, URL state, lifecycle) and native launcher
+views/                          Display only
+  nicegui_today.py, nicegui_import.py   new app's Today and Data → Import
+  today_rows.py                 framework-free Today rows and wording shared by both apps
+  navigation.py, common.py      Streamlit places/sections; context, freshness and gold columns
+  today.py, crafting.py, characters.py, market.py, skillups.py, watchlist.py,
+  scan_changes.py, scan_import.py, catalogs.py   Streamlit pages (page map above)
+brownstone/                     importable without Streamlit or NiceGUI
+  config.py, markets.py         market.toml (+ local overrides) → typed Source; MARKET_KEYS, market_id,
+                                scope_predicate, legacy upgrade
+  sources.py, normalization.py  TSM download; CSV → validated frame
+  pipeline.py                   TSM run; read-only preview_scans; shared reviewed/CLI import_scans
+  scans.py, scan_details.py, variants.py   SavedVariables parser, validation, house check, unit/item
+                                prices; format-3/4 references and item pass; link identity (ADDON-08)
+  addon_records.py, character_snapshots.py, journal.py, professions.py, characters.py
+                                non-scan records: lifecycle, storage, scoped projections, Characters cards
+  scan_inputs.py, drop_files.py, import_review.py   drop-folder inventory and batch import; naming
+                                contract; Import summaries/messages shared by both apps
+  storage.py, metrics.py, item_names.py   schema/migrations, loads, manifests, scoped price/depth reads;
+                                ADDON-10 calculator and rebuild; version-scoped labels
+  analysis.py, scan_changes.py  Browse/discount queries; scoped scan comparison
+  crafting.py, action_board.py, skillups.py   catalog validation, routes and costs; ranking policy;
+                                skill-up totals
+  recipe_import.py, recipe_catalogs.py, selection_files.py   saved page → catalog TOML; catalog
+                                discovery, status and writes; in-place selection edits
+  today*.py                     Today plan, confidence, data, settings, funds, eligibility, loading, session
+  watchlist.py                  watchlist entries, evidence and hit text
+  beta_report.py, beta_evidence.py, beta_markdown.py   beta evidence report
+  freshness.py, money.py, navigation.py   staleness policy and captions; g/s/c; questions and experiences
+  cli.py                        `python -m brownstone` collect/import, `recipes`, `beta-report`
 ```
 
-Dependencies point inward: `app.py` → `views/` → `brownstone`. Domain modules (`action_board`, `freshness`, `money`, and `crafting` apart from reading a catalog file) do no other I/O and take the clock as a parameter. The `dashboard` extra (Streamlit) is needed only for `app.py` and `views/`.
+Dependencies point inward: the app entries → `views/` → `brownstone`, which never imports `views/`. Domain modules (`action_board`, `freshness`, `money`, and `crafting` apart from reading a catalog file) do no other I/O and take the clock as a parameter. The `dashboard` extra (Streamlit) is needed only for `app.py` and `views/`.
 
 ## Data contracts
 
@@ -197,7 +165,7 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 - `_read_scan_bytes` implements the bounded descriptor/path read described by ADDON-06. `_prepare_scans`, `_select_scans`, `_check_scans`, `scans.listing_frame` and `scans.scan_content_hash` are shared with CLI import; there is one parser and one per-scan hash format. Validation also checks item-reference types, uniqueness and membership in this scan, plus finite nonnegative duration; capture availability is local aggregate evidence. CLI validation stays limited to selected scans. UI previews validate every scan's header, times and listings (`_validate_scans`), but record house mismatches per scan in `ScanPreview.mismatches`; `new_ids` excludes them.
 - `import_scans(..., reviewed=preview, scan_ids=...)` recomputes and compares bytes/configuration/known records before any archive write. It rejects unknown, empty or already-imported selections. A final duplicate check under the writer transaction precedes `_save_collection`; the writer consumes the recomputed in-memory bytes. Fresh databases and migrations are created only during explicit import. Preview remains read-only across schema 3 and 4.
 - `_save_collection` preserves raw bytes and manifests, and `_load_collection` shares transactional deduplication and per-scan import with the CLI. `_file_scan_state` classifies every file scan after loading as saved (same ID and hash), `other_house` or remaining, without validating unselected scans; an unusable entry counts as remaining. `import_guidance` uses those counts to protect subsets and warn about other-house scans.
-- `views/scan_import.render` shows a short new-record summary and the Import button before a Details expander containing the existing tables, captions and selection. Details starts collapsed and opens for file errors, new partial scans, other-house records, non-default selections, import errors and drops the selection would leave not fully imported (a selected new drop is normal, not a problem); once opened it stays open until the next Preview or import (STORY-045; ADDON-06 and OPS-03). Errors are shown once, above, never repeated as a warning. Imported character tables have a separate collapsed Imported character data expander. Drop cleanup counts (hidden at zero) and post-import machine clear guidance use the existing full-import evidence; the full reminder stays in Details. It owns one active review and selection in Streamlit session state. Configuration/source switches discard both; changing to a TSM source also invalidates the active addon identity. Each Preview click clears prior state before reading. Import runs in the button's `on_click` callback and stores its messages for the rerun, so the result replaces the reviewed table. Errors discard the review and require another click. `app.py` orchestrates these controls and keeps TSM refresh unchanged.
+- Both Import pages show a short summary and the Import button before a collapsed Details section that opens on problems and stays open for the review (ADDON-06, OPS-03). Each keeps one active review and selection, discarded on a source/configuration change; a Preview click clears prior state; the result replaces the reviewed table, and errors discard the review. Wording and rows come from `import_review`.
 - Bronze/silver/database together are still not atomic; normal import-write failures retain a failed manifest for diagnosis. Best-effort file-read detection cannot prevent every concurrent game write (ADDON-06).
 
 ### Multiple input files (STORY-037)
@@ -211,132 +179,48 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 - `file_rows` and `latest_rows` provide common CLI/page cleanup evidence. `fully_imported` is true only for a readable nonempty file whose every scan and character snapshot has a matching stored hash and no house mismatch. Ignored names, parse errors, conflicts and other-house scans cannot give cleanup permission.
 - CLI `--preview` is read-only. With a drop folder, ordinary addon import lists every file and imports only those with new scans (or, with `--scan`, those holding the requested IDs), so a repeated run never re-archives imported files; `--input` keeps the explicit single-file path and takes its machine from a drop name, otherwise from `machine`. The page keeps file status, per-file scan tables, UTC provenance and each machine's latest-drop state in Details, then refreshes that evidence after import. The fresh review resets selection to its new-file default.
 
-### Character snapshots (STORY-032)
+### Character evidence (STORY-032/033 onward)
 
-Capture and clear/session rules live in requirements.md → ADDON-11/12. Addon 0.8.0 keeps
-account-wide format 6 with `scans` (unchanged record formats 1–4), `snapshots`, `sessions` and
-`snapshot_sequence`, `journal` and `journal_diagnostics`. Each snapshot is a keyed table, with `slots` and `containers` arrays;
-exact links and nullable client values are preserved without variant interpretation yet.
-Length-prefixed character/realm + kind + Unix seconds + persistent sequence identify an event.
-The sequence prevents two bank/logout observations in the same second from overwriting each other;
-latest reads order same-second evidence by its numeric `sequence`, then ID.
+Capture, clear and display rules are ADDON-11/12; saved fields are in `addon/README.md`. Account file
+format 6 holds `scans` (record formats 1–4), `snapshots`, `sessions`, `snapshot_sequence`, `journal`,
+`journal_diagnostics` and `journal_errors`. Event IDs are length-prefixed character/realm + kind +
+Unix seconds + the shared persistent sequence; latest reads order by capture time, then sequence.
+Unknown values are absent in Lua and nullable in Python; raw argument tuples never become prices.
 
-`scans.read_addon_records` parses both record lists once; `read_saved_variables` retains its scan-only
-return contract for existing callers. `character_snapshots` validates evidence, canonicalizes content
-for SHA-256, checks character house evidence, queries scoped duplicates and reads latest per-character
-bags/bank independently. The original file's exact bytes remain authoritative bronze evidence.
-
-Migration **10** adds `character_snapshots` (source/ID primary key, full MARKET_KEYS, character
-realm/faction, kind, UTC timestamp, nullable BIGINT gold, machine, collection/file/content hashes,
-original record JSON) and `character_slots` (source/ID/container/slot primary key, nullable BIGINT
-item/count and exact link). Slots belong to the fully scoped parent; no cross-character or price join
-is introduced. Frozen DDL is replayable; existing tables/rows/hashes are unchanged and migration
-backs up the starting database. Preview can query schemas before 10 without upgrading.
-
-`ScanPreview.non_scans`, `non_scan_summaries`, `non_scan_known`, `non_scan_mismatches` are the
-single state for both snapshots and journal entries; known state uses `record_sha256` for both.
-`new_record_ids` drives import availability.
-Snapshot-only properties are read-only compatibility projections, never parallel state.
-`addon_records` dispatches validation/storage by record type, while sharing house, hash/conflict,
-preview/review, transaction and outcome logic. Scan selection/`--scan` limits only scans; every
-matching non-scan record in each selected file imports. `scan_inputs` tracks expected commits by
-(type, ID) across overlapping drops and refuses unrelated state changes. The final writer check
-compares the same non-scan known state before archiving. Conflicts isolate the affected file.
-
-Migration **11** adds `character_journal`, source/entry-ID primary key, full MARKET_KEYS,
-character/character realm/faction, event family, UTC capture time, machine, collection ID, source
-file hash, canonical content hash and raw `record_json`. JSON stringifies Lua numeric keys;
-canonical SHA-256 uses sorted typed-key pairs recursively to preserve nil-hole tuple tables with `n`
-and distinguish numeric keys from string keys.
-Snapshot canonical hashes are unchanged. Preview of older schemas reads unknown journal state
-without migrating. Upgrades back up the starting schema; replayable DDL changes no historical rows.
-Journal rows load directly with snapshots/scans inside the collection transaction; no journal silver
-export or interpretation. Exact bytes are preserved in the shared bronze blob. The manifest's
-`non_scan_records` is the common outcome list (`record_type`, `record_id`, `record_sha256`, outcome,
-summary); `snapshots` remains a derived compatibility projection for historical consumers.
-A collection without priced scans cannot replace prices. Latest imported bank evidence persists.
-
-Journal records use `entry_id`, `sequence`, `event`, `family`, `arguments`, `captured_at`,
-`captured_at_utc`, `session_time`, character/realm/faction, addon version, login marker and `windows`.
-Money adds `before_copper`/`after_copper`; bags add numeric `item_changes` or `baseline_missing`.
-Mail adds `inbox` with counts and message array (index, header/invoice counted tuples, attachment
-info/link); send hooks add a cached `draft` plus `draft_is_last_observed`. Overflow adds `skipped`.
-STORY-040 adds `owned_auctions` to family `auction`: `api`, counted `counts`, `auctions`
-(index + raw `info`; legacy also `item_link`/`time_left`), and nullable modern `full_results`/
-`sold_status`. Modern info is a field-preserving table; legacy info is a tuple with `n`.
-The matching owned-update event reads cached results only; the transient last successfully saved
-list suppresses equal states and resets on reload. Version 0.7.0 retains file format 6/schema 11;
-no new import path, table or migration. API/capture/display rules live in ADDON-12.
-STORY-041 adds `level` and `skills` to bags snapshots. `skills.legacy` has API name,
-counted count tuple and rows; `skills.modern` has API name, counted profession indexes and rows.
-Each row keeps its original index, counted `info`, name, rank/max and available ID; legacy headers
-remain in raw evidence. Modern rows are a dense array even when the index tuple has nil holes.
-Legacy rows also keep header expansion, with `possibly_incomplete` on the surface when a header is
-collapsed. The import page reads only the newest bags snapshot per character (SQL `QUALIFY` on capture time, then sequence).
-Snapshot hashing retains historical hashes exactly; only the new `skills` subtree uses the journal's
-typed-key canonical encoder, so counted tuples cannot conflate numeric and string keys.
-Stored snapshot JSON retains those tuples without sorting mixed key types.
-`known_recipes` in family `craft` has API prefix, counted profession/count returns, name/rank/max,
-indexed rows with counted raw info, links/link IDs, made tuple/min/max, reagent count tuple and
-reagent rows (raw info/link/ID/count), filter state and `possibly_incomplete`.
-This uses schema 11/raw JSON and format 6 unchanged; the lifecycle has no new adapter or storage path.
-`professions` validates optional display fields and projects scoped latest bags plus latest list per
-profession, ordering by capture time/shared sequence. It shows all observed skill lines rather than
-inventing a profession classification, and keeps absent lists/counts unknown. If both skill surfaces
-report the same name, display deterministically prefers the modern row (which supplies skill IDs),
-labels its API/ID and keeps both originals raw; it never fills one API's holes from the other.
-`views/scan_import` and the Characters page use it. Capture/display/unknown rules and the journal choice live in ADDON-11/12.
-STORY-049 adds a modern `known_recipes.api = "C_TradeSkillUI"` surface: `recipe_ids`,
-count tuple, profession returns keyed by function name, dense rows with `recipe_id`, raw `info`
-and `schematic`, learned flag, links, output quantities and category evidence. Schematic reagent
-slots/options remain raw rather than being flattened into guessed required ingredients. Filters
-retain counted return tuples. The first opening's journal payload also has `trade_skill_api_inventory`
-(function/event name arrays). Format 6/schema 11 are unchanged.
-`professions` reads scoped craft journal records to retain all craft evidence alongside the latest
-list per profession, ordered by capture time/sequence. Compatible catalog recipe IDs supply only
-profession metadata when window provenance is missing; unresolved hook IDs remain visible separately.
-The import page shows list and seen-crafted sources/counts/IDs. Rules and beta limits live in ADDON-12.
-STORY-051 adds `brownstone/characters.py` and `views/characters.py`, dispatched immediately after
-Today. `character_snapshots.latest_data` supplies scoped latest bags/bank, readable bags history and
-observation provenance; its `latest_rows` keeps the import table shape. `professions.latest_data`
-reuses those snapshots, adds scoped journal observations and projects recipe evidence;
-`data_rows` supplies plain profession data and `_rows` preserves the import table labels/values.
-`build_characters` returns newest-last-seen cards, nullable level/integer-copper gold, machine,
-relative/UTC time, freshness, profession counts/sources/times, rank progress/cap flags and long-form
-history points. Shared capture-time/sequence ordering and the ADDON-11 unreadable rule apply.
-The view uses Streamlit 1.65 bordered wrapping cards (at most two per row), metrics, progress bars,
-coloured badges and decorative skill-ID emoji. Collapsed expanders contain Altair line/point charts
-and the exact same history data in a table. No inferred class/race, tier levels, HTML or CSS.
-Page rules: requirements.md → Characters page. No new schema, importer or dependencies.
-
-Reference tuple shapes and filter index 0 come from Blizzard's
-[Classic trade skill UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua)
-and [Classic craft UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua);
-Forever availability and extra returns require beta evidence, which is retained raw.
-API shape evidence: Blizzard's generated
-[modern owned API documentation](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua)
-uses 1-based owned indexes and nullable fields;
-[Classic auction UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_AuctionUI/Classic/Blizzard_AuctionUI.lua)
-reads batch/total, places saleStatus at tuple position 16, and marks 1 as sold awaiting delivery.
-These reference sources establish API shape, not Forever beta availability.
-`journal_diagnostics` is load-session evidence: rejected events, missing/installed hooks, fired counts.
-`journal_errors` counts guarded observation failures by event/hook; these are reported in chat.
-Unknown values are absent in Lua/nullable in Python; arbitrary argument tuples never become prices.
-The ID uses the snapshot identity encoder and shared sequence. Cap/clear/hook rules are ADDON-12.
-
-CLI/page use `journal.preview_rows` for per-file character/family counts by state; `latest_rows`
-queries source + all market keys and returns imported family counts/latest time. The page retains
-latest bags/gold and independent bank evidence. `journal.active_auction_rows` reads scoped raw
-journal/snapshot JSON to establish known characters, selects owned evidence by capture time/shared
-sequence/entry ID, and returns UTC, reported count and client-marked sold count. Missing evidence
-shows `active auctions unknown`; explicit empty shows count zero. Legacy counts preserve batch/total;
-the page uses reported total when present, and a shorter batch keeps sold count unknown. Missing statuses or incomplete
-results retain an unknown sold count. Only the import page calls this projection.
-`InputFile.fully_imported` checks scans plus all
-non-scan known states and house mismatches; `import_guidance` counts all newly saved records.
-Machine comes from OPS-03, stays unchanged on duplicates, and never participates in market joins.
-Windows scripts copy the whole account file unchanged. No other view consumes the journal.
-
+- **Reading.** `scans.read_addon_records` returns scans and non-scan records from one parse.
+  `addon_records` dispatches validation, content hash, house check and storage by record type
+  (`character_snapshots` or `journal`), sharing preview/review, transaction and outcome logic.
+- **Preview state.** `ScanPreview.non_scans`, `non_scan_summaries`, `non_scan_known` and
+  `non_scan_mismatches` are the one state for snapshots and journal entries (known state is
+  `record_sha256`); `new_record_ids` drives import availability. `snapshots`/`snapshot_*` are
+  read-only projections for the snapshot preview table. Scan selection and `--scan` limit scans only;
+  every matching non-scan record in a selected file imports. `scan_inputs` tracks expected commits by
+  (type, ID) across overlapping drops; the final writer check compares non-scan known state too.
+- **Hashes.** Snapshot SHA-256 is canonical sorted JSON; only the `skills` subtree uses the journal's
+  typed-key encoder (`journal._typed`), so historical snapshot hashes are unchanged and counted tuples
+  never conflate numeric and string keys. Journal hashes use the typed encoder throughout.
+- **Storage.** Migration 10: `character_snapshots` (source/ID key, full MARKET_KEYS, character
+  realm/faction, kind, UTC time, nullable BIGINT gold, machine, collection/file/content hashes, raw
+  JSON) and `character_slots` (source/ID/container/slot key, nullable item/count, exact link).
+  Migration 11: `character_journal` (source/entry key, full MARKET_KEYS, character identity, family,
+  UTC time, machine, collection, file and content hashes, raw JSON). Records load inside the
+  collection transaction; there is no journal silver export. Bronze keeps the exact file bytes.
+- **Manifests.** `non_scan_records` lists every record's type, ID, hash, outcome and summary;
+  `snapshots` is its snapshot subset, kept for older manifests and readers.
+- **Projections.** `character_snapshots.latest_data` returns scoped latest readable bags/bank, bags
+  history and every observation; `professions.latest_data` adds scoped journal observations, the latest
+  known-recipe list per profession and *seen crafted* evidence (catalog recipe IDs supply profession
+  metadata only). `characters.build_characters` builds the Characters cards; `journal.active_auction_rows`
+  and the `latest_rows`/`preview_rows` functions supply the import page tables. If both skill surfaces
+  report a name, display prefers the modern row and never fills one API's holes from the other.
+- **Reference shapes** come from Blizzard's
+  [Classic trade skill UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua),
+  [Classic craft UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua),
+  [modern owned-auction API](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua)
+  (1-based owned indexes, nullable fields) and the
+  [Classic auction UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_AuctionUI/Classic/Blizzard_AuctionUI.lua)
+  (saleStatus at tuple position 16; 1 is sold awaiting delivery). They establish API shape, not
+  Forever availability, which needs beta evidence retained raw.
 
 ## Scan comparison
 
@@ -392,20 +276,26 @@ No change to crafting, the Action Board or the views should be needed. If one is
 
 ## Quality gates
 
-Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `brownstone/` and `launch.py`) and pytest with a branch-coverage floor run locally and in CI; configuration is in `pyproject.toml`. `Source` is a `TypedDict`, so mypy checks config key names wherever a function is annotated with it.
+Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `brownstone/`, both launchers, `nicegui_app.py` and the NiceGUI views and `today_rows`; the Streamlit views are not type-checked) and pytest with a branch-coverage floor run locally and in CI; configuration is in `pyproject.toml`. `Source` is a `TypedDict`, so mypy checks config key names wherever a function is annotated with it.
 
 ## Known design debt
 
-- Batch preflight and per-file reviewed imports parse files repeatedly and retain their bytes in memory. Large retained drop folders increase preview cost; manual cleanup bounds it. Rename completion is local only and cannot guarantee Google Drive's remote visibility or offline availability.
-
-- **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It is kept as one loop deliberately: it runs once per token, about a million times for a 24 MB scan, and splitting it adds a function call to each. Revisit only with a measurement.
-- **Coverage gaps** (overall coverage in `status.md` → Quality gates): `views/market.py` 76% (Below usual price with data, which only Retail can supply), `app.py` 93% (configuration and upgrade errors), `views/catalogs.py` 93% (error messages for unreadable selections and failed writes). `sources.py` downloads over the network, which offline tests don't exercise.
+- **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It
+  stays one loop because it runs once per token (1.9 s for the 51 MB schema-1 file, 0.16 s for a 4 MB
+  format-4 drop, measured 2026-10-12); splitting it adds a call per token. Revisit only with a measurement.
+- **Repeated parsing:** a reviewed import parses the file twice (preview, then the stale-review recheck):
+  2.8 s for the 51 MB file, 0.5 s for a 4 MB drop. A drop-folder import re-previews every inventory file
+  and each selected file again, and retains their bytes in memory; manual cleanup of imported drops bounds it.
+- **Coverage gaps** (overall in `status.md` → Verify): `views/market.py` (Below usual price with data, which
+  only Retail supplies), `app.py`/`nicegui_app.py` configuration and upgrade errors, `views/catalogs.py`
+  error messages for unreadable selections and failed writes. `sources.py` downloads over the network,
+  which offline tests don't exercise.
 - Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
-- `views/` is not type-checked.
-- `completed_snapshots` reads every manifest on each page load; this is fine at current volumes.
-- Re-importing an addon file parses it in full before deduplication can skip its scans: about 0.1 s per schema-2 scan, 0.9 s per schema-1 scan. Scans left in the file add up until `/bscan clear`, and bronze keeps a compressed copy of each distinct file (about 0.5 MB per schema-2 scan).
-- Each imported scan adds about 4.7 MB to DuckDB (`scan_listings`, 101,485 rows) and 1 MB of silver. That is now the largest per-scan cost; keeping listings only in silver Parquet and querying them from there would remove it if disk becomes a problem.
-- Addon silver, DuckDB and the manifest are not one atomic write, like TSM collections.
+- `completed_snapshots` reads every manifest on each page load (5 ms for the beta source's 19 manifests).
+- Each imported scan adds about 4.7 MB to DuckDB (`scan_listings`) and 1 MB of silver; keeping listings
+  only in silver Parquet would remove it if disk becomes a problem.
+- Silver, DuckDB and the manifest are not one atomic write, for TSM and addon collections alike. Rename
+  completion of a drop is local only and cannot guarantee Google Drive's remote state.
 
 ## Variant-aware scan reads (STORY-023)
 
@@ -467,129 +357,41 @@ derived name lookup. The hit panels read names only when there is a hit. No sche
 inside Market. Today calls the panel above its tabs; scan import calls it when rendering successful
 results. Both panels read evidence without changing their host page's calculations or import path.
 
-## Today contracts (STORY-025)
+## Today contracts
 
-SPIKE-009 adds `brownstone/today_loading.py`: `load_today_characters` reads the shared profession
-projection and retains a warning on failure; `load_today` selects the latest scoped snapshot, opens
-the database read-only and assembles the existing `build_today` arguments using the caller's clock.
-Both `views/today.py` and `views/nicegui_today.py` call these loaders. Framework-free Craft/Sell projections live in `views/today_rows.py` and are shared.
-`nicegui_app.py` is the main loopback-only entry point; source and tab live in the URL,
-settings still use `today_settings`, and row dialogs project retained purchases through
-`craft_details`. SPIKE-009b adds adjustments and Queue through native
-NiceGUI components, Quasar props and Tailwind classes. STORY-054 finishes the cards: Cards is
-the default, Table remains one toggle click away, and collapsed card details project complete
-`craft_details` materials/steps and the matching Sell row. `purchase_uses(crafts)` in
-`brownstone/today.py` groups reserved purchased units by item/route and output name; NiceGUI Buy
-projects it as For before the display cap, including contributions from hidden Low-confidence cards.
-Presentation rules live in `requirements.md` → Today → Presentation. `brownstone/today_session.py` owns the
-shared context fingerprint and queue prose. NiceGUI keeps choices/refill, display preferences and
-queue ticks in volatile `app.storage.tab`, separately per source; rebuilding only the plan preserves
-the selected tab. Controls reserve through the same `build_today` path and cards project retained
-`craft_details` purchases and Sell values. No pricing or version change.
-`launch_nicegui.py` starts a detached `nicegui_app.py --native` with a free loopback port.
-Readiness is acknowledged after the native loaded event. Token-checked local focus and stop
-endpoints allow reuse and safe restart when the shared `launch.py.code_fingerprint` plus the
-new entry/launcher bytes change. Browser startup schedules `BrowserIdle`, which checks all
-connected clients and stops after the UI-07 idle interval. `--port` and `--data-dir` support
-browser checks on copied data. Start instructions: `status.md` → *New app*.
+Rules live in `requirements.md` → Today. Calculations are framework-free; both apps call them.
 
-
-Rules and decisions live in `requirements.md` → Today. `read_today_evidence` returns
-`(observations, listings, metrics, vendor_sell_prices)` for one source and analytical snapshot.
-Listings are grouped base/legacy catalog identities with `(quantity, full buyout, unit ceil)` tuples;
-metrics retain ADDON-10 counts and p25. Missing listing support is `None`, distinct from an empty
-eligible scan's `{}`. No seller strings enter this path. Catalog compatibility retains game/rules
-version; storage predicates retain source and every MARKET_KEYS field plus scan/snapshot and item
-variant state. No schema changes or migrations are needed.
-
-STORY-043 adds `brownstone/today_characters.py`: `project_recipes` consumes compatible parsed
-catalogs and the shared `professions.latest_data` result, returning recipe/catalog-keyed statuses,
-resolved character identity and catalog comparison diagnostics. `filter_candidates` runs before
-Today sizing/reservations; it attaches status/training cost or team character names and counts
-excluded reasons. The module matches recipe IDs only and reads newer bags rank by skill ID from raw
-window profession provenance. No database reader, schema migration or catalog mutation is added.
-`TodaySettings.character` is nullable `(name, realm, faction)`; JSON lists normalize to tuples and
-older files default to None. The shared loader supplies scoped character data; `views/today.py` saves the selector with
-the existing form, displays eligibility/cost or Who can make it, and renders collapsed catalog checks.
-Session context includes character evidence so changed evidence resets choices and Queue ticks.
-Rules/status precedence live only in `requirements.md` → Today.
-
-STORY-057 extends that same projection with complete bags skill surfaces and the documented
-profession-to-skill-ID map. Bags-only characters are selectable. Team statuses aggregate the same
-`recipe_status` results, and `filter_candidates` excludes Unknown unless `TodaySettings.include_unknown`
-is enabled. The projection supplies the no-character notice to both apps; the result retains it as
-`character_note`. Unknown team rows retain their mark and Who can make it column. Both settings forms
-persist the flag in the existing atomic file. Today version is 5; no pricing, storage or schema change.
-Rules and source evidence live in `requirements.md` → *Character eligibility*.
-
-STORY-056 adds `brownstone/today_funds.py`: `resolve_funds` consumes that scoped projection,
-preferences, clock and scan stale window, returning effective settings plus a shared summary and
-notes. It uses only the latest readable bags record retained by `professions.latest_data` /
-`character_snapshots.latest_data`; it neither reads storage nor persists the effective balance.
-`TodaySettings.gold_override` defaults to false, including old JSON. Both apps render its provenance
-and notes; `load_today` supplies the effective settings to the existing calculation path. Settings
-forms continue to save the entered amount separately from the resolved balance. No migration or
-Today version change. Funds rules live in `requirements.md` → *Opening and settings*.
-
-`build_today` takes catalogs, scoped evidence, `TodaySettings` and the caller's clock. It returns
-four capped lists (`craft`, `buy`, `sell`, `below_vendor`), mutually exclusive hidden reason counts,
-remaining counts, complete shopping cost, freshness and Today version. Craft rows retain board
-routes and recipe/catalog provenance. Recipe evaluation retains `intermediate_steps` for chosen
-`craft` branches only, with catalog recipe/item IDs, names, per-execution quantities, craft counts
-and depth. `craft_details(row)` projects complete materials from the selected row's existing
-`purchases` (no listing quotes), using that catalog's material names, and scales retained intermediate
-steps by batch size. Copper costs remain integers; step costs are already in the purchased leaves.
-Both detail lists retain stale/actionable state. Materials include the merged Buy list's hidden tail.
-Prefix units/buyouts support whole-stack quotes with binary
-search for the affordable bound; the most profitable size is then chosen among the bound and each size just
-before an input needs another listing. Each selection reserves funds and listing offsets. No per-unit expansion or per-recipe SQL.
-Selection rounds re-size remaining candidates against the same remaining resources. Duplicate
-output routes are counted and omitted once an output is selected; sell follows the chosen route,
-and shopping combines item/route purchases. Evidence state is attached to every result row. Settings I/O is separate from pure calculations; the UI writes only
-on Save, to `today_settings.settings_path(data_dir, source_id)` (one file per source in the shared data
-directory), and reports invalid or failed reads/writes without hiding the tables. The view wraps the
-form in an expander and puts the four lists in tabs. Each table projects decision columns plus State
-by default; an evidence toggle reveals its other columns without changing result values. Shared
-provenance appears once above the tabs; freshness stays outside collapsed controls (UI-01).
-The Craft dataframe supports single-row selection, initially empty. Its widget key fingerprints
-plan contents and provenance (excluding continuously changing freshness age), so a changed plan
-clears selection. Selected materials appear beneath it, followed by indented catalog craft steps
-(STORY-038); detail materials are complete rather than capped at Buy's 10 displayed rows.
-
-STORY-039 adds optional ordered `choices` (catalog ID, recipe ID, exact batch size or `None` for
-unchecked) and `refill=True` to `build_today`. Exact choices reserve through the same prefix ladders
-before greedy refill of untouched outputs. Result rows expose `feasible_size` and `plan_order`;
-`choice_limits` exposes current bounds, and `dropped_choices` names why each choice was rejected
-(infeasible size, output already planned, row limit, recipe gone). A choice at the size the greedy
-rule would pick with the same funds and reservations keeps that row's limiting factor; any other size
-reads *chosen batch*. `refill` is echoed in the result; with refill off, `remaining.craft` counts the
-feasible outputs left out rather than rows beyond the cap.
-`session_queue` projects all reserved shopping (before the display cap), retained catalog route steps
-in postorder, and Sell rows; its copper totals never re-quote. Missing undercut totals remain null.
-The view adds source-scoped checkbox/batch controls and a Queue tab. Session fingerprints cover catalogs,
-source/market, snapshot (manifest and snapshot ID, which determine the stored evidence read), settings,
-freshness limit, auction cut and scoped character evidence, excluding the caller clock;
-auction evidence is identified by the snapshot rather than re-serialised. Choice values and queue ticks are
-retained separately from widget state so Streamlit widget cleanup on navigation cannot lose them.
-The queue fingerprint includes plan/context but excludes control bookkeeping and staleness, so ticks
-survive the scan crossing the freshness limit. Widgets take start values only through session state
-(never also `value=`), avoiding Streamlit's duplicate-default warning.
-Each rerun builds the current plan once; stored default control rows supply the session choices.
-Copy as text is a per-source toggle showing a plain-text code block with Streamlit's clipboard
-control; it stays open across ticks. No disk or schema writes.
-
-STORY-046 applies `today_confidence.confidence` after the complete funded plan is chosen, using
-retained route markers, freshness, Sell metrics and each purchase's ladder prefix. Rules and named
-thresholds live in `requirements.md` → Today. Craft/Sell and Queue lines carry `confidence` and
-`confidence_reasons`; merged Queue buys project contributing labels. The Craft view filters only
-its displayed rows and copies hidden counts, preserving the plan and resetting selection when its
-visible rows change. Confidence fields are excluded from Queue tick fingerprints so age transitions
-leave ticks intact. No persistence, schema or pricing changes.
-
-Offline fixtures in `test_today.py`, `test_today_data.py` and `test_today_view.py` cover this contract
-without discovering local catalogs. Performance verification uses a copied database with current
-local catalog selections; aggregate measurements and limitations are in `status.md`.
-
+- **Loading.** `today_loading.load_today` picks the latest scoped snapshot, opens the database
+  read-only, resolves funds and returns the `build_today` arguments with the caller's clock;
+  `load_today_characters` reads `professions.latest_data` and keeps a failure for the UI to explain.
+- **Evidence.** `today_data.read_today_evidence` returns `(observations, listings, metrics,
+  vendor_sell_prices)` for one source and analytical snapshot: base/legacy listings as
+  `(quantity, full buyout, unit ceil)` tuples per item, ADDON-10 metrics and effective scan vendor
+  references. Missing listing support is `None`, distinct from an eligible scan's `{}`. No seller
+  strings enter this path; reads keep source, every MARKET_KEYS field, scan/snapshot and variant state.
+- **Settings.** `TodaySettings` holds validated integer settings, the nullable character
+  `(name, realm, faction)`, `gold_override` and `include_unknown` (older files load with defaults);
+  `today_settings` persists one atomic JSON file per source. `today_funds.resolve_funds` turns the
+  scoped projection into effective settings plus summary and notes, without persisting the balance.
+- **Eligibility.** `today_characters.project_recipes` matches catalog recipe IDs against the
+  projection and returns per-recipe status, team names and catalog checks; `filter_candidates` runs
+  before sizing and counts excluded reasons. `PROFESSION_SKILL_IDS` carries the documented map.
+- **Plan.** `build_today(catalogs, observations, market, snapshot, settings, *, now, listings, metrics,
+  vendor_prices, max_age_hours, auction_cut, choices=None, refill=True, character_data)` returns
+  capped `craft`, `buy`, `sell` and `below_vendor` lists, hidden and remaining counts, shopping total,
+  freshness, `choice_limits`, `dropped_choices`, `queue` and `today_version`. `Ladder` holds prefix
+  units/costs for whole-stack quotes; binary search finds the affordable bound and only bound/listing
+  breakpoints are quoted. Each selection reserves funds and listing offsets; no per-unit expansion or
+  per-recipe SQL. Craft rows keep board routes, `purchases`, `intermediate_steps` (chosen craft
+  branches only), `plan_order` and `feasible_size`. `today_confidence.confidence` labels the funded
+  plan afterwards. `craft_details(row)` projects materials from `purchases` and scales steps by batch;
+  `purchase_uses(crafts)` groups purchased units per item/route and output (the new app's Buy *For*);
+  `session_queue` projects reserved shopping, route steps in postorder and posts without re-quoting.
+- **Session.** `today_session.plan_context` fingerprints catalogs, market, snapshot, settings,
+  freshness limit, auction cut and character evidence (not the clock); a changed context resets
+  choices and ticks. Queue tick identity is the plan without confidence labels (`stable_queue`).
+  Streamlit keeps choices and ticks in session state separately from widget keys, which widget cleanup
+  can drop; the Craft table's selection key fingerprints plan contents and provenance.
 
 ## Beta evidence report (STORY-042)
 
@@ -599,7 +401,7 @@ directory is never opened by the report. `beta_report` uses the pipeline's bound
 `scans.read_addon_database` plus the extracted `addon_record_list` helper shared with import. It
 validates records independently through `pipeline._validate_scans` or the existing snapshot/journal
 summarizers (which also validate professions), so a refused record cannot hide other evidence.
-`beta_evidence` contains pure checks and the small `COVERAGE` table; `views.beta_report` renders
+`beta_evidence` contains pure checks and the small `COVERAGE` table; `beta_markdown` renders
 Markdown and uses `money.to_gold`. No Streamlit dependency, schema change or addon change.
 
 The only persistent writes are a unique UTC timestamp/UUID folder under ignored `work/beta-reports/`,

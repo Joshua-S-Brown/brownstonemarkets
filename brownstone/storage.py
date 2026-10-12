@@ -12,6 +12,7 @@ from . import markets, metrics
 from .config import ADDON_PROVIDER, MARKET_KEYS, Source
 from .freshness import observed_at
 from .item_names import remember_local_catalog_names, remember_observed_names
+from .markets import scope_predicate
 
 SCHEMA_VERSION = 11
 
@@ -241,13 +242,13 @@ MIGRATIONS = {1: _migrate_to_1, 2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_
               11: _migrate_to_11}
 
 
-def _has_table(db, name: str) -> bool:
+def has_table(db, name: str) -> bool:
     return db.execute("SELECT 1 FROM duckdb_tables() WHERE table_name = ?", [name]).fetchone() is not None
 
 
 def schema_version(db) -> int:
     """The database's recorded schema version; 0 for a v0.1 database or an empty one."""
-    if not _has_table(db, "schema_info"):
+    if not has_table(db, "schema_info"):
         return 0
     row = db.execute("SELECT value FROM schema_info WHERE key='schema_version'").fetchone()
     return int(row[0]) if row else 0
@@ -288,7 +289,7 @@ def upgrade_database(data_dir: Path, create: bool = False) -> bool:
     existed = path.exists()
     with duckdb.connect(str(path)) as db:
         version = schema_version(db)
-        has_data = _has_table(db, "market_snapshots")
+        has_data = has_table(db, "market_snapshots")
     if version == SCHEMA_VERSION:
         with duckdb.connect(str(path)) as db:
             metrics.initialize_metrics(db)
@@ -348,9 +349,9 @@ def load_scan(db, scan: Path, listings: Path, prices: Path | None, items: Path |
         db.execute("INSERT INTO scan_items BY NAME SELECT * FROM read_parquet(?)", [str(items)])
     if prices is not None:
         db.execute("INSERT INTO market_snapshots BY NAME SELECT * FROM read_parquet(?)", [str(prices)])
-    snapshot_id = db.execute("SELECT snapshot_id FROM read_parquet(?)", [str(scan)]).fetchone()[0]
-    row = db.execute("SELECT source_id, scan_id FROM read_parquet(?)", [str(scan)]).fetchone()
-    metrics.store_scan_metrics(db, row[0], row[1])
+    source_id, scan_id, snapshot_id = db.execute(
+        "SELECT source_id, scan_id, snapshot_id FROM read_parquet(?)", [str(scan)]).fetchone()
+    metrics.store_scan_metrics(db, source_id, scan_id)
     remember_observed_names(db, snapshot_id)
 
 
@@ -363,7 +364,7 @@ def completed_snapshots(config: Source) -> list[dict]:
     Manifests written before the market/source split are upgraded in memory; files are never edited.
     """
     records = []
-    identity: Mapping[str, Any] = config
+    identity: Mapping[str, Any] = config  # Iterated keys aren't TypedDict literals.
     folder = Path(config["data_dir"]) / "bronze" / config["source_id"]
     for path in folder.glob("*.json"):
         try:
@@ -384,12 +385,6 @@ def latest_snapshot(config: Source) -> tuple[dict | None, str | None, int]:
         return None, None, 0
     latest = manifests[0]
     return latest, latest.get("analytical_snapshot_id", latest["snapshot_id"]), len(manifests)
-
-
-def scope_predicate(config: Mapping[str, Any]) -> tuple[str, list[Any]]:
-    """SQL predicate and parameters for one source and the entire market identity."""
-    keys = ("source_id", *MARKET_KEYS)
-    return " AND ".join(f"{key}=?" for key in keys), [config[key] for key in keys]
 
 
 def _variant_predicate(variant_id: str | None, state: str | None) -> tuple[str, list]:

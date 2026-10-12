@@ -2,6 +2,7 @@
 from datetime import datetime
 
 FUTURE_TOLERANCE_HOURS = 0.25
+STALE_WARNING = "Saved prices are stale or future-dated. Refresh before acting on them."
 
 
 def is_stale(age_hours: float, max_age_hours: float) -> bool:
@@ -27,3 +28,12 @@ def assess(snapshot: dict, now: datetime, max_age_hours: float) -> dict:
     return {"age_hours": age, "stale": is_stale(age, max_age_hours),
             "basis": "upstream scan" if upstream else "collection",
             "upstream_known": bool(upstream), "observed_at": observed}
+
+
+def age_caption(freshness: dict, max_age_hours: float) -> str:
+    """Price age in words, honest about collection time when the source gives no scan time (DATA-05)."""
+    if freshness["upstream_known"]:
+        return (f"Prices scanned {freshness['age_hours']:.1f} hours ago "
+                f"({freshness['observed_at']:%Y-%m-%d %H:%M} UTC) · stale after {max_age_hours} hours")
+    return (f"Price age unknown: this source gives no scan time. Downloaded {freshness['age_hours']:.1f} hours ago; "
+            f"prices may be older. Stale after {max_age_hours} hours since download.")

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from . import selection_files
+from .crafting import parse_recipe_catalog
 from .recipe_import import (
     GAME_PATHS,
     archive_bytes,
@@ -88,6 +89,18 @@ def find_catalogs(config_dir: Path) -> list[dict]:
                         "catalog_path": catalog_path, "selection": load_selection(selection_path),
                         "catalog": catalog})
     return entries
+
+
+def parse_catalogs(entries: list[dict]) -> tuple[list[dict], list[str]]:
+    """Generated catalogs ready for the board, each with its ``catalog_id``; one bad catalog never hides the rest."""
+    catalogs, errors = [], []
+    for entry in entries:
+        if entry["catalog"]:
+            try:
+                catalogs.append({**parse_recipe_catalog(entry["catalog"]), "catalog_id": entry["name"]})
+            except Exception as error:
+                errors.append(f"Recipe catalog {entry['name']} unavailable: {error}")
+    return catalogs, errors
 
 
 def missing_professions(entries: list[dict]) -> dict[str, list[str]]:

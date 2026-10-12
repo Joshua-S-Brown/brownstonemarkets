@@ -15,8 +15,9 @@ import streamlit as st
 from brownstone import recipe_catalogs as rc
 from brownstone.crafting import parse_recipe_catalog
 from brownstone.money import format_money
+from brownstone.navigation import EXPERIENCES
 from brownstone.recipe_import import archived_saved_at
-from views.common import EXPERIENCES, show_context
+from views.common import show_context
 from views.crafting import _materials, _recipe_heading
 from views.navigation import QUESTIONS
 

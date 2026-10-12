@@ -21,7 +21,7 @@ from .freshness import FUTURE_TOLERANCE_HOURS
 from .item_names import remember_local_catalog_names
 from .normalization import PRICE_COLUMNS, normalize
 from .sources import download
-from .storage import known_scan, load_scan, load_snapshot, upgrade_database
+from .storage import has_table, known_scan, load_scan, load_snapshot, upgrade_database
 
 
 def _collection_id(now: datetime) -> str:
@@ -173,11 +173,6 @@ class ScanPreview:
         return self._snapshots(self.non_scan_mismatches)
 
     @property
-    def new_snapshot_ids(self):
-        return [r["snapshot_id"] for r, k, m in zip(self.snapshots, self.snapshot_known,
-                                                   self.snapshot_mismatches, strict=True) if not k and not m]
-
-    @property
     def new_ids(self) -> list[str]:
         return [s["scan_id"] for s, existing, mismatch in zip(self.summaries, self.known, self.mismatches,
                                                               strict=True) if existing is None and not mismatch]
@@ -213,7 +208,7 @@ def _read_scan_bytes(path: Path) -> bytes:
 
 def _known_scans(db, config: Source, summaries: list[dict]) -> list[dict | None]:
     # Older schemas may lack addon_scans. Preview never migrates them.
-    if not db.execute("SELECT count(*) FROM information_schema.tables WHERE table_name='addon_scans'").fetchone()[0]:
+    if not has_table(db, "addon_scans"):
         return [None] * len(summaries)
     return [known_scan(db, config, summary["scan_id"]) for summary in summaries]
 

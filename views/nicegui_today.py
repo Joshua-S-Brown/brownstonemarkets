@@ -6,15 +6,16 @@ from urllib.parse import urlencode
 import duckdb
 from nicegui import app, ui
 
-from brownstone.money import format_money, parse_money, to_gold
+from brownstone.freshness import STALE_WARNING, age_caption
+from brownstone.money import format_money, parse_money
 from brownstone.today import build_today, craft_details, purchase_uses
 from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_funds import resolve_funds
 from brownstone.today_loading import load_today, load_today_characters
-from brownstone.today_session import digest, plan_context, queue_line
+from brownstone.today_session import digest, plan_context, queue_line, queue_total, stable_queue
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
-from brownstone.watchlist import known_names, load_entries, read_watchlist, watchlist_path
-from views.today_rows import craft_row, sell_row
+from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
+from views import today_rows as tr
 
 TABS = ['Craft', 'Buy', 'Sell', 'Below vendor', 'Queue']
 
@@ -48,58 +49,34 @@ def table(rows, *, label, row_key='id'):
     return widget
 
 
-def state(row):
-    return 'stale — inspect only' if row['stale'] else 'potential gain'
-
-
 def buy_rows(result, names):
     uses = purchase_uses(result['craft'])
-    return [{'Material': names.get(r['item_id'], f"Item {r['item_id']}"), 'Route': r['method'],
-             'For': '; '.join(f'{name}: {units} units' for name, units in uses[(r['item_id'], r['method'])].items()),
-             'Required units': r['quantity'], 'Purchased units': r['purchased_units'],
-             'Cost (g)': to_gold(r['cost_copper']), 'Highest unit price (g)': to_gold(r['highest_unit_copper']),
-             'Scan p25 (g)': to_gold(r['p25_copper']), 'Cheap now': r['cheap_now'], 'State': state(r)}
+    return [tr.buy_row(r, names, used_for='; '.join(f'{name}: {units} units'
+                                                 for name, units in uses[(r['item_id'], r['method'])].items()))
             for r in result['buy']]
-
-
-def vendor_rows(result, names):
-    return [{'Item': names.get(r['item_id'], f"Item {r['item_id']}"), 'Units': r['purchased_units'],
-             'Cost (g)': to_gold(r['cost_copper']), 'Vendor pays per unit (g)': to_gold(r['vendor_sell_copper']),
-             'Highest listing unit (g)': to_gold(r['highest_unit_copper']), 'Gain (g)': to_gold(r['gain_copper']),
-             'State': state(r)} for r in result['below_vendor']]
 
 
 def details_dialog(row):
     details = craft_details(row)
     with ui.dialog() as dialog, ui.card().classes('w-full'):
         ui.label(f"Materials for {row['output_name']} · {row['batch_size']} crafts")
-        table([{'Material': r['item_name'], 'Route': 'vendor' if r['method'] == 'vendor' else 'auction house',
-                'Required units': r['quantity'], 'Purchased units': r['purchased_units'],
-                'Cost (g)': to_gold(r['cost_copper']),
-                'Highest unit price (g)': to_gold(r['highest_unit_copper']), 'State': state(r)}
-               for r in details['materials']], label='Materials')
+        table([tr.material_row(r) for r in details['materials']], label='Materials')
         ui.label(f"Batch material cost: {format_money(row['batch_cost_copper'])}. "
                  'Whole-stack surplus has no revenue credit. Vendor stock is unknown.')
         for step in details['intermediate_steps']:
             ui.label(f"{'↳ ' * step['depth']}{step['item_name']}: {step['crafts']} crafts → "
-                     f"{step['quantity']} units · {state(step)}")
+                     f"{step['quantity']} units · {tr.state(step)}")
         ui.button('Close', on_click=dialog.close)
     dialog.on('hide', dialog.delete)
     dialog.open()
 
 
 def freshness_caption(freshness, config):
-    if freshness['upstream_known']:
-        ui.label(f"Prices scanned {freshness['age_hours']:.1f} hours ago "
-                 f"({freshness['observed_at']:%Y-%m-%d %H:%M} UTC) · stale after {config['max_age_hours']} hours")
-    else:
-        ui.label(f"Price age unknown: this source gives no scan time. Downloaded "
-                 f"{freshness['age_hours']:.1f} hours ago; prices may be older. "
-                 f"Stale after {config['max_age_hours']} hours since download.")
+    ui.label(age_caption(freshness, config['max_age_hours']))
     if freshness['stale']:
         with ui.card().props('flat bordered'):
             ui.icon('warning', color='warning')
-            ui.label('Saved prices are stale or future-dated. Refresh before acting on them.')
+            ui.label(STALE_WARNING)
 
 
 def watchlist_hits(config, catalogs):
@@ -114,32 +91,19 @@ def watchlist_hits(config, catalogs):
         if hits:
             with ui.expansion(f'Watchlist hits ({len(hits)})', value=True):
                 for row in hits:
-                    ui.label(_hit_text(row, names))
+                    ui.label(hit_text(row, names))
     except Exception as error:
         ui.label(f'Watchlist evidence unavailable: {error}')
-
-
-def _hit_text(row, names):
-    # Same wording as the Streamlit panel (views/watchlist.render_hits): only the sides that hit.
-    states = []
-    if row['buy_hit']:
-        units = (f"{row['buy_units']} units at or below target" if row['buy_units'] is not None
-                 else 'units not available for this source')
-        states.append(f"Buy {row['buy_state']} · {units}")
-    if row['sell_hit']:
-        states.append(f"Sell {row['sell_state']}")
-    item = row['entry'].item_id
-    return f"{names.get(item, 'Unknown item')} ({item}) · {format_money(row['price'])} · {'; '.join(states)}"
 
 
 def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
     identities = [None, *available_characters(character_data)]
     selected = resolve_character(saved.character, character_data)
     if saved.character is not None and selected is None:
-        ui.label('Saved character is no longer present in this source and market; showing Our team.')
+        ui.label(tr.MISSING_CHARACTER)
     funds = resolve_funds(saved, character_data, datetime.now(UTC), config['max_age_hours'])
     with ui.expansion('Today settings', value=unreadable or funds.settings.gold_copper == 0).classes('w-full'):
-        ui.label('One funded plan · whole auction stacks are bought; surplus is shown · sales speed is unknown')
+        ui.label(tr.SETTINGS_NOTE)
         with ui.row():
             character = ui.select({str(i): 'Our team' if c is None else ' · '.join(c)
                                    for i, c in enumerate(identities)}, value=str(identities.index(selected)),
@@ -174,7 +138,7 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
 
 def plan_tables(result, names, active_tab, config, session=None, on_change=None):
     sells = {r['output_item_id']: r for r in result['sell']}
-    crafts = [{**craft_row(r, sells[r['output_item_id']]), 'id': i} for i, r in enumerate(result['craft'])]
+    crafts = [{**tr.craft_row(r, sells[r['output_item_id']]), 'id': i} for i, r in enumerate(result['craft'])]
     with ui.tabs(value=active_tab) as tabs:
         for name in TABS:
             ui.tab(name)
@@ -205,9 +169,9 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
             with table_area:
                 widget = table(crafts, label='Craft')
             widget.on('rowClick', lambda e: details_dialog(result['craft'][e.args[1]['id']]))
-            ui.label(f"{result['remaining']['craft']} more rows outside this list's 10-row limit.")
+            ui.label(f"{result['remaining']['craft']} {tr.ROW_LIMIT_NOTE}.")
             ui.label('Open a card or click a table row to inspect materials and catalog steps.')
-            ui.label('Hidden recipes: ' + ('; '.join(f'{k}: {v}' for k, v in sorted(result['hidden'].items())) or '0'))
+            ui.label(tr.hidden_line(result['hidden']))
             with ui.expansion('Catalog checks'):
                 if result['catalog_checks']:
                     table(result['catalog_checks'], label='Catalog checks')
@@ -215,17 +179,15 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
                     ui.label('No differences in comparable matched recipe evidence.')
         with ui.tab_panel('Buy'):
             table(buy_rows(result, names), label='Buy')
-            ui.label(f"{result['remaining']['buy']} more rows outside this list's 10-row limit.")
-            ui.label(f"Whole shopping list: {format_money(result['shopping_total_copper'])}. "
-                     'Cheap now means average paid is strictly below scan p25; informational only. '
-                     'Vendor stock is unknown.')
+            ui.label(f"{result['remaining']['buy']} {tr.ROW_LIMIT_NOTE}.")
+            ui.label(tr.shopping_line(result))
         with ui.tab_panel('Sell'):
-            table([sell_row(r) for r in result['sell']], label='Sell')
-            ui.label(f"{result['remaining']['sell']} more rows outside this list's 10-row limit.")
+            table([tr.sell_row(r) for r in result['sell']], label='Sell')
+            ui.label(f"{result['remaining']['sell']} {tr.ROW_LIMIT_NOTE}.")
         with ui.tab_panel('Below vendor'):
-            ui.label('Independent aside, not part of the craft budget.')
-            table(vendor_rows(result, names), label='Below vendor')
-            ui.label(f"{result['remaining']['below_vendor']} more rows outside this list's 10-row limit.")
+            ui.label(tr.VENDOR_ASIDE)
+            table([tr.vendor_row(r, names) for r in result['below_vendor']], label='Below vendor')
+            ui.label(f"{result['remaining']['below_vendor']} {tr.ROW_LIMIT_NOTE}.")
         with ui.tab_panel('Queue'):
             queue_panel(result, session if session is not None else {})
     return tabs
@@ -254,26 +216,20 @@ def render(config, catalogs, character_data, active_tab='Craft'):
             for note in funds.notes:
                 ui.label(note)
             if not settings.gold_copper:
-                ui.label('Enter the gold you have available to size the plan. Use explicit units, for example 12g 50s.')
+                ui.label(tr.ZERO_GOLD_HINT)
             try:
                 manifest, arguments = load_today(config, catalogs, settings, latest_characters, datetime.now(UTC))
                 if manifest is None:
-                    ui.label('Refresh or import a scan for this market to inspect Today.')
+                    ui.label(tr.NO_SNAPSHOT)
                     return
                 result = session_plan(arguments, session, reset_note)
             except Exception as error:
                 ui.label(f'Unable to build Today: {error}')
                 return
             freshness_caption(result['freshness'], config)
-            ui.label(f"Today rules v{result['today_version']} · cautious output price · {config['auction_cut']:.0%} "
-                     f"auction cut · source {config['source_id']} · market {config['market_id']} · "
-                     f"snapshot {arguments['snapshot']['snapshot_id']} · "
-                     f"scan {manifest.get('scan_id', 'not available for this source')} · "
-                     f"evidence {result['freshness']['observed_at']} (UTC) · time basis {result['freshness']['basis']}")
+            ui.label(tr.provenance(result, config, manifest, arguments['snapshot']['snapshot_id']))
             if not result['listing_evidence_available']:
-                ui.label('Individual listings, thin markets, cheap now, undercuts and below-vendor listings: '
-                         'not available for this source. Batches use funds and the per-item cap; '
-                         'costs are aggregate estimates.')
+                ui.label(tr.NO_LISTINGS)
             watchlist_hits(config, catalogs)
             names = {i: item['name'] for c in catalogs for i, item in c['items_by_id'].items()}
             tabs = plan_tables(result, names, current_tab, config, session, lambda: update(saved_settings[0]))
@@ -359,9 +315,9 @@ def craft_card(row, sell):
         ui.label(f"{row['output_name']} · {row['batch_size']} crafts").classes('text-xl font-semibold')
         ui.label(f"Batch profit {format_money(row['batch_profit_copper'])} · "
                  f"per craft {format_money(row['profit_per_craft_copper'])}")
-        character = craft_row(row, sell)
+        character = tr.craft_row(row, sell)
         capability = [f"{key}: {character[key]}" for key in ('Can make', 'Who can make it') if key in character]
-        ui.label(' · '.join([f"{row['confidence']} confidence", *capability, state(row)]))
+        ui.label(' · '.join([f"{row['confidence']} confidence", *capability, tr.state(row)]))
         if character.get('Learning'):
             ui.label(character['Learning'])
         ui.label(f"Cautious sale {format_money(row['sale_price_copper'])} · "
@@ -392,18 +348,14 @@ def competition(sell):
 
 def queue_panel(result, session):
     queue = result['queue']
-    stable = {**queue, 'lines': [{k: v for k, v in line.items() if k not in ('confidence', 'confidence_reasons')}
-                                for line in queue['lines']]}
-    identity = digest({'queue': stable, 'context': session.get('context')})
+    identity = digest({'queue': stable_queue(queue), 'context': session.get('context')})
     if session.get('queue_identity') != identity:
         session.update(queue_identity=identity, ticks={})
     texts = [queue_line(line) for line in queue['lines']]
     for i, text in enumerate(texts):
         ui.checkbox(text, value=session['ticks'].get(str(i), False),
                     on_change=lambda e, index=str(i): session['ticks'].update({index: e.value}))
-    profit = queue['expected_profit_copper']
-    total = (f"Gold needed: {format_money(queue['gold_needed_copper'])} · "
-             f"Expected profit at undercut: {format_money(profit) if profit is not None else 'unavailable'}")
+    total = queue_total(queue)
     ui.label(total)
     if result['freshness']['stale']:
         ui.label('stale — inspect only')
@@ -416,8 +368,7 @@ def session_plan(arguments, session, reset_note):
     reset_note.set_text('')  # As in Streamlit, the note shows only on the rebuild that reset.
     if session.get('context') != context:
         if session:
-            reset_note.set_text('Scan, settings or catalog evidence changed: session choices and queue ticks '
-                                'reset. Previous choices were dropped, not resized; a fresh default plan is shown.')
+            reset_note.set_text(tr.PLAN_RESET)
         session.clear()
         session.update(context=context, choices=None, refill=True, rows=[], ticks={})
     result = build_today(**arguments, choices=session['choices'], refill=session['refill'])
@@ -440,6 +391,6 @@ def read_saved_settings(config):
     try:
         saved = load_settings(path)
     except (ValueError, TypeError, OSError) as error:
-        ui.label(f'Could not read Today settings: {error}. Defaults are shown; save to replace this file.')
+        ui.label(tr.unreadable_settings(error))
         return TodaySettings(), True
     return saved, False

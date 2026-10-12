@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from . import beta_evidence as evidence
 from . import pipeline, professions, scans
+from .beta_markdown import markdown
 from .config import Source
 
 
@@ -237,7 +238,6 @@ def create_report(path: Path, config: Source, output_root: Path, previous: Path 
     code = code or int(bool(counts["fail"]))
     folder = output_root / (now.strftime("%Y%m%dT%H%M%S%fZ") + "-" + uuid4().hex[:8])
     folder.mkdir(parents=True)
-    from views.beta_report import markdown
     (folder / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     (folder / "report.md").write_text(markdown(report), encoding="utf-8")
     return folder, report, code

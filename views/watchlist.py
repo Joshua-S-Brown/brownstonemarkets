@@ -8,6 +8,7 @@ from brownstone.watchlist import (
     Entry,
     build_watchlist,
     catalog_names,
+    hit_text,
     known_names,
     load_entries,
     parse_entry,
@@ -139,13 +140,4 @@ def render_hits(config, catalogs=()):
     # Hit states already say stale; the host page owns the freshness warning.
     _time(result, warn=False)
     for row in hits:
-        entry = row['entry']
-        states = []
-        if row['buy_hit']:
-            units = (f"{row['buy_units']} units at or below target" if row['buy_units'] is not None
-                     else 'units not available for this source')
-            states.append(f"Buy {row['buy_state']} · {units}")
-        if row['sell_hit']:
-            states.append(f"Sell {row['sell_state']}")
-        st.caption(f"{names.get(entry.item_id, 'Unknown item')} ({entry.item_id}) · "
-                   f"{format_money(row['price'])} · {'; '.join(states)}")
+        st.caption(hit_text(row, names))

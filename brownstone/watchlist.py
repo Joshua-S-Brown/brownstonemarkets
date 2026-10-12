@@ -7,7 +7,7 @@ from .action_board import compatible_catalogs
 from .config import ADDON_PROVIDER
 from .freshness import assess
 from .metrics import units_below_price
-from .money import parse_money
+from .money import format_money, parse_money
 from .storage import latest_snapshot, scope_predicate
 from .today_data import read_skillup_market
 
@@ -112,6 +112,19 @@ def _state(target, hit, price, freshness):
         return 'no snapshot'
     state = 'not listed' if price is None else 'hit' if hit else 'not hit'
     return state + (' · stale' if freshness['stale'] else '')
+
+
+def hit_text(row: dict, names: dict[int, str]) -> str:
+    """One current-hit line naming only the sides that hit; shared by both apps' panels."""
+    states = []
+    if row['buy_hit']:
+        units = (f"{row['buy_units']} units at or below target" if row['buy_units'] is not None
+                 else 'units not available for this source')
+        states.append(f"Buy {row['buy_state']} · {units}")
+    if row['sell_hit']:
+        states.append(f"Sell {row['sell_state']}")
+    item = row['entry'].item_id
+    return f"{names.get(item, 'Unknown item')} ({item}) · {format_money(row['price'])} · {'; '.join(states)}"
 
 
 def read_watchlist(db, config, entries, now):

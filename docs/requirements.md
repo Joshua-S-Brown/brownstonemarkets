@@ -675,7 +675,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   the same 10-row limit. Refill does not grow explicit batches or re-add unchecked outputs (including
   alternate routes to those outputs). Turning refill off keeps exactly the ticked choices, including
   any refill rows already ticked; the Craft tab then counts the feasible crafts left out (never 0
-  when some fit) and keeps the hidden-reason counts. Choices and refill preference live only in the Streamlit session,
+  when some fit) and keeps the hidden-reason counts. Choices and refill preference live only in the app session (never on disk),
   separately per source; scan, settings or catalog/evidence changes reset them with a note and a fresh
   default plan. Previous choices are dropped rather than carried over at resized quantities.
 - **Session queue (STORY-039):** one complete checklist: auction-house materials, vendor materials,

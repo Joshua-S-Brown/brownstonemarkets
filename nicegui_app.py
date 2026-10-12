@@ -11,24 +11,18 @@ from nicegui import Client, app, ui
 
 from brownstone import config as configuration
 from brownstone import pipeline, recipe_catalogs
-from brownstone.crafting import parse_recipe_catalog
-from brownstone.navigation import QUESTIONS
+from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences
 from brownstone.today_loading import load_today_characters
 from views.nicegui_import import render as render_import
 from views.nicegui_today import render
 
 ROOT = Path(__file__).resolve().parent
-EXPERIENCES = {"forever": "WoW Forever", "classic": "Classic Era", "retail": "Retail (regression)"}
 
 
 def read_catalogs():
-    catalogs = []
-    for entry in recipe_catalogs.find_catalogs(recipe_catalogs.CONFIG_DIR):
-        if entry["catalog"]:
-            try:
-                catalogs.append({**parse_recipe_catalog(entry["catalog"]), "catalog_id": entry["name"]})
-            except Exception as error:
-                ui.label(f"Recipe catalog {entry['name']} unavailable: {error}")
+    catalogs, errors = recipe_catalogs.parse_catalogs(recipe_catalogs.find_catalogs(recipe_catalogs.CONFIG_DIR))
+    for message in errors:
+        ui.label(message)
     return catalogs
 
 
@@ -83,9 +77,7 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
 
 
 def sidebar(sources, game, source, place, tab):
-    order = list(EXPERIENCES)
-    games = sorted({s['game_version'] for s in sources},
-                   key=lambda g: order.index(g) if g in order else len(order))
+    games = experiences(sources)
     selected_game = game if game in games else games[0]
     options = [s for s in sources if s['game_version'] == selected_game]
     chosen = next((s for s in options if s['source_id'] == source), options[0] if len(options) == 1 else None)

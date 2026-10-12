@@ -391,7 +391,7 @@ def test_empty_load_retains_diagnostics_and_historical_loads_warn():
 
 
 def test_markdown_collapses_repeated_passes_and_caps_ids():
-    from views.beta_report import markdown
+    from brownstone.beta_markdown import markdown
     db = database()
     for i in range(30):
         r = entry(f"bulk{i}", before_copper=110, after_copper=110)

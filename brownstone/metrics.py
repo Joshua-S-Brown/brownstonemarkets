@@ -8,7 +8,7 @@ from typing import Any
 
 import polars as pl
 
-from .markets import MARKET_KEYS
+from .markets import MARKET_KEYS, scope_predicate
 from .variants import ITEM_KEYS
 
 METRICS_VERSION = 1
@@ -128,18 +128,14 @@ def initialize_metrics(db) -> None:
         rebuild_scan_metrics(db)
 
 
-def _scope(config: Mapping[str, Any], snapshot_id: str) -> tuple[str, list[Any]]:
-    keys = ["source_id", *MARKET_KEYS]
-    return " AND ".join(f"{k}=?" for k in keys) + " AND snapshot_id=?", [*[config[k] for k in keys], snapshot_id]
-
-
 def _scan(db, config: Mapping[str, Any], snapshot_id: str) -> tuple[str, list[Any]] | None:
     # Config validates scan evidence using scans.py; defer this import to avoid that cycle.
     from .config import ADDON_PROVIDER
 
     if config["provider"] != ADDON_PROVIDER:
         return None
-    predicate, parameters = _scope(config, snapshot_id)
+    predicate, parameters = scope_predicate(config)
+    predicate, parameters = predicate + " AND snapshot_id=?", [*parameters, snapshot_id]
     row = db.execute(f"SELECT scan_id FROM addon_scans WHERE {predicate} "
                      "AND status='completed' AND NOT partial AND priced", parameters).fetchone()
     return (predicate + " AND scan_id=?", [*parameters, row[0]]) if row else None

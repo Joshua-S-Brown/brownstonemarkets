@@ -11,7 +11,9 @@ from . import character_snapshots as holdings
 from . import professions
 from .config import MARKET_KEYS
 from .freshness import FUTURE_TOLERANCE_HOURS
+from .markets import scope_predicate
 from .scans import _utc
+from .storage import has_table
 
 FAMILIES = {"auction", "mail", "craft", "vendor", "loot", "money", "bags", "system"}
 
@@ -73,7 +75,7 @@ def states(config, records: list[dict], db=None) -> list[dict | None]:
             return [None] * len(records)
         with duckdb.connect(str(path), read_only=True) as connection:
             return states(config, records, connection)
-    if not db.execute("SELECT 1 FROM information_schema.tables WHERE table_name='character_journal'").fetchone():
+    if not has_table(db, "character_journal"):
         return [None] * len(records)
     stored = {}
     for entry, sha, *scope in db.execute(
@@ -116,12 +118,12 @@ def latest_rows(config) -> list[dict]:
     if not path.exists():
         return []
     with duckdb.connect(str(path), read_only=True) as db:
-        if not db.execute("SELECT 1 FROM information_schema.tables WHERE table_name='character_journal'").fetchone():
+        if not has_table(db, "character_journal"):
             return []
+        predicate, parameters = scope_predicate(config)
         rows = db.execute("SELECT character, character_realm, character_faction, family, count(*), "
-                          "max(captured_at) FROM character_journal WHERE source_id=? AND " +
-                          " AND ".join(f"{k}=?" for k in MARKET_KEYS) + " GROUP BY ALL ORDER BY ALL",
-                          [config["source_id"], *[config[k] for k in MARKET_KEYS]]).fetchall()
+                          f"max(captured_at) FROM character_journal WHERE {predicate} GROUP BY ALL ORDER BY ALL",
+                          parameters).fetchall()
     return [dict(zip(("Character", "Realm", "Faction", "Family", "Entries", "Latest (UTC)"),
                      (*r[:-1], r[-1].astimezone(UTC).isoformat()), strict=True)) for r in rows]
 
@@ -138,16 +140,14 @@ def active_auction_rows(config) -> list[dict]:
     if not path.exists():
         return []
     characters: dict[tuple, dict] = {}
-    scope = " AND ".join(["source_id=?", *(f"{k}=?" for k in MARKET_KEYS)])
-    params = [config["source_id"], *[config[k] for k in MARKET_KEYS]]
+    scope, params = scope_predicate(config)
     with duckdb.connect(str(path), read_only=True) as db:
-        tables = {r[0] for r in db.execute("SELECT table_name FROM information_schema.tables").fetchall()}
         for table in ("character_snapshots", "character_journal"):
-            if table in tables:
+            if has_table(db, table):
                 for key in db.execute(f"SELECT DISTINCT character, character_realm, character_faction "
                                       f"FROM {table} WHERE {scope}", params).fetchall():
                     characters.setdefault(key, {})
-        if "character_journal" in tables:
+        if has_table(db, "character_journal"):
             rows = db.execute("SELECT character, character_realm, character_faction, record_json "
                               f"FROM character_journal WHERE {scope} AND family='auction' "
                               "AND record_json LIKE '%\"owned_auctions\"%'", params).fetchall()

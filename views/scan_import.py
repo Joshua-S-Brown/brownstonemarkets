@@ -43,7 +43,7 @@ def render(config):
     selected = st.session_state.get("scan_import_selection", default)
     _summary(preview, config.get("machine"))
     button = st.container()
-    problems = _scan_problems(preview)
+    problems = review.scan_problems(preview)
     if set(selected) != set(default):
         problems.append("Selection differs from the default")
     _warning(problems)
@@ -92,11 +92,6 @@ def _details_open(problems, failed):
 
 def _summary(preview, machine, drop_time=None):
     st.caption(review.summary(preview, machine, drop_time))
-
-
-
-def _scan_problems(preview):
-    return review.scan_problems(preview)
 
 
 def _warning(problems):

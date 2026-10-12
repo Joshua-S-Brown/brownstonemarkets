@@ -21,6 +21,12 @@ SERVER_TYPES = {"normal", "pvp", "roleplaying", "hardcore", ""}  # Forever only;
 _LEGACY_FACTION_SUFFIXES = ("-alliance", "-horde")
 
 
+def scope_predicate(config: Mapping[str, Any]) -> tuple[str, list[Any]]:
+    """SQL predicate and parameters for one source and the entire market identity."""
+    keys = ("source_id", *MARKET_KEYS)
+    return " AND ".join(f"{key}=?" for key in keys), [config[key] for key in keys]
+
+
 def market_id(fields: Mapping[str, Any]) -> str:
     """Canonical ID, e.g. classic-us-mankrik-alliance, forever-us-roleplaying-alliance.
 

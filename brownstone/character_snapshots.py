@@ -11,8 +11,10 @@ import duckdb
 from . import professions
 from .config import MARKET_KEYS
 from .freshness import FUTURE_TOLERANCE_HOURS
+from .markets import scope_predicate
 from .money import to_gold
 from .scans import _list, _utc
+from .storage import has_table
 
 
 def content_hash(record: dict) -> str:
@@ -111,12 +113,6 @@ def check_house(record: dict, config: Mapping[str, Any]) -> list[str]:
     return problems
 
 
-def _has_snapshots(db) -> bool:
-    # Older schemas lack the table; preview never migrates them.
-    return db.execute("SELECT 1 FROM information_schema.tables WHERE table_name='character_snapshots'").fetchone() \
-        is not None
-
-
 def states(config: Mapping[str, Any], records: list[dict], db=None) -> list[dict | None]:
     """Each record's stored content hash for this source, or None when it isn't imported yet."""
     if db is None:
@@ -125,7 +121,7 @@ def states(config: Mapping[str, Any], records: list[dict], db=None) -> list[dict
             return [None] * len(records)
         with duckdb.connect(str(path), read_only=True) as connection:
             return states(config, records, connection)
-    if not records or not _has_snapshots(db):
+    if not records or not has_table(db, "character_snapshots"):  # Preview never migrates.
         return [None] * len(records)
     cursor = db.execute(f"SELECT snapshot_id, snapshot_sha256, {', '.join(MARKET_KEYS)} FROM character_snapshots "
                         "WHERE source_id = ? AND list_contains(?, snapshot_id)",
@@ -188,13 +184,12 @@ def latest_data(config: Mapping[str, Any]) -> dict[tuple, dict]:
     if not path.exists():
         return {}
     with duckdb.connect(str(path), read_only=True) as db:
-        if not _has_snapshots(db):
+        if not has_table(db, "character_snapshots"):
             return {}
-        rows = db.execute("SELECT record_json, machine FROM character_snapshots WHERE source_id=? AND " +
-                          " AND ".join(f"{key}=?" for key in MARKET_KEYS) +
-                          " ORDER BY captured_at, CAST(json_extract_string(record_json, '$.sequence') AS BIGINT) "
-                          "NULLS FIRST, snapshot_id",
-                          [config["source_id"], *[config[k] for k in MARKET_KEYS]])
+        predicate, parameters = scope_predicate(config)
+        rows = db.execute(f"SELECT record_json, machine FROM character_snapshots WHERE {predicate} "
+                          "ORDER BY captured_at, CAST(json_extract_string(record_json, '$.sequence') AS BIGINT) "
+                          "NULLS FIRST, snapshot_id", parameters)
         characters: dict[tuple, dict] = {}
         for raw, machine in rows.fetchall():
             r = json.loads(raw)

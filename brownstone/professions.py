@@ -5,9 +5,10 @@ from pathlib import Path
 
 import duckdb
 
-from .config import MARKET_KEYS
+from .markets import scope_predicate
 from .recipe_catalogs import CONFIG_DIR, find_catalogs, profession_title
 from .scans import _list, _utc
+from .storage import has_table
 
 
 def latest_data(config) -> dict[tuple, dict]:
@@ -26,10 +27,9 @@ def latest_data(config) -> dict[tuple, dict]:
     path = Path(config["data_dir"]) / "brownstone.duckdb"
     if not path.exists():
         return characters
-    scope = " AND ".join(["source_id=?", *(f"{k}=?" for k in MARKET_KEYS)])
-    params = [config["source_id"], *[config[k] for k in MARKET_KEYS]]
+    scope, params = scope_predicate(config)
     with duckdb.connect(str(path), read_only=True) as db:
-        if db.execute("SELECT 1 FROM information_schema.tables WHERE table_name='character_journal'").fetchone():
+        if has_table(db, "character_journal"):
             records = db.execute(
                 f"SELECT character, character_realm, character_faction, record_json, machine "
                 f"FROM character_journal WHERE {scope} ORDER BY captured_at, "
@@ -60,8 +60,6 @@ def _order(record: dict) -> tuple:
 
 
 def _observe(state: dict, record: dict) -> None:
-    if record.get("kind") == "bags" and _order(record) > _order(state["bags"]):
-        state["bags"] = record
     if _crafted_id(record) is not None:
         state.setdefault("crafts", []).append(record)
     recipes = record.get("known_recipes")

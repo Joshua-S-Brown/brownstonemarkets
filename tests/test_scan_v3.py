@@ -30,7 +30,7 @@ def rich(scan_id="rich", finished=FINISHED, status="completed"):
     record = packed(scan(scan_id, finished, rows, status=status))
     extras = [(1, 4, 2, 10, 1, 1), (2, 1, 2, 10, 1, 2), (0, "", "", "", 0, 0),
               (1, 3, 1, 0, 1, 3), (1, 2, 1, 15, 2, 3)]
-    return {**record, "schema_version": 3, "listing_format": scans.PACKED_V3_FORMAT,
+    return {**record, "schema_version": 3, "listing_format": ":".join(scans.PACKED_V3_FIELDS),
             "listings": [r + ":" + ":".join(map(str, e)) for r, e in zip(record["listings"], extras, strict=True)],
             "sellers": ["TestSeller", "TestSeller-Other"], "level_types": ["REQ_LEVEL", "ITEM_LEVEL"],
             "links": [MONKEY, BEAR, BASE], "duration_seconds": 12.5,

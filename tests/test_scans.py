@@ -72,7 +72,7 @@ FINISHED = int(NOW.timestamp()) - 600
 
 
 def test_parse_the_sample_file():
-    complete, stopped = scans.read_saved_variables(FIXTURE.read_bytes())
+    complete, stopped = scans.read_addon_records(FIXTURE.read_bytes())[0]
     summary = scans.summarize(complete)
     assert (summary["scan_id"], summary["status"], summary["partial"]) == (COMPLETE, "completed", False)
     assert summary["finished_at"] == datetime(2026, 11, 4, 18, 1, 2, tzinfo=UTC)
@@ -92,13 +92,13 @@ def test_parser_subset_escapes_and_errors():
         with pytest.raises(ValueError):
             scans.parse_lua(bad)
     with pytest.raises(ValueError, match="BrownstoneScanDB"):
-        scans.read_saved_variables(b"OtherDB = {\n}\n")
+        scans.read_addon_records(b"OtherDB = {\n}\n")[0]
     with pytest.raises(ValueError, match="schema_version"):
-        scans.read_saved_variables(b'BrownstoneScanDB = {\n["schema_version"] = 7,\n}\n')
+        scans.read_addon_records(b'BrownstoneScanDB = {\n["schema_version"] = 7,\n}\n')[0]
 
 
 def test_stack_pricing_rounds_up_and_never_prices_missing_buyouts():
-    listings = scans.listing_frame(scans.read_saved_variables(FIXTURE.read_bytes())[0])
+    listings = scans.listing_frame(scans.read_addon_records(FIXTURE.read_bytes())[0][0])
     wool = listings.filter(pl.col("item_id") == 2592).row(0, named=True)
     # 250c for a stack of 3 is 83.33c each: no exact unit price, and a cost that rounds up.
     assert (wool["buyout"], wool["quantity"], wool["unit_buyout"], wool["unit_buyout_ceil"]) == (250, 3, None, 84)

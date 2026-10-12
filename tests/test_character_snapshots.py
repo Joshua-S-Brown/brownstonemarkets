@@ -36,7 +36,7 @@ def test_snapshots_only_preview_import_archive_counts_and_unknown_bank(tmp_path)
     raw = path.read_bytes()
     preview = preview_scans(config, now=NOW)
     assert not config["data_dir"].exists()
-    assert preview.new_snapshot_ids == ["char:bags:1", "bob"] and preview.new_ids == []
+    assert preview.new_record_ids == ["char:bags:1", "bob"] and preview.new_ids == []
     assert holdings.preview_rows(preview, "mac")[0]["Gold"] == 1.2345
     manifest = import_scans(config, now=NOW, reviewed=preview, scan_ids=[])
     assert manifest["fully_imported"] and manifest["status"] == "no_complete_scan"
@@ -50,7 +50,7 @@ def test_snapshots_only_preview_import_archive_counts_and_unknown_bank(tmp_path)
         assert db.execute("SELECT count(*) FROM character_slots").fetchone()[0] == 2
         assert db.execute("SELECT count(*) FROM market_snapshots").fetchone()[0] == 0
         assert db.execute("SELECT gold_copper, machine FROM character_snapshots").fetchall() == [(12345, "mac")] * 2
-    assert not preview_scans(config, now=NOW).new_snapshot_ids
+    assert not preview_scans(config, now=NOW).new_record_ids
     repeated = import_scans(config, now=NOW)
     assert all(r["outcome"] == "duplicate" for r in repeated["snapshots"])
     assert repeated["bronze_file"] == manifest["bronze_file"]
@@ -101,7 +101,7 @@ def test_other_house_and_market_scope_are_not_pooled(tmp_path):
     path = write(tmp_path / "own.lua", [snapshot(), foreign])
     config = addon_source(tmp_path / "data", path)
     preview = preview_scans(config, now=NOW)
-    assert preview.new_snapshot_ids == ["char:bags:1"] and preview.snapshot_mismatches[1]
+    assert preview.new_record_ids == ["char:bags:1"] and preview.snapshot_mismatches[1]
     manifest = import_scans(config, now=NOW, reviewed=preview)
     assert manifest["other_house"] == 1 and not manifest["fully_imported"]
     assert "another auction house" in import_guidance(manifest)

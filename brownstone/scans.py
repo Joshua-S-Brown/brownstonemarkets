@@ -24,7 +24,6 @@ SCAN_SCHEMA_VERSIONS = (1, 2, 3, 4)
 PACKED_FIELDS = ("item_id", "quantity", "buyout", "min_bid", "bid", "flags", "name_index")
 PACKED_FORMAT = ":".join(PACKED_FIELDS)
 PACKED_V3_FIELDS = (*PACKED_FIELDS, *scan_details.EXTRA_FIELDS)
-PACKED_V3_FORMAT = ":".join(PACKED_V3_FIELDS)
 FLAG_COMPLETE_INFO, FLAG_COMMODITY = 1, 2
 # Configurable house evidence and where each value lives in a scan.
 EVIDENCE_FIELDS = {
@@ -152,7 +151,7 @@ def read_addon_database(raw: bytes) -> dict:
 
 def read_addon_records(raw: bytes) -> tuple[list[dict], list[dict]]:
     database = read_addon_database(raw)
-    records, snapshots, journal = addon_record_lists(database)
+    records, snapshots, journal = (addon_record_list(database, kind) for kind in ("scans", "snapshots", "journal"))
     for values, key in ((records, "scan_id"), (snapshots, "snapshot_id"), (journal, "entry_id")):
         ids = [r.get(key) if isinstance(r, dict) else None for r in values]
         if key != "scan_id" and any(not isinstance(value, str) or not value for value in ids):
@@ -162,22 +161,9 @@ def read_addon_records(raw: bytes) -> tuple[list[dict], list[dict]]:
     return records, snapshots + journal
 
 
-def addon_record_lists(database: dict) -> tuple[list[dict], list[dict], list[dict]]:
-    """Shared list extraction; evidence reports validate records independently after this step."""
-    records = addon_record_list(database, "scans")
-    snapshots = addon_record_list(database, "snapshots")
-    journal = addon_record_list(database, "journal")
-    return records, snapshots, journal
-
-
 def addon_record_list(database: dict, kind: str) -> list[dict]:
     """Extract one import list so a report can continue after another list is malformed."""
     return _list(database.get(kind), kind)
-
-
-def read_saved_variables(raw: bytes) -> list[dict]:
-    """Every scan in an account-wide file, including files with snapshots."""
-    return read_addon_records(raw)[0]
 
 
 def _evidence(scan: dict, field: str) -> Any:

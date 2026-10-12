@@ -6,7 +6,7 @@ report.json keeps every check and ID.
 import json
 from collections import defaultdict
 
-from brownstone.money import to_gold
+from .money import to_gold
 
 ID_LIMIT = 10
 

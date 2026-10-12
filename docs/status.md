@@ -1,354 +1,89 @@
 # Status
 
-Current implemented state, limitations and how to verify. History lives in Git; keep this file describing *now*.
+Current implemented state, limitations and how to verify. History, including dated real-data checks
+and beta play sessions, lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-12._
+_Last updated 2026-10-12 (first audit)._
 
 ## Implemented
 
-- **Main app (STORY-058):** NiceGUI with Today, Team/Market placeholders and Data → Import.
-  Start instructions, shared modules and verification: [New app](#new-app-story-058).
+Rules live in `requirements.md` and contracts in `design.md`; each bullet names where.
 
-- **Today craft cards (STORY-054, implemented and reviewed 2026-10-12):** NiceGUI Craft opens as
-  collapsed cards, with Table one toggle click away. Complete reserved materials and indented
-  intermediate steps, summed material cost and matching Sell evidence open together. Buy's For
-  names each craft's purchased units, including stack surplus. Tests inspect displayed money/labels;
-  the trial's private cost props are removed. Rules: `requirements.md` → Today → Presentation;
-  contracts: `design.md` → Today contracts. Offline checks:
-  `tests/ui_trial/test_nicegui_today.py` cover shared materials, vendor routes, intermediate steps,
-  stale/Unknown labels, collapse/toggle, order/cap, adjustments and retained-cost reconciliation.
-  The shared offline AppTest fixture uses a 10-second default timeout (explicit timeouts still win):
-  full coverage runs repeatedly exceeded Streamlit's 3-second default on otherwise passing tests.
-  **Forever beta check (2026-10-12):** resolved `config/market.local.toml`, copied `data/` to
-  ignored `work/story054/data`, and selected Basilly with entered 25g, fixed 1c minimum, cap 5.
-  At the previous 10s minimum no crafts appear. The 1c check shows four Known/Low cards in order:
-  Linen Bag, Linen Cloak, Brown Linen Shirt, Simple Linen Pants, each five crafts. Material costs
-  are 5s 82c, 2s 21c, 2s 30c and 2s 30c, summing to shopping 12s 63c. Buy's Linen Cloth For
-  contributions are 48/19/20/20 purchased units (107 total; 60 required), and Coarse Thread
-  15/5/5/5 (30 total). Each card shows its own reserved units and Bolt of Linen Cloth steps;
-  undercut batch profits are 8s 38c, 2s 49c, 2s 40c and 2s 40c. Scan
-  `20261011T105714Z-cf2f26` is older than 24 hours, so every card is *stale — inspect only*.
-  Live browser observations, screenshots and numerical check are under `work/story054/`, outside
-  Git. Original data/settings/configuration are untouched. No pricing, version or Streamlit change.
+- **Main app (NiceGUI, UI-07):** Today, Team and Market (both placeholders for STORY-052/055) and
+  Data → Import. Start it from `Start Brownstone.command` / `.cmd` or `launch_nicegui.py`
+  ([New app](#new-app)). Runs on the Mac only; the Windows PC plays and drops scan files.
+- **Old app (Streamlit, UI-01 to UI-06):** unchanged and reachable from
+  `Start Brownstone (old app).command` / `.cmd` (`launch.py`). Places: Today (Today plan, All
+  recipes), Team (Characters), Market (Browse market, Skill-up demand, Watchlist, Below usual price),
+  Data (Import or Refresh from TSM, Recipe catalogs, Scan changes). TSM refresh lives only here.
+- **Ingestion:** TSM CSV → bronze/silver/DuckDB/gold with manifests, validation and analytical
+  deduplication (DATA-01 to DATA-05). Addon SavedVariables import (ADDON-01 to ADDON-06): read-only
+  preview, explicit reviewed import, scan formats 1–4 inside account file format 6, partial scans
+  stored but never priced, exact bytes gzip-archived once per SHA-256. Character snapshots and the raw
+  event journal share the same non-scan import lifecycle (ADDON-11/12). A second machine's files
+  arrive through the read-only drop folder (OPS-03). CLI: `python -m brownstone`, with `--preview`,
+  `--input`, `--scan` and the `recipes` and `beta-report` subcommands.
+- **Sources:** the Forever beta source `forever-us-normal-alliance-addon` (disabled in the tracked
+  `config/market.toml`, enabled with `scan_path`, `machine` and `drop_folder` in the untracked
+  `config/market.local.toml`), Mankrik Alliance Classic Era (development stand-in), and Retail Area 52
+  and US commodities (regression only). Market identity includes environment (DATA-03).
+- **Storage:** schema 11 and metrics version 1; backed-up, idempotent migrations (`design.md` →
+  Schema migrations). The local database is at schema 11.
+- **Crafting:** twelve generated catalogs. Forever (`forever-beta-1.60`, 1,930 recipes from pages saved
+  2026-10-04 to 06): Alchemy 167, Blacksmithing 430, Cooking 129, Enchanting 28, Engineering 205,
+  First Aid 31, Leatherworking 511, Mining 17, Tailoring 412. Classic Era: Alchemy 101, Enchanting 12,
+  Tailoring 6. One combined Action Board (CRAFT-05), depth display (CRAFT-09), recipe import and the
+  Recipe catalogs page (CRAFT-08), learning sources and training costs (STORY-050).
+- **Today (`today_version` 5):** funded, supply-reserved plan with Buy/Sell/Below vendor/Queue,
+  choices and refill, confidence labels, character eligibility and recorded funds (`requirements.md`
+  → Today). The new app shows Craft as cards with Table one toggle away (STORY-054).
+- **Other pages:** Characters (STORY-051), Watchlist (STORY-048), Skill-up demand (CRAFT-10), Scan
+  changes (UI-06), Browse market and Below usual price (UI-02/03), version-scoped item names (DATA-02),
+  market metrics (ADDON-10).
+- **Beta evidence report (STORY-042):** private Markdown/JSON reports under ignored
+  `work/beta-reports/` ([usage](#beta-evidence-report)).
+- **Scanning addon:** `addon/BrownstoneScan/` 0.11.2, file format 6, scan format 4: manual scans with
+  the bounded item-info pass, character snapshots, event journal, active auctions, known recipes
+  through `C_TradeSkillUI`, reload/clear buttons and the minimap panel. Usage, saved fields and beta
+  checklists are in `addon/README.md`.
 
-- **Three questions (STORY-053, implemented and reviewed 2026-10-11):** In the old Streamlit app, Today, Team, Market and visually
-  separated Data replace the flat page list. In-page segmented controls keep every old page reachable;
-  collection and catalogs live in Data. Business questions introduce places and sections. Addon
-  Below usual price explains the missing history before loading prices. Per-source place keys survive
-  source switches; old page names migrate to place/section pairs. Rules: `requirements.md` → UI-01;
-  structure: `design.md` → Page map. Offline checks: `tests/test_navigation.py` and existing view/import
-  AppTests updated to navigate place and section controls.
-  Forever beta check (2026-10-11): resolved `config/market.local.toml`, copied `data/` to ignored
-  `work/story-053/data`, then rendered every place and section without importing or refreshing.
-  Today uses recorded character funds by default (STORY-056 below);
-  Team shows Basilly level 6 / Tailoring
-  8/75 / six known recipes, Cicelyna level 1, and Keenagen level 5 / Mining 3/75 / one known recipe.
-  Browse market shows 7,715 items and 18 saved snapshots. Skill-up demand and catalogs remain
-  inspectable, Watchlist shows its source-local empty state, Below usual price explains missing
-  history, and Scan changes compares eligible saved scans. Data exposes preview/import controls
-  and collapsed imported character evidence. Screenshots and read-only AppTest observations are
-  under `work/story-053/`; the original data and local configuration are untouched.
+**Pending review:** STORY-025 and STORY-030 (Streamlit Today/layout), STORY-042, STORY-056, STORY-057.
 
-
-- **Characters (STORY-051, implemented and reviewed 2026-10-10):** Characters lives in Team. Scoped cards
-  show imported last-seen/machine evidence, readable level/gold, profession rank progress, recipe
-  evidence and freshness badges. Collapsed Altair charts and tables share readable snapshot history.
-  The existing addon import tables retain their shape and values. Rules/contracts:
-  `requirements.md` → Characters page; `design.md` → Character snapshots.
-  Offline tests: `tests/test_characters.py`, with import-projection regressions in
-  `test_character_snapshots.py`, `test_professions.py` and `test_app.py`.
-  Forever check (2026-10-09, copied `data/`, configured beta source): newest first, Keenagen level 5,
-  1s 40c, Mining 3/75 and recipes unknown; Cicelyna level 1, 1c, readable empty skill list;
-  Basilly level 6, 1s 70c, Tailoring 7/75, two seen-crafted recipes (2963, 3755), latest craft
-  evidence 10:01:44 UTC. All report windows-pc, Classic Beta PvE 2 / Alliance and fresh bags.
-  Basilly's level history is 4 → 6; Cicelyna stays 1; Keenagen stays 5 / Mining 3.
-  Modern window evidence is now confirmed (STORY-049 below); STORY-043's check below uses the newer imports.
-  Limitation: the legacy `GetSkillLineInfo` surface (Classic Era stand-in) reports every skill line,
-  so weapon skills and languages appear as lines and can show *at cap*; the Forever client's modern
-  surface reports professions only.
-
-- **Today funds (STORY-056, implemented 2026-10-11; pending review):** both apps use recorded gold
-  from the shared scoped character projection; older typed settings require the explicit override.
-  Summary shows capture provenance, stale age, pooled-funds mailing notice or missing-gold fallback.
-  Rules: `requirements.md` → *Opening and settings*; contracts: `design.md` → *Today contracts*.
-  Offline tests: `tests/test_today_funds.py` and `tests/ui_trial/test_nicegui_today.py`.
-  Current Forever beta page verification is recorded under STORY-057 below.
-
-- **Today team crafts (STORY-043/057, implemented; pending review):** Today v5 uses the shared
-  source/full-market profession projection for character eligibility in both apps. The selector includes
-  bags-only characters, and both apps show the same excluded-reason counts and evidence notice.
-  Session choices reset when character evidence changes. Rules and skill-ID source evidence:
-  `requirements.md` → *Character eligibility*; contracts: `design.md` → *Today contracts*.
-  Offline checks: `tests/test_today_team.py`, `tests/test_today_characters.py`,
-  `tests/ui_trial/test_nicegui_today.py`, plus existing Today/Queue/funds regressions.
-  **Forever beta check (2026-10-11):** source resolved through `config/market.local.toml`; a complete
-  temporary copy of `data/` isolates app initialization and all potential writes. Streamlit AppTest and
-  the live NiceGUI browser page both render **Our team**, Include unknown recipes off, and funds
-  **3s 96c across 3 characters**, minimum gain **10s**, cap **5**. Both show **no crafts**:
-  six known Tailoring recipes for Basilly (rank 8) and Smelt Copper for Keenagen (rank 3) are the
-  eligible set; none clears current price/gain checks. No unlearned trainer recipe qualifies at these
-  ranks. Cicelyna's complete empty profession list contributes no eligible recipe. The plan is empty,
-  which is the honest answer for this team and these settings.
-  Hidden counts match: **1,427 no character has this profession**, **351 rank below required skill**,
-  **1 needs pattern or other source**, **60 unknown for every character**, **1 missing prices** and
-  **4 below minimum gain**. Shopping is **0c**, with no Buy/Sell/Below vendor rows. Scan
-  `20261011T105714Z-cf2f26` is fresh; older Cicelyna/Keenagen gold captures retain stale age labels.
-  No catalog check differences. The original data, saved settings and configuration are untouched.
-
-- **Today confidence (STORY-046, implemented and reviewed 2026-10-08):** The confidence pass labels Craft rows
-  High/Medium/Low with visible reasons, carried to Sell and Queue (including merged purchases).
-  Rules and named thresholds: `requirements.md` → Today; contract: `design.md` → Today contracts.
-  The default-off session Craft filter counts *low confidence* without changing reservations,
-  shopping, Sell or Queue. Confidence age transitions preserve queue ticks. Offline boundaries,
-  retained route markers, cumulative material share, plan invariance and AppTest checks cover this.
-  Forever beta check (2026-10-08, copy of `data/`, saved settings 25g, scaled 1%, 10s floor, cap 5):
-  fresh scan `20261009T003454Z-95a884` (observed 2026-10-09 00:34:59 UTC) gives **High 0, Medium 2,
-  Low 8** over 10 rows. Reasons: unconfirmed yield 10, few listings 8, thin 7, unconfirmed vendor
-  price 4, material share >75% 1, >40% 1. Every Forever yield is unconfirmed, so no Forever row can be
-  High until yields are counted in game; thin outputs are the main Low cause.
-
-- **Recipe learning (STORY-050, implemented and reviewed 2026-10-09):** twelve catalogs now carry optional source codes and integer-copper training costs from their existing archived pages. Recipe catalogs has a **View a catalog recipe** expander; Today now uses them for character eligibility and training costs (STORY-043 above). CRAFT-08 records the evidence for drop, quest, vendor and trainer; unverified codes 1, 16 and 21 display *other (code N)*. Skill 1 without source remains *unknown*. Forever Tailoring's view shows Bolt of Linen Cloth: unknown / unknown cost; Linen Bag: trainer / 1s; Red Linen Bag: drop, vendor / unknown cost; Runecloth Bag: vendor / unknown cost. Existing yield/vendor and post-launch captions remain visible.
-  - All twelve catalogs regenerated from unchanged archived bytes. Parsed comparisons against the prior catalogs confirmed only `learned_from`, `training_cost_copper` and `catalog_version` changed; selection files changed only their version. Added source/cost field counts respectively: Classic Alchemy 33/33, Enchanting 9/9, Tailoring 5/5; Forever Alchemy 145/41, Blacksmithing 328/86, Cooking 95/8, Enchanting 15/9, Engineering 152/75, First Aid 18/11, Leatherworking 383/80, Mining 13/12, Tailoring 351/86. Repeating generation produces no changes.
-- **Skill-up demand map (STORY-047, implemented, pending review):** Skill-up demand lives in Market.
-  Compatible professions default to all; session controls adjust crafts per recipe and post-launch
-  inclusion. Direct/raw totals lead, profession totals follow and bands are collapsed. Catalog
-  regeneration adds page coverage and skill-up evidence without changing existing values; older
-  catalogs still load. Market context reads the newest selected-source snapshot and remains visible
-  when stale. Contracts/rules: `design.md` → Skill-up map, `requirements.md` → CRAFT-08/CRAFT-10.
-  Offline synthetic saved-page, calculation, scoped market and AppTest checks cover the story.
-  Real beta validation and limitations: [below](#skill-up-map-real-data-check-story-047).
-
-- **Beta play sessions (Windows):** on 2026-10-08 (addon 0.9.0) the logout bags snapshot was empty
-  (0 slots, 0 copper, level 1), so addon **0.10.0** saves the newest readable read from that login, and
-  Brownstone treats 0-slot backpack snapshots as unreadable (ADDON-11, ADDON-12). The 2026-10-09 session
-  (0.10.0; Basilly and Cicelyna: loot, a trainer, crafts, mail, bank and an Ironforge scan) confirmed it:
-  logout and `/reload` bags were readable and snapshot gold matched the money chain. Crafting 5 Bolt of
-  Linen Cloth and 1 Linen Bag, and buying 3 Coarse Thread at 10c, confirmed those catalog values (Forever
-  Tailoring catalog 0.5). Failed mail sends were journaled as `MAIL_FAILED`, never as sends. Every fresh
-  login's first bag entry had listed the whole bag as gains; addon **0.10.1** sets that baseline from the
-  first settled bag update instead (rule beside the journal baselines in `requirements.md`). The scan was
-  first skipped as another house because the source pinned Stormwind's zone and auctioneer; Alliance cities
-  share one house, so only faction is now scan evidence, and the scan is imported. **0.10.1 confirmed in game
-  (2026-10-09, Windows, Keenagen):** the first bag entry after login was `baseline_missing`; after
-  `/bscan clear` and `/reload` the next entries were real changes (4 shots fired, then +1 Chipped Claw
-  looted), and the two logout snapshots differ by exactly those 3 units. Beta report: no failures and no
-  bag residual warnings. Level and profession ranks (modern skill API) are captured for every character, but opening
-  Tailoring saved **no known-recipe list**: the Forever client doesn't answer STORY-041's `GetTradeSkill*`
-  reader. STORY-049's guarded `C_TradeSkillUI` reader is implemented in **0.11.0**, pending
-  the beta play check by 15 October. It retains modern rows/schematics and a once-per-load API
-  inventory; only learned rows count. The import page also projects existing craft evidence:
-  Basilly's Tailoring 7/75 shows recipes **2963 and 3755** as *seen crafted*, with latest evidence
-  **2026-10-09 10:01:44 UTC**. Cicelyna and Keenagen have known recipes unknown (Keenagen's
-  Mining is 3/75). Capture/display rules are in ADDON-11/12; play actions are in addon/README.md.
-  **First 0.11.0 check (2026-10-10, Claude; windows-pc drop 20261010T112252Z, Basilly only):** still
-  **no known-recipe list**. The client has `C_TradeSkillUI` (146 functions, including
-  `GetAllRecipeIDs`, `GetRecipeInfo`, `GetRecipeSchematic`, `GetChildProfessionInfo`,
-  `GetBaseProfessionInfo` and `IsTradeSkillReady`; **no** `GetTradeSkillLine`), and
-  `TRADE_SKILL_LIST_UPDATE`, `TRADE_SKILL_DATA_SOURCE_CHANGED` and `NEW_RECIPE_LEARNED` register.
-  Six `TRADE_SKILL_CLOSE` entries but only **one** `TRADE_SKILL_SHOW` (11:20:46 UTC, with the
-  Tailoring open cast, spell 3908), and a close came before any show: the window opens without
-  `TRADE_SKILL_SHOW`, so the addon's open flag stays false and later list updates are ignored. At the
-  one show the reader found no profession name and returned nothing, and it saves no diagnostics on
-  failure, so the file can't say why (likely: data not ready at show). No craft, no recipe learned
-  (no money change) and Tailoring stays 7/75.
-  **Fix in 0.11.1 (2026-10-10, Claude):** reads on the client's ready signal and on close, not only
-  after a show; tries the base profession name before the child one (an empty child name stopped
-  the 0.11.0 reader); refuses a not-ready read; and saves `trade_skill_read` diagnostics when a read
-  fails.
-  **Confirmed on the beta with 0.11.1 (2026-10-10, Claude; windows-pc drop 20261010T120510Z):**
-  STORY-049's play check passed, so STORY-043 can start.
-  - **Lists:** Basilly's Tailoring lists **471** recipe IDs (all recipes, learned or not), **6 learned**
-    after training one (Bolt of Linen Cloth 2963, Linen Bag 3755, Linen Cloak 2387, Simple Linen Pants
-    12044, Brown Linen Shirt 3915, White Linen Shirt 2393). Keenagen's Mining lists 18, 1 learned
-    (Smelt Copper 2657). No filters or collapsed categories were reported (*possibly incomplete* false).
-  - **IDs:** `recipe_id` is the spell ID, the same ID as catalog `recipe_id` and as the
-    `C_TradeSkillUI.CraftRecipe` hook argument. Each row carries its output `item_id`, `min_made`/
-    `max_made` and schematic reagent item IDs/counts.
-  - **Catalog agreement:** 429 listed IDs are in the Forever catalogs (412 Tailoring, 17 Mining), and
-    every one agrees on output item, yield and reagents. 60 aren't in catalogs (59 Tailoring, such as
-    Stormcloth and 7-digit Forever IDs, plus Smelt Obsidian-Infused Thorium Bar).
-  - **Events:** the list arrives with `TRADE_SKILL_DATA_SOURCE_CHANGED` right after
-    `TRADE_SKILL_SHOW`; later shows read it directly. A craft triggers `TRADE_SKILL_LIST_UPDATE`
-    with the new rank (Tailoring 7 → 8 after crafting 2963). `GetBaseProfessionInfo` names the
-    profession while open and is empty with `IsTradeSkillReady()` false at close.
-  - **Fixed in 0.11.2:** the first opening per login reported an empty list (0 IDs), which 0.11.1
-    saved as a list; 0.11.2 refuses it, and no longer saves diagnostics at close. Projections use the
-    latest list, so the imported data is unaffected.
-
-- **Auction deposit, first observation (STORY-035; 2026-10-10, Claude; Basilly, addon 0.11.1):** one
-  post, not yet enough for a formula. `C_AuctionHouse.PostCommodity` posted **5 Linen Cloth** (2589,
-  vendor sell 13c from the scan's item info) at **23c** each with duration argument **3**; money went
-  **145c → 45c** in the same second (`PLAYER_MONEY`), so the deposit was **100c** and the bags lost 5
-  Linen Cloth. The Classic-style 15% of vendor value per 12 hours would give 39c for 48 hours, so either
-  the formula differs or a minimum deposit applies; which duration code 3 is isn't confirmed by the
-  file. 30 seconds later `OWNED_AUCTIONS_UPDATED` showed the auction with status 1 (sold in
-  `Enum.AuctionStatus`) and 100 seconds left. No invoice mail was captured yet, so the
-  sale-to-mailbox time stays unconfirmed. Next play steps are in `backlog.md` → STORY-035.
-
-- **Brownstone panel (STORY-044, implemented; pending in-game beta check):** addon **0.9.0**
-  adds a draggable minimap coin and `/bscan panel`, opening a movable Escape-closeable
-  panel with status, existing guarded actions and the manual routine. Only the minimap
-  angle is saved in `ui`; formats **6/4** stay unchanged. Offline Lua tests cover controls,
-  scan/item-pass disabled states, counts/cap warning, angle restoration and no capture on
-  open. A Brownstone regression proves UI state leaves preview/import/report evidence unchanged
-  while retaining exact-byte provenance. Usage/check: `addon/README.md` → Panel; contract:
-  [ADDON-13](requirements.md#addon-13-brownstone-panel-story-044). Client layout, drag and
-  Escape behavior still need the play check. The icon assumes the stock circular minimap;
-  custom minimap shapes/resizing may affect placement (`/bscan panel` remains available).
-
-- **Beta evidence report (STORY-042):** Brownstone-only CLI produces private Markdown/JSON evidence
-  under ignored `work/beta-reports/`, with shared import validation, isolated exact-byte import
-  round trip, diagnostics/coverage, character summaries, integer residuals and optional prior-file
-  comparison. No addon, live data or input writes. Usage and limits: [below](#beta-evidence-report-story-042).
-
-- **Active auctions (STORY-040, implemented, pending review and in-game beta):** addon **0.7.0**
-  passively reads cached modern/legacy owned lists on guarded owned-update events, records changed
-  raw lists in the existing auction journal, and suppresses unchanged lists within each load.
-  Format **6** and schema **11** stay unchanged. Shared import preserves bytes/provenance and counts
-  auction-family entries; the import page shows latest observed UTC/count/client-marked sold per
-  scoped character, or *active auctions unknown*. Offline modern/legacy Lua and import/page tests
-  cover empty/missing values, deduplication, silence, forbidden requests and rejected registration.
-  No real owned-list recording has been supplied. Client API support, full-list delivery, status
-  fields and arrival without opening the Auctions tab remain pending. Legacy cached results can
-  be paged: all available batch rows and reported batch/total counts are preserved, but no reader
-  requests uncached pages. Partial results retain unknown sold counts. Run the active-auctions beta
-  checklist in `addon/README.md` by 13 October; preserve fixtures before 21 October. Rules: ADDON-12.
-
-- **Event journal (STORY-033, implemented and reviewed 2026-10-07, pending in-game measurement):** addon
-  **0.7.0**, account-wide format **6**, guarded event listeners/secure post-hooks, raw arguments,
-  shared snapshot sequence, money/bag changes, mailbox states and last-observed send drafts.
-  Schema **11** stores scoped raw character journal evidence. Snapshots and entries share non-scan
-  preview, stale/conflict checks, batch commits, Fully imported and import guidance. CLI/page
-  preview aggregates character/family/state; the import page alone shows imported counts/latest time.
-  Capture/cap/clear/event/hook rules are [ADDON-12](requirements.md#addon-12-event-journal-story-033).
-  Offline Lua/Python/page tests cover capture families/hooks, missing APIs, dedup/conflicts, cap,
-  overflow versioning and session-safe clear. **Pending on Forever beta on both machines:** actual
-  event/hook availability and argument layouts, loot sender GUID, mail draft timing/invoice values,
-  gathering/crafting/vendor/auction reconciliation evidence and normal-session sizes/reload cost.
-  Real journal recordings have not yet been supplied. Follow `addon/README.md` → Event journal beta
-  checklist by 13 October; preserve recordings/fixtures before 21 October. No transaction interpretation.
-
-- **Character snapshots (STORY-032, implemented and reviewed; pending the in-game beta check):** addon **0.7.0** writes
-  account-wide file format **6**, preserving scan format 4. Guarded logout/reload and bank open/close
-  reads retain gold, occupied slots, raw links and container/event evidence for each character.
-  Initial-login markers survive confirmed reloads; clear preserves snapshots from the current login
-  and retains everything if the signal is unknown. Rules are ADDON-11 in `requirements.md`.
-  Schema **10** adds scoped character parents/slots without modifying old observations. Snapshots-only
-  and mixed files use the same preview, drop folder, transactional importer, bronze collection and
-  Fully imported status. CLI/page expose snapshot states; the import page shows latest bags/gold and
-  independent bank time/counts/machine per character. No other view uses holdings.
-  Offline Lua tests cover modern/legacy containers, two characters, missing APIs, rejected events and
-  reload-safe clear; Python/UI tests cover duplicates/conflicts, other houses, old files, migration,
-  stale reviews, CLI, snapshots-only files and overlapping drops. **In-game checks remain pending on
-  both Mac and Windows:** event registration/firing, logout/reload bag availability, bank-close
-  readability, container IDs/coverage, login/reload flags and the updated scan/clear routine. Exact
-  steps and evidence to record are in `addon/README.md` → Character snapshots beta checklist.
-
-- **Second-machine files (STORY-037, implemented and reviewed):** configured machine provenance, optional local-only read-only Drive inbox, independent per-file previews/imports and exact-byte collections, ignored/error reasons, latest-drop/full-import cleanup evidence, CLI `--preview` and file selection in the import page. Schema 9 adds nullable scan machine; historical rows stay missing. Windows has a manual PowerShell script, double-click wrapper and ignored settings file with an example. Setup is in `addon/README.md`; rules are OPS-03 and contracts are in `design.md`. First real Windows → Drive → Mac round trip passed 2026-10-07 (one beta scan, imported as `windows-pc`). Drive can still be downloading a just-synced file, which shows as *Scan file changed while reading*; preview again after a minute.
-
-- **Ingestion:** TSM CSV → bronze/silver/DuckDB/gold with manifests, validation and analytical deduplication. Sources: Mankrik Alliance Classic Era (development stand-in), plus Retail Area 52 and US commodities (regression only).
-- **Addon scan import (STORY-010):** a `provider = "addon"` source imports BrownstoneScan SavedVariables through **Preview addon scans** → select new scans → **Import addon scan** (STORY-014), or `python -m brownstone --source <id> [--input file] [--scan ID]`. Rules ADDON-01 to ADDON-06 in `requirements.md`.
-  - House evidence is checked against the configured market. Preview lists scans from another house as not importable, with the reasons; importing one (including a CLI import of the whole file) fails. CLI `--scan` validates only selected scans.
-  - Stacks are priced per unit, rounded up when inexact. `market_value` is the quantity-weighted 25th percentile.
-  - Deduplication is by `scan_id`, and identical file bytes are stored once, gzip-compressed. Partial scans are stored and labeled but not priced. After an import that saved something new and left no file scans unimported, the app and CLI say `/bscan clear` is safe; subsets warn to import the remainder first; scans from another house warn that clearing deletes them; an import with nothing new warns to `/reload` first instead. The addon refuses to clear scans it hasn't written to the file yet.
-  - STORY-045: Preview shows one short summary per file with new scans or character records, counts already-imported files, and puts Import directly below the summary. Details contains the existing preview tables, notes and selection; it opens on the problems named in ADDON-06/STORY-045, including drops the selection would leave not fully imported, and stays open for the rest of that review. Imported character data stays in its own collapsed expander. Cleanup is a count of fully imported drops for manual deletion, hidden at zero; after import, each latest-drop machine (or the local file's machine) gets one conditional clear-guidance line. Empty local files are quiet when another input is readable. Preview displays IDs, UTC start/finish, status, listing count, import state and partial status in Details. It writes nothing and uses only read-only database queries. Empty selections and duplicates-only previews offer no import. File/configuration/duplicate-state changes invalidate a review before import; reads use the bounds and best-effort detection in ADDON-06. A missing database is created only by an explicit import.
-  - Reads scan formats 1, 2, 3 and 4; older scans keep new fields null (ADDON-08/09). Converting the real scan to format 2 gives identical listings and item prices, at 2.8 MB instead of 24.8 MB.
-  - The Forever Action Board works from imported scans with no calculation changes.
-  - The beta source `forever-us-normal-alliance-addon` is disabled in the tracked `config/market.toml`. On the user's machine, the untracked `config/market.local.toml` enables it and points it at the game's SavedVariables file, to archive beta scans before the beta closes. Classic Mankrik stays the default development source.
-- **Recipe import (STORY-004):** `python -m brownstone recipes --page <saved page> --selection config/recipe-selections/<catalog>.toml` generates a catalog from a Wowhead profession page saved in a browser (CRAFT-08). It never downloads. The page is archived under `data/recipe-sources/`, and the command lists recipe and vendor price changes.
-  - Pages saved 2026-10-04: Classic Tailoring (287 recipes, SHA-256 `aab9c70c…`) and Forever Tailoring (471 recipes, `9ab28c15…`). Copies are in `data/recipe-sources/wowhead/`, ignored by Git like all of `data/`.
-- **Recipe catalogs page (STORY-014 Slice 2):** the app's **Recipe catalogs** view shows the catalogs of the sidebar experience (WoW Forever or Classic Era); there is no separate switch on the page, and Retail shows that it has no catalogs. It lists that version's catalogs, found by their selection files whatever the profession (the Crafting view loads them the same way), and the professions with none yet. Each row shows recipe and item counts, catalog version, the page's save date, game build and SHA-256, the count of unconfirmed values (listed in an expander), and **Refresh due** (CRAFT-08).
-  - **Add or update a profession** is one numbered flow: **1. Profession** lists existing catalogs as *update (N recipes)* and the rest as *new catalog*; **2. Saved page** (an update can start from the catalog's archived page, when it is on this machine); **3. Recipes**, vendor marks and rules version; **4. Review and save**, which follows every choice live and writes nothing. The review gives recipe and item counts before and after, the recipes added and removed by name, every recipe and vendor price change, selection notes that would be removed and the selection file. **Save catalog** archives the page and writes the selection file (edited line by line, comments kept) and the catalog; its key carries a fingerprint of the choices and the files on disk, so a click on a review that has since changed writes nothing. Choices that reproduce the catalog exactly show *Nothing to save*.
-  - After saving, a toast and a banner confirm it, the table reloads and the saved profession stays selected.
-  - **Choosing recipes:** a searchable list of every recipe the page offers, plus **Add all matching** and **Remove all matching** for a name and skill range (intermediates are added automatically). Choosing all of Classic or Forever Tailoring is possible this way.
-  - **Items several recipes make** (Alchemy's transmuted essences) are always bought, and their recipes aren't offered; recipes Wowhead lists as making 0 are never used either (CRAFT-08). The recipe step's count says how many recipes each reason leaves out.
-  - A page from another game version or profession is refused. After a write the page lists the changed tracked files and never commits. Generation goes through the same `prepare_catalog` as `python -m brownstone recipes`.
-  - The recipe step says how many of the page's recipes can be chosen and why the rest can't: no item made (enchants on gear), no fixed yield on Wowhead (Classic Enchanting's 7 oils list 0), or seasonal. The 2026-10-04 pages offer 226 of 287 Classic Tailoring, 413 of 471 Forever Tailoring, 101 of 132 Classic Alchemy, 167 of 202 Forever Alchemy and 12 of 204 Classic Enchanting recipes. The Alchemy and Enchanting catalogs, added in the app, hold every offered recipe; Classic Tailoring is a deliberately small subset (6 recipes); Forever Tailoring holds 412 recipes from the page saved 2026-10-06.
-  - Checked on the real config and archive: all twelve catalogs regenerate from their archived pages unchanged (no bump, no tracked file written). Their saved pages show Classic 1.15.8 (67156), and Forever 1.60.1 (70205 or 70235). Classic Enchanting holds no Season of Discovery recipes.
-- **Crafting:** twelve generated catalogs. Forever (1,930 recipes, pages saved 2026-10-04 to 2026-10-06): Alchemy 167, Blacksmithing 430, Cooking 129, Enchanting 28, Engineering 205, First Aid 31, Leatherworking 511, Mining 17, Tailoring 412. Classic Era: Alchemy 101, Enchanting 12, Tailoring 6. Every compatible catalog shares one Action Board with a Profession column and filter (STORY-015a). Recipe costs and details stay within their own catalog, including duplicate recipe IDs and shared outputs. Cautious and listed price bases, policy 0.2, five labels, per-recipe error isolation and per-catalog parse isolation (a catalog that fails to load is named and left off the board) are preserved. Incompatible catalogs explain their rules mismatch, offer unpriced inspection and link to Recipe catalogs.
-- **Today (STORY-025, pending review):** settings persist per source in ignored local JSON; a funded,
-  supply-reserved craft plan ranks whole-stack batch profit, with a merged shopping list, output
-  competition/undercut evidence and independent below-vendor aside. Every list caps at 10 and counts
-  the rest; hidden recipes show reasons. Stale data stays inspectable with a warning and every row
-  non-actionable. TSM labels listing-dependent evidence unavailable. Rules and decisions are in
-  `requirements.md` → Today; contracts are in `design.md` → Today contracts.
-- **Today craft details (STORY-038, implemented and reviewed):** selecting a Craft row shows
-  its complete reserved material purchases, required/purchased units, route, cost and highest unit
-  price, plus indented chosen catalog intermediate steps and batch quantities. No row starts selected;
-  changed plan contents/provenance clear selection. Materials reconcile exactly in copper with the
-  craft and full merged shopping cost, including Buy's hidden tail; stale details remain inspect-only.
-  Details reuse the reserved purchases of the current chosen plan.
-- **Choose the Today plan (STORY-039, implemented and reviewed 2026-10-08):** Craft controls start ticked,
-  allow exact batch edits, and re-reserve listings in plan order. Refill defaults on; turning it off
-  keeps the ticked plan. Source-scoped session choices reset on scan/settings/evidence changes, with
-  a note; invalid exact choices are dropped rather than resized. Queue lists complete auction/vendor
-  buys, catalog crafts in dependency order, then posts, with copper totals matching Buy/Sell. Queue
-  ticks are session-only and do not change numbers; Copy as text exposes the checklist and totals.
-  Rules are in `requirements.md` → Today; no database, addon, catalog or settings schema change.
-- **Scan changes (STORY-018):** compare any two distinct eligible addon scans of the selected source and market; defaults to the newest two scan IDs. Displays per-unit prices, listing/unit counts, changes, separate new/vanished lists, compatible-catalog item filtering, UTC finish times, gap and freshness. Missing listings, no buyout and no market value have distinct labels. Eligibility and display rules are in UI-06 (`requirements.md`). Market scope includes environment (DATA-03).
-- **Market depth (STORY-019):** Crafting shows output listing/unit counts and a direct-input depth summary on each board row, and the same counts in recipe inputs and shopping lists. Counts come from the exact priced scan. Missing listings and unavailable depth have distinct labels; depth is display-only (CRAFT-09 in `requirements.md`).
-- **Interface:**
-  - The sidebar experience choice lists WoW Forever first (so it opens by default) and resolves the source and market together; every view follows them, including Recipe catalogs, and each page names the experience, source and market under its title. If an experience has several enabled sources, the sidebar asks for a source and shows nothing until one is chosen (today only Retail, with Area 52 and region commodities). The database upgrade runs on browsing for the selected source when a database exists; Preview never migrates.
-  - STORY-030 is implemented, pending review: the sidebar's source metadata and configuration hint are
-    in collapsed Source details. Today opens by default (STORY-025, pending review), with a settings
-    summary, an expander that opens for zero gold or unreadable settings, and Craft/Buy/Sell/Below vendor
-    tabs plus the session Queue tab (STORY-039). Decision columns lead each table; per-tab toggles expose evidence columns. Shared provenance
-    appears on the page, while freshness warnings and stale State columns remain visible.
-  - Crafting groups unsupported recipes in one collapsed table, catalog captions in Catalogs on this
-    board, and board explanations in How to read this board. Board provenance and freshness stay visible;
-    recipe summaries in g/s/c and expandable recipe evidence retain their existing behavior. UI rules
-    and the layout choices are in `requirements.md` → UI-01 and Today → Evidence and honesty.
-  - Market also holds Browse market, Skill-up demand, Watchlist and Below usual price; Data holds import, Recipe catalogs and Scan changes (STORY-053 above). Below usual price explains when a source can't support it.
-  - All money is displayed in gold.
-- **Launcher:** `launch.py` (via `Start Brownstone (old app).command` / `.cmd`) restarts its own server when the code has changed.
-- **Catalogs:**
-  - **Classic Era:** Tailoring 0.4 (six representative bag/bolt recipes); Alchemy and Enchanting 0.3. Tailoring retains the quantities, roles and vendor prices hand-verified in STORY-007.
-  - **Forever beta** (`forever-beta-1.60`): Tailoring 0.5; Alchemy, Blacksmithing, Cooking, Enchanting, Engineering, First Aid, Leatherworking and Mining 0.3. Catalogs are generated from archived pages; selection coverage and unconfirmed yields/vendor values remain visible.
-- **Markets and sources (STORY-009):**
-  - A market is the auction house; a source is the feed that observed it. `market_id` is derived, so several sources can observe one market, each with its own folder and deduplication.
-  - Forever houses (server type + faction, no realm) can be configured. Neutral houses default to a 15% cut.
-  - The catalog `ruleset` field is now `rules_version`.
-  - The CLI uses `--source`; `--market` still works as an alias.
-- **Beta/live identity (STORY-017):** implemented under DATA-03 in `requirements.md`. The tracked Forever source is explicitly beta, with its source ID unchanged. Every price, scan and listing carries environment; Browse, Opportunities, crafting, depth, Scan changes, manifest selection and import deduplication all enforce it. Page captions show the derived beta market ID.
-- **Item names (STORY-022):** Browse/search, Opportunities and Scan changes resolve missing labels through version-scoped names collected from scans, TSM rows and catalogs; crafting and board depth already use catalog labels. Name policy lives in DATA-02 (`requirements.md`). Stored observations and archives remain unchanged.
-- **Storage:** code supports schema 10 with backed-up, idempotent migrations (see `design.md` → Schema migrations). The local `data/brownstone.duckdb` remains at version 9 (metrics_version 1); STORY-032 schema-10 verification used copies only. Upgrades run at app startup or explicit import and preserve a backup of the starting schema; migration verification for STORY-023 uses only copied databases. Earlier backups remain intact. Old manifests are adapted only in memory.
-- **Market metrics (STORY-024):** schema 7 stores versioned facts from the shared `metrics.py`
-  calculator at scan import. Definitions and evidence limits live in ADDON-10 (`requirements.md`).
-  Existing databases backfill outside frozen migration DDL on startup/import, retrying unfinished
-  initialization. `rebuild_scan_metrics(db)` recomputes from stored listings transactionally;
-  scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
-  Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
-  historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.37% after the full macOS run: 1,134 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
-
-- **Scanning addon:** `addon/BrownstoneScan/` is version **0.11.2**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
-  - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
-  - **Offline verified:** shipped Lua executes under Lua 5.1 with modern and legacy WoW stubs, including missing/erroring optional APIs, seller fallback, one reference lookup per ID, manual start, timeout and partial close. Delayed/synchronous answers, failed requests/answers, timeout and late events, missing API/rejected event, house close during the pass, pre-pass save and reload-mid-pass import, first-pass preservation and maintenance guards are verified. Resulting scans import; mixed formats 1–4, raw archive bytes, deduplication, variant prices/scope/depth/comparison, migration backup/replay and reference nulls are tested. Lupa is a declared, pinned dev dependency; Python coverage does not measure Lua branches.
-  - **Reload and Clear saved scans buttons** sit beside the scan button on the auction house window, with Clear protected like `/bscan clear` and both disabled during a scan; behaviour and decisions are in `addon/README.md` → *Reload and clear controls*.
-  - **Beta accepted 2026-10-06** (build 70235, addon 0.3.1): complete format-3 scans imported and deduplicated, duration 1.23× and bytes per listing 1.92× the 0.2.0 baseline (within ADDON-09), suffix variants priced separately, buttons placed and working. Measurements and availability counts are in `addon/README.md` → *Format-3 beta checklist*.
-  - Existing beta scans remain preserved under ignored `data/` (including the byte-for-byte 0.1.0 scan archive). Seller-bearing format-3 files stay local under ADDON-07.
+**Pending in-game beta checks** (checklists in `addon/README.md`): the item-info pass measurement
+(STORY-031), snapshots on both machines (STORY-032), the event journal (STORY-033), active auctions
+(STORY-040), the panel (STORY-044) and auction deposits (STORY-035). Confirmed on the beta so far:
+format-3 scans and the reload/clear buttons (addon 0.3.1), readable logout bags (0.10.0) and the
+fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-recipe lists
+(0.11.1; the empty first read is refused since 0.11.2).
 
 ## Limitations
 
-- **Beta scans so far:** seven complete Normal Alliance scans (16:47Z, 17:46Z and 22:54Z on 2026-10-04, 20:34Z on 2026-10-05, and 16:16Z, 20:17Z and 20:32Z on 2026-10-06) and one stopped scan, all from the beta and identified separately from the live house by schema 4 (DATA-03). The three from 22:54Z on 2026-10-04 to 16:16Z on 2026-10-06 are addon 0.2.0; the last two are addon 0.3.1, format 3, the newest with 88,329 listings.
-- **No sellers on the beta:** its bulk scan API returns no owner names, so format-3 scans have no seller data (ADDON-07). STORY-028 is blocked on *Seller capture* (Later in `backlog.md`).
-- Addon **0.4.0 has not been measured in game**; event/cache timing, interruption persistence, added duration, bytes per listing and reload lag remain pending. Earlier addon versions have been measured on one beta house only, not the Roleplaying or a neutral house. In game, `/bscan start` without the button, closing the house mid-scan and Escape on the clear popup are untested (all covered offline). Beta region and realm values are generic, so scans are identified by auctioneer, zone and label. The `.toc` interface number 16001 may change with beta builds.
-- Required skill levels are display-only.
-- The Recipe catalogs page shows a catalog's game build only when its archived page is on this machine (`data/` isn't in Git). Regenerating records the uploaded file's name as the manifest's `original_name`, as the CLI does.
-- Craft routes remain local to each catalog; routing across professions is STORY-015b.
-- **Forever values still to confirm in game** (shown on the recipe view):
-  - **Output counts:** every recipe keeps Wowhead's list value of 1, marked `output_quantity_verified = false` until counted in game. The "(2)" in Wowhead's spell tooltips turned out to be the effect number, not a count (2026-10-06), so a yield above 1 is unlikely. Craft one Bolt of Linen Cloth on the beta and count to confirm.
-  - **Vendor items:** Coarse Thread, Fine Thread, Red Dye and Rune Thread are assumed sold by vendors (`vendor_verified = false`); check a Forever trade supplies vendor.
-  - **Availability:** Runecloth Bag and its two dyes are marked post-launch, but the 2026-10-04 17:46Z scan has both dyes on the beta auction house (Magenta 44 units, Cerulean 261).
-- Multi-yield recipes aren't supported (see `requirements.md` → *Not modeled*). Every current recipe makes 1.
-- Crafting and Opportunities use one addon scan: no recent or historical values and no discount screen. Scan changes compares saved scans without deriving historical price metrics. Listing depth is displayed, but not used in calculations.
-- The real beta scan has thin high-level Tailoring coverage, because most beta characters are low level; low-tier bags and cloth are well listed. Runecloth Bag has no listings, so its board row shows missing prices.
-- Mankrik has no upstream scan time, so price age is unknown and "stale" only measures time since download.
-- Classic historical values are zero, so the discount screen cannot run on Classic.
-- Not modeled: see `requirements.md` → *Not modeled*.
-- Legacy rows have no source hash and are not retroactively deduplicated. Changed content at the same upstream time is kept as a correction.
-- Silver, DuckDB and gold are not written atomically. If a run fails after the DuckDB commit, the bronze/silver files are the recovery source. There is no replay tool yet (STORY-006).
-- Run one writer at a time; a concurrent refresh can fail on the DuckDB lock.
+- **Beta scans:** sixteen complete Normal Alliance scans and one stopped scan are imported, the newest
+  `20261011T105714Z-cf2f26`. No Roleplaying or neutral house has been scanned.
+- **No sellers on the beta:** the bulk scan API returns no owner names (ADDON-07); STORY-028 is blocked
+  on *Seller capture* (Later in `backlog.md`).
+- **Forever values still to confirm in game** (shown on the recipe view): every Forever yield is
+  `output_quantity_verified = false` (a yield above 1 is unlikely); Coarse Thread, Fine Thread, Red Dye
+  and Rune Thread are assumed vendor items; Runecloth Bag and its dyes are marked post-launch although
+  both dyes appear on the beta auction house.
+- Crafting and Opportunities use one addon scan: no recent or historical values and no discount
+  screen. Listing depth is displayed, not used in board calculations.
+- Today keeps aggregate-selected routes while quoting whole listings; surplus is uncredited and
+  unshared, and the greedy plan is affordable, not a global optimum. Sales speed and volatility are
+  not modeled.
+- Craft routes stay within each catalog (cross-profession routing is STORY-015b). Multi-yield recipes
+  aren't supported (`requirements.md` → *Not modeled*). Required skill levels are display-only.
+- On the Classic stand-in, the legacy skill API reports every skill line, so weapon skills and
+  languages appear as lines; the Forever client reports professions only.
+- Mankrik has no upstream scan time, so its "stale" measures time since download. Classic historical
+  values are zero, so the discount screen cannot run on Classic.
+- The Recipe catalogs page shows a catalog's game build only when its archived page is on this machine.
+- Legacy TSM rows have no source hash and are not retroactively deduplicated.
+- Silver, DuckDB and gold are not written atomically. If a run fails after the DuckDB commit, the
+  bronze/silver files are the recovery source; there is no replay tool yet (STORY-006).
+- Run one writer at a time; a concurrent import or refresh can fail on the DuckDB lock. Google Drive
+  can still be downloading a just-synced drop (*Scan file changed while reading*): preview again later.
+- The NiceGUI app reads evidence on load: reload it after importing elsewhere.
 
 ## Verify
 
@@ -359,334 +94,32 @@ _Last updated 2026-10-12._
 git diff --check
 ```
 
-Expected: 1,134 tests pass and one explicit PowerShell-unavailable skip on this Mac; 1,135 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the old app or addon preview/import in Data in the main app.
+Expected on this Mac: 1,132 passed and one explicit PowerShell-unavailable skip (1,133 run where PowerShell exists, as in Windows CI), offline, at 96.4% branch coverage; `ruff check .` and `mypy` report no issues. CI runs the same
+on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
+Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the
+old app, or addon preview/import in Data. Real-data checks run on a copy of `data/` under ignored
+`work/`, never the original.
 
-Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
+### New app
 
-Real-data preview/import was checked on 2026-10-05 against temporary copies of the database and a 51 MB schema-1 scan file (about 2–3 s per preview or import; originals unchanged).
+Install `requirements.lock.txt`, then double-click `Start Brownstone.command` / `.cmd` (or run
+`launch_nicegui.py`). It opens a native window, focuses it on a second launch when the code is current,
+and restarts only the authenticated app it started when the code changed. If the native window can't
+start, it prints one line and opens the browser; that server stops after five minutes without a
+connected tab. For a copied-data browser check:
+`.venv/bin/python nicegui_app.py --data-dir /path/to/copied-data --port 8081`.
 
-STORY-031 real-data verification (2026-10-06, copies under ignored `work/story-031/`): schema 7→8
-preserved 66,089 prices, 668,109 listings, 8 scan rows, 6,116 references and 31,071 metrics.
-The schema-7 backup matches the pre-upgrade copy byte for byte; two migration replays preserve
-all observations and leave historical provenance null. Today evidence matches across seven
-complete scans. The archived two-scan format-3 file yields two duplicates; removing only those
-scans inside the copy and importing again yields two fresh imports with identical captured
-scan/listing/reference/metric and price evidence (new collection IDs/times are expected).
-Migration took 0.161 s; duplicate import took 0.722 s. Original database/archive hashes stayed
-unchanged. The aggregate report/script and raw/database copies remain ignored; no beta result
-is claimed. Full game checks remain in `addon/README.md` → *Format-4 beta checklist*.
-
-STORY-024 verification (2026-10-06, local copy only): schema 6→7 preserved all 49,964 price
-observations, 491,661 listings, 6 scan rows and the empty reference table. Five complete scans
-produce 14,946 metric rows; every minimum/25th percentile agrees with the corresponding stored
-item prices (zero sentinels normalized to null), and every listing count/unit total agrees with
-baseline listing aggregation and the depth reader. Zero mismatches. All 14,946 historical seller
-measure/coverage sets remain null. Two rebuilds match the initial backfill exactly; migration-7
-replay leaves rows unchanged. The schema-6 backup equals the pre-upgrade copy byte for byte and
-remains unchanged after replay. The original database SHA-256 remains
-`16d6a31b26bb6a9596fe9d74a1f38914502e2b1117ecb512cb5df0654fd8134a`.
-Aggregate-only verification script, report and copied databases are under ignored `work/story-024/`.
-No real format-3 seller/variant availability is claimed; offline fixtures cover it. Tests cover
-weighted odd/even percentile ranks, stacks/rounding/no buyout, strict thresholds, seller coverage,
-exact variant/legacy separation, every source/market/scan/snapshot field, deterministic rebuild,
-import/rebuild rollback, schema-7 interrupted-backfill retry and schema-6 backup/replay/layout.
-Rebuild currently materializes eligible listings locally; memory-bounded scaling remains a limitation.
-
-STORY-023 real-data verification (local copies): migration 5→6 took 75 ms and preserved all 46,923 price observations, 413,930 listings and 5 scan rows from the preserved database backup. All six historical scan comparisons and price/depth reads across four complete scans matched the pre-story reader results. Migration replay kept data unchanged; the schema-5 backup equalled the pre-upgrade copy. Re-importing the archived 0.2.0 scan returned one duplicate in 219 ms. The live database and archive SHA-256 stayed unchanged during this check. The local verification script, report and copies are under ignored `work/story-023/`. These are software checks; the beta measurements are in `addon/README.md`.
-
-Item-name verification: `tests/test_item_names.py` covers later-loaded names, catalog-only names, placeholders/blank names excluded, unknown and separate game versions, shared labels without mixed prices across sources/houses/environments, observed/catalog precedence, newest loaded names and lexical ties, older imports, TSM timestamps and collection-time fallback, partial listings, Browse/search and Opportunities, Scan changes (a scan's own loaded name before newer lookup names), padded names trimmed, catalog-labelled board depth, migration backfill/replay/backup and unchanged observation rows. Malformed catalogs, including ones missing IDs, remain isolated; the app seeds catalog labels only into an existing database.
-
-On a copy of the schema-4 real database (2026-10-05), migration 4→5 plus catalog seeding named 625 of the 1,140 Forever items that had placeholders, leaving 515 of 3,384 items unnamed. Classic remains 2 unnamed of 5,868; Retail remains 242 of 29,150. Runecloth's three Forever price rows now display Runecloth using catalog evidence; none had a loaded price-row name. All four 166-row Forever boards (including depth), all six Scan changes comparisons (apart from names) and all other Browse/Opportunities values across seven snapshot/source contexts were identical. Stored observation tables and a migration replay were identical too. The version-4 backup equals the original copy. All 98 original files under `data/` retained their SHA-256; the database hash before/after is `e0f3fca9411cacf667ebfbd8235502b29b250273a4932020e9d5a73a3996f372`. Timings for this run: migration/catalog seed 149 ms, replay 68 ms, four boards 37→40 ms, six comparisons 67→130 ms, all Browse/Opportunities reads 21→42 ms. Verification script, reports and database copies are under ignored `work/story-022/`, excluded from commits.
-
-Beta/live verification: `tests/test_environments.py` covers explicit configuration, unchanged live IDs, launch-boundary and timezone classification, v3 migration/backup/replay, old-manifest resolution without edits, duplicate re-import, full-scope single/multi-scan reads, same-key scope conflicts, CSV deduplication, CLI and app startup from either beta or Classic. Existing per-market-key depth and Scan changes tests include environment; preview tests cover environment changes invalidating a review.
-
-On temporary real-data copies (2026-10-05), migration 3→4 kept all counts: 8,846 Forever prices, 4 scans and 316,691 listings became beta; 5,868 Classic, 18,152 Retail house and 10,998 Retail commodity prices became live with unchanged IDs. The 166-row Forever board and all three comparisons were identical before/after. The archived 2026-10-04 file returned two duplicates with no new database rows. Original database, input file and 19 bronze-manifest SHA-256 checks passed; copies were deleted. Migration took 81 ms, board read 13 ms, three comparisons 34 ms, preview 1.03 s and duplicate import 1.24 s.
-
-Scan comparison verification: `tests/test_scan_changes.py` covers price and supply changes, unchanged/new/vanished items, absent versus no-buyout prices, weighted historical prices, exact scan/snapshot IDs, every source/market field, partial/incomplete/unpriced exclusions, duplicate imports, newest-two defaults and item-ID filters. AppTest covers scan selection, compatible catalog filtering (including name collisions and incompatible item IDs), UTC times/gap, context, absent/no-buyout labels and unavailable comparisons.
-
-On a temporary read-only copy of the three imported Normal Alliance scans, full comparisons returned the following counts. Changed means any price or supply metric differs; times include eligibility queries, SQL aggregation and per-item result construction. The original database's SHA-256 stayed unchanged.
-
-| Earlier scan | Later scan | Changed | Unchanged | New | Vanished | Query time |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `20261004T174645Z-0076af` | `20261004T225430Z-31f52b` | 2,575 | 193 | 208 | 175 | 11.06 ms |
-| `20261004T164730Z-c651bd` | `20261004T225430Z-31f52b` | 2,613 | 136 | 227 | 178 | 10.76 ms |
-| `20261004T164730Z-c651bd` | `20261004T174645Z-0076af` | 2,234 | 631 | 78 | 62 | 10.41 ms |
-
-Depth verification: `tests/test_depth.py` covers source and every market field, exact scan selection, partial scans, duplicate imports, stack units and listings without a buyout. The Crafting UI tests cover multiple compatible catalogs, duplicate recipe IDs and own-catalog details, rules-mismatch inspection, shared experience/source selection, addon outputs with and without listings, direct inputs and TSM unavailable depth. On a copy of the real database, scan `20261004T225430Z-31f52b` returns Linen Bag 1,429 listings / 1,429 units and Runecloth Bag 0 / 0 in about 3 ms; all four Tailoring rows and policy 0.2 are identical before and after the query.
-
-Last live check (2026-10-04, Mankrik, 5,868 rows), cautious basis:
-
-| Bag | Profit | Label |
-| --- | --- | --- |
-| Runecloth Bag | 73s 37c | potential craft |
-| Woolen Bag | — | negative margin |
-| Mageweave Bag | — | negative margin |
-
-On the listed basis, Runecloth Bag shows 2g 50s 69c, because the cheapest Runecloth listing is far below its market value.
-
-Addon import dry run (2026-10-04, on copies of `data/brownstone.duckdb` at version 2 and the real scan file; originals unchanged):
-
-- **Timings:** the 24 MB file parses in 0.88 s. Unit and item prices take 0.05 s. The full import takes 1.22 s, including bronze copy, migration 2→3 and DuckDB load. A re-import takes 0.97 s and skips both scans as duplicates without copying the bytes again.
-- **Scan `20261004T164730Z-c651bd`:** completed, imported. 101,485 listings (702,427 units), 28,105 of them stacks, giving 2,927 items. Non-exact stacks: 0. 4 listings had no buyout.
-- **Scan `20261004T165015Z-02d971`:** stopped (throttled), 0 listings. Recorded as `empty`, not priced.
-- **Existing data:** all 24,020 existing rows kept. Database 2.1 MB → 6.8 MB.
-
-| Item | Listings / units | Min buyout | Market value |
-| --- | --- | --- | --- |
-| Runecloth (14047) | 2 / 4 | 2g 55s | 2g 55s |
-| Bolt of Runecloth | 35 / 142 | 86s 95c | 87s |
-| Runecloth Bag | none | — | — |
-| Rugged Leather | 19 / 110 | 5s | 5s |
-| Wool Cloth | 99 / 2,652 | 83c | 84c |
-| Mageweave Cloth | 79 / 203 | 35s 94c | 43s 94c |
-
-The Forever Action Board labels Runecloth Bag **missing prices**, because there's no bag listing. Its cautious craft cost is 4g 95s, buying bolts (87s) rather than crafting them from 2g 55s Runecloth.
-
-Forever Tailoring rows (2026-10-04, on a copy of `data/brownstone.duckdb`; the original was unchanged). Source `forever-us-normal-alliance-addon`, scan `20261004T174645Z-0076af` (observed 17:46Z), cautious basis. Depth is listings / units in that scan:
-
-| Rank | Bag | Label | Craft cost | Sale | Profit (cautious / listed) | Bag depth | Input depth |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Red Linen Bag | potential craft | 4s 30c | 6s | 1s 40c / 1s 80c | 471 / 471 | Linen Cloth 482 / 24,029; Bolt of Linen 214 / 3,069 |
-| 2 | Linen Bag | potential craft | 2s 40c | 3s | 45c / 75c | 1,374 / 1,374 | Linen Cloth 482 / 24,029 |
-| 3 | Woolen Bag | potential craft | 7s 30c | 8s | 30c / 84c | 173 / 173 | Wool Cloth 266 / 5,593; Bolt of Woolen 27 / 161 |
-| 4 | Runecloth Bag (post-launch) | missing prices | 24g 47s 6c | — | — | none | Bolt of Runecloth 37 / 152; Magenta Dye 29 / 44; Cerulean Dye 111 / 261; Rugged Leather 24 / 129 |
-
-All three low-tier bags craft their bolts (2 Linen Cloth at 35c, 3 Wool Cloth at 70c) and buy thread and dye from vendors. Runecloth Bag would buy its bolts (87s); the dyes alone cost 19g 52s 6c.
-
-
-### Today real-data verification (2026-10-06)
-
-Calculated using **copies** of each source's database and current local catalog selections; no
-original database writes or seller-name reads. Settings: 100g available, scaled 1% / 10s floor
-(1g effective minimum), cap 5. Timings include opening the copy and evidence reads; copying files
-and catalog discovery are excluded. Both newest snapshots were fresh at verification time; stale
-and future-date handling is verified separately with offline fixtures.
-
-| Source / evidence | Craft | Buy | Sell | Below vendor | Rest (craft / buy / sell / aside) | Read / calculate / total |
-| --- | ---: | ---: | ---: | ---: | --- | --- |
-| Forever beta, scan `20261006T203259Z-ea00ed` | 10 | 10 | 10 | 0 | 23 / 14 / 0 / 0 | 0.0628 / 0.0898 / 0.1526 s |
-| Classic TSM, snapshot `20261004T135552051172Z_8b24dbea` | 6 | 10 | 6 | 0 | 0 / 7 / 0 / 0 | 0.2294 / 0.0057 / 0.2350 s |
-
-Forever hidden: missing prices 1,389; unsupported recipes 79; insufficient listed materials 7;
-one craft exceeds remaining funds 63; below minimum gain 273. Top batches: Barbaric Bracers,
-5 crafts, 32g 87s 70c estimated batch profit (cap); Azure Gustwoven Hood, 5, 19g 67s 97c (cap);
-Frost Oil, 4, 17g 57s 33c (more crafts lower profit: a fifth is affordable but earns less).
-With 10,000g and a 1,000-craft cap, the Forever calculation takes 0.28 s.
-
-Classic hidden: missing prices 12; unsupported recipes 1; one craft exceeds remaining funds 78;
-below minimum gain 13. Top batches: Elixir of Frost Power, 5, 11g 28s 20c (cap);
-Major Troll's Blood Potion, 5, 8g 91s 15c (cap); Major Rejuvenation Potion, 5, 6g 48s 40c (cap).
-TSM has no listing-dependent estimates; its costs and batch quantities use aggregate prices.
-
-Today v1 retains aggregate-selected routes while quoting actual whole listings; it does not search
-alternate routes after cheap supply is exhausted. Whole-stack surplus is uncredited and unshared.
-The greedy plan is affordable, not a global optimum. Below-vendor evidence is an independent aside,
-restricted to base/legacy identities with an observed scan vendor-sell reference. Missing reference
-prices are omitted. Sales speed, stockpile, volatility, character inventory/recipes, cross-profession
-routes and automated actions remain outside STORY-025 (see backlog → Today, later versions).
-
-
-STORY-037 verification: `tests/test_scan_inputs.py` covers shared naming examples, machine/local-only config,
-read-only previews, two-machine same-market imports, per-file archives, partial pricing, duplicate/conflicting
-IDs, ignored/unreadable/truncated/other-house files, latest-drop cleanup, stale reviews and schema-9
-backup/replay/legacy nulls. CLI preview/subsets and explicit input remain covered; `tests/test_app.py`
-exercises file selection, machine/UTC rows, ignored files, fresh cleanup evidence and stale import rejection.
-`tests/test_windows_drop.py` invokes the shipped PowerShell harness with disposable files where available;
-macOS visibly skips it, and Windows CI runs it. The harness tests shared names, byte equality, no-op duplicates,
-process/missing/invalid guards, hash failure and no-overwrite collisions without Pester.
-
-On copies under ignored `work/story-037/`, migration 8→9 preserves 10 scans, 825,631 listings, 81,757 prices,
-12,135 item references, 46,739 metrics and 39,299 item names. All historical machines remain null;
-the schema-8 backup equals the original copied database byte-for-byte, and migration replay is idempotent.
-A copied 0.4.0 beta file named `windows-pc-20261007T004900Z-BrownstoneScan.lua` previews as duplicate
-`20261007T004900Z-9dc790`, fully imported; preview leaves the copied database unchanged. The originals
-remain unchanged: database SHA-256 `46dc059c0f8bdf4cc2a0ef2e55531d4d0915845f58bf148e2d00030c4f7ea425`;
-input SHA-256 `a576e621c93eaae2eab2f6153f284b54984c2455088c308164df774a8cfa9632`.
-Real Drive folder, real SavedVariables and original `data/` were never written for these checks.
-Drive streaming/offline files and sync delays can cause retryable file errors; naming completion only
-protects the local copy, not remote sync ordering. Preview memory and repeated parsing grow with retained
-files; manual cleanup is necessary. Successful files commit independently of failed files.
-
-
-## Beta evidence report (STORY-042)
+### Beta evidence report
 
 After logout or `/reload` has finished writing, run from the repository:
 
 ```bash
 .venv/bin/python -m brownstone beta-report "/path/to/BrownstoneScan.lua" --source forever-us-normal-alliance-addon
-# For additions since a retained earlier file, append:
-# --previous "/path/to/earlier/BrownstoneScan.lua"
 ```
 
-The command prints an absolute report folder followed by pass/warn/fail totals. Send Claude the
-folder's `report.md` (and `report.json` for structured checking); these omit listing sellers. Keep
-raw SavedVariables private under ADDON-07. Exit 0 permits warnings, exit 1 means a check failed,
-exit 2 means an input could not be read. Reports do not import the session into your real database
-or authorize clearing the addon: use the existing import/cleanup workflow separately.
-
-`tests/test_beta_report.py` covers clean evidence, shared readers/formats 1–6, refused records and
-malformed lists continuing independently, required fields/IDs/sequences/time bounds, money chains,
-gold and bag residuals with missing/incomplete baselines, overflow/skipped counts, diagnostics and
-error counters, level/skill surfaces and profession names/frequency/incomplete causes, inferred
-loads, coverage, exact bronze round trips, comparisons/conflicts, seller/bidder exclusion, exit
-codes, unique folders and absence of writes outside report/temporary directories.
-
-Current limits: load boundaries are inferred, historical diagnostics are unavailable, and journal
-error counters cannot be assigned to loads. Checklist observation does not prove an action
-succeeded or establish invoice semantics. Serialized sizes are approximations. A scan from another house is named as a *scan house* warning and left out of the round trip. Real files on this
-machine currently provide formats 1–4 only, including two Windows drops; genuine format-5/6
-snapshot/journal/profession evidence remains pending play. Synthetic formats 5/6 exercise the full
-report/import path offline. Details of module boundaries and reconciliation are in
-[design.md](design.md#beta-evidence-report-story-042).
-
-Current real-file verification: 16 copied inputs (genuine formats 1–4, two Windows drops and the
-game-file backup), with a fresh temporary copy of `data/`. All 13 nonempty files pass the exact-byte
-import round trip. Three cleared files fail with the importer's no-scans/reload guidance; all files
-have the same 20 expected warnings for missing diagnostics and character-checklist capture in
-older formats. Totals: 112 pass, 320 warn, 3 fail; end-to-end run 55.998 seconds. All 171 original
-file hashes and the complete fresh data copy are unchanged. Private per-file results, timings and
-every warning/failure are in ignored `work/beta-reports/verification/real-results.json`; no genuine
-format-5/6 in-game recording is claimed.
-
-STORY-038 real-data check (2026-10-07, read-only existing database): Forever beta Normal Alliance,
-source `forever-us-normal-alliance-addon`, scan `20261007T185956Z-a4a84f`, existing saved settings
-25g / scaled 1% with 10s floor / cap 5. Today selects 9 crafts; all reserved details reconcile to
-249,991c shopping total. Barbaric Bracers (`forever-leatherworking`, recipe 23399), batch 5,
-costs 111,728c: Ruined Leather Scraps 2,400 required / 2,409 purchased / 31,404c; Cured Heavy Hide
-10 / 17 / 35,649c; Raptor Hide 5 / 18 / 5,310c; Small Lustrous Pearl 20 / 20 / 19,399c;
-Large Fang 20 / 20 / 19,966c. All five routes are auction purchases. Highest unit prices are
-17c, 2,097c, 295c, 1,099c and 1,000c respectively. The retained catalog chain is Heavy Leather
-40 crafts/units → Medium Leather 200 → Light Leather 800, at depths 1/2/3. Evidence was fresh
-at 21:45 UTC. No database migration, import or settings write was needed.
-
-
-### STORY-039 Forever beta verification (2026-10-08)
-
-Loaded the enabled Forever beta source through `config/market.local.toml`, copied the complete
-453 MB data directory to a temporary directory, and ran calculations and the actual Streamlit page
-against that copy. Original data/settings were not written. Scan `20261007T185956Z-a4a84f` was fresh
-during the first check; the final rerun crossed the 24-hour freshness limit and correctly showed
-the stale banner, inspect-only table states and queue caption. Saved settings: 25g, scaled 1% with 10s floor (25s minimum), cap 5.
-
-The page renders Craft, Buy, Sell, Below vendor and Queue with no exceptions.
-Default: 9 crafts, 15 complete shopping rows (10 displayed, 5 beyond the cap), 37 queue lines;
-gold needed 24g 99s 91c and expected profit at undercut 90g 65s 89c. Top crafts are Barbaric
-Bracers (5, cautious profit 36g 32s 72c), Frost Oil (5, 18g 22s 20c) and Bronze Dory
-(5, 12g 4s 59c). Unticking Barbaric Bracers with refill off leaves 8 crafts, 28 queue lines,
-13g 79s 95c needed and 54g 35s 90c expected profit at undercut. Default refill adds Thick Murloc
-Armor and Raptor Hide Harness: 10 crafts, 42 queue lines, 24g 98s 23c needed and 78g 63s 90c
-expected profit at undercut. Queue gold reconciles exactly with full shopping cost in all cases.
-Refill-added controls, queue ticking across reruns and Copy as text were exercised on the page.
-No live game action, download or import was performed.
-
-Review check (2026-10-08, Claude, live browser on a scratch copy of the project and data; the real
-database SHA-256 was unchanged): default, untick-with-refill and refill-off totals reproduce the figures
-above exactly. Re-ticking Barbaric Bracers drops the two refill rows with a note and restores the default
-totals. Bronze Dory at batch 2 shows its lower real profit (4g 80s 62c) and refill spends the freed gold.
-Queue ticks and the Copy as text block persist across reruns while the scan is stale; Limited by keeps
-the real reason on unchanged rows; refill off reports the crafts left out (71); the server log shows no
-Session State warning.
-
-## Skill-up map real-data check (STORY-047)
-
-Checked 2026-10-08 using `config/market.local.toml`'s enabled Forever beta source
-`forever-us-normal-alliance-addon`, market `forever-us-normal-alliance-beta`. Read-only DuckDB
-connection; database SHA-256 unchanged. N=5, default post-launch exclusion (one recipe).
-Newest snapshot/scan: `20261007T185956Z-a4a84f`, observed 2026-10-07 19:00:04 UTC; stale at the
-24-hour limit. All market columns remained visible; absent items had zero listed units and blank prices.
-
-| Profession | Catalog / page usable | Unknown skill-up range | No item on page | Raw expansion errors |
-| --- | ---: | ---: | ---: | ---: |
-| alchemy | 167 / 167 | 13 | 15 | 5 |
-| blacksmithing | 430 / 431 | 97 | 65 | 1 |
-| cooking | 129 / 129 | 15 | 3 | 0 |
-| enchanting | 28 / 30 | 6 | 200 | 2 |
-| engineering | 205 / 207 | 12 | 20 | 30 |
-| first-aid | 31 / 31 | 18 | 0 | 2 |
-| leatherworking | 511 / 512 | 46 | 78 | 32 |
-| mining | 17 / 17 | 11 | 1 | 0 |
-| tailoring | 412 / 413 | 107 | 50 | 0 |
-
-Top ten raw materials in combined totals (units), after the review marked Forever leather tiers
-`raw_material`:
-
-- Runecloth (14047): 28,060.
-- Mageweave Cloth (4338): 16,010.
-- Thorium Bar (12359): 11,250.
-- Silk Cloth (4306): 10,310.
-- Rugged Leather (8170): 7,645.
-- Thick Leather (4304): 5,535.
-- Fel Leather (248825): 4,950.
-- Mithril Bar (3860): 4,450.
-- Bronze Bar (2841): 4,095.
-- Rune Thread (14341): 3,990.
-
-Tailoring 50–74 tables contained 42 recipes, 18 direct and 18 raw material rows; raw Linen Cloth was
-1,240 units (9,908 listed, 0.003g lowest), raw Wool Cloth 765 (3,956 listed, 0.0077g lowest).
-All 42 yields were marked unconfirmed; two recipe ranges were unknown. Cerulean Dye's existing
-item post-launch marker remained visible; the toggle excludes recipes marked post-launch, not
-recipes whose inputs carry that item marker.
-
-Limitations found by this check: 72 recipes have fractional intermediate craft counts at N = 5 (expansion
-checks all N crafts together, so Silver Contact's yield of 5 divides evenly) and contribute no raw units; their direct units remain visible and the page warns above totals. Before the review,
-Leatherworking's conversion chains expanded high-tier leather back to 17,179,425 Ruined Leather Scraps;
-the selection now marks Light to Rugged Leather `raw_material` (CRAFT-08), so raw totals stop there.
-Totals remain an all-recipe expectation, not a gathering recommendation or launch forecast.
-The 107 unknown Tailoring ranges include page colour arrays containing zero; validity remains
-strict rather than interpreting zero. Saved pages are October 4 (Alchemy) or October 6 (other Forever
-professions). Full check output is local-only under ignored `work/story047/real-data.json`.
-
-## STORY-048 — Watchlist with target prices
-
-Implemented: source-local target entries, Watchlist inside Market, base-item price states and
-unit counts, and current-hit panels on Today and successful addon import results. Invalid files stay
-read-only and preserved. Rules: `requirements.md` → Watchlist; contracts: `design.md` → Watchlist.
-Offline verification is in `tests/test_watchlist.py` and `tests/test_watchlist_view.py`.
-
-Forever beta check uses a copy of `data/` in ignored `work/story048/data`, with targets added only
-there. Scan `20261010T134347Z-51ff02` (2026-10-10 13:43:54 UTC) shows Tough Jerky (117) at 3c,
-96 listed units / 64 at target; Minor Healing Potion (118) at 6c, 846 / 582; Refreshing Spring Water
-(159) at 13c, 189 / 6. Equal buy/sell targets hit for each; an absent ID stays not listed. Browser
-inspection also confirms Today's short hit panel. Screenshots and check output are local artifacts
-under `work/story048/`. This checks imported evidence, not current in-game availability.
-
-
-### New app (STORY-058)
-
-NiceGUI 3.18.0 is the main app. Install `requirements.lock.txt`, then double-click
-`Start Brownstone.command` / `.cmd` (or run `launch_nicegui.py`). It opens a native desktop
-window, acknowledges the loaded event, and focuses that window on a second launch when the
-code is current. Code changes restart only the authenticated app this launcher started,
-using `launch.py`'s fingerprint approach. Native startup failure prints one browser-fallback
-line. Browser mode stops after five minutes without a connected tab; native mode stops on close.
-The Streamlit app remains at `Start Brownstone (old app).command` / `.cmd`, using unchanged
-`launch.py`. Rules: `requirements.md` → UI-07 and UI-05.
-
-Places are Today, Team, Market, then visually separate Data, with their shared business questions.
-Team and Market are placeholders for STORY-052/055. Place, source and Today tab live in the URL
-and survive refresh; the active Today tab also survives switching places. Sources resolve Forever
-first, with an explicit choice for multiple observers. The responsive header opens navigation.
-Data → Import supports the same local and drop preview/selection/import flow as Streamlit,
-including summary before Details, per-file errors and conservative cleanup evidence. TSM refresh
-remains in the old app. Both pages share `brownstone/import_review.py` and the existing importer;
-no import, calculation, settings, today_version or storage changes.
-
-Today retains adjustments, Queue, Cards/Table, funds and character behavior from SPIKE-009b.
-Settings and plan evidence still use the shared loaders and session helpers. Reload after imports
-performed elsewhere. Offline NiceGUI checks: `tests/ui_trial/test_nicegui_today.py` and
-`tests/ui_trial/test_nicegui_app.py`; no-window lifecycle tests: `tests/test_launch_nicegui.py`.
-Existing Streamlit import regressions remain in `tests/test_app.py`.
-
-Real-data checks and screenshots are retained locally under `work/story058/`, outside Git.
-The current Forever beta local input and four Windows drops are already imported. The latest
-drop, `windows-pc-20261011T110619Z-BrownstoneScan.lua`, carries scan `20261011T105714Z-cf2f26`
-with 74,109 listings. Explicit duplicate import through each app on separate copies of `data/`
-leaves all database records identical to each other and the original. Data shows Nothing new,
-four fully imported drops, and conditional machine-clear guidance. Today with Basilly retains
-recorded 2s 55c gold and the saved plan settings; current evidence is stale and inspection only.
-Finder double-click on macOS acknowledged a loaded native window. A second launch reused it;
-after a code change, a third double-click replaced its readiness token and recorded the current
-fingerprint. Authenticated browser shutdown was exercised live. Direct native-window inspection
-and a manual close remain limited by the computer tool's access to the Python window. The app
-runs on the Mac only (the Windows PC plays and drops scan files), so the Windows launchers are
-covered by CI's Windows test run, not checked by hand.
+Add `--previous "/path/to/earlier/BrownstoneScan.lua"` to report additions since an earlier file. The
+command prints the report folder and pass/warn/fail totals; send Claude `report.md` (and `report.json`).
+Reports omit listing sellers; keep raw SavedVariables private (ADDON-07). Exit 0 permits warnings,
+1 means a check failed, 2 means an input could not be read. A report imports nothing into the real
+database and doesn't authorize clearing the addon. Load boundaries are inferred, diagnostics exist only
+for the latest load, and serialized sizes are approximate (`design.md` → Beta evidence report).

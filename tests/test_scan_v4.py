@@ -159,7 +159,7 @@ def test_migration8_backup_replay_layout_and_historical_null_provenance(tmp_path
 
 def test_format4_fixture():
     path = Path(__file__).parent / "fixtures/brownstone_scan_v4.lua"
-    record = scans.read_saved_variables(path.read_bytes())[0]
+    record = scans.read_addon_records(path.read_bytes())[0][0]
     assert record == enriched()
 
 

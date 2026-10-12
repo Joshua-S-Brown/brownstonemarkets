@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import streamlit as st
 
-from brownstone.money import format_money, parse_money, to_gold
+from brownstone.money import format_money, parse_money
 from brownstone.today import build_today, craft_details
 from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_funds import resolve_funds
@@ -11,11 +11,11 @@ from brownstone.today_loading import load_today, load_today_characters
 from brownstone.today_session import digest as _digest
 from brownstone.today_session import plan_context as _context
 from brownstone.today_session import queue_line as _queue_line
+from brownstone.today_session import queue_total, stable_queue
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
+from views import today_rows as tr
 from views.common import gold_columns, show_context, show_freshness
 from views.navigation import QUESTIONS
-from views.today_rows import craft_row as _craft_row
-from views.today_rows import sell_row as _sell_row
 from views.watchlist import render_hits
 
 
@@ -25,16 +25,16 @@ def _settings(config, character_data):
     try:
         saved = load_settings(path)
     except (ValueError, TypeError, OSError) as error:
-        st.warning(f"Could not read Today settings: {error}. Defaults are shown; save to replace this file.")
+        st.warning(tr.unreadable_settings(error))
         saved = TodaySettings()
         unreadable = True
     selected = resolve_character(saved.character, character_data)
     if saved.character is not None and selected is None:
-        st.caption("Saved character is no longer present in this source and market; showing Our team.")
+        st.caption(tr.MISSING_CHARACTER)
     summary = st.empty()
     funds = resolve_funds(saved, character_data, datetime.now(UTC), config["max_age_hours"])
     with st.expander("Today settings", expanded=unreadable or funds.settings.gold_copper == 0):
-        st.caption("One funded plan · whole auction stacks are bought; surplus is shown · sales speed is unknown")
+        st.caption(tr.SETTINGS_NOTE)
         return _settings_form(config, path, saved, summary, character_data, selected)
 
 
@@ -69,7 +69,7 @@ def _settings_form(config, path, saved, summary, character_data, selected):
     for note in funds.notes:
         st.caption(note)
     if not funds.settings.gold_copper:
-        st.info("Enter the gold you have available to size the plan. Use explicit units, for example 12g 50s.")
+        st.info(tr.ZERO_GOLD_HINT)
     return funds.settings
 
 
@@ -84,7 +84,7 @@ def render(config, catalogs):
     try:
         manifest, arguments = load_today(config, catalogs, settings, character_data, datetime.now(UTC))
         if manifest is None:
-            st.info("Refresh or import a scan for this market to inspect Today.")
+            st.info(tr.NO_SNAPSHOT)
             return
         show_freshness(config, manifest)
         sid = arguments["snapshot"]["snapshot_id"]
@@ -93,24 +93,14 @@ def render(config, catalogs):
         st.error(f"Unable to build Today: {error}")
         return
     if not result["listing_evidence_available"]:
-        st.info("Individual listings, thin markets, cheap now, undercuts and below-vendor listings: "
-                "not available for this source. Batches use funds and the per-item cap; costs are aggregate estimates.")
+        st.info(tr.NO_LISTINGS)
     names = {i: item["name"] for c in catalogs for i, item in c["items_by_id"].items()}
-    freshness = result["freshness"]
-    st.caption(f"Today rules v{result['today_version']} · cautious output price · "
-               f"{config['auction_cut']:.0%} auction cut · source {config['source_id']} · "
-               f"market {config['market_id']} · snapshot {sid} · "
-               f"scan {manifest.get('scan_id', 'not available for this source')} · "
-               f"evidence {freshness['observed_at']} (UTC) · time basis {freshness['basis']}")
+    st.caption(tr.provenance(result, config, manifest, sid))
     render_hits(config, catalogs)
     _tables(result, names, arguments=arguments)
 
 
-def _evidence(row):
-    return {"State": "stale — inspect only" if row["stale"] else "potential gain"}
-
-
-def _table(rows, rest, decisions, key, *, selection_key=None, rest_text="more rows outside this list's 10-row limit"):
+def _table(rows, rest, decisions, key, *, selection_key=None, rest_text=tr.ROW_LIMIT_NOTE):
     evidence = st.toggle("Show evidence columns", key=f"today-evidence-{key}")
     if rows:
         columns = [*decisions, "State"]
@@ -142,47 +132,36 @@ def _tables(result, names, *, arguments=None):
         decision_character = ["Can make", "Learning"] if result["character"] else ["Who can make it"]
         if not result["character"] and any(r.get("craft_status") == "Unknown" for r in visible):
             decision_character += ["Can make", "Learning"]
-        craft = [_craft_row(row, sells[row["output_item_id"]]) for row in visible]
+        craft = [tr.craft_row(row, sells[row["output_item_id"]]) for row in visible]
         selected = _table(craft, result["remaining"]["craft"],
                ["Item", "Profession", *decision_character, "Batch", "Limited by", "Material cost (g)",
                 "Batch profit (g)", "Profit per craft (g)", "Thin", "Confidence", "Reasons"], "craft",
                selection_key=_selection_key({**result, "craft": visible}),
-               rest_text=("more rows outside this list's 10-row limit" if result["refill"]
+               rest_text=(tr.ROW_LIMIT_NOTE if result["refill"]
                           else "more crafts fit the remaining gold; refill is off"))
         if selected:
             _craft_details(visible[selected[0]])
         elif craft:
             st.caption("Select a craft row to see its materials and catalog craft steps.")
-        hidden = "; ".join(f"{reason}: {count}" for reason, count in sorted(hidden_counts.items()))
-        st.caption("Hidden recipes: " + (hidden or "0"))
+        st.caption(tr.hidden_line(hidden_counts))
         with st.expander("Catalog checks", expanded=False):
             if result["catalog_checks"]:
                 st.dataframe(result["catalog_checks"], hide_index=True, width="stretch")
             else:
                 st.caption("No differences in comparable matched recipe evidence.")
     with buy_tab:
-        buy = [{"Material": names.get(r["item_id"], f"Item {r['item_id']}"), "Item ID": r["item_id"],
-                "Route": r["method"], "Required units": r["quantity"], "Purchased units": r["purchased_units"],
-                "Cost (g)": to_gold(r["cost_copper"]), "Highest unit price (g)": to_gold(r["highest_unit_copper"]),
-                "Scan p25 (g)": to_gold(r["p25_copper"]), "Cheap now": r["cheap_now"], **_evidence(r)}
-               for r in result["buy"]]
-        _table(buy, result["remaining"]["buy"],
+        _table([tr.buy_row(r, names, item_id=True) for r in result["buy"]], result["remaining"]["buy"],
                ["Material", "Route", "Required units", "Purchased units", "Cost (g)",
                 "Highest unit price (g)", "Cheap now"], "buy")
-        st.caption(f"Whole shopping list: {format_money(result['shopping_total_copper'])}. "
-                   "Cheap now means average paid is strictly below scan p25; informational only. "
-                   "Vendor stock is unknown.")
+        st.caption(tr.shopping_line(result))
     with sell_tab:
-        _table([_sell_row(row) for row in result["sell"]], result["remaining"]["sell"],
+        _table([tr.sell_row(row) for row in result["sell"]], result["remaining"]["sell"],
                ["Output", "Batch", "Lowest competing unit (g)", "Listings", "Units", "Undercut unit (g)",
                 "Profit at undercut for batch (g)", "Thin", "Confidence", "Reasons"], "sell")
     with vendor_tab:
-        st.caption("Independent aside, not part of the craft budget.")
-        _table([{"Item": names.get(r["item_id"], f"Item {r['item_id']}"),
-                 "Item ID": r["item_id"], "Listings": r["listings"], "Units": r["purchased_units"],
-                 "Cost (g)": to_gold(r["cost_copper"]), "Vendor pays per unit (g)": to_gold(r["vendor_sell_copper"]),
-                 "Highest listing unit (g)": to_gold(r["highest_unit_copper"]), "Gain (g)": to_gold(r["gain_copper"]),
-                 **_evidence(r)} for r in result["below_vendor"]], result["remaining"]["below_vendor"],
+        st.caption(tr.VENDOR_ASIDE)
+        _table([tr.vendor_row(r, names, item_id=True) for r in result["below_vendor"]],
+               result["remaining"]["below_vendor"],
                ["Item", "Units", "Cost (g)", "Vendor pays per unit (g)", "Gain (g)"], "vendor")
 
     with queue_tab:
@@ -204,12 +183,7 @@ def _selection_key(result):
 def _craft_details(row):
     details = craft_details(row)
     st.markdown(f"**Materials for {row['output_name']} · {row['batch_size']} crafts**")
-    materials = [{"Material": r["item_name"], "Item ID": r["item_id"],
-                  "Route": "vendor" if r["method"] == "vendor" else "auction house",
-                  "Required units": r["quantity"], "Purchased units": r["purchased_units"],
-                  "Cost (g)": to_gold(r["cost_copper"]),
-                  "Highest unit price (g)": to_gold(r["highest_unit_copper"]), **_evidence(r)}
-                 for r in details["materials"]]
+    materials = [tr.material_row(r, item_id=True) for r in details["materials"]]
     st.dataframe(materials, hide_index=True, width="stretch",
                  column_config=gold_columns("Cost (g)", "Highest unit price (g)"))
     st.caption(f"Batch material cost: {format_money(row['batch_cost_copper'])}. "
@@ -218,9 +192,8 @@ def _craft_details(row):
         st.caption("Chosen catalog craft steps (indented by depth; costs are included in the materials above).")
         lines = [f"{row['output_name']}: {row['batch_size']} crafts"]
         for step in details["intermediate_steps"]:
-            state = _evidence(step)["State"]
             lines.append(f"{'    ' * step['depth']}↳ {step['item_name']}: {step['crafts']} crafts → "
-                         f"{step['quantity']} units · {state}")
+                         f"{step['quantity']} units · {tr.state(step)}")
         st.text("\n".join(lines))
 
 
@@ -257,8 +230,7 @@ def _plan_controls(default, arguments):
     state = st.session_state.get(state_key)
     if state is None or state["context"] != context:
         if state is not None:
-            st.info("Scan, settings or catalog evidence changed: session choices and queue ticks reset. "
-                    "Previous choices were dropped, not resized; a fresh default plan is shown.")
+            st.info(tr.PLAN_RESET)
             for key in state["widgets"]:
                 st.session_state.pop(key, None)
         state = {"context": context, "rows": sorted(default["craft"], key=lambda r: r["plan_order"]),
@@ -316,9 +288,7 @@ def _seed(key, value):
 
 def _queue(result):
     queue = result["queue"]
-    stable_queue = {**queue, "lines": [{k: v for k, v in line.items()
-                                      if k not in ("confidence", "confidence_reasons")} for line in queue["lines"]]}
-    identity = _digest({"queue": stable_queue, "context": result.get("session_context"), "evidence": [
+    identity = _digest({"queue": stable_queue(queue), "context": result.get("session_context"), "evidence": [
         {k: r[k] for k in ("source_id", "market_id", "snapshot_id", "scan_id")}
         for r in result["craft"]]})
     key = f"today-queue-{identity}"
@@ -336,9 +306,7 @@ def _queue(result):
             st.session_state[tick] = previous["ticks"][tick]
         st.checkbox(text, key=tick)
     st.session_state[state_key] = {"identity": key, "ticks": {tick: st.session_state[tick] for tick in tick_keys}}
-    profit = queue["expected_profit_copper"]
-    total = (f"Gold needed: {format_money(queue['gold_needed_copper'])} · "
-             f"Expected profit at undercut: {format_money(profit) if profit is not None else 'unavailable'}")
+    total = queue_total(queue)
     st.caption(total)
     if result["freshness"]["stale"]:
         st.caption("stale — inspect only")
