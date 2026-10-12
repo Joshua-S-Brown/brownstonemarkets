@@ -6,7 +6,10 @@ _Last updated 2026-10-12._
 
 ## Implemented
 
-- **Three questions (STORY-053, implemented and reviewed 2026-10-11):** Today, Team, Market and visually
+- **Main app (STORY-058):** NiceGUI with Today, Team/Market placeholders and Data → Import.
+  Start instructions, shared modules and verification: [New app](#new-app-story-058).
+
+- **Three questions (STORY-053, implemented and reviewed 2026-10-11):** In the old Streamlit app, Today, Team, Market and visually
   separated Data replace the flat page list. In-page segmented controls keep every old page reachable;
   collection and catalogs live in Data. Business questions introduce places and sections. Addon
   Below usual price explains the missing history before loading prices. Per-source place keys survive
@@ -275,7 +278,7 @@ _Last updated 2026-10-12._
     and the layout choices are in `requirements.md` → UI-01 and Today → Evidence and honesty.
   - Market also holds Browse market, Skill-up demand, Watchlist and Below usual price; Data holds import, Recipe catalogs and Scan changes (STORY-053 above). Below usual price explains when a source can't support it.
   - All money is displayed in gold.
-- **Launcher:** `launch.py` (via `Start Brownstone.command` / `.cmd`) restarts its own server when the code has changed.
+- **Launcher:** `launch.py` (via `Start Brownstone (old app).command` / `.cmd`) restarts its own server when the code has changed.
 - **Catalogs:**
   - **Classic Era:** Tailoring 0.4 (six representative bag/bolt recipes); Alchemy and Enchanting 0.3. Tailoring retains the quantities, roles and vendor prices hand-verified in STORY-007.
   - **Forever beta** (`forever-beta-1.60`): Tailoring 0.5; Alchemy, Blacksmithing, Cooking, Enchanting, Engineering, First Aid, Leatherworking and Mining 0.3. Catalogs are generated from archived pages; selection coverage and unconfirmed yields/vendor values remain visible.
@@ -294,7 +297,7 @@ _Last updated 2026-10-12._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.27% after the full macOS run and focused UI verification: 1,079 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.29% after the full macOS run: 1,133 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.11.2**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -334,7 +337,7 @@ _Last updated 2026-10-12._
 git diff --check
 ```
 
-Expected: 1,015 tests pass and one explicit PowerShell-unavailable skip on this Mac; 1,016 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the app.
+Expected: 1,133 tests pass and one explicit PowerShell-unavailable skip on this Mac; 1,134 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the old app or addon preview/import in Data in the main app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 
@@ -626,47 +629,41 @@ inspection also confirms Today's short hit panel. Screenshots and check output a
 under `work/story048/`. This checks imported evidence, not current in-game availability.
 
 
-### SPIKE-009 (trial)
+### New app (STORY-058)
 
-Today runs in NiceGUI 3.18.0 beside Streamlit; SPIKE-009b's interactive trial is implemented
-and reviewed (2026-10-12). Decided: the NiceGUI app becomes Brownstone's app for four places
-(`requirements.md` → UI-07); STORY-058 turns this trial into it. Install `requirements.lock.txt`, then double-click
-`Start Brownstone (trial).command` on macOS or `Start Brownstone (trial).cmd` on Windows.
-The launcher opens a pywebview native window on a free loopback port, reuses it on a second
-launch, and falls back to the browser with a one-line explanation if native startup fails.
-Closing the native window uses NiceGUI's server shutdown. No terminal must remain running.
-In the browser fallback the server keeps running after the tab closes (there is no window to
-close); a later double-click reopens it, and a restart of the computer stops it.
-Browser development still uses `.venv/bin/python nicegui_app.py` (Windows:
-`.venv\Scripts\python.exe nicegui_app.py`), default `http://127.0.0.1:8081`; `--port` and
-`--data-dir PATH` remain available. `launch_trial.py --data-dir PATH` checks native mode on a copy.
-`launch.py`, the existing launchers and Today's calculation/version rules are unchanged.
+NiceGUI 3.18.0 is the main app. Install `requirements.lock.txt`, then double-click
+`Start Brownstone.command` / `.cmd` (or run `launch_nicegui.py`). It opens a native desktop
+window, acknowledges the loaded event, and focuses that window on a second launch when the
+code is current. Code changes restart only the authenticated app this launcher started,
+using `launch.py`'s fingerprint approach. Native startup failure prints one browser-fallback
+line. Browser mode stops after five minutes without a connected tab; native mode stops on close.
+The Streamlit app remains at `Start Brownstone (old app).command` / `.cmd`, using unchanged
+`launch.py`. Rules: `requirements.md` → UI-07 and UI-05.
 
-Adjust crafts holds bounded batch inputs (applied on Enter or leaving the box) and ticks; Refill freed gold and Hide Low confidence
-sit together above the plan. The expansion starts collapsed to keep the plan on the first screen.
-Table/Cards and the active tab survive adjustments. Cards project reserved materials, intermediate
-steps and Sell prices. Queue uses the shared route checklist and totals, with per-tab/source ticks
-that reset with the plan. Shared context/prose and volatile state contracts: `design.md` → *Today contracts*.
-Offline simulation: `tests/ui_trial/test_nicegui_today.py`; launcher/fallback checks without windows:
-`tests/test_launch_trial.py`. Pywebview/platform dependencies are pinned; CI installs the lock and
-runs pip check and the full suite on macOS and Windows.
+Places are Today, Team, Market, then visually separate Data, with their shared business questions.
+Team and Market are placeholders for STORY-052/055. Place, source and Today tab live in the URL
+and survive refresh; the active Today tab also survives switching places. Sources resolve Forever
+first, with an explicit choice for multiple observers. The responsive header opens navigation.
+Data → Import supports the same local and drop preview/selection/import flow as Streamlit,
+including summary before Details, per-file errors and conservative cleanup evidence. TSM refresh
+remains in the old app. Both pages share `brownstone/import_review.py` and the existing importer;
+no import, calculation, settings, today_version or storage changes.
 
-The copied Forever beta check with Basilly shows 2s 55c recorded gold, captured
-2026-10-11 10:57 UTC. The saved 10s minimum produces no crafts. In the copy only, reducing the
-minimum to 1c and percentage to 0 gives Linen Bag x2 (1s 95c shopping); shrinking to x1 costs
-1s 65c. Unticking the bag refills with Linen Cloak x5; shrinking the cloak to x3 matches Streamlit:
-1s 65c shopping, 1s 20c batch profit, 1s 17c profit at the 99c undercut. Screenshots and check
-outputs are ignored under `work/spike009b-screenshots/` and `work/spike009b-compare.txt`.
-The native loaded event and launcher reuse were exercised on macOS, including a Finder double-click.
-A final native startup took 3.19s; its second launch focused the existing window in 0.75s.
-Direct native-window visual/close verification remains limited by the computer tool's app access;
-Windows window behavior awaits the owner's second machine.
+Today retains adjustments, Queue, Cards/Table, funds and character behavior from SPIKE-009b.
+Settings and plan evidence still use the shared loaders and session helpers. Reload after imports
+performed elsewhere. Offline NiceGUI checks: `tests/ui_trial/test_nicegui_today.py` and
+`tests/ui_trial/test_nicegui_app.py`; no-window lifecycle tests: `tests/test_launch_nicegui.py`.
+Existing Streamlit import regressions remain in `tests/test_app.py`.
 
-Callbacks keep controls/source state intact while replacing the plan container, avoiding Streamlit's
-whole-page rerun. NiceGUI needs explicit per-tab storage, client connection timing, and closures for
-row callbacks; the user fixture does not simulate Toggle clicks, so its value API is used there and
-real browser clicks verify the toggle. Cards need no new calculation or hand-written CSS. The trial
-adds roughly 170 view lines plus a small shared session helper and launcher. Remaining nine sections
-are roughly 9–14 development days including tests and desktop packaging polish; this is an estimate,
-not a migration decision. Native startup acknowledges the loaded window, not just a listening port;
-manual close and Windows timing remain to be judged. Reload after importing elsewhere if idle.
+Real-data checks and screenshots are retained locally under `work/story058/`, outside Git.
+The current Forever beta local input and four Windows drops are already imported. The latest
+drop, `windows-pc-20261011T110619Z-BrownstoneScan.lua`, carries scan `20261011T105714Z-cf2f26`
+with 74,109 listings. Explicit duplicate import through each app on separate copies of `data/`
+leaves all database records identical to each other and the original. Data shows Nothing new,
+four fully imported drops, and conditional machine-clear guidance. Today with Basilly retains
+recorded 2s 55c gold and the saved plan settings; current evidence is stale and inspection only.
+Finder double-click on macOS acknowledged a loaded native window. A second launch reused it;
+after a code change, a third double-click replaced its readiness token and recorded the current
+fingerprint. Authenticated browser shutdown was exercised live. Direct native-window inspection
+and a manual close remain limited by the computer tool's access to the Python window; Windows
+launcher/window verification awaits the product owner's second machine.

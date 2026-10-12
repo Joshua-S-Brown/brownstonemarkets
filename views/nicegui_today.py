@@ -176,8 +176,9 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
     with ui.tabs(value=active_tab) as tabs:
         for name in TABS:
             ui.tab(name)
+    tabs.on_value_change(lambda e: app.storage.tab.update({'today-active-tab': e.value}))
     tabs.on_value_change(lambda e: ui.navigate.history.replace('/?' + urlencode({
-        'game': config['game_version'], 'source': config['source_id'], 'tab': e.value})))
+        'game': config['game_version'], 'source': config['source_id'], 'place': 'Today', 'tab': e.value})))
     with ui.tab_panels(tabs, value=active_tab).classes('w-full'):
         with ui.tab_panel('Craft'):
             if result['character_note']:

@@ -1,4 +1,4 @@
-"""Detached native trial launcher with reuse and a browser fallback."""
+"""Detached native main-app launcher with reuse and a browser fallback."""
 import argparse
 import json
 import os
@@ -12,20 +12,46 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
+from launch import code_fingerprint as shared_code_fingerprint
+
 ROOT = Path(__file__).resolve().parent
+
+
+def code_fingerprint():
+    # Reuse the old launcher's byte/path fingerprint, adding this app's entry and launcher.
+    import hashlib
+    digest = hashlib.sha256(shared_code_fingerprint().encode())
+    for name in ('nicegui_app.py', 'launch_nicegui.py'):
+        digest.update(name.encode())
+        digest.update((ROOT / name).read_bytes())
+    return digest.hexdigest()
+
+
+def request_state(state, action):
+    parsed = urllib.parse.urlparse(state['url'])
+    if parsed.hostname != '127.0.0.1' or parsed.scheme != 'http':
+        raise ValueError('Only loopback launcher-owned servers are allowed')
+    request = urllib.request.Request(state['url'] + '/_brownstone/' + action + '?' +
+                                     urllib.parse.urlencode({'token': state['token']}), method='POST')
+    with urllib.request.urlopen(request, timeout=2) as response:
+        return json.load(response)
 
 
 def reuse(ready_file):
     try:
         state = json.loads(ready_file.read_text(encoding='utf-8'))
-        # Only contact the loopback server this launcher recorded.
-        parsed = urllib.parse.urlparse(state['url'])
-        if parsed.hostname != '127.0.0.1' or parsed.scheme != 'http':
-            return False
-        request = urllib.request.Request(state['url'] + '/_trial/focus?' +
-                                         urllib.parse.urlencode({'token': state['token']}), method='POST')
-        with urllib.request.urlopen(request, timeout=2) as response:
-            focused = json.load(response)['focused']
+        if state.get('code') != code_fingerprint():
+            # The server verifies the secret; no PID-based kill can hit an unrelated process.
+            if not request_state(state, 'stop').get('stopping'):
+                return False
+            for _ in range(40):
+                try:
+                    request_state(state, 'focus')
+                except (OSError, ValueError, KeyError, urllib.error.URLError):
+                    return False
+                time.sleep(.25)
+            raise RuntimeError('The previous Brownstone server did not stop. Try again after it closes.')
+        focused = request_state(state, 'focus')['focused']
         if not focused:
             if state['native']:
                 return False
@@ -38,7 +64,7 @@ def reuse(ready_file):
 def start(args, ready_file, log, *, native):
     from nicegui.native import find_open_port
     command = [sys.executable, str(ROOT / 'nicegui_app.py'), '--ready-file', str(ready_file),
-               '--focus-token', secrets.token_urlsafe(32)]
+               '--focus-token', secrets.token_urlsafe(32), '--code-fingerprint', code_fingerprint()]
     command += ['--native'] if native else ['--port', str(find_open_port())]
     if args.data_dir:
         command += ['--data-dir', str(args.data_dir.resolve())]
@@ -65,11 +91,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
     work = ROOT / 'work'
     work.mkdir(exist_ok=True)
-    ready_file = work / 'trial-ready.json'
+    ready_file = work / 'app-ready.json'
     if reuse(ready_file):
         return 0
     ready_file.unlink(missing_ok=True)
-    with (work / 'trial-launcher.log').open('w', encoding='utf-8') as log:
+    with (work / 'app-launcher.log').open('w', encoding='utf-8') as log:
         process = start(args, ready_file, log, native=True)
         if await_ready(process, ready_file):
             return 0
@@ -80,7 +106,7 @@ def main(argv=None):
             state = json.loads(ready_file.read_text(encoding='utf-8'))
             webbrowser.open(state['url'])
             return 0
-    print(f'Brownstone trial could not start. See {work / "trial-launcher.log"}.')
+    print(f'Brownstone could not start. See {work / "app-launcher.log"}.')
     return 1
 
 

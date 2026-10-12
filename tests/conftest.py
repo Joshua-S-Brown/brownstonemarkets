@@ -26,4 +26,4 @@ def make_source(data_dir, **overrides):
 def pytest_addoption(parser):
     # Only register the main-file option. NiceGUI's fixtures are local to tests/ui_trial;
     # importing its plugin globally would reset application state in unrelated tests.
-    parser.addini('main_file', 'NiceGUI trial entry point', default='nicegui_app.py')
+    parser.addini('main_file', 'NiceGUI main-app entry point', default='nicegui_app.py')

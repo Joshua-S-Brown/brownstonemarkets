@@ -47,10 +47,20 @@ explains the missing historical values before querying prices, even without a sa
 ### New app (decided 2026-10-12; UI-07)
 
 Brownstone's main app moves to NiceGUI, beside the Streamlit app rather than replacing it page by page.
-`nicegui_app.py` is the entry; its views are `views/nicegui_*.py` (today; import from STORY-058, team
+`nicegui_app.py` is the entry; its views are `views/nicegui_*.py` (today and import from STORY-058; team
 from STORY-052, market from STORY-055). Both apps call the same `brownstone/` functions: when the new
 app needs logic that lives in a Streamlit view, it moves into a framework-free `brownstone/` module
 both use, never a copy (as SPIKE-009 did with `today_loading` and SPIKE-009b with `today_session`).
+`brownstone/navigation.py` holds the questions shared by both navigation views. NiceGUI stores
+place/source/tab in the URL, preserves the active Today tab through place changes, and invalidates
+its volatile import review when source/configuration changes. Its responsive header opens the drawer.
+`views/nicegui_import.py` uses `pipeline.preview_scans`/`import_scans` for local files and
+`scan_inputs` for drop inventories and imports. `brownstone/import_review.py` owns shared summary,
+problem, scan-row, cleanup and outcome/error projections used by both Import pages. NiceGUI's
+ImportPage owns callbacks and replaces the review container with import results; drop imports
+refresh file/cleanup evidence. Details opens on problems and stays open during the review.
+TSM sources point to the old app. No calculation, import-rule or schema changes.
+
 The Streamlit app keeps the page map above, frozen. Shared, framework-free row shaping stays in
 `views/today_rows.py`-style modules importable by both.
 
@@ -65,7 +75,11 @@ The Streamlit app keeps the page map above, frozen. Shared, framework-free row s
 
 ```text
 app.py                  Streamlit entry: source selection, place/section dispatch, explicit collection
-views/                  Streamlit only; display, no calculations
+nicegui_app.py          Main NiceGUI entry: loopback, source/place URL, launch lifecycle
+launch_nicegui.py        Detached native launcher, code fingerprint, authenticated focus/restart, fallback
+views/                  Display, no calculations
+  nicegui_today.py       Today native controls and shared plan projections
+  nicegui_import.py      Data addon review and results through the shared import pipeline
   navigation.py         Four places, business questions, per-source place/section session keys
   common.py             snapshot loading, freshness display, gold columns
   crafting.py           Action Board and recipe explanation
@@ -76,6 +90,8 @@ views/                  Streamlit only; display, no calculations
   scan_changes.py       Saved addon comparison tables, scan choices and catalog filter
   scan_import.py        Data addon preview, new-scan selection and explicit reviewed import
 brownstone/             importable without Streamlit
+  import_review.py      Shared Import summaries, evidence rows, cleanup and result messages
+  navigation.py         Shared business-question wording
   config.py             market.toml (+ untracked market.local.toml overrides) → list[Source] (typed, validated)
   markets.py            market identity: MARKET_KEYS, derived market_id, validation, legacy upgrade
   sources.py            HTTP download
@@ -457,7 +473,7 @@ SPIKE-009 adds `brownstone/today_loading.py`: `load_today_characters` reads the 
 projection and retains a warning on failure; `load_today` selects the latest scoped snapshot, opens
 the database read-only and assembles the existing `build_today` arguments using the caller's clock.
 Both `views/today.py` and `views/nicegui_today.py` call these loaders. Framework-free Craft/Sell projections live in `views/today_rows.py` and are shared.
-`nicegui_app.py` is an optional loopback-only trial entry point; source and tab live in the URL,
+`nicegui_app.py` is the main loopback-only entry point; source and tab live in the URL,
 settings still use `today_settings`, and row dialogs project retained purchases through
 `craft_details`. SPIKE-009b adds adjustments, Queue and a Cards/Table preview through native
 NiceGUI components, Quasar props and Tailwind classes. `brownstone/today_session.py` owns the
@@ -465,11 +481,13 @@ shared context fingerprint and queue prose. NiceGUI keeps choices/refill, displa
 queue ticks in volatile `app.storage.tab`, separately per source; rebuilding only the plan preserves
 the selected tab. Controls reserve through the same `build_today` path and cards project retained
 `craft_details` purchases and Sell values. No pricing or version change.
-`launch_trial.py` starts a detached `nicegui_app.py --native` with a free loopback port. Readiness is
-acknowledged after the native loaded event, and a token-checked local focus endpoint reuses that
-window. Failed native startup falls back to a free-port browser app. The double-click trial launchers
-leave the existing Streamlit launchers alone. `--port` and `--data-dir` remain supported in browser mode.
-Start instructions and trial findings: `status.md` → *SPIKE-009 (trial)*.
+`launch_nicegui.py` starts a detached `nicegui_app.py --native` with a free loopback port.
+Readiness is acknowledged after the native loaded event. Token-checked local focus and stop
+endpoints allow reuse and safe restart when the shared `launch.py.code_fingerprint` plus the
+new entry/launcher bytes change. Browser startup schedules `BrowserIdle`, which checks all
+connected clients and stops after the UI-07 idle interval. `--port` and `--data-dir` support
+browser checks on copied data. Start instructions: `status.md` → *New app*.
+
 
 Rules and decisions live in `requirements.md` → Today. `read_today_evidence` returns
 `(observations, listings, metrics, vendor_sell_prices)` for one source and analytical snapshot.

@@ -30,19 +30,28 @@ On Windows, use `py -m venv .venv` and `.venv\Scripts\python.exe` in place of `.
 Double-click **Start Brownstone.command** (macOS) or **Start Brownstone.cmd** (Windows), or run:
 
 ```bash
-.venv/bin/python launch.py
+.venv/bin/python launch_nicegui.py
 ```
 
-The launcher opens http://127.0.0.1:8501. It reuses a running server only if the code hasn't changed since that server started; otherwise it restarts it.
+Brownstone opens in its own desktop window on a free port at `127.0.0.1`. A second launch
+focuses the current window or restarts the launcher's own app if the Python code changed.
+If the desktop window cannot open, the launcher explains the browser fallback in one line;
+that server stops after five minutes with no connected tabs. Closing the native window stops it.
 
-In the app:
+Choose an experience (WoW Forever first), then a source when there are several. The sidebar has
+**Today**, **Team**, **Market**, and **Data**. Today keeps the existing plan and settings;
+Team and Market show what is coming. **Data → Import** previews addon inputs without writing,
+then imports only after your explicit selection and **Import addon scan** click.
 
-1. Pick a **Data source** in the sidebar.
-2. Click **Refresh from TSM** to collect prices, or **Import addon scan** for an addon source. Nothing downloads or imports otherwise.
-3. Use the views:
-   - **Crafting:** the Action Board and recipe detail.
-   - **Browse market:** every observed item.
-   - **Opportunities:** a discount screen. It needs historical prices, so it doesn't work on Classic.
+The complete Streamlit app remains available as **Start Brownstone (old app).command** / **.cmd**,
+or `.venv/bin/python launch.py`, at `http://127.0.0.1:8501`. Use it for **Refresh from TSM** and
+pages that have not moved to the new app. Its pages and launcher behavior are unchanged.
+
+For a copied-data browser check:
+
+```bash
+.venv/bin/python nicegui_app.py --data-dir /path/to/copied-data --port 8081
+```
 
 All money is shown in gold: decimal in tables, `4g 50s 97c` in summaries.
 

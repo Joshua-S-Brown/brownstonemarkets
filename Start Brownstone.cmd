@@ -5,5 +5,5 @@ if not exist "%~dp0.venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
-"%~dp0.venv\Scripts\python.exe" "%~dp0launch.py"
+"%~dp0.venv\Scripts\python.exe" "%~dp0launch_nicegui.py"
 if errorlevel 1 pause
