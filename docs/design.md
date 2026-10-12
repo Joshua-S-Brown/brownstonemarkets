@@ -30,11 +30,11 @@ framework-free module both use, never a copy: `brownstone/` for calculations and
 (`today_loading`, `today_session`, `import_review`, `navigation`), `views/today_rows.py` for Today
 table projections and wording.
 
-**Main app (NiceGUI, UI-07).** `nicegui_app.py` is the entry; views are `views/nicegui_today.py`
-and `views/nicegui_import.py`. Place, source and Today tab live in the URL; the active Today tab
-survives place changes. Session state is per-tab `app.storage.tab`: Today choices, refill, display
-preferences and queue ticks per source, and one import review that a source/configuration change
-discards. ImportPage replaces the review with results; drop imports refresh their file evidence.
+**Main app (NiceGUI, UI-07).** `nicegui_app.py` is the entry; views are `views/nicegui_today.py`,
+`views/nicegui_team.py` and `views/nicegui_import.py`. Place, source and Today tab live in the URL;
+the active Today tab survives place changes. Session state is per-tab `app.storage.tab`: Today choices, refill, display
+preferences and queue ticks per source, Team character/window per source, and one import review
+that a source/configuration change discards. ImportPage replaces the review with results; drop imports refresh their file evidence.
 
 | Place | New app | Built by |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ widget cleanup from discarding another source's choice, and old page names migra
 app.py / launch.py              Streamlit entry and its launcher (code-fingerprint restart)
 nicegui_app.py / launch_nicegui.py   Main NiceGUI entry (loopback, URL state, lifecycle) and native launcher
 views/                          Display only
-  nicegui_today.py, nicegui_import.py   new app's Today and Data → Import
+  nicegui_today.py, nicegui_team.py, nicegui_import.py   Today, Team and Data → Import
   today_rows.py                 framework-free Today rows and wording shared by both apps
   navigation.py, common.py      Streamlit places/sections; context, freshness and gold columns
   today.py, crafting.py, characters.py, market.py, skillups.py, watchlist.py,
@@ -84,6 +84,7 @@ brownstone/                     importable without Streamlit or NiceGUI
                                 skill-up totals
   recipe_import.py, recipe_catalogs.py, selection_files.py   saved page → catalog TOML; catalog
                                 discovery, status and writes; in-place selection edits
+  progression.py                Team reach windows, current board values and skill-up cost estimates
   today*.py                     Today plan, confidence, data, settings, funds, eligibility, loading, session
   watchlist.py                  watchlist entries, evidence and hit text
   beta_report.py, beta_evidence.py, beta_markdown.py   beta evidence report
@@ -392,6 +393,33 @@ Rules live in `requirements.md` → Today. Calculations are framework-free; both
   choices and ticks. Queue tick identity is the plan without confidence labels (`stable_queue`).
   Streamlit keeps choices and ticks in session state separately from widget keys, which widget cleanup
   can drop; the Craft table's selection key fingerprints plan contents and provenance.
+
+## Team contracts (STORY-052)
+
+Rules live in CRAFT-11 and Characters page (`requirements.md`). `views/nicegui_team.py` renders
+`characters.build_characters` cards and progression underneath, with character/window in
+`app.storage.tab['team-' + source_id]`. It reads `professions.latest_data` through the shared
+`load_today_characters`, then `today_loading.load_today` for the newest full-market/source snapshot
+and read-only evidence; no new price SQL, writes, schema or Streamlit changes.
+
+`progression.build_progression(catalogs, observations, market, snapshot, character_data, character,
+*, now, window=25, max_age_hours=24, auction_cut=.05, listings=None, metrics=None)` returns sorted
+`professions`, per-catalog `unlisted` counts and board `freshness`. Profession rows retain rank/max,
+note, reachable `recipes` and nullable `best`. Recipe rows retain the shared Today status, learning
+fields, board profit/reason, confidence and `estimate` (`complete`, nullable integer `cost_copper`,
+`reasons`, per-point `steps`). Unknowns never become zeros. Empty price evidence cannot prevent the
+roster rendering; without a snapshot the page shows a scan-unavailable explanation.
+
+Attribution calls Today's exact-ID matcher; `today_characters.profession_rank` shares rank/max
+selection with Today's rank calculation. `recipe_status(..., planned_rank=point)` reuses the same
+status rule at each estimated future rank; only the rank check changes, never unknown evidence or
+profession presence. `action_board.rank_catalogs` supplies current per-craft
+profits. `evaluate_recipe` supplies cautious material costs even for intermediate recipes whose
+sale value is absent; `expected_crafts` uses exact rational yellow expectations, rounded to copper
+in `estimate_cost`. Training is charged once per catalog/recipe in the chosen steps. One `skillup_walk` per profession (current rank to the window or cap) is shared by every target, which stops on its prefix; listing ladders are built once per build. Confidence
+reuses Today's quote/sell projections and `today_confidence` for a single craft, without changing
+board profit or the progression estimate; insufficient quoted supply is Low. No batch funding,
+reservation, output sales credit or new learning/status rule.
 
 ## Beta evidence report (STORY-042)
 

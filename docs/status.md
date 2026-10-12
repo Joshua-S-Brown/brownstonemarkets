@@ -3,13 +3,13 @@
 Current implemented state, limitations and how to verify. History, including dated real-data checks
 and beta play sessions, lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-12 (first audit)._
+_Last updated 2026-10-12 (STORY-052)._
 
 ## Implemented
 
 Rules live in `requirements.md` and contracts in `design.md`; each bullet names where.
 
-- **Main app (NiceGUI, UI-07):** Today, Team and Market (both placeholders for STORY-052/055) and
+- **Main app (NiceGUI, UI-07):** Today, Team (roster and progression), Market (STORY-055 placeholder) and
   Data → Import. Start it from `Start Brownstone.command` / `.cmd` or `launch_nicegui.py`
   ([New app](#new-app)). Runs on the Mac only; the Windows PC plays and drops scan files.
 - **Old app (Streamlit, UI-01 to UI-06):** unchanged and reachable from
@@ -37,6 +37,10 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
 - **Today (`today_version` 5):** funded, supply-reserved plan with Buy/Sell/Below vendor/Queue,
   choices and refill, confidence labels, character eligibility and recorded funds (`requirements.md`
   → Today). The new app shows Craft as cards with Table one toggle away (STORY-054).
+- **Team (STORY-052, CRAFT-11):** shared character cards with Next step lines, a scoped character
+  choice and 5–100-point window, profession comparison and per-point material/training estimates.
+  Current Action Board profit, reused Today statuses/confidence, incomplete reasons and cap guidance;
+  yellow chances remain an unconfirmed Classic assumption. Streamlit Characters is unchanged.
 - **Other pages:** Characters (STORY-051), Watchlist (STORY-048), Skill-up demand (CRAFT-10), Scan
   changes (UI-06), Browse market and Below usual price (UI-02/03), version-scoped item names (DATA-02),
   market metrics (ADDON-10).
@@ -70,7 +74,7 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
   unshared, and the greedy plan is affordable, not a global optimum. Sales speed and volatility are
   not modeled.
 - Craft routes stay within each catalog (cross-profession routing is STORY-015b). Multi-yield recipes
-  aren't supported (`requirements.md` → *Not modeled*). Required skill levels are display-only.
+  aren't supported (`requirements.md` → *Not modeled*). Character-level tier requirements are not inferred.
 - On the Classic stand-in, the legacy skill API reports every skill line, so weapon skills and
   languages appear as lines; the Forever client reports professions only.
 - Mankrik has no upstream scan time, so its "stale" measures time since download. Classic historical
@@ -92,7 +96,7 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,132 passed and one explicit PowerShell-unavailable skip (1,133 run where PowerShell exists, as in Windows CI), offline, at 96.4% branch coverage; `ruff check .` and `mypy` report no issues. CI runs the same
+Expected on this Mac: 1,166 passed and one explicit PowerShell-unavailable skip (1,167 run where PowerShell exists, as in Windows CI), offline, at 96.46% coverage with branches enabled; `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the
 old app, or addon preview/import in Data. Real-data checks run on a copy of `data/` under ignored

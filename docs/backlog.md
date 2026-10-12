@@ -42,7 +42,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-052 Team: roster and progression planner (Brownstone; medium-large; in the new app)
+1. STORY-060 a polished new app (Brownstone; medium; display only; approved mockup)
 2. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
 3. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
 4. STORY-035 auction deposits (needs a beta check)
@@ -57,7 +57,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 
 **Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040 and STORY-044 (checklists in `addon/README.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 053, 054, 056, 057, 058 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 056, 057, 058 and SPIKE-009/009b.
 
 **Added 2026-10-12 (product owner, after SPIKE-009b: "instead of migrating all the pages… what do we really need?"):** NiceGUI becomes the app, but only for what running the business needs. Four places move, each a story: **Today** (STORY-058, then STORY-054's cards), **Team**: the employee roster, their skills and where to invest (STORY-052, then STORY-059), **Market**: an explorer for browsing materials, crafts and supply chains, plus what moved since the last scan, kept for now to judge its use (STORY-055), and **Data**: Import (STORY-058). Everything else (All recipes, Watchlist, Below usual price, Scan changes, Recipe catalogs) stays in the Streamlit app, which is kept, unchanged and reachable, but gets no new features. The new app is built for WoW Forever; Classic stays development test data with no features of its own (`requirements.md` → *Interface*). This supersedes the Streamlit placements in STORY-053 for future work.
 
@@ -67,6 +67,30 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 3. **Market: what are the market indicators, and how do they affect our strategy?** One brief that ties what moved to what it means for our plan (STORY-055).
 
 STORY-053 sets up the navigation first, so each later story has a home. New feature stories wait behind these four. Display and wiring only unless a story says otherwise: no change to calculations, ranking or `today_version`.
+
+### STORY-060 — A polished new app
+
+Added 2026-10-12 (product owner: "it doesn't feel like a polished web app… I can't even copy paste text in the app"). Brownstone only; display and layout in the new app. No calculation, ranking, storage, settings-file or `today_version` change; the Streamlit app is unchanged.
+
+As the owner of a gold-making business, I want each page to show the answer first and keep the evidence one click away, so that I can act without reading paragraphs of text.
+
+**Approved design:** the [Today mockup](https://claude.ai/artifact/5vdt7i8ftMgEgjz6GJJnHj) (2026-10-12, product owner: "feels amazing and so much easier to use"), built from the real Forever beta plan. Build to it; where this text and the mockup differ, ask. Every page must pass UI-08 in `requirements.md`.
+
+Acceptance:
+- **Copy and paste work** in the native window (pywebview defaults `text_select` to false; enable it through `app.native.window_args`), and the app is **always light**, readable whatever the macOS appearance.
+- **Header navigation:** Today, Team, Market, then a separated Data, as tabs in the top header (the left drawer goes; at phone width the tabs wrap). The selected source's short label, an ⓘ button and a gear button sit at the right. Place, source and Today tab stay in the URL.
+- **One subtle business question per place** under its title; section questions are dropped.
+- **Status chips** at the top of Today: who the plan is for (character and profession rank, or Our team), scan age with a coloured Stale badge, gold available with its origin, and *N recipes hidden · why?* (opens the ⓘ dialog). A stale or future-dated scan shows one plain-language banner ("Prices are from yesterday… scan again before you buy") with a link to how to scan.
+- **Summary tiles:** crafts, gold needed, expected profit at undercut, and the best craft with its profit.
+- **Tabs Plan, Shopping list, Sell, Queue, Extras** (renaming Craft and Below vendor; Table stays available inside Plan). Plan cards show output, crafts, profit large with per-craft profit and cost, status and confidence as badges, and one line of what to buy and where to sell; *What to buy and where to sell* opens materials (with purchased and needed units), intermediate steps and the sell price, competition and profit. Shopping list keeps *For*; Queue keeps ticks, totals and Copy as text.
+- **ⓘ How this plan was made** (dialog): scan ID and time, market and auction cut, Today rules version and price basis, gold origin, and every hidden-recipe reason with its count. This replaces the inline provenance, per-character gold notes, row-limit counts and hidden-reason text.
+- **Settings in a dialog** behind the gear button, with the same fields, validation and Save-only behaviour.
+- **Empty state:** with no crafts, one card that says why in a sentence (from the top hidden reasons and the minimum gain), with buttons to open settings and the ⓘ reasons.
+- **Data → Import and Team** follow the same pattern: status chips (latest import, files waiting, characters), one primary action, details on demand, and Team's progression summary first with recipe detail behind a click. The reach slider updates on release. Claude supplies their mockups before handoff.
+- **One shared theme module** (`views/nicegui_theme.py`): colours, spacing and helpers for chips, badges, banners, tiles, dialogs and empty states, used by every new-app page.
+- **Offline tests** (NiceGUI user fixture): every existing displayed value still appears (numbers, labels, stale states); the ⓘ dialog lists provenance and hidden reasons; the settings dialog saves and rejects as before; the empty state names its reasons; header navigation keeps URL state; text selection is enabled in native window arguments.
+- **Real-data check:** screenshots of Today (with an entered gold amount so crafts appear, and the saved settings for the empty state), Team and Data on a copy of `data/`, compared with the mockup.
+- **Docs:** `requirements.md` → Today → Presentation and UI-07 (header navigation, dialogs, light theme); `design.md` (theme module, page structure); `status.md`.
 
 ### STORY-055 — Market explorer
 
@@ -217,28 +241,6 @@ Acceptance:
 - **Seen in Brownstone:** on the addon import page, per character, the latest observed active-auction list: time (UTC), number of auctions, and how many the client marked sold, or *active auctions unknown*. No other views; interpretation is STORY-034.
 - **Offline tests** with Lua stubs for the modern and legacy APIs: a list with several auctions including a sold one, an unchanged list (no new entry), a changed list, an empty list, missing values, no request functions ever called, a rejected event, and the import page's latest row and unknown case.
 - **Checklist** in `addon/README.md`: open the Auctions tab before posting, post two small stacks, open it again, cancel one, open it again, and after a sale (before and after taking the mail) open it again. Note whether the list arrived without the tab, and save the recordings as fixtures before 21 October.
-
-### STORY-052 — Team: roster and progression planner
-
-Added 2026-10-09 (product owner: "which professions have the most profitable nearly achievable recipes that I need to push my level to get next"). Depends on STORY-043 (known/learnable status), STORY-047 (skill-up colours) and STORY-050 (how recipes are learned).
-
-As a gold maker, I want to see, for each of my characters and professions, the profitable recipes just beyond my current skill and what it costs to reach them, so that I can decide which profession to level next.
-
-**Revised 2026-10-12:** built in the new app's Team place (after STORY-058). First bring the Characters page over (STORY-051's cards and rules, `requirements.md` → *Characters page*) as the roster, reusing `brownstone/characters.py`; the Streamlit Characters page is not changed. Then the progression below. *Should we add a character?* is STORY-059, not this story. The *AppTest* in the tests below means the NiceGUI user fixture.
-
-Acceptance (refined 2026-10-10 for handoff, after STORY-043; placed on the Team page 2026-10-11):
-- **On the new app's Team page**, under the characters: each character card gains a *Next step* line per profession (best reachable recipe, points needed, estimated cost, or *train the next tier first*), and a Progression section shows the detail below. Choose a character of the selected source and full market (the same choices as Today's character select, STORY-043: `today_characters.available_characters` over `professions.latest_data`); default the first. Calculation in a new `brownstone/progression.py` (no Streamlit or NiceGUI, no downloads), display in a new `views/nicegui_team.py`; `nicegui_app.py` replaces the Team placeholder with it, and the character choice and slider live in the page's per-tab state, per source.
-- **Professions come from recipe lists only:** a catalog recipe belongs to one of this character's professions only when its `recipe_id` is in that profession's latest list (STORY-043's matching rule; never by name or title). Each profession uses STORY-043's rank (list rank, or a newer readable bags rank for the same skill ID) and max rank from the same evidence. Catalog recipes in no list are counted per catalog as *not in a recipe list: open that profession's window*; a skill line with no list shows *recipes unknown*.
-- **Statuses reuse STORY-043** (`today_characters.recipe_status`): never a second status rule.
-- **Within reach:** recipes not Known whose `required_skill` is above the rank and at most **25** points above it (slider, 5 to 100). Each shows required skill, points needed, profit per craft, its confidence label (STORY-046) and how it's learned (CRAFT-08 labels with training cost through `money.py`, or *cost unknown*). Recipes without trainer code 6 are shown marked *needs pattern or other source*, not hidden; Unknown statuses are shown marked, never treated as learnable.
-- **Profit per craft** from the newest snapshot of the selected source and full market, from the Action Board's existing per-craft rows (`action_board.rank_catalogs`, the same costing and cautious sale price Today ranks on; no second pricing path). A recipe the board doesn't value (an intermediate, a missing price, an invalid row) shows its board reason; missing prices are never free and never zero profit.
-- **Cost to get there**, labelled once as an estimate: for each point from the current rank up to the recipe's `required_skill`, the cheapest catalog craft of that profession that gives a skill-up at that rank by `skillup_colors` (STORY-047) and that the character can use: Known, or Train now / trainer-learnable (code 6) once its `required_skill` is reached, adding its training cost the first time it's used. Cost per craft is its material cost by CRAFT-03's cheapest route from the same snapshot (intermediates included); selling the results is not counted. Expected crafts per point: **1** while orange; while yellow, the community Classic chance (grey − rank) / (grey − yellow), recorded in the new CRAFT rule as an unconfirmed assumption; green and grey give none. A point with no qualifying craft, a missing material price, a missing colour or an unknown training cost marks the estimate **incomplete** and shows which, never free. Crossing the profession's max rank stops at the cap with *train the next tier first*.
-- **Compare professions:** one summary row per profession: rank/max, best reachable recipe (highest profit per craft in the window), its points needed, estimated cost to reach it, and its profit per craft. Sorted by profit per craft, then cost; incomplete estimates sort after complete ones at the same profit and are shown, never dropped.
-- **At cap:** a profession at max rank shows *train the next tier first* and still lists what lies beyond.
-- **Honest labels:** current-scan profit, not a forecast; sales speed and demand unknown; beta prices; skill-up chances on yellow are estimates.
-- **Offline tests:** window boundaries (exactly +25 in, +26 out, slider), a pattern recipe marked, a Known recipe excluded, an Unknown recipe marked, a recipe in no list counted not attributed, orange and yellow cost steps, a gap with no skill-up craft (incomplete), a trainer recipe used for skill-ups adding its cost once, a missing material price (incomplete), an intermediate without board profit, comparison sort with ties and incomplete rows, a profession at cap, scoping (another source's character never appears), and a NiceGUI user-fixture test of the page (roster cards, Next step lines, character choice, slider, summary rows).
-- **Real-data check:** on the Forever beta source, the summary rows for Basilly (Tailoring 8/75) and Keenagen (Mining 3), and the best reachable recipe per profession with its cost estimate.
-- **Docs:** a new CRAFT rule in `requirements.md` (reach window, profession attribution, cost estimate and its yellow assumption), `design.md`, `status.md`.
 
 ### STORY-044 — Brownstone panel from a minimap button
 

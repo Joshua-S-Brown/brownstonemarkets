@@ -14,6 +14,7 @@ from brownstone import pipeline, recipe_catalogs
 from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences
 from brownstone.today_loading import load_today_characters
 from views.nicegui_import import render as render_import
+from views.nicegui_team import render as render_team
 from views.nicegui_today import render
 
 ROOT = Path(__file__).resolve().parent
@@ -65,9 +66,11 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
         ui.label(QUESTIONS['Import'])
         render_import(chosen)
         return
-    if place in ('Team', 'Market'):
-        ui.label('Roster, skills and where to invest are coming in STORY-052.' if place == 'Team'
-                 else 'Materials, crafts, supply chains and scan changes are coming in STORY-055.')
+    if place == 'Team':
+        render_team(chosen, read_catalogs())
+        return
+    if place == 'Market':
+        ui.label('Materials, crafts, supply chains and scan changes are coming in STORY-055.')
         return
     ui.label(QUESTIONS['Today plan'])
     character_data, warning = load_today_characters(chosen)

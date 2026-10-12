@@ -71,21 +71,26 @@ def _skill_id(surface: dict) -> int | None:
     return surface.get("skill_id")
 
 
-def _rank(state: dict, record: dict) -> int | None:
+def profession_rank(state: dict, record: dict) -> tuple[int | None, int | None]:
+    """Rank and cap from the list, or newer readable bags for the same skill ID."""
     surface = record["known_recipes"]
-    rank = surface.get("rank")
     bags = state.get("bags", {})
+    result = surface.get("rank"), surface.get("max_rank")
     skill_id = _skill_id(surface)
     if skill_id is not None and _order(bags) > _order(record):
         for api in (bags.get("skills") or {}).values():
             for skill in _list(api.get("rows"), "skill rows"):
                 if skill.get("skill_id") == skill_id and type(skill.get("rank")) is int:
-                    rank = skill["rank"]
-    return rank
+                    result = skill["rank"], skill.get("max_rank")
+    return result
 
 
-def recipe_status(recipe: dict, state: dict) -> dict:
-    """Resolve one status from exact recipe IDs and complete skill-ID evidence."""
+def _rank(state: dict, record: dict) -> int | None:
+    return profession_rank(state, record)[0]
+
+
+def recipe_status(recipe: dict, state: dict, *, planned_rank: int | None = None) -> dict:
+    """Resolve exact-ID status; planned_rank changes only the rank check for progression steps."""
     record, row = _match(state, recipe["recipe_id"])
     # A window list newer than the skills snapshot (profession learned since) outranks its absence.
     if _lacks_profession(recipe, state) and (not row or _order(state.get("bags", {})) > _order(record)):
@@ -97,7 +102,7 @@ def recipe_status(recipe: dict, state: dict) -> dict:
     reason = _unknown_reason(surface, row, recipe)
     if reason:
         return {"craft_status": "Unknown", "character_reason": reason, "training_cost_copper": None}
-    rank = _rank(state, record)
+    rank = _rank(state, record) if planned_rank is None else planned_rank
     if rank is not None and rank < recipe["required_skill"]:
         return {"craft_status": "Not yet", "character_reason": "rank below required skill",
                 "training_cost_copper": None}

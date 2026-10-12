@@ -531,6 +531,36 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Market context:** optional, read-only, newest imported snapshot of the selected source and full market. ADDON-10 base/legacy metrics supply units listed and lowest unit buyout; TSM shows its price and units *not available for this source*. No snapshot omits columns with an explanation. Scan time (or labeled collection time) and DATA-05/Today's freshness policy label stale/future evidence without hiding it. Missing/nonpositive prices stay missing. Context changes neither units nor order.
   - **Presentation:** Totals lead, band sections are collapsed, rule/honesty text is one caption.
 
+- **CRAFT-11 Team progression (STORY-052):** in the new app's Team place, roster cards use the
+  Characters page rules and gain a Next step per profession. Progression defaults to the first scoped
+  Today character and a 25-point reach window (integer slider 5–100), remembered per tab and source.
+  - **Attribution and eligibility:** a catalog recipe belongs only to the latest profession list
+    containing its recipe ID, using Today's matching, status and rank rule. Rank/max come from the
+    same list or newer readable bags row for the same skill ID. Unlisted recipes are counted per
+    catalog with *not in a recipe list: open that profession's window*; skill lines without a list say
+    *recipes unknown*. No name/title matching. Known recipes are excluded from the reach window;
+    required skill must be above rank and at most the window above it. Unknown remains marked;
+    recipes without trainer code 6 remain visible as *needs pattern or other source*.
+  - **Current profit:** newest snapshot of the selected source and full market, using the Action
+    Board's per-craft rows (CRAFT-03/04/05). Unvalued recipes retain the board reason; intermediates
+    say they are not ranked. Missing profit stays unavailable. Show CRAFT-08 learning labels and
+    training cost, or *cost unknown*, and Today's confidence labels.
+  - **Estimated cost to reach:** at each rank below required skill, choose the cheapest catalog craft
+    attributed to that profession that gives a skill-up and is Known, or trainer-learnable through
+    Today's status rule once its required skill is reached. Charge its training cost only on first
+    use. Materials use CRAFT-03's cheapest route within the craft's catalog, including intermediates;
+    no revenue credit. Orange takes one expected craft per point. Yellow assumes the community
+    Classic chance `(grey - rank) / (grey - yellow)`: **unconfirmed on Forever**, an estimate, not
+    established game evidence. Green/grey give no qualifying points. Expected material copper is
+    rounded up per point; training stays integer copper. A gap, missing material price/colour or
+    unknown required training cost makes the estimate incomplete with the reason, never free.
+    Stop at the profession cap; crossing it says *train the next tier first*. At cap, still list
+    recipes in the window beyond it.
+  - **Comparison:** one row per profession, rank/max, highest per-craft profit in the window,
+    points needed, cost estimate and profit. Sort profit descending, then complete estimates before
+    incomplete at ties, then cost ascending; retain incomplete rows. Label once: current-scan profit
+    is not a forecast, sales speed/demand unknown, beta prices and estimated yellow skill-up chances.
+
 ### Watchlist (STORY-048)
 
 - **Entries and storage:** one base-item entry per positive item ID, with an optional note and at
@@ -786,6 +816,15 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
 - **UI-06 Scan changes:** compare two distinct complete, non-partial, priced addon scans within the sidebar's selected source and full market identity (DATA-03/DATA-08). Choices come from scan IDs, never import manifests, newest finish first; the newest two are the default. Display both finish times in UTC, their gap and freshness (DATA-05); only the later scan carries the stale warning, since the earlier one is deliberately historical. Show per-unit minimum buyout and market value, listing counts and units for each scan, and later-minus-earlier changes. An item is listed if any listing exists, including one without a buyout. Absent items show **not listed**, with blank changes; listed items without usable prices show **no buyout** or **no market value**, never free. New and vanished items have separate lists. Shared items are changed if any price or supply metric differs. The catalog filter uses only item IDs from catalogs compatible with the selected source (UI-04). A non-addon source or fewer than two eligible scans explains why no comparison is available.
 - **UI-05:** the launcher reuses a running server only if its code is current. It restarts its own outdated server and never stops a server it did not start.
 - **UI-07 The new app (decided 2026-10-12; built from STORY-058):** Brownstone's main app is the NiceGUI app (`nicegui_app.py`), bound to `127.0.0.1` only and opened in its own desktop window by `Start Brownstone`, or in the browser with a one-line explanation if the window can't open. Its places are **Today**, **Team**, **Market** and **Data** (Import), in that order, Data visually separate. The browser fallback stops after five minutes with no connected tabs; native mode stops when its window closes. `launch_nicegui.py` fingerprints the Python code and restarts only its own authenticated app on a code change. Place, selected source and Today tab survive browser refresh through the URL. UI-01's source resolution (Forever first, never merged), collection-only-on-click and provenance rules, and UI-05's launcher rule, apply to it as well. The Streamlit app (`Start Brownstone (old app)`) keeps every existing page under UI-01 to UI-06 and gets no new features; All recipes, Watchlist, Below usual price, Scan changes and Recipe catalogs are not rebuilt in the new app. New features are built for WoW Forever; Classic and Retail sources stay selectable for development and regression but get no features of their own.
+
+- **UI-08 Design checklist (decided 2026-10-12, product owner):** every new-app page passes these before review, checked on screenshots, not only code. STORY-060 brings the existing pages into line.
+  1. **Answer first:** the top of the page answers its place's question; one subtle business-question subtitle per place.
+  2. **One primary action** per view, visually distinct.
+  3. **Status as badges and chips,** not sentences: freshness, confidence, eligibility and stale state are coloured, labelled and consistent everywhere.
+  4. **Evidence on demand:** provenance, rule versions, IDs and hidden-reason counts sit behind an ⓘ button or an expandable detail, never inline; nothing is removed.
+  5. **Helpful empty and error states:** say what happened, why, and the next action, in plain language.
+  6. **Consistent components** from the shared theme module; no page invents its own look.
+  7. **Readable:** always-light theme, text contrast at least 4.5:1, controls at least 44 px, selectable text, and layouts that wrap at narrow widths.
 
 ### Operations
 - **OPS-01:** tests are offline and run in CI on macOS and Windows from the lock file, including the UI test, alongside Ruff and mypy. No market data is stored in Git.

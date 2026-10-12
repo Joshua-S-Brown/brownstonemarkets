@@ -34,9 +34,9 @@ async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, m
     assert [b.text for b in buttons] == ['Today', 'Team', 'Market', 'Data']
     assert buttons[-2].id < next(iter(user.find(ui.separator).elements)).id < buttons[-1].id
     await user.should_see(QUESTIONS['Team'])
-    await user.should_see('STORY-052')
+    await user.should_see('No characters imported for this source')
     await user.open('/?game=classic&source=test&place=Team&tab=Buy')
-    await user.should_see('STORY-052')
+    await user.should_see('No characters imported for this source')
     user.find(marker='place-Market').click()
     await user.should_see(QUESTIONS['Market'])
     await user.should_see('STORY-055')
@@ -45,7 +45,7 @@ async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, m
     assert next(iter(user.find(ui.tabs).elements)).value == 'Buy'
     user.find('Queue').click()
     user.find(marker='place-Team').click()
-    await user.should_see('STORY-052')
+    await user.should_see('No characters imported for this source')
     user.find(marker='place-Today').click()
     await user.should_see('Save Today settings')
     assert next(iter(user.find(ui.tabs).elements)).value == 'Queue'
