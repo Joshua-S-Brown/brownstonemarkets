@@ -7,6 +7,7 @@ from nicegui import ui
 from test_today import catalog
 from test_today_view import app, listing_evidence_app
 
+from brownstone.money import format_money
 from brownstone.today import build_today, craft_details
 from brownstone.today_loading import load_today
 from brownstone.today_settings import load_settings
@@ -188,6 +189,7 @@ async def test_team_unknown_switch_counts_and_no_evidence_notice(user, tmp_path,
     monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: data)
     _, _, path = app(tmp_path, monkeypatch)
     await user.open('/')
+    await user.should_see('Save Today settings')
     choices = next(e for e in user.find(ui.select).elements if e.label == 'Character')
     assert choices.options['0'] == 'Our team'
     await user.should_see('unknown for every character: 1')
@@ -210,6 +212,7 @@ async def test_team_only_plans_capable_names(user, tmp_path, monkeypatch):
     monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: data)
     app(tmp_path, monkeypatch)
     await user.open('/')
+    await user.should_see('Save Today settings')
     craft = next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows[0]
     assert craft['Who can make it'] == 'Basilly'
 
@@ -237,6 +240,153 @@ async def test_mixed_team_keeps_unknown_column_after_known_row(user, tmp_path, m
         {'name': c['catalog_id'], 'catalog': c} for c in (first, unknown)])
     save_settings(path, replace(load_settings(path), include_unknown=True))
     await user.open('/')
+    await user.should_see('Save Today settings')
     craft = next(t for t in user.find(ui.table).elements if 'Craft' in t._markers)
     assert any(r.get('Can make') == 'Unknown' for r in craft.rows)
     assert any(c['name'] == 'Can make' for c in craft.columns)
+
+
+async def test_adjustments_match_planner_queue_ticks_and_reset(user, tmp_path, monkeypatch):
+    _, source = listing_evidence_app(tmp_path, monkeypatch, -1)
+    path = source['data_dir'] / f"today-settings.{source['source_id']}.local.json"
+    await user.open('/')
+    await user.should_see('Adjust crafts')
+    from brownstone.crafting import parse_recipe_catalog
+    catalogs = [{**parse_recipe_catalog(catalog()), 'catalog_id': 'fixture'}]
+    _, arguments = load_today(source, catalogs, load_settings(path), {}, datetime.now(UTC))
+    default = build_today(**arguments)
+    row = default['craft'][0]
+    user.find('Queue').click()
+    queue_tick = next(e for e in user.find(ui.checkbox).elements if e.text.startswith('Buy at'))
+    tick_text = queue_tick.text
+    user.find(kind=ui.checkbox, content=tick_text).click()
+    user.find('Hide Low confidence').click()
+    await user.should_see('Hidden Low confidence')
+    assert next(e for e in user.find(ui.checkbox).elements if e.text == tick_text).value
+    assert next(iter(user.find(ui.tabs).elements)).value == 'Queue'
+    user.find('Hide Low confidence').click()
+    batch = user.find(kind=ui.number, content=f"Batch for {row['output_name']}")
+    box = next(iter(batch.elements))
+    box.set_value(1)
+    # Typing alone doesn't rebuild (it would replace the box mid-typing); blur commits.
+    assert next(iter(batch.elements)) is box
+    batch.trigger('blur')
+    choices = [{'catalog_id': row['catalog_id'], 'recipe_id': row['recipe_id'], 'batch_size': 1}]
+    expected = build_today(**arguments, choices=choices)
+    await user.should_see(f"Whole shopping list: {format_money(expected['shopping_total_copper'])}")
+    buy = next(t for t in user.find(ui.table).elements if 'Buy' in t._markers)
+    names = {i: item['name'] for c in catalogs for i, item in c['items_by_id'].items()}
+    assert buy.rows == [{**r, 'id': i} for i, r in enumerate(buy_rows(expected, names))]
+    assert not any(e.value for e in user.find(ui.checkbox).elements if e.text.startswith('Buy at'))
+    user.find('Refill freed gold').click()
+    user.find(kind=ui.checkbox, content=row['output_name']).click()
+    await user.should_see('Whole shopping list: 0c')
+    assert not next(t for t in user.find(ui.table).elements if 'Buy' in t._markers).rows
+    user.find('Refill freed gold').click()
+    await user.should_see('Whole shopping list: 0c')
+    # Settings change resets adjustments and retains the active tab.
+    user.find('Save Today settings').click()
+    # Same settings don't reset; a changed cap does.
+    user.find(kind=ui.number, content='Most crafts per item').elements.pop().set_value(2)
+    user.find('Save Today settings').click()
+    await user.should_see('Previous choices were dropped, not resized')
+    assert next(iter(user.find(ui.tabs).elements)).value == 'Queue'
+    assert next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows
+    # The reset note shows only on the rebuild that reset.
+    user.find('Hide Low confidence').click()
+    await user.should_not_see('Previous choices were dropped, not resized')
+
+
+async def test_cards_reserved_cost_unknown_and_stale(user, tmp_path, monkeypatch):
+    app(tmp_path, monkeypatch, stale=True)
+    await user.open('/')
+    await user.should_see('Adjust crafts')
+    user.find(ui.toggle).elements.pop().set_value('Cards')
+    cards = user.find(marker='craft-card').elements
+    assert cards and all(c._props['materials_copper'] == c._props['cost_copper'] for c in cards)
+    await user.should_see('Can make: Unknown')
+    await user.should_see('stale — inspect only')
+    await user.should_see('What to buy and where to sell')
+
+
+async def test_dropped_choice_and_invalid_batch(user, tmp_path, monkeypatch):
+    app(tmp_path, monkeypatch)
+    await user.open('/')
+    await user.should_see('Adjust crafts')
+    from nicegui import app as nicegui_app
+
+    from views.nicegui_today import batch_change
+    with user.client:
+        session = nicegui_app.storage.tab['today-plan-test']
+    row = session['rows'][0]
+    session['choices'] = [{'catalog_id': row['catalog_id'], 'recipe_id': row['recipe_id'], 'batch_size': 10000}]
+    user.find('Refill freed gold').click()
+    await user.should_see('Choice is no longer feasible; dropped, not resized.')
+    assert session['choices'][0]['batch_size'] is None
+    with user.client:
+        calls = []
+        batch_change(1.5, ('fixture', 30), 5, lambda *args, **kwargs: calls.append(args))
+        batch_change(None, ('fixture', 30), 5, lambda *args, **kwargs: calls.append(args))
+    assert not calls
+
+
+async def test_refill_next_output_cards_and_source_isolation(user, tmp_path, monkeypatch):
+    from test_today import output_catalog
+
+    from brownstone.pipeline import run
+    _, source, _ = app(tmp_path, monkeypatch)
+    catalogs = [output_catalog(i, f'route-{i}') for i in range(3, 14)]
+    for c in catalogs:
+        output = c['recipes_by_id'][30]['output_item_id']
+        c['recipes'][0]['output_item_id'] = output
+        c['items_by_id'][output]['name'] = f'Fixture {output}'
+    csv = tmp_path / 'many.csv'
+    csv.write_text('itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n1,Material,20,10,0,0,\n' +
+                   ''.join(f'{i},Output {i},2000,2000,0,0,\n' for i in range(3, 14)))
+    run(source, csv)
+    monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs', lambda *args: [
+        {'name': c['catalog_id'], 'catalog': c} for c in catalogs])
+    await user.open('/')
+    await user.should_see('Adjust crafts')
+    crafts = next(t for t in user.find(ui.table).elements if 'Craft' in t._markers)
+    assert len(crafts.rows) == 10
+    original = [r['Item'] for r in crafts.rows]
+    checkbox = next(e for e in user.find(ui.checkbox).elements if e.text == original[0])
+    user.find(kind=ui.checkbox, content=checkbox.text).click()
+    crafts = next(t for t in user.find(ui.table).elements if 'Craft' in t._markers)
+    assert len(crafts.rows) == 10 and original[0] not in [r['Item'] for r in crafts.rows]
+    assert set(r['Item'] for r in crafts.rows) - set(original)
+    # Refill rows are ticked and become explicit when refill is turned off.
+    user.find('Refill freed gold').click()
+    assert len(next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows) == 10
+    with user.client:
+        user.find(ui.toggle).elements.pop().set_value('Cards')
+    assert len(user.find(marker='craft-card').elements) == 10
+    assert all(c._props['cost_copper'] == c._props['materials_copper']
+               for c in user.find(marker='craft-card').elements)
+    # Changing source in this browser tab cannot borrow choices or evidence.
+    other = source | {'source_id': 'other'}
+    monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [source, other])
+    await user.open('/?game=classic&source=other')
+    await user.should_see('Refresh or import a scan')
+    with user.client:
+        from nicegui import app as nicegui_app
+        assert not nicegui_app.storage.tab['today-plan-other'].get('rows')
+
+    await user.open('/?game=classic&source=test')
+    await user.should_see('Adjust crafts')
+    toggle = user.find(ui.toggle).elements.pop()
+    assert toggle.value == 'Cards'
+    with user.client:
+        toggle.set_value('Table')
+    assert original[0] not in [r['Item'] for r in
+                               next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows]
+    assert not next(e for e in user.find(ui.switch).elements if e.text == 'Refill freed gold').value
+    # A second browser tab gets its own untouched default plan.
+    from uuid import uuid4
+    user.tab_id = str(uuid4())
+    await user.open('/?game=classic&source=test')
+    await user.should_see('Adjust crafts')
+    assert original[0] in [r['Item'] for r in
+                           next(t for t in user.find(ui.table).elements if 'Craft' in t._markers).rows]
+    assert next(e for e in user.find(ui.switch).elements if e.text == 'Refill freed gold').value

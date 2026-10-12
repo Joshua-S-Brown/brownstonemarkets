@@ -14,7 +14,7 @@ dependencies = ["duckdb>=1.2,<2", "polars>=1.20,<2", "pyarrow>=19,<26", "request
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "pytest-cov>=5,<8", "ruff>=0.6,<1", "mypy>=1.10,<2", "lupa==2.6", "pytest-asyncio>=1,<2", "httpx>=0.28,<1"]
 dashboard = ["streamlit>=1.40,<2"]
-nicegui = ["nicegui==3.18.0"]
+nicegui = ["nicegui==3.18.0", "pywebview==6.2.1"]
 
 [project.scripts]
 brownstone = "brownstone.cli:main"
@@ -48,7 +48,7 @@ max-complexity = 10
 exclude = ["work", "data", "**/node_modules", "**/__pycache__", "**/.*"]
 
 [tool.coverage.run]
-source = ["brownstone", "views", "app", "launch", "nicegui_app"]
+source = ["brownstone", "views", "app", "launch", "launch_trial", "nicegui_app"]
 branch = true
 
 [tool.coverage.report]
@@ -59,6 +59,6 @@ fail_under = 88
 
 [tool.mypy]
 python_version = "3.12"  # The tested version; installed stubs (numpy) need 3.12 syntax.
-files = ["brownstone", "launch.py", "nicegui_app.py", "views/nicegui_today.py", "views/today_rows.py"]
+files = ["brownstone", "launch.py", "launch_trial.py", "nicegui_app.py", "views/nicegui_today.py", "views/today_rows.py"]
 ignore_missing_imports = true
 warn_unused_ignores = true

@@ -1,10 +1,12 @@
 """Optional loopback-only Today trial. Run: python nicegui_app.py."""
 import argparse
+import json
 import os
+import secrets
 from pathlib import Path
 from urllib.parse import urlencode
 
-from nicegui import ui
+from nicegui import app, ui
 
 from brownstone import config as configuration
 from brownstone import recipe_catalogs
@@ -28,7 +30,7 @@ def read_catalogs():
 
 
 @ui.page('/')
-def today_page(game: str = '', source: str = '', tab: str = 'Craft'):
+async def today_page(game: str = '', source: str = '', tab: str = 'Craft'):
     ui.colors(primary='#594235', secondary='#8b7355', accent='#42766b')
     with ui.header():
         ui.label('Brownstone Markets · Today')
@@ -67,14 +69,18 @@ def today_page(game: str = '', source: str = '', tab: str = 'Craft'):
     character_data, warning = load_today_characters(chosen)
     if warning:
         ui.label(warning)
+    await ui.context.client.connected()
     render(chosen, read_catalogs(), character_data, tab)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8081)
     parser.add_argument('--data-dir', type=Path, help='Use a copied data directory for the trial')
-    args = parser.parse_args([] if os.environ.get('NICEGUI_USER_SIMULATION') else None)
+    parser.add_argument('--native', action='store_true', help='Open a desktop window on a free loopback port')
+    parser.add_argument('--ready-file', type=Path, help=argparse.SUPPRESS)
+    parser.add_argument('--focus-token', default='', help=argparse.SUPPRESS)
+    args = parser.parse_args([] if os.environ.get('NICEGUI_USER_SIMULATION') else argv)
     if args.data_dir:
         original = configuration.read_sources
 
@@ -82,8 +88,35 @@ def main():
             return [{**s, 'data_dir': args.data_dir.resolve()} for s in original(*arguments)]
 
         configuration.read_sources = sources
-    ui.run(host='127.0.0.1', port=args.port, reload=False, show=False,
+    configure_launch(args)
+    ui.run(host='127.0.0.1', port=None if args.native else args.port, native=args.native,
+           window_size=(1280, 900), reload=False, show=False,
            title='Brownstone Markets', show_welcome_message=False)
+
+
+def configure_launch(args):
+    def ready():
+        if args.ready_file:
+            # Write then rename, so the launcher polling for this file never reads it half-written.
+            partial = args.ready_file.with_suffix('.tmp')
+            partial.write_text(json.dumps({'url': f"http://127.0.0.1:{os.environ['NICEGUI_PORT']}",
+                                           'token': args.focus_token, 'native': args.native}), encoding='utf-8')
+            partial.replace(args.ready_file)
+
+    if args.native:
+        app.native.on('loaded', ready)
+    else:
+        app.on_startup(ready)
+
+    @app.post('/_trial/focus')
+    def focus(token: str = ''):
+        if not args.focus_token or not secrets.compare_digest(token, args.focus_token):
+            return {'focused': False}
+        if app.native.main_window is not None:
+            app.native.main_window.restore()
+            app.native.main_window.show()
+            return {'focused': True}
+        return {'focused': False}
 
 
 if __name__ == '__main__':

@@ -628,23 +628,44 @@ under `work/story048/`. This checks imported evidence, not current in-game avail
 
 ### SPIKE-009 (trial)
 
-Today also runs in NiceGUI 3.18.0 beside Streamlit; the product owner's migration judgement is pending.
-After installing `requirements.lock.txt`, run `.venv/bin/python nicegui_app.py` (Windows:
-`.venv\Scripts\python.exe nicegui_app.py`) and open `http://127.0.0.1:8081`. `--port` changes the
-port; `--data-dir PATH` selects a copied data folder and its preferences. The host always stays
-loopback. `app.py`, `launch.py` and rules are unchanged. Both presentations use the shared loader
-in `design.md` → *Today contracts*. Queue/adjustments remain in Streamlit.
+Today runs in NiceGUI 3.18.0 beside Streamlit; SPIKE-009b's interactive trial is implemented,
+pending owner review. Install `requirements.lock.txt`, then double-click
+`Start Brownstone (trial).command` on macOS or `Start Brownstone (trial).cmd` on Windows.
+The launcher opens a pywebview native window on a free loopback port, reuses it on a second
+launch, and falls back to the browser with a one-line explanation if native startup fails.
+Closing the native window uses NiceGUI's server shutdown. No terminal must remain running.
+In the browser fallback the server keeps running after the tab closes (there is no window to
+close); a later double-click reopens it, and a restart of the computer stops it.
+Browser development still uses `.venv/bin/python nicegui_app.py` (Windows:
+`.venv\Scripts\python.exe nicegui_app.py`), default `http://127.0.0.1:8081`; `--port` and
+`--data-dir PATH` remain available. `launch_trial.py --data-dir PATH` checks native mode on a copy.
+`launch.py`, the existing launchers and Today's calculation/version rules are unchanged.
 
-Native tables sort/filter, tabs retain source/tab in the URL, and row dialogs show reserved materials.
-The default Craft columns are compact; the evidence switch reveals every field. The copied Forever
-beta check with Basilly matches all four lists: 10 crafts (5 more), 10 Buy rows (8 more), 10 Sell rows,
-no Below vendor hits, and 24g 84s 38c shopping. Local screenshots/check output are ignored under
-`work/spike009-screenshots/` and `work/spike009-realcheck.json`.
+Adjust crafts holds bounded batch inputs (applied on Enter or leaving the box) and ticks; Refill freed gold and Hide Low confidence
+sit together above the plan. The expansion starts collapsed to keep the plan on the first screen.
+Table/Cards and the active tab survive adjustments. Cards project reserved materials, intermediate
+steps and Sell prices. Queue uses the shared route checklist and totals, with per-tab/source ticks
+that reset with the plan. Shared context/prose and volatile state contracts: `design.md` → *Today contracts*.
+Offline simulation: `tests/ui_trial/test_nicegui_today.py`; launcher/fallback checks without windows:
+`tests/test_launch_trial.py`. Pywebview/platform dependencies are pinned; CI installs the lock and
+runs pip check and the full suite on macOS and Windows.
 
-Callbacks/dialogs simplify local updates. Async fixture setup and wide evidence tables need more care;
-NiceGUI's user fixture is local to `tests/ui_trial/`, with browser checks for layout/client sorting.
-Eight trial tests take about 8 seconds; three warm synthetic renders have medians of 0.168s in
-NiceGUI and 0.182s in AppTest (a small fixture, not a general benchmark). Remaining nine sections plus
-Queue/adjustments are roughly 10–15 development days including tests. Windows execution awaits CI
-(the lock excludes uvloop there). Reload after importing elsewhere or leaving a plan open a long time;
-upgrade older databases through the existing app first. This trial reads them without migrations.
+The copied Forever beta check with Basilly shows 2s 55c recorded gold, captured
+2026-10-11 10:57 UTC. The saved 10s minimum produces no crafts. In the copy only, reducing the
+minimum to 1c and percentage to 0 gives Linen Bag x2 (1s 95c shopping); shrinking to x1 costs
+1s 65c. Unticking the bag refills with Linen Cloak x5; shrinking the cloak to x3 matches Streamlit:
+1s 65c shopping, 1s 20c batch profit, 1s 17c profit at the 99c undercut. Screenshots and check
+outputs are ignored under `work/spike009b-screenshots/` and `work/spike009b-compare.txt`.
+The native loaded event and launcher reuse were exercised on macOS, including a Finder double-click.
+A final native startup took 3.19s; its second launch focused the existing window in 0.75s.
+Direct native-window visual/close verification remains limited by the computer tool's app access;
+Windows window behavior awaits the owner's second machine.
+
+Callbacks keep controls/source state intact while replacing the plan container, avoiding Streamlit's
+whole-page rerun. NiceGUI needs explicit per-tab storage, client connection timing, and closures for
+row callbacks; the user fixture does not simulate Toggle clicks, so its value API is used there and
+real browser clicks verify the toggle. Cards need no new calculation or hand-written CSS. The trial
+adds roughly 170 view lines plus a small shared session helper and launcher. Remaining nine sections
+are roughly 9–14 development days including tests and desktop packaging polish; this is an estimate,
+not a migration decision. Native startup acknowledges the loaded window, not just a listening port;
+manual close and Windows timing remain to be judged. Reload after importing elsewhere if idle.

@@ -1,6 +1,4 @@
 """Today settings and evidence tables; calculations live in brownstone.today."""
-import hashlib
-import json
 from datetime import UTC, datetime
 
 import streamlit as st
@@ -10,6 +8,9 @@ from brownstone.today import build_today, craft_details
 from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_funds import resolve_funds
 from brownstone.today_loading import load_today, load_today_characters
+from brownstone.today_session import digest as _digest
+from brownstone.today_session import plan_context as _context
+from brownstone.today_session import queue_line as _queue_line
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from views.common import gold_columns, show_context, show_freshness
 from views.navigation import QUESTIONS
@@ -191,7 +192,7 @@ def _tables(result, names, *, arguments=None):
 def _selection_key(result):
     # Stable across clock ticks/evidence toggles; any plan content or provenance change resets selection.
     plan = {key: value for key, value in result.items() if key != "freshness"}
-    digest = hashlib.sha256(json.dumps(plan, sort_keys=True, default=str).encode()).hexdigest()
+    digest = _digest(plan)
     key = f"today-craft-{digest}"
     previous = st.session_state.get("today-craft-selection-key")
     if previous and previous != key:
@@ -221,18 +222,6 @@ def _craft_details(row):
             lines.append(f"{'    ' * step['depth']}↳ {step['item_name']}: {step['crafts']} crafts → "
                          f"{step['quantity']} units · {state}")
         st.text("\n".join(lines))
-
-
-def _digest(value):
-    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
-
-
-def _context(arguments):
-    # Listings, observations and metrics are read for the snapshot ID, so the snapshot identifies them.
-    context = {key: arguments[key] for key in ("catalogs", "market", "snapshot", "settings",
-                                              "max_age_hours", "auction_cut")}
-    context["character_data"] = sorted(arguments.get("character_data", {}).items())
-    return _digest(context)
 
 
 def _session_choices(state, prefix):
@@ -323,26 +312,6 @@ def _seed(key, value):
     # Widgets get their start value only through session state, never also through `value=`.
     if key not in st.session_state:
         st.session_state[key] = value
-
-
-def _queue_line(line):
-    text = _queue_line_text(line)
-    if "confidence" in line:
-        reasons = ", ".join(line["confidence_reasons"])
-        text += f" · {line['confidence']} confidence" + (f" ({reasons})" if reasons else "")
-    return text
-
-
-def _queue_line_text(line):
-    stage, name = line["stage"], line["name"]
-    if stage in ("auction house", "vendor"):
-        return (f"Buy at {stage}: {name} · {line['purchased_units']} units · "
-                f"highest unit {format_money(line['highest_unit_copper'])} · total {format_money(line['cost_copper'])}")
-    if stage == "craft":
-        return f"Craft: {name} · recipe {line['recipe_id']} ({line['catalog_id']}) · {line['batch_size']} crafts"
-    price = format_money(line["unit_copper"]) if line["unit_copper"] is not None else "unavailable"
-    profit = format_money(line["profit_copper"]) if line["profit_copper"] is not None else "unavailable"
-    return f"Post: {name} · {line['quantity']} units · undercut unit {price} · profit {profit}"
 
 
 def _queue(result):

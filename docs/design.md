@@ -439,11 +439,19 @@ results. Both panels read evidence without changing their host page's calculatio
 SPIKE-009 adds `brownstone/today_loading.py`: `load_today_characters` reads the shared profession
 projection and retains a warning on failure; `load_today` selects the latest scoped snapshot, opens
 the database read-only and assembles the existing `build_today` arguments using the caller's clock.
-Both `views/today.py` and `views/nicegui_today.py` call these loaders. Session choices remain in
-Streamlit. Framework-free Craft/Sell projections live in `views/today_rows.py` and are shared.
+Both `views/today.py` and `views/nicegui_today.py` call these loaders. Framework-free Craft/Sell projections live in `views/today_rows.py` and are shared.
 `nicegui_app.py` is an optional loopback-only trial entry point; source and tab live in the URL,
 settings still use `today_settings`, and row dialogs project retained purchases through
-`craft_details`. It uses native NiceGUI components, without custom HTML or CSS.
+`craft_details`. SPIKE-009b adds adjustments, Queue and a Cards/Table preview through native
+NiceGUI components, Quasar props and Tailwind classes. `brownstone/today_session.py` owns the
+shared context fingerprint and queue prose. NiceGUI keeps choices/refill, display preferences and
+queue ticks in volatile `app.storage.tab`, separately per source; rebuilding only the plan preserves
+the selected tab. Controls reserve through the same `build_today` path and cards project retained
+`craft_details` purchases and Sell values. No pricing or version change.
+`launch_trial.py` starts a detached `nicegui_app.py --native` with a free loopback port. Readiness is
+acknowledged after the native loaded event, and a token-checked local focus endpoint reuses that
+window. Failed native startup falls back to a free-port browser app. The double-click trial launchers
+leave the existing Streamlit launchers alone. `--port` and `--data-dir` remain supported in browser mode.
 Start instructions and trial findings: `status.md` → *SPIKE-009 (trial)*.
 
 Rules and decisions live in `requirements.md` → Today. `read_today_evidence` returns
