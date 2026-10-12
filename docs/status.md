@@ -47,8 +47,6 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   through `C_TradeSkillUI`, reload/clear buttons and the minimap panel. Usage, saved fields and beta
   checklists are in `addon/README.md`.
 
-**Pending review:** STORY-025 and STORY-030 (Streamlit Today/layout), STORY-042, STORY-056, STORY-057.
-
 **Pending in-game beta checks** (checklists in `addon/README.md`): the item-info pass measurement
 (STORY-031), snapshots on both machines (STORY-032), the event journal (STORY-033), active auctions
 (STORY-040), the panel (STORY-044) and auction deposits (STORY-035). Confirmed on the beta so far:
