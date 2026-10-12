@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team (STORY-060 mockup)</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .person { padding: 20px; display: flex; flex-direction: column; gap: 12px; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+  button.chip.person { background: var(--surface); color: var(--ink); align-items: stretch; }
+  button.chip.person[aria-pressed="true"] { background: var(--surface); color: var(--ink); border: 2px solid var(--brand); padding: 19px; }
+  .facts { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+  .facts strong { color: var(--ink); }
+  .next { font-size: 14px; line-height: 1.5; padding: 10px 12px; border-radius: 10px; background: var(--ground); }
+  .window { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .window input { width: 220px; min-height: 0; padding: 0; accent-color: var(--brand); }
+</style>
+</head>
+<body>
+<!-- Real Forever beta evidence on a copy of data/ (2026-10-12): three characters, scan 20261011T105714Z-cf2f26, 25-point window. -->
+<header>
+  <div class="bar">
+    <div class="brandname">Brownstone</div>
+    <nav aria-label="Places">
+      <a href="today.html">Today</a>
+      <a href="team.html" aria-current="page">Team</a>
+      <a href="#">Market</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="data.html">Data</a>
+    </nav>
+    <span class="source">WoW Forever · Normal Alliance (beta)</span>
+    <button class="iconbtn" aria-label="How these estimates work" data-dialog="info">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div>
+    <h1>Team</h1>
+    <p class="question">Who can do what, and how are my characters progressing?</p>
+  </div>
+
+  <div class="chips">
+    <span class="chip">3 characters</span>
+    <span class="chip">Last seen 1 day ago <small>· windows-pc</small></span>
+    <span class="chip"><span class="badge warn">Stale</span> Prices 33 hours old</span>
+  </div>
+
+  <div class="roster" data-group="who">
+    <button class="card person chip" aria-pressed="true" style="border-radius: 16px; white-space: normal">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%"><h2>Basilly</h2><span class="note">1 day ago</span></div>
+      <div class="facts"><span>Level <strong class="num">6</strong></span><span>Gold <strong class="num">2s 55c</strong></span><span>6 known recipes</span></div>
+      <div style="width: 100%" class="stack">
+        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700"><span>Tailoring</span><span class="num">8 / 75</span></div>
+        <div class="progress"><span style="width: 11%"></span></div>
+      </div>
+      <div class="next" style="width: 100%"><strong>Next:</strong> Brown Linen Pants · +22 points · about <span class="num">10s 34c</span> to reach</div>
+    </button>
+    <button class="card person chip" aria-pressed="false" style="border-radius: 16px; white-space: normal">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%"><h2>Keenagen</h2><span class="note">2 days ago</span></div>
+      <div class="facts"><span>Level <strong class="num">5</strong></span><span>Gold <strong class="num">1s 40c</strong></span><span>1 known recipe</span></div>
+      <div style="width: 100%" class="stack">
+        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700"><span>Mining</span><span class="num">3 / 75</span></div>
+        <div class="progress"><span style="width: 4%"></span></div>
+      </div>
+      <div class="next" style="width: 100%"><strong>Next:</strong> nothing new within 25 points; the next Mining recipes need skill 65</div>
+    </button>
+    <button class="card person chip" aria-pressed="false" style="border-radius: 16px; white-space: normal">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%"><h2>Cicelyna</h2><span class="note">2 days ago</span></div>
+      <div class="facts"><span>Level <strong class="num">1</strong></span><span>Gold <strong class="num">1c</strong></span></div>
+      <div class="note" style="width: 100%">No profession reported yet.</div>
+      <div class="next" style="width: 100%"><strong>Next:</strong> learn a profession to see what's in reach</div>
+    </button>
+  </div>
+
+  <h2 class="section-title">Basilly's next steps</h2>
+
+  <div class="window">
+    <label class="check" style="font-weight: 700">Look ahead <input type="range" min="5" max="100" value="25" aria-label="Points within reach"> <span class="num">25 points</span></label>
+    <span class="note">Updates when you let go.</span>
+  </div>
+
+  <div class="tiles">
+    <div class="card tile"><span class="label">Best next recipe</span><span style="font-size: 20px; font-weight: 800">Brown Linen Pants</span><span class="num note">needs skill 30</span></div>
+    <div class="card tile"><span class="label">Points to go</span><span class="big num">22</span></div>
+    <div class="card tile"><span class="label">Cost to get there</span><span class="big num">~10s 34c</span><span class="note">estimate · crafting Bolt of Linen Cloth</span></div>
+    <div class="card tile"><span class="label">Then earns</span><span class="big num profit">+88c</span><span class="note">per craft at today's prices</span></div>
+  </div>
+
+  <div class="card tablebox">
+    <table>
+      <thead><tr><th>Recipe</th><th>Skill</th><th>Points</th><th>Earns per craft</th><th>Cost to reach</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Brown Linen Pants</strong></td><td class="num">30</td><td class="num">+22</td><td class="num profit"><strong>+88c</strong></td><td class="num">~10s 34c</td><td><span class="badge neutral">Trainer</span> <span class="badge warn">Low</span></td></tr>
+        <tr><td><strong>Brown Linen Robe</strong></td><td class="num">30</td><td class="num">+22</td><td class="num profit">+42c</td><td class="num">~10s 34c</td><td><span class="badge neutral">Trainer</span> <span class="badge warn">Low</span></td></tr>
+        <tr><td><strong>White Linen Robe</strong></td><td class="num">30</td><td class="num">+22</td><td class="num profit">+42c</td><td class="num">~10s 34c</td><td><span class="badge neutral">Trainer</span> <span class="badge warn">Low</span></td></tr>
+        <tr><td><strong>Brown Linen Vest</strong></td><td class="num">10</td><td class="num">+2</td><td class="num profit">+39c</td><td class="num">~92c</td><td><span class="badge neutral">Trainer</span> <span class="badge warn">Low</span></td></tr>
+        <tr><td><strong>Linen Belt</strong></td><td class="num">15</td><td class="num">+7</td><td class="num profit">+39c</td><td class="num">~3s 22c</td><td><span class="badge neutral">Trainer</span> <span class="badge warn">Low</span></td></tr>
+        <tr><td><strong>Simple Linen Boots</strong></td><td class="num">20</td><td class="num">+12</td><td class="num loss">−55c</td><td class="num">~5s 52c</td><td><span class="badge neutral">Trainer</span> <span class="badge warn">Low</span></td></tr>
+        <tr><td><strong>Faction Banner</strong></td><td class="num">20</td><td class="num">+12</td><td class="note">no price yet</td><td class="num">~5s 52c</td><td><span class="badge neutral">Trainer</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div><button class="btn" aria-expanded="false" data-toggle="steps" data-open="Hide how to get there" data-closed="How to get there">How to get there</button></div>
+  <div id="steps" class="card" style="padding: 18px 22px" hidden>
+    <div class="line">Craft <strong>Bolt of Linen Cloth</strong> (known) from skill 8 to 30: one skill-up per craft while orange, more crafts per point once it turns yellow. About <strong class="num">10s 34c</strong> of Linen Cloth; selling the bolts isn't counted. Training costs for the target recipe are unknown.</div>
+    <p class="note">The real page lists each step (rank, recipe, expected crafts, cost), as today.</p>
+  </div>
+</main>
+
+<dialog id="info" aria-label="How these estimates work">
+  <div class="dialog-head"><h2>How these estimates work</h2><button class="btn" data-close>Close</button></div>
+  <dl>
+    <dt>Prices</dt><dd>Scan 20261011T105714Z-cf2f26, 11 Oct 10:57 UTC (stale)</dd>
+    <dt>Earns per craft</dt><dd>Action Board profit at cautious prices; not a forecast. Sales speed and demand unknown.</dd>
+    <dt>Cost to reach</dt><dd>Cheapest usable skill-up craft per point; training paid once; no credit for selling.</dd>
+    <dt>Yellow recipes</dt><dd>Classic skill-up chance assumed; unconfirmed on Forever.</dd>
+  </dl>
+  <span class="label">Not in any recipe list for Basilly</span>
+  <div class="row"><span>Alchemy, Blacksmithing, Cooking, Enchanting, Engineering, First Aid, Leatherworking, Mining</span><strong class="num">1,518</strong></div>
+  <p class="note">Open that profession's window in game to record its list.</p>
+</dialog>
+<script src="mockup.js"></script>
+</body>
+</html>

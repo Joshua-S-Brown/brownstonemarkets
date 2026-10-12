@@ -74,7 +74,7 @@ Added 2026-10-12 (product owner: "it doesn't feel like a polished web app… I c
 
 As the owner of a gold-making business, I want each page to show the answer first and keep the evidence one click away, so that I can act without reading paragraphs of text.
 
-**Approved design:** the [Today mockup](https://claude.ai/artifact/5vdt7i8ftMgEgjz6GJJnHj) (2026-10-12, product owner: "feels amazing and so much easier to use"), built from the real Forever beta plan. Build to it; where this text and the mockup differ, ask. Every page must pass UI-08 in `requirements.md`.
+**Approved design:** `docs/mockups/` (`today.html`, `team.html`, `data.html`, shared `mockup.css`/`mockup.js`; open them in a browser), built from real Forever beta evidence; Today was approved 2026-10-12 (product owner: "feels amazing and so much easier to use"). Build to them; where this text and a mockup differ, ask. Each mockup's *Mockup controls* line switches example states and is not part of the design. Every page must pass UI-08 in `requirements.md`.
 
 Acceptance:
 - **Copy and paste work** in the native window (pywebview defaults `text_select` to false; enable it through `app.native.window_args`), and the app is **always light**, readable whatever the macOS appearance.
@@ -86,11 +86,12 @@ Acceptance:
 - **ⓘ How this plan was made** (dialog): scan ID and time, market and auction cut, Today rules version and price basis, gold origin, and every hidden-recipe reason with its count. This replaces the inline provenance, per-character gold notes, row-limit counts and hidden-reason text.
 - **Settings in a dialog** behind the gear button, with the same fields, validation and Save-only behaviour.
 - **Empty state:** with no crafts, one card that says why in a sentence (from the top hidden reasons and the minimum gain), with buttons to open settings and the ⓘ reasons.
-- **Data → Import and Team** follow the same pattern: status chips (latest import, files waiting, characters), one primary action, details on demand, and Team's progression summary first with recipe detail behind a click. The reach slider updates on release. Claude supplies their mockups before handoff.
+- **Data → Import and Team** follow their mockups: Data leads with status chips (scans imported, drop folder, characters), one *Check for new scans* action, a result card (up to date with per-machine clear guidance, or new evidence with Import), and files, problems and imported character tables on demand. Team shows selectable roster cards with a Next step line, then the selected character's look-ahead slider (updates on release), summary tiles and a reachable-recipes table, with cost steps and estimate assumptions on demand.
 - **One shared theme module** (`views/nicegui_theme.py`): colours, spacing and helpers for chips, badges, banners, tiles, dialogs and empty states, used by every new-app page.
 - **Offline tests** (NiceGUI user fixture): every existing displayed value still appears (numbers, labels, stale states); the ⓘ dialog lists provenance and hidden reasons; the settings dialog saves and rejects as before; the empty state names its reasons; header navigation keeps URL state; text selection is enabled in native window arguments.
 - **Real-data check:** screenshots of Today (with an entered gold amount so crafts appear, and the saved settings for the empty state), Team and Data on a copy of `data/`, compared with the mockup.
 - **Docs:** `requirements.md` → Today → Presentation and UI-07 (header navigation, dialogs, light theme); `design.md` (theme module, page structure); `status.md`.
+- **Cleanup at closure:** once reviewed, delete `docs/mockups/` (Git keeps it; the app becomes the reference). Review screenshots stay under ignored `work/`, never in the repository.
 
 ### STORY-055 — Market explorer
 
