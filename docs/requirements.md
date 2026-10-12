@@ -715,6 +715,17 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   Count remaining feasible outputs (each output once, whatever its routes) outside the 10-row selection
   separately from hidden rows. Every list
   caps at **10 rows**, with a count of the rest; shopping totals include materials beyond its display cap.
+- **Presentation (STORY-054, new NiceGUI app only):** Craft opens as cards in the existing displayed
+  plan order, with the same 10-row limit and remaining count; Table is one click away. Each card
+  initially shows its output, batch, batch profit and profit per craft through `money.py`, confidence,
+  character status or capable names, and a why line of cautious sale price, competing listings/units,
+  limiting factor and thin flag. One click opens its complete reserved materials (name, auction-house
+  or vendor route, purchased units, cost, highest unit price), summed material cost, indented intermediate
+  steps, and Sell's undercut price, competing listings/units and batch profit at that price. Every stale
+  card says *stale — inspect only*; Unknown stays marked. Buy's **For** column names each contributing
+  output with its purchased units, including whole-stack surplus, from the same per-craft purchases.
+  Cards and For never re-quote listings or change calculations, reservations, queue, settings or version.
+  The Streamlit Today page remains unchanged.
 - **Buy:** merge the selected batches' purchases by base item and buy/vendor route, summing required units,
   purchased units and full buyouts, and taking the highest paid unit-buyout-ceiling. Sort by cost descending,
   item ID, route. *Cheap now* is informational only: for auction purchases, full cost divided by purchased

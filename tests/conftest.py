@@ -1,9 +1,22 @@
 """Use ordinary directories, compatible with the desktop filesystem sandbox."""
 import shutil
+import sys
 import uuid
+from functools import partial
 from pathlib import Path
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def app_test_timeout():
+    """Allow covered offline app runs to finish; preserve explicitly supplied timeouts."""
+    # A separate patch context preserves test monkeypatch/tmp_path teardown order.
+    with pytest.MonkeyPatch.context() as patch:
+        module = sys.modules.get('streamlit.testing.v1')
+        if module is not None:
+            patch.setattr(module.AppTest, 'from_file', partial(module.AppTest.from_file, default_timeout=10))
+        yield
 
 
 @pytest.fixture

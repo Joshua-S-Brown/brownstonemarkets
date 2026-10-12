@@ -475,8 +475,13 @@ the database read-only and assembles the existing `build_today` arguments using 
 Both `views/today.py` and `views/nicegui_today.py` call these loaders. Framework-free Craft/Sell projections live in `views/today_rows.py` and are shared.
 `nicegui_app.py` is the main loopback-only entry point; source and tab live in the URL,
 settings still use `today_settings`, and row dialogs project retained purchases through
-`craft_details`. SPIKE-009b adds adjustments, Queue and a Cards/Table preview through native
-NiceGUI components, Quasar props and Tailwind classes. `brownstone/today_session.py` owns the
+`craft_details`. SPIKE-009b adds adjustments and Queue through native
+NiceGUI components, Quasar props and Tailwind classes. STORY-054 finishes the cards: Cards is
+the default, Table remains one toggle click away, and collapsed card details project complete
+`craft_details` materials/steps and the matching Sell row. `purchase_uses(crafts)` in
+`brownstone/today.py` groups reserved purchased units by item/route and output name; NiceGUI Buy
+projects it as For before the display cap, including contributions from hidden Low-confidence cards.
+Presentation rules live in `requirements.md` → Today → Presentation. `brownstone/today_session.py` owns the
 shared context fingerprint and queue prose. NiceGUI keeps choices/refill, display preferences and
 queue ticks in volatile `app.storage.tab`, separately per source; rebuilding only the plan preserves
 the selected tab. Controls reserve through the same `build_today` path and cards project retained

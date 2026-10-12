@@ -7,7 +7,7 @@ import duckdb
 from nicegui import app, ui
 
 from brownstone.money import format_money, parse_money, to_gold
-from brownstone.today import build_today, craft_details
+from brownstone.today import build_today, craft_details, purchase_uses
 from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_funds import resolve_funds
 from brownstone.today_loading import load_today, load_today_characters
@@ -27,7 +27,7 @@ def table(rows, *, label, row_key='id'):
                   'Batch profit (g)', 'Profit per craft (g)', 'Confidence'],
         'Sell': ['Output', 'State', 'Batch', 'Lowest competing unit (g)', 'Listings', 'Units',
                  'Undercut unit (g)', 'Profit at undercut for batch (g)', 'Thin', 'Confidence', 'Reasons'],
-        'Buy': ['Material', 'State', 'Route', 'Required units', 'Purchased units', 'Cost (g)',
+        'Buy': ['Material', 'State', 'Route', 'For', 'Required units', 'Purchased units', 'Cost (g)',
                 'Highest unit price (g)', 'Cheap now'],
     }.get(label, keys)
 
@@ -53,7 +53,9 @@ def state(row):
 
 
 def buy_rows(result, names):
+    uses = purchase_uses(result['craft'])
     return [{'Material': names.get(r['item_id'], f"Item {r['item_id']}"), 'Route': r['method'],
+             'For': '; '.join(f'{name}: {units} units' for name, units in uses[(r['item_id'], r['method'])].items()),
              'Required units': r['quantity'], 'Purchased units': r['purchased_units'],
              'Cost (g)': to_gold(r['cost_copper']), 'Highest unit price (g)': to_gold(r['highest_unit_copper']),
              'Scan p25 (g)': to_gold(r['p25_copper']), 'Cheap now': r['cheap_now'], 'State': state(r)}
@@ -189,7 +191,7 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
                     crafts = [r for r in crafts if r['Confidence'] != 'Low']
                     ui.label(f"Hidden Low confidence: {len(result['craft']) - len(crafts)}")
             with ui.row():
-                display = ui.toggle(['Table', 'Cards'], value=(session or {}).get('display', 'Table'))
+                display = ui.toggle(['Cards', 'Table'], value=(session or {}).get('display', 'Cards'))
             table_area = ui.column().classes('w-full')
             card_area = ui.column().classes('w-full')
             table_area.bind_visibility_from(display, 'value', backward=lambda v: v == 'Table')
@@ -204,7 +206,7 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
                 widget = table(crafts, label='Craft')
             widget.on('rowClick', lambda e: details_dialog(result['craft'][e.args[1]['id']]))
             ui.label(f"{result['remaining']['craft']} more rows outside this list's 10-row limit.")
-            ui.label('Click a craft to inspect materials and catalog steps.')
+            ui.label('Open a card or click a table row to inspect materials and catalog steps.')
             ui.label('Hidden recipes: ' + ('; '.join(f'{k}: {v}' for k, v in sorted(result['hidden'].items())) or '0'))
             with ui.expansion('Catalog checks'):
                 if result['catalog_checks']:
@@ -353,28 +355,39 @@ def batch_change(value, identity, maximum, change):
 
 def craft_card(row, sell):
     details = craft_details(row)
-    with ui.card().classes('w-full rounded-xl shadow-sm border-l-4 border-amber-800').mark('craft-card') as card:
-        card._props['cost_copper'] = row['batch_cost_copper']
-        card._props['materials_copper'] = sum(r['cost_copper'] for r in details['materials'])
+    with ui.card().classes('w-full rounded-xl shadow-sm border-l-4 border-amber-800').mark('craft-card'):
         ui.label(f"{row['output_name']} · {row['batch_size']} crafts").classes('text-xl font-semibold')
         ui.label(f"Batch profit {format_money(row['batch_profit_copper'])} · "
                  f"per craft {format_money(row['profit_per_craft_copper'])}")
-        ui.label(f"{row['confidence']} confidence · Can make: {row.get('craft_status', 'Unknown')} · "
-                 f"{', '.join(row.get('who_can_make_it', [])) or 'unknown'} · {state(row)}")
+        character = craft_row(row, sell)
+        capability = [f"{key}: {character[key]}" for key in ('Can make', 'Who can make it') if key in character]
+        ui.label(' · '.join([f"{row['confidence']} confidence", *capability, state(row)]))
+        if character.get('Learning'):
+            ui.label(character['Learning'])
         ui.label(f"Cautious sale {format_money(row['sale_price_copper'])} · "
-                 f"{sell['listings']} listings / {sell['units']} units · "
+                 f"{competition(sell)} · "
                  f"limited by {row['limiting_factor']}" + (' · thin' if sell['thin'] else ''))
         with ui.expansion('What to buy and where to sell').classes('w-full'):
+            ui.label(f"What to buy · Material cost {format_money(row['batch_cost_copper'])}").classes('font-semibold')
             for material in details['materials']:
                 route = 'vendor' if material['method'] == 'vendor' else 'auction house'
                 ui.label(f"{material['item_name']} · {route} · {material['purchased_units']} units · "
                          f"{format_money(material['cost_copper'])} · "
                          f"highest unit {format_money(material['highest_unit_copper'])}")
             for step in details['intermediate_steps']:
-                ui.label(f"{'↳ ' * step['depth']}{step['item_name']}: {step['crafts']} crafts")
+                ui.label(f"{'↳ ' * step['depth']}{step['item_name']}: {step['crafts']} crafts").style(
+                    f"margin-left: {step['depth']}rem")
             price, profit = sell['undercut_copper'], sell['undercut_batch_profit_copper']
-            ui.label(f"Sell at {format_money(price) if price is not None else 'unavailable'} · "
+            ui.label(f"Where to sell · Auction house · "
+                     f"Sell at {format_money(price) if price is not None else 'unavailable'} · "
+                     f"{competition(sell)} · "
                      f"profit {format_money(profit) if profit is not None else 'unavailable'}")
+
+
+def competition(sell):
+    if sell['listings'] is None or sell['units'] is None:
+        return 'competing listings and units not available for this source'
+    return f"{sell['listings']} listings / {sell['units']} units"
 
 
 def queue_panel(result, session):

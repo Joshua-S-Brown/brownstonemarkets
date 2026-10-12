@@ -65,8 +65,8 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
    - STORY-056 gold available from the chosen character (Brownstone; implemented 2026-10-11)
    - STORY-057 Today shows only what our team can make (Brownstone; implemented 2026-10-11)
    - SPIKE-009b the interactive Today in NiceGUI (Brownstone; implemented and reviewed 2026-10-12). Decided: NiceGUI becomes the app, with four places only (*Added 2026-10-12* below).
-16. STORY-058 the new app: NiceGUI with Today and Import (Brownstone; implemented; Windows check pending)
-17. STORY-054 Today as craft cards (Brownstone; medium, display only; in the new app)
+16. STORY-058 the new app: NiceGUI with Today and Import (Brownstone; implemented and reviewed 2026-10-12; no Windows launcher check: the app runs on the Mac only)
+17. STORY-054 Today as craft cards (Brownstone; implemented and reviewed 2026-10-12)
 18. STORY-052 Team: roster and progression planner (Brownstone; medium-large; in the new app)
 19. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
 20. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)

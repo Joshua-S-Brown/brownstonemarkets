@@ -337,6 +337,17 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
             "source_id": market["source_id"], "queue": session_queue(crafts, shopping, sells)}
 
 
+def purchase_uses(crafts):
+    """Group reserved purchased units by item/route and output, including stack surplus."""
+    uses = {}
+    for row in crafts:
+        for purchase in row['purchases']:
+            outputs = uses.setdefault((purchase['item_id'], purchase['method']), {})
+            name = row['output_name']
+            outputs[name] = outputs.get(name, 0) + purchase['purchased_units']
+    return uses
+
+
 def craft_details(row):
     """Project a selected batch's reserved purchases and retained route; never quote again.
 

@@ -9,6 +9,28 @@ _Last updated 2026-10-12._
 - **Main app (STORY-058):** NiceGUI with Today, Team/Market placeholders and Data → Import.
   Start instructions, shared modules and verification: [New app](#new-app-story-058).
 
+- **Today craft cards (STORY-054, implemented and reviewed 2026-10-12):** NiceGUI Craft opens as
+  collapsed cards, with Table one toggle click away. Complete reserved materials and indented
+  intermediate steps, summed material cost and matching Sell evidence open together. Buy's For
+  names each craft's purchased units, including stack surplus. Tests inspect displayed money/labels;
+  the trial's private cost props are removed. Rules: `requirements.md` → Today → Presentation;
+  contracts: `design.md` → Today contracts. Offline checks:
+  `tests/ui_trial/test_nicegui_today.py` cover shared materials, vendor routes, intermediate steps,
+  stale/Unknown labels, collapse/toggle, order/cap, adjustments and retained-cost reconciliation.
+  The shared offline AppTest fixture uses a 10-second default timeout (explicit timeouts still win):
+  full coverage runs repeatedly exceeded Streamlit's 3-second default on otherwise passing tests.
+  **Forever beta check (2026-10-12):** resolved `config/market.local.toml`, copied `data/` to
+  ignored `work/story054/data`, and selected Basilly with entered 25g, fixed 1c minimum, cap 5.
+  At the previous 10s minimum no crafts appear. The 1c check shows four Known/Low cards in order:
+  Linen Bag, Linen Cloak, Brown Linen Shirt, Simple Linen Pants, each five crafts. Material costs
+  are 5s 82c, 2s 21c, 2s 30c and 2s 30c, summing to shopping 12s 63c. Buy's Linen Cloth For
+  contributions are 48/19/20/20 purchased units (107 total; 60 required), and Coarse Thread
+  15/5/5/5 (30 total). Each card shows its own reserved units and Bolt of Linen Cloth steps;
+  undercut batch profits are 8s 38c, 2s 49c, 2s 40c and 2s 40c. Scan
+  `20261011T105714Z-cf2f26` is older than 24 hours, so every card is *stale — inspect only*.
+  Live browser observations, screenshots and numerical check are under `work/story054/`, outside
+  Git. Original data/settings/configuration are untouched. No pricing, version or Streamlit change.
+
 - **Three questions (STORY-053, implemented and reviewed 2026-10-11):** In the old Streamlit app, Today, Team, Market and visually
   separated Data replace the flat page list. In-page segmented controls keep every old page reachable;
   collection and catalogs live in Data. Business questions introduce places and sections. Addon
@@ -297,7 +319,7 @@ _Last updated 2026-10-12._
   scoped readers expose facts, exact shares/coverage and threshold supply without seller names.
   Board depth and Scan changes use stored facts. Addon item prices use the same calculator;
   historical price observations remain preserved. No new dashboard or trading policy is introduced.
-- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.29% after the full macOS run: 1,133 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
+- **Quality gates:** CI runs Ruff (including a complexity limit of 10), mypy and the tests with a branch-coverage floor of 88% (96.37% after the full macOS run: 1,134 passed, one PowerShell-unavailable skip) on macOS and Windows from the lock file, including the Streamlit UI test. One function, the scan parser's hot loop, is exempt from the complexity limit and listed as debt in `design.md`. Config loads into typed, individually validated `Source` records.
 
 - **Scanning addon:** `addon/BrownstoneScan/` is version **0.11.2**, writing account-wide file format **6** and scan format **4**. The bounded scan-owned item info pass (STORY-031) is implemented and reviewed, pending beta measurement; its rules are ADDON-09 and its checklist/fields are in `addon/README.md`. It records richer listing evidence and one official item-reference observation per ID per scan; capture/variant/measurement rules are ADDON-08/09 in `requirements.md`. Formats 1/2/3 remain readable with unchanged raw bytes/hashes; formats 1/2 keep richer reference fields null. Schema migration 8 retains first-pass reference columns, adds separate pass values/provenance and an effective-reference view without rewriting historical observations. Read-only preview validates reference observations too, before any write. Import records first-pass, pass-added and effective availability, pass counters and listing duration locally; pass duration stays in raw evidence. Today reads effective vendor references with the same source/full-market/scan/snapshot scope.
   - Prices, Scan changes and explicit depth reads separate variants and unresolved evidence. Browse, Opportunities and Scan changes display identity and resolution state (`legacy` for formats 1/2). Scan changes match a legacy item to a format-3 base row only when the format-3 scan has only base listings for it, so plain goods compare across the 0.2.0/0.3.0 boundary. Out-of-range optional listing values are stored as missing and counted rather than rejecting the scan; `required_level` accepts `REQ_LEVEL` and `REQ_LEVEL_ABBR`; the Forever beta reports the latter. Catalog crafting reads base rows, with existing historical reads retained; format-3 unresolved/variant-only prices cannot fill a base catalog item.
@@ -337,7 +359,7 @@ _Last updated 2026-10-12._
 git diff --check
 ```
 
-Expected: 1,133 tests pass and one explicit PowerShell-unavailable skip on this Mac; 1,134 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the old app or addon preview/import in Data in the main app.
+Expected: 1,134 tests pass and one explicit PowerShell-unavailable skip on this Mac; 1,135 tests run where PowerShell exists (Windows CI), offline; `ruff check .` and `mypy` report no issues. Windows uses `.venv\Scripts\python.exe`. Live ingestion is a separate manual check: **Refresh from TSM** in the old app or addon preview/import in Data in the main app.
 
 Scan preview verification: `tests/test_scan_preview.py` covers mixed new/duplicate/partial/empty scans, UTC metadata, missing data directories, no preview writes, old-schema read-only preview, shared time/listing validation, other-house scans listed but not selectable, ID conflicts, exact-byte archives, empty/unknown/duplicate selections, configuration/file/duplicate-state invalidation (including the final writer check), bounded reads, deterministic read changes, unreadable/truncated/malformed files, partial pricing, commit-failure rollback/failed manifests and shared CLI subset guidance, including an unselected malformed entry. AppTest in `tests/test_app.py` covers preview → selection → subset import, duplicates-only reminders, empty selections, retryable errors, stale reviews, other-house rows, the result replacing the reviewed table, page-load upgrade of an existing addon database and source/configuration switching, while retaining the TSM and existing-page regressions.
 
@@ -665,5 +687,6 @@ recorded 2s 55c gold and the saved plan settings; current evidence is stale and 
 Finder double-click on macOS acknowledged a loaded native window. A second launch reused it;
 after a code change, a third double-click replaced its readiness token and recorded the current
 fingerprint. Authenticated browser shutdown was exercised live. Direct native-window inspection
-and a manual close remain limited by the computer tool's access to the Python window; Windows
-launcher/window verification awaits the product owner's second machine.
+and a manual close remain limited by the computer tool's access to the Python window. The app
+runs on the Mac only (the Windows PC plays and drops scan files), so the Windows launchers are
+covered by CI's Windows test run, not checked by hand.
