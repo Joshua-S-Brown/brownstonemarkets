@@ -29,7 +29,7 @@ async def test_page_matches_shared_plan_and_row_details(user, tmp_path, monkeypa
     _, arguments = load_today(source, catalogs, load_settings(
         source['data_dir'] / f"today-settings.{source['source_id']}.local.json"), {}, datetime.now(UTC))
     result = build_today(**arguments)
-    user.find(ui.toggle).elements.pop().set_value('Table')
+    user.find(kind=ui.toggle, marker='plan-display').elements.pop().set_value('Table')
     widget = user.find('Craft').elements
     craft_table = next(e for e in widget if isinstance(e, ui.table))
     sells = {r['output_item_id']: r for r in result['sell']}
@@ -326,7 +326,7 @@ async def test_cards_reserved_cost_unknown_and_stale(user, tmp_path, monkeypatch
     app(tmp_path, monkeypatch, stale=True)
     await user.open('/')
     await user.should_see('Adjust crafts')
-    assert next(iter(user.find(ui.toggle).elements)).value == 'Cards'
+    assert next(iter(user.find(kind=ui.toggle, marker='plan-display').elements)).value == 'Cards'
     cards = user.find(marker='craft-card').elements
     assert cards
     for card in cards:
@@ -339,10 +339,10 @@ async def test_cards_reserved_cost_unknown_and_stale(user, tmp_path, monkeypatch
     user.find(kind=ui.expansion, content='What to buy and where to sell').trigger('update:modelValue', True)
     await user.should_see('What to buy · Material cost')
     assert next(e for e in next(iter(cards)).descendants() if isinstance(e, ui.expansion)).value
-    user.find(ui.toggle).elements.pop().set_value('Table')
+    user.find(kind=ui.toggle, marker='plan-display').elements.pop().set_value('Table')
     table = next(t for t in all_tables(user) if 'Craft' in t._markers)
     assert table.parent_slot.parent.visible
-    user.find(ui.toggle).elements.pop().set_value('Cards')
+    user.find(kind=ui.toggle, marker='plan-display').elements.pop().set_value('Cards')
     assert not table.parent_slot.parent.visible
     await user.should_see('Who can make it: unknown')
     await user.should_see('stale — inspect only')
@@ -388,7 +388,7 @@ async def test_refill_next_output_cards_and_source_isolation(user, tmp_path, mon
         {'name': c['catalog_id'], 'catalog': c} for c in catalogs])
     await user.open('/')
     await user.should_see('Adjust crafts')
-    user.find(ui.toggle).elements.pop().set_value('Table')
+    user.find(kind=ui.toggle, marker='plan-display').elements.pop().set_value('Table')
     crafts = next(t for t in all_tables(user) if 'Craft' in t._markers)
     assert len(crafts.rows) == 10
     await user.should_see('recipes hidden')
@@ -404,7 +404,7 @@ async def test_refill_next_output_cards_and_source_isolation(user, tmp_path, mon
     user.find('Refill freed gold').click()
     assert len(next(t for t in all_tables(user) if 'Craft' in t._markers).rows) == 10
     with user.client:
-        user.find(ui.toggle).elements.pop().set_value('Cards')
+        user.find(kind=ui.toggle, marker='plan-display').elements.pop().set_value('Cards')
     assert len(user.find(marker='craft-card').elements) == 10
     for card in user.find(marker='craft-card').elements:
         assert_card_cost(card)
@@ -422,7 +422,7 @@ async def test_refill_next_output_cards_and_source_isolation(user, tmp_path, mon
 
     await user.open('/?game=classic&source=test')
     await user.should_see('Adjust crafts')
-    toggle = user.find(ui.toggle).elements.pop()
+    toggle = user.find(kind=ui.toggle, marker='plan-display').elements.pop()
     assert toggle.value == 'Cards'
     with user.client:
         toggle.set_value('Table')

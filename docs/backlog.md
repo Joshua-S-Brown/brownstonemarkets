@@ -44,7 +44,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 **Order:**
 1. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
 2. STORY-064 flood signals: crowding and overshoots (Brownstone; medium; ready for launch on 4 November)
-3. STORY-063 launch weeks: where to spend play time (Brownstone; medium; refined 2026-10-13, ready for handoff)
+3. STORY-063 launch weeks: where to spend play time (Brownstone; implemented, pending owner review)
 4. STORY-065 farming rates from play sessions (addon + Brownstone; needs a beta discovery first)
 5. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
 6. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
@@ -316,6 +316,8 @@ Acceptance:
 
 ### STORY-063 — Launch weeks: where to spend play time
 
+**Implemented; pending owner review.** Rules: `requirements.md` → UI-12; contracts: `design.md` → This session.
+
 Added 2026-10-13 (product owner: "I need to figure out how to spend those first couple weeks effectively… whether it's using cheap mats to improve my professions or getting my characters leveled… or farming certain materials to sell or to craft myself"). Brownstone only; read-only over values already computed. **Refined 2026-10-13** with the product owner: lives on Today, covers the whole team, values levelling as cost plus what it unlocks, and leaves farming to STORY-065.
 
 As the owner, I want the ways each character could spend a play session laid out side by side on current evidence, so that I use my gaming time well in the first weeks when markets swing.
@@ -324,7 +326,7 @@ Acceptance:
 - **Where:** a *This session* view in the new app's Today place, one toggle away from the plan, for **every scoped Today character** (the whole team), each in its own section. It answers *what should our company do today?*, so it links to Team and Market rather than repeating them.
 - **Crafting to sell,** per character: the Today plan rows that character can make (STORY-043 statuses), with their planned profit and total, exactly as Today computes them. Each output carries its STORY-064 crowding label (contested outputs say so), and each material its overshoot label (cheap materials say so). **Labels only:** no change to Today's plan, ranking or `today_version`.
 - **Levelling a profession,** per character and profession, from STORY-052 (CRAFT-11) at the Team page's reach window: the estimated cost to reach the next useful recipes, which recipes that unlocks and their current Action Board profit per craft (CRAFT-03/04/05; unvalued recipes keep the board's reason). Show how much of the cost is materials STORY-064 flags **cheap**, so a good moment to level is visible. No payback or forecast number: cost and what it unlocks side by side; the owner weighs them. A profession at its maximum rank says it is capped instead of estimating past the cap.
-- **Order:** within each character, crafting first, then professions by the best current profit per craft they unlock, ties by lower cost; deterministic. Characters in Today's character order. The page orders the options; it does not decide between crafting and levelling.
+- **Order:** within each character, crafting first, then professions by the best current profit per craft they unlock, ties by lower cost; deterministic. Characters in Today's character order. **Revised 2026-10-13 after the owner's first look:** each character answers first with short next-step lines (craft, level a profession, level the character when the next profession tier needs it, train, gather), details folded underneath; the owner still chooses (UI-12).
 - **Farming** is not shown yet. One line says farming rates come later (STORY-065), never an invented rate.
 - **Honest limits:** every figure states the snapshot it rests on and its age (DATA-05); thin or missing evidence says so; missing prices are unknown, never free; incomplete estimates keep their reasons; variants stay separate. Listings, never sales; no forecast.
 - **Calculation** in a new `brownstone/` module composing existing outputs only (Today's plan, `progression`, `flood_signals`); no new price query. Display in `views/nicegui_today.py` with `views/nicegui_theme.py`. Record the rule in `requirements.md` next to UI-11.

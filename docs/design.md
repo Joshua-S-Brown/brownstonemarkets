@@ -432,6 +432,22 @@ Rules live in `requirements.md` → Today. Calculations are framework-free; both
   Streamlit keeps choices and ticks in session state separately from widget keys, which widget cleanup
   can drop; the Craft table's selection key fingerprints plan contents and provenance.
 
+### This session (STORY-063)
+
+Rules live in `requirements.md` → UI-12. `session_options.build_options(db, config, arguments,
+plan, window=25)` composes the displayed reserved plan with `progression.build_progression` and
+its `estimate_cost` results, using only `today_loading.load_today`'s observations, listings and
+metrics. Selected estimate steps reuse `evaluate_recipe`'s catalog-local shopping quantities for
+cheap-material attribution; no new price query. One `flood_signals.signals` call covers the union
+of plan and estimate item IDs, retaining full source/market scope and separate variant identities.
+It returns character sections, annotated copies, per-character craft totals, character level,
+`next_steps` (kinds `craft`, `level_profession`, `level_character`, `train`, `nothing`, `evidence`),
+per-profession `milestones` and `tier` (`NEXT_TIER`), snapshot/freshness and separate signal
+provenance; the view turns steps into lines (`step_text`). The input plan/arguments and Today version are untouched.
+`views/nicegui_today.py` places the toggle above the plan status so it stays put, composes lazily
+when **This session** opens, reads Team's per-tab/source
+reach window, uses the shared theme and links to Market items and the selected Team character.
+
 ## Team contracts (STORY-052)
 
 Rules live in CRAFT-11 and Characters page (`requirements.md`). `views/nicegui_team.py` renders

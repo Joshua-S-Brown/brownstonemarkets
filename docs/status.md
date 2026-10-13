@@ -3,7 +3,7 @@
 Current implemented state, limitations and how to verify. History, including dated real-data checks
 and beta play sessions, lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-13 (STORY-064)._
+_Last updated 2026-10-13 (STORY-063)._
 
 ## Implemented
 
@@ -41,6 +41,13 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   → Today). The new app shows Plan cards with Table one toggle away, status chips, summary tiles and
   helpful empty-state reasons; Shopping list, Sell, Queue and Extras retain their existing evidence.
   Provenance and hidden counts are in the ⓘ dialog; fixed/scaled settings retain Save-only behaviour.
+- **This session (STORY-063, UI-12):** a fixed toggle under Today's title; one card per scoped
+  character with next-step lines (craft, level a profession, level the character for the next tier,
+  train, gather), details folded underneath: reserved crafts with plain flood labels and profession
+  costs grouped by reach at Team's remembered window. Cheap-material portion, incomplete reasons and
+  caps remain explicit; tier levels are Classic Era's, unconfirmed on Forever. Links open Team and Market.
+  Today plan/ranking/version are unchanged. Farming awaits STORY-065. Verify with
+  `tests/test_session_options.py` and `tests/ui_trial/test_nicegui_session.py`.
 - **Team (STORY-052, CRAFT-11):** shared character cards with Next step lines, a scoped character
   choice and 5–100-point window that updates on release, summary tiles, reachable recipes,
   profession comparison and per-point material/training estimates on demand.
@@ -120,8 +127,8 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,264 passed and one explicit PowerShell-unavailable skip (1,265 run where
-PowerShell exists, as in Windows CI), offline, at 96.29% coverage with branches enabled;
+Expected on this Mac: 1,297 passed and one explicit PowerShell-unavailable skip (1,298 run where
+PowerShell exists, as in Windows CI), offline, at 96.40% coverage with branches enabled;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the

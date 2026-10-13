@@ -8,6 +8,7 @@ from nicegui import app, ui
 
 from brownstone.freshness import STALE_WARNING, age_caption
 from brownstone.money import format_money, parse_money
+from brownstone.session_options import build_options
 from brownstone.today import build_today, craft_details, purchase_uses
 from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_funds import resolve_funds
@@ -17,6 +18,7 @@ from brownstone.today_settings import TodaySettings, load_settings, save_setting
 from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
 from views import nicegui_theme as theme
 from views import today_rows as tr
+from views.nicegui_market import item_link
 
 TABS = ['Plan', 'Shopping list', 'Sell', 'Queue', 'Extras']
 LEGACY_TABS = {'Craft': 'Plan', 'Buy': 'Shopping list', 'Below vendor': 'Extras'}
@@ -204,7 +206,8 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
                 if session.get('hide_low'):
                     crafts = [r for r in crafts if r['Confidence'] != 'Low']
             with ui.row().classes('w-full justify-end'):
-                display = ui.toggle(['Cards', 'Table'], value=(session or {}).get('display', 'Cards'))
+                display = ui.toggle(['Cards', 'Table'], value=(session or {}).get('display', 'Cards')).mark(
+                    'plan-display')
             table_area = ui.column().classes('w-full')
             card_area = ui.column().classes('w-full')
             table_area.bind_visibility_from(display, 'value', backward=lambda v: v == 'Table')
@@ -272,12 +275,15 @@ def render(config, catalogs, character_data, active_tab='Craft'):
                 ui.label(f'Unable to build Today: {error}')
                 return
             info[0] = lambda: plan_info(result, config, manifest, arguments, funds, session)
-            plan_status(result, settings, funds, config, settings_dialog, open_info, latest_characters, session)
+            display = view_toggle(session)
+            with ui.column().classes('w-full') as status:
+                plan_status(result, settings, funds, config, settings_dialog, open_info, latest_characters, session)
             if not result['listing_evidence_available']:
                 ui.label(tr.NO_LISTINGS)
             watchlist_hits(config, catalogs)
             names = {i: item['name'] for c in catalogs for i, item in c['items_by_id'].items()}
-            with ui.expansion('Other plan views') if not result['craft'] else ui.column().classes('w-full gap-3'):
+            with (session_view(display, config, arguments, result, session, status),
+                  ui.expansion('Other plan views') if not result['craft'] else ui.column().classes('w-full gap-3')):
                 tabs = plan_tables(result, names, current_tab, config, session, lambda: update(saved_settings[0]))
 
             def remember(e):
@@ -524,3 +530,231 @@ def no_plan_info(config, saved, character_data):
             ui.label(note)
     popup.on('hide', popup.delete)
     popup.open()
+
+
+def view_toggle(session):
+    """Sits under the page title in both views so it never moves when the view changes."""
+    return ui.toggle(['Today plan', 'This session'], value=session.get('view', 'Today plan')).props(
+        'no-caps padding="10px 22px"').classes('text-base').mark('session-view')
+
+
+def session_view(display, config, arguments, result, session, status):
+    """Compose lazily when This session opens and preserve the displayed plan's choices."""
+    status.bind_visibility_from(display, 'value', backward=lambda v: v == 'Today plan')
+    plan_area = ui.column().classes('w-full')
+    options_area = ui.column().classes('w-full gap-4')
+    plan_area.bind_visibility_from(display, 'value', backward=lambda v: v == 'Today plan')
+    options_area.bind_visibility_from(display, 'value', backward=lambda v: v == 'This session')
+    loaded = False
+
+    def show(value):
+        nonlocal loaded
+        session['view'] = value
+        if value != 'This session' or loaded:
+            return
+        with options_area:
+            try:
+                window = app.storage.tab.get('team-' + config['source_id'], {}).get('window', 25)
+                with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
+                    options = build_options(db, config, arguments, result, window=window)
+                session_options(options, config)
+                loaded = True
+            except Exception as error:
+                ui.label(f'Unable to build session options: {error}')
+    display.on_value_change(lambda e: show(e.value))
+    show(display.value)
+    return plan_area
+
+
+CROWDING = {'thin': ('thin: few listings', 'warn'), 'contested': ('contested: many sellers', 'warn')}
+OVERSHOOT = {'cheap': ('cheap right now', 'good'), 'high': ('pricier than usual', 'warn'),
+             'too few scans': ('price history too short', 'neutral'), 'no buyout': ('no buyout', 'neutral')}
+
+
+def session_money(value):
+    return format_money(value) if value is not None else 'unknown'
+
+
+def session_signal(signal):
+    """Only labels worth acting on; steady and typical stay in the evidence."""
+    if signal is None:
+        ui.label('Listing / relative-price evidence unavailable').classes('bs-note')
+        return
+    with ui.row().classes('items-center gap-2'):
+        for text, tone in (CROWDING.get(signal['crowding'], (None, None)),
+                           OVERSHOOT.get(signal['overshoot']['label'], (None, None))):
+            if text:
+                theme.badge(text, tone)
+        with ui.expansion('Listing evidence').classes('bs-note'):
+            churn = signal['churn']
+            history = signal['overshoot']
+            ui.label(f"{signal['crowding']} · {history['label']} · {signal['listings']} listings · "
+                     f"{signal['units']} units · largest stack {signal['largest_stack_units']} / "
+                     f"{signal['units']} units")
+            ui.label(f"Lowest-buyout changes {churn['changed']} / {churn['pairs']} comparable pairs"
+                     if churn['pairs'] else 'Lowest-buyout churn unknown')
+            lowest = signal['min_buyout'] if signal['min_buyout'] and signal['min_buyout'] > 0 else None
+            ui.label(f"Typical {session_money(history['typical_copper'])} · {history['scans']} earlier priced "
+                     f"scans · current lowest {session_money(lowest)}")
+
+
+def cheap_share(estimate):
+    cheap, cost = estimate['cheap_cost_copper'], estimate['cost_copper']
+    if cheap is None:
+        return 'cheap auction materials unknown'
+    if cheap == cost and cost:
+        return 'all on materials that are cheap right now'
+    return f'{format_money(cheap)} of it on cheap auction materials' if cheap else 'no cheap auction materials'
+
+
+def step_text(step, character, window):
+    """One plain line per option; the figures are the ones in the details below."""
+    name = character['character'][0]
+    kind = step['kind']
+    if kind == 'craft':
+        rows = ', '.join(f"{r['batch_size']} {r['output_name']}" for r in character['crafts'])
+        return f"Craft {rows} · planned profit {format_money(character['craft_profit_copper'])}"
+    if kind == 'nothing':
+        return (f'Nothing to craft or level within {window} points. '
+                'Gathering is the option here; farming rates come later (STORY-065).')
+    if kind == 'evidence':
+        return 'No professions seen yet: open each profession window next login so Brownstone can read them.'
+    group = step['group']
+    profession = group['profession']
+    if kind == 'level_profession':
+        recipe, estimate = step['recipe'], step['recipe']['estimate']
+        more = f" (+{step['more']} more on the way)" if step['more'] else ''
+        return (f"Level {profession} {group['rank']} → {recipe['required_skill']} for "
+                f"{format_money(estimate['cost_copper'])}, {cheap_share(estimate)} · unlocks {recipe['name']} "
+                f"at {format_money(recipe['profit_copper'])} per craft{more}")
+    tier = step['tier']
+    if kind == 'train':
+        return f"{profession} is capped at {tier['cap']}: train {tier['name']} {profession} at a trainer"
+    level = character['level']
+    reach = (f"{profession} is capped at {tier['cap']}" if group['capped']
+             else f"Before {profession} reaches {tier['cap']}")
+    now = f"{level} → {tier['required_level']}" if level is not None else f"to {tier['required_level']} (level unknown)"
+    return f"{reach}: level {name} {now} to train {tier['name']}"
+
+
+def session_summary(character, options, config):
+    identity = character['character']
+
+    def select(e, key=identity):
+        app.storage.tab.setdefault('team-' + config['source_id'], {}).update(character=list(key))
+    with ui.row().classes('items-baseline gap-3'):
+        link = ui.link(identity[0], '/?' + urlencode({
+            'place': 'Team', 'game': config['game_version'], 'source': config['source_id']}))
+        link.classes('text-2xl font-bold min-h-[44px] underline').on('click', select)
+        level = character['level']
+        ui.label(f"level {level if level is not None else 'unknown'} · {' · '.join(identity[1:])}").classes(
+            'bs-note')
+    for step in character['next_steps']:
+        with ui.row().classes('items-start gap-2 no-wrap').mark('session-step'):
+            ui.label('→').classes('font-bold')
+            ui.label(step_text(step, character, options['window']))
+
+
+def session_milestone(milestone, group, config):
+    estimate = milestone['estimate']
+    with ui.card().classes('bs-card').mark('session-recipe'):
+        cost = session_money(estimate['cost_copper']) if estimate['complete'] else (
+            'incomplete: ' + '; '.join(estimate['reasons']))
+        ui.label(f"Reach {milestone['skill']} (+{milestone['skill'] - group['rank']} points) · cost {cost} · "
+                 f"{cheap_share(estimate)}").classes('font-bold')
+        for recipe in milestone['recipes']:
+            with ui.row().classes('items-center gap-2'):
+                item_link(config, recipe['output_item_id'], recipe['name'])
+                ui.label(f"{session_money(recipe['profit_copper'])} per craft" if recipe['profit_copper'] is not None
+                         else f"profit per craft unknown · {recipe['board_reason']}")
+                theme.badge(recipe['confidence'] + ' confidence',
+                            'warn' if recipe['confidence'] in ('Low', 'Unavailable') else 'neutral')
+                if recipe['needs_pattern']:
+                    theme.badge('needs pattern or other source', 'warn')
+        with ui.expansion('Cost and confidence evidence'):
+            for recipe in milestone['recipes']:
+                ui.label(f"{recipe['name']}: {'; '.join(recipe['confidence_reasons'])}")
+            for step in estimate['steps']:
+                ui.label(f"Rank {step['rank']} · {step['recipe']} · {step['expected_crafts']} expected crafts · "
+                         f"{format_money(step['cost_copper'])} including training "
+                         f"{format_money(step['training_cost_copper'])}")
+                for material in step['materials']:
+                    item_link(config, material['item_id'], f"{material['item_name']} · "
+                              f"{material['quantity']} units per craft · {material['method']}")
+                    session_signal(material['signal'])
+
+
+def session_crafts(character, config):
+    ui.label('Crafting to sell').classes('text-lg font-bold')
+    if not character['crafts']:
+        ui.label('No reserved Today plan rows this character can make.')
+        return
+    ui.label(f"Planned profit total {format_money(character['craft_profit_copper'])}")
+    for row in character['crafts']:
+        with ui.card().classes('bs-card').mark('session-craft'):
+            item_link(config, row['output_item_id'], row['output_name'])
+            with ui.row().classes('items-center gap-2'):
+                theme.badge(row['session_status']['craft_status'])
+                theme.badge(row['confidence'] + ' confidence', 'warn' if row['confidence'] == 'Low' else 'neutral')
+            ui.label(f"{row['batch_size']} planned crafts · profit {format_money(row['batch_profit_copper'])} · "
+                     f"per craft {format_money(row['profit_per_craft_copper'])} · "
+                     f"cost {format_money(row['batch_cost_copper'])}")
+            session_signal(row['signal'])
+            for material in row['purchases']:
+                with ui.row().classes('items-center gap-2'):
+                    item_link(config, material['item_id'], row['material_names'][material['item_id']])
+                    ui.label(f"{material['purchased_units']} units · {material['method']} · "
+                             f"{format_money(material['cost_copper'])}")
+                session_signal(material['signal'])
+
+
+def session_options(options, config):
+    snapshot = options['snapshot']
+    signal = options['signals']
+    with ui.row().classes('items-center gap-3'):
+        theme.chip(age_caption(options['freshness'], config['max_age_hours']))
+        if options['freshness']['stale']:
+            theme.badge('stale — inspect only', 'warn')
+    if signal['note']:
+        ui.label(signal['note'])
+    for character in options['characters']:
+        with ui.card().classes('bs-card').mark('session-character'):
+            session_summary(character, options, config)
+            with ui.expansion(f"Details for {character['character'][0]}").classes('w-full'):
+                session_crafts(character, config)
+                session_professions(character, config)
+    if not options['characters']:
+        ui.label('No scoped Today characters imported. Use Data → Import.')
+    ui.label('Farming rates come later (STORY-065).')
+    with ui.expansion('How these options were made'):
+        ui.label(f"Reach window {options['window']} points (set on Team) · cost and unlocks side by side; "
+                 'current profit is not a forecast. Listings, never sales. No sales credit in costs. Yellow '
+                 'skill-up chances and Classic Era tier levels (Journeyman 10, Expert 20, Artisan 35) are '
+                 'unconfirmed on Forever.')
+        ui.label(f"Snapshot {snapshot['snapshot_id']} · scan {snapshot.get('scan_id', 'unavailable')} · "
+                 f"source {config['source_id']} · market {config['market_id']} · rules {config.get('rules_version')}")
+        if signal['scan']:
+            ui.label(f"Labels: scan {signal['scan']['scan_id']} · snapshot {signal['scan']['snapshot_id']} · "
+                     f"{signal['scan']['finished_at']} · {age_caption(signal['freshness'], config['max_age_hours'])}")
+
+
+def session_professions(character, config):
+    ui.label('Levelling professions').classes('text-lg font-bold')
+    if not character['professions']:
+        ui.label('No profession list reported. Open profession windows and import character evidence.')
+    for group in character['professions']:
+        ui.label(f"{group['profession']} · {group['rank'] if group['rank'] is not None else 'unknown'} / "
+                 f"{group['max_rank'] if group['max_rank'] is not None else 'unknown'}").classes('font-bold')
+        tier = group['tier']
+        if tier is not None:
+            ui.label(f"{tier['name']} (past {tier['cap']}) needs character level {tier['required_level']}").classes(
+                'bs-note')
+        if group['capped']:
+            theme.badge('capped · train the next tier first', 'warn')
+        elif not group['recipes']:
+            ui.label(group['note'] or 'No next recipes in reach; rank or recipe evidence may be missing.')
+        for milestone in group['milestones']:
+            session_milestone(milestone, group, config)
+    with ui.expansion('Recipe list coverage'):
+        for catalog, count in character['unlisted'].items():
+            ui.label(f"{catalog}: {count} not in a recipe list; open that profession's window")

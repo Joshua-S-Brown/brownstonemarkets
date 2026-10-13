@@ -843,6 +843,37 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - Compare the newest lowest unit buyout (not market value, so like is compared with like) with its own median positive per-unit lowest buyout from earlier eligible scans within `flood_window_days` (default **7 days**, inclusive, measured back from the newest scan). Require `flood_min_scans` (default **5**) matching priced scans; the newest never enters its median. Median uses the middle price, or the mean of the two middle prices rounded down to integer copper. **Cheap** is at most `flood_cheap_percent` (default **60%**) of typical; **high** is at least `flood_high_percent` (default **150%**). Integer cross-products decide boundaries. Show ratio, typical price and scan count; too few scans or missing prices never flag. All seven settings inherit shared config and allow source overrides; positive integers, thin below contested, churn at most 100%, price cut-offs straddling 100%.
   - Market shows two short linked lists: contested catalog-chain identities ordered by listings then churn fraction, and overshoots with up to five cheap and five high identities ordered within each direction by distance from typical, leaving out **thin** identities (owner decision 2026-10-13: their one-off quotes crowded out real swings; item pages still flag them); deterministic item/state/variant ties, no pooling. Material/output roles come only from compatible catalogs, including both roles where applicable. Item pages load their signals lazily, including noncatalog items; show thresholds/window, scan UTC time and DATA-05 freshness, listing evidence and short-history explanations. Names use the scan's own loaded name, then the source game version's `item_names`, then **Item N**. These are listings, never sales, observed demand or a forecast.
 
+- **UI-12 This session (STORY-063):** a toggle under Today's title, in the same place in both views,
+  shows every scoped Today character in Today's character order. Each character card answers first
+  with short **next step** lines, then folds the evidence into **Details**. The lines are options in a
+  fixed order, not a verdict: the owner still chooses (owner decision 2026-10-13, replacing "orders
+  options without choosing"). Character links open Team; item links open Market.
+  - Next steps, in order: **craft** the character's reserved Today rows with their planned profit;
+    per profession (in profession order), **level** it to the reach of its best valued unlock when that
+    estimate is complete, with its cost, cheap share and unlock; **level the character** when the
+    character level is below the next tier's requirement (shown as "before X reaches cap", or "X is
+    capped" when it is); **train** the next tier when capped and high enough. With no craft or
+    levelling line: **nothing to craft or level within the window**, gathering is the option. With no
+    profession list: open the profession windows next login.
+  - Next tier levels follow Classic Era's ladder (warcraft.wiki.gg, *Classic proficiency*): cap 75 →
+    Journeyman at character level 10, 150 → Expert at 20, 225 → Artisan at 35. Character level comes
+    from the newest bags snapshot; unknown says so. Unconfirmed on Forever, like CRAFT-11's yellow chances.
+  - Crafting shows the reserved Today rows that character is Known or Train now for (STORY-043),
+    their unchanged planned profit and per-character total. UI-11 labels show in plain words, and only
+    when worth acting on (thin, contested, cheap, high, short history, no buyout); steady and typical
+    stay in the evidence. Labels never change the plan, ranking or today_version.
+  - Profession options reuse CRAFT-11 at Team's remembered reach window, grouped by reach: recipes at
+    one required skill share one cost estimate, shown once, lowest reach first, with each unlock's
+    current Action Board profit per craft or its unvalued reason. Show the portion of each complete
+    estimate spent on UI-11 cheap auction materials, with expected copper rounded up per point as in
+    CRAFT-11; vendor purchases and training are excluded from that portion. Incomplete total and cheap
+    portion stay unknown with reasons. At cap say **capped** instead of displaying estimates beyond the
+    cap. No payback or forecast number.
+  - Snapshot/scan and DATA-05 age accompany figures; labels retain their own UI-11 scan and age.
+    Thin/missing evidence and incomplete recipe lists remain explicit. Catalog routes only receive
+    base/legacy labels under ADDON-08, never pooled variant labels. Missing prices are unknown,
+    never free. Listings, never sales. Farming has only **Farming rates come later (STORY-065)**.
+
 - **UI-08 Design checklist (decided 2026-10-12, product owner):** every new-app page passes these before review, checked on screenshots, not only code. STORY-060 brings the existing pages into line.
   1. **Answer first:** the top of the page answers its place's question; one subtle business-question subtitle per place.
   2. **One primary action** per view, visually distinct.
