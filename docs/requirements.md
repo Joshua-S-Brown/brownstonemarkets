@@ -12,7 +12,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - Blizzard's API publishes no Forever auction data, and TSM has no Forever data.
   - Existing Forever price sites are fed by players' addon scans. Forever addons reportedly use the modern `C_AuctionHouse` API, which has Retail-style commodities.
   - Forever reuses Classic item IDs: 2,323 of the 2,927 items priced in the 2026-10-04 beta scan are also priced on Classic Era Mankrik under the same IDs. Prices differ (see STORY-012), so this allows explicit comparison, never joining (DATA-03).
-  - **Unconfirmed claims** (from outside design notes, 2026-10-06; not evidence, never built on until checked in game, checklist under *Now* in `backlog.md`): a Black Market vendor sells a fixed list of scarce materials at fixed prices (claimed 50g each, Pyrite 5g); a sold auction's gold arrives by mail about 2 minutes after the sale; auction scans are throttled beyond `ReplicateItems`' 15 minutes; the event names for purchases, crafts, posts and mail match Retail's.
+  - **Unconfirmed claims** (from outside design notes, 2026-10-06; not evidence, never built on until checked in game, checklist under *Now* in `backlog.md`): a Black Market vendor sells a fixed list of scarce materials at fixed prices (claimed 50g each, Pyrite 5g); a sold auction's gold arrives by mail about 2 minutes after the sale; auction scans are throttled beyond `ReplicateItems`' 15 minutes; the event names for purchases, crafts, posts and mail match Retail's. Added 2026-10-13: profession tiers need character level 10 (Journeyman), 20 (Expert) and 35 (Artisan), as on Classic Era (UI-12 uses this, labelled unconfirmed).
   - **Measured, contradicting those notes:** the notes assumed Retail-style commodities (per-unit price tiers) and a seller on every listing. The beta reports neither (ADDON-02, ADDON-07).
   - Sources: [Wikipedia](https://en.wikipedia.org/wiki/World_of_Warcraft:_Forever), [AHledger](https://ahledger.com/wow-forever/auction-house), [WowGuide realms](https://wowguide.net/en/guides/wow-forever-realms-rulesets), [Blizzard API forum: Classic Era auction 404s](https://us.forums.blizzard.com/en/blizzard/t/404-for-all-classic-era-namespace-auction-house-endpoints/54307), [WOW4E_AH_Trader](https://github.com/1nd1v1d/WOW4E_AH_Trader).
 - **Development stand-in:** Mankrik Alliance, Classic Era (TSM public realm CSV). Classic is used to build and prove the product, not as the end market. Switching to Forever must be a configuration and catalog change: add a source whose market fields describe the Forever house and whose `rules_version` matches a Forever catalog. It must not require code changes.
@@ -254,8 +254,10 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   character within the selected source and full market, ordered by capture time then shared sequence.
   Last seen does not make older bags values fresh. History includes only readable bags snapshots;
   missing level/ranks supply no chart points.
-- Reported rank equal to reported maximum displays *at cap: train the next tier*. No character-level
-  tier requirement is inferred; such requirements need evidence under *Known Forever market facts*.
+- Reported rank equal to reported maximum displays *at cap: train the next tier*. Team infers no
+  character-level tier requirement. This session (UI-12) uses Classic Era's tier levels, labelled as an
+  unconfirmed assumption, until trainer evidence (addon 0.11.3) confirms or corrects them under
+  *Known Forever market facts* (owner decision 2026-10-13).
   Existing capture, known-recipe and unreadable-read rules remain in ADDON-11/12.
 
 ### ADDON-12 Event journal (STORY-033)
@@ -288,6 +290,14 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   no unchanged-bag entry. Incomplete reads invalidate the baseline and record `baseline_missing`,
   never guessed zeros/deltas. A later complete read reestablishes it before differences resume.
   Window booleans are based on observed open/close events; absent means not observed, not closed.
+- **Discovery context (addon 0.11.3, 2026-10-13; STORY-065 and UI-12 tier evidence):** `LOOT_OPENED`
+  adds `loot_slot_count` and per slot (at most 50) its `GetLootSlotLink` and every `GetLootSourceInfo`
+  return value (GUID/quantity pairs, so a node, mob or container can be told apart later), plus `zone`
+  (`GetRealZoneText`, `GetSubZoneText`, `C_Map.GetBestMapForUnit("player")`). Own `CHAT_MSG_LOOT`
+  entries add `zone`. `TRAINER_SHOW` adds `trainer_service_count` and per service (at most 300)
+  `GetTrainerServiceInfo`, level requirement, skill requirement and cost return values, plus the
+  available/unavailable/used filter states. Raw values only, interpreted after the beta check; a
+  missing or failing API leaves that value out, never a guess. File format stays 6.
 - Mail open/inbox changes read `GetInboxNumItems`, every header and invoice, and available attachment
   info/links (an attachment is kept when any of its values is reported, so an item the client
   hasn't loaded yet keeps its ID and count without a name). Header/invoice tuples retain their full positional return values and counts. Capture

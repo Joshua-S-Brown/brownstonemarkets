@@ -42,25 +42,22 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
-2. STORY-064 flood signals: crowding and overshoots (Brownstone; medium; ready for launch on 4 November)
-3. STORY-063 launch weeks: where to spend play time (Brownstone; implemented, pending owner review)
-4. STORY-065 farming rates from play sessions (addon + Brownstone; needs a beta discovery first)
-5. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
-6. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-7. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
-8. STORY-035 auction deposits (needs a beta check)
-9. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-10. STORY-036 vendor price ceilings
-11. STORY-015b crafting across professions
-12. STORY-021 item page and charts (would live in the Market explorer)
-13. STORY-026 scan coverage and rhythm
-14. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-15. STORY-006 replay
+1. STORY-015b crafting across professions (Brownstone; medium; refined 2026-10-13, ready for handoff)
+2. STORY-065 farming rates from play sessions (addon + Brownstone; needs its beta discovery, in the play session before 21 October)
+3. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
+4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+5. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
+6. STORY-035 auction deposits (needs a beta check)
+7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+8. STORY-036 vendor price ceilings
+9. STORY-021 item page and charts (would live in the Market explorer)
+10. STORY-026 scan coverage and rhythm
+11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+12. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040, STORY-044 and STORY-027 (checklists in `addon/README.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 056, 057, 058, 060 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 060, 063, 064 and SPIKE-009/009b.
 
 **Added 2026-10-12 (product owner, after SPIKE-009b: "instead of migrating all the pages… what do we really need?"):** NiceGUI becomes the app, but only for what running the business needs. Four places move, each a story: **Today** (STORY-058, then STORY-054's cards), **Team**: the employee roster, their skills and where to invest (STORY-052, then STORY-059), **Market**: an explorer for browsing materials, crafts and supply chains, plus what moved since the last scan, kept for now to judge its use (STORY-055), and **Data**: Import (STORY-058). Everything else (All recipes, Watchlist, Below usual price, Scan changes, Recipe catalogs) stays in the Streamlit app, which is kept, unchanged and reachable, but gets no new features. The new app is built for WoW Forever; Classic stays development test data with no features of its own (`requirements.md` → *Interface*). This supersedes the Streamlit placements in STORY-053 for future work.
 
@@ -70,29 +67,6 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 3. **Market: what are the market indicators, and how do they affect our strategy?** One brief that ties what moved to what it means for our plan (STORY-055).
 
 STORY-053 sets up the navigation first, so each later story has a home. New feature stories wait behind these four. Display and wiring only unless a story says otherwise: no change to calculations, ranking or `today_version`.
-
-### STORY-055 — Market explorer
-
-**Implemented; pending owner review.** Rules: `requirements.md` → UI-09; contracts: `design.md` → Market explorer.
-
-Added 2026-10-11 as *Market brief*; **rewritten 2026-10-12** (product owner: "the broader views of the materials and crafting market and supply chains… so that I can browse certain things and explore the data myself"; on what moved since the last scan: "keep it for now and I'll see how useful it is"). Brownstone only; read-only over values already computed. Built in the new app's Market place (after STORY-058). Supply chains here mean materials → crafts → outputs from our catalogs, not sellers (STORY-028).
-
-As the owner, I want to look up any item and see where it sits in our crafting: what it costs, what it's used for and what it makes, so that I can explore the market myself instead of only reading Today's answer.
-
-Acceptance:
-- **Find any item** of the newest snapshot of the selected source and full market, by name or ID, regardless of price (UI-02). The page states the snapshot's UTC time and freshness once.
-- **An item's page** shows, from that snapshot: lowest buyout and market value per unit, listings and units, and the item's vendor buy and sell price when known. Then its place in the chain, from compatible catalogs (UI-04) only:
-  - **Made from:** if a catalog recipe makes it, its materials with quantities and current cost by CRAFT-03's cheapest route, intermediates indented (`crafting.material_plan`), and its profit per craft from the Action Board rows (`action_board.rank_catalogs`), with the board's reason when it isn't valued.
-  - **Used in:** every catalog recipe that consumes it, with quantity per craft, that recipe's output and profit per craft, sorted by profit per craft. Who on the team can make each (STORY-043 statuses), Unknown marked.
-  - **Skill-up demand:** the bands where levellers need it (STORY-047's map), if any.
-  Every item named in a chain opens its own page in one click, so you can walk the chain in either direction.
-- **What moved since the last scan** (kept on trial; the owner will judge its use): a section comparing the newest two complete scans of the same source and full market (UI-06's rules), listing at most 10 items whose lowest buyout or units changed most, limited to items in our catalogs' chains, each with its change in copper and units and a link to its page. With one scan, it says *no earlier scan*. A TSM source says it has no scan comparison.
-- **Honest labels:** listings, not sales or demand; no forecast; missing prices never free or zero; stale evidence labelled.
-- **Presentation** follows the rest of the new app (STORY-060): replace the Market placeholder, use `views/nicegui_theme.py` (chips, tiles, cards, badges, empty states, dialogs) and pass UI-08. Status chips at the top (snapshot age with Stale badge, items in our chains); the header ⓘ opens a dialog with snapshot ID and time, source, market and catalogs used. The open item is in the URL (`item=<id>`), so refresh and the browser's back button keep it.
-- **Calculation** in a new `brownstone/market_explorer.py` (no NiceGUI or Streamlit) composing existing outputs: `analysis` browse queries, `crafting`, `action_board.rank_catalogs`, `today_characters`, `skillups`, `scan_changes`. No second pricing path. Display in a new `views/nicegui_market.py`.
-- **Offline tests (NiceGUI user fixture where it's display):** search by name and ID; an item with made-from, used-in and skill-up sections; an item in no catalog (price only, says so); a missing price (never free); walking from a material to an output and back; what-moved with two scans, one scan, and a TSM source; scoping (another source's snapshot never used); a stale snapshot.
-- **Real-data check:** on the Forever beta source: Linen Cloth's used-in list, Bolt of Linen Cloth's made-from, and what moved across the two newest scans.
-- **Docs:** a *Market explorer* rule in `requirements.md`, `design.md`, `status.md`.
 
 ### STORY-059 — Should we add a character?
 
@@ -298,40 +272,6 @@ Acceptance:
 - **Shown** on the Market explorer's item page (STORY-055) and in Stock (STORY-061).
 - Feeds *Sales speed instead of a fixed cap* (Later) for Today, which stays a separate story.
 
-### STORY-064 — Flood signals: crowding and overshoots
-
-Added 2026-10-13 (product owner: "when the game launches, I may need to consider market saturation as everyone's leveling up their professions"). Promoted from *Strategy ideas* (Later): *Crowding without seller names* and *Buy the overshoots*. Brownstone only; read-only over saved scans and the market metrics layer (ADDON-10); no schema change. Must be ready for launch on 4 November; it is built and tested on beta scans. **Refined 2026-10-13:** thresholds below decided by the product owner after looking at the beta's 18 scans (median item: 2 listings; 1 in 10 has 15 or more).
-
-As the owner, I want to see which markets are flooded or crashed right now, so that in the first weeks I buy cheap materials and avoid crafting into crowded markets.
-
-**Implemented; pending owner review.** Rules: `requirements.md` → UI-11; contracts: `design.md` → Flood signals.
-
-Acceptance:
-- **Crowding per item** from the newest scan and the scans before it, all from the same source and full market: listing count, units listed, the share of units in the largest stack, and how often the lowest buyout changed across recent consecutive scans (STORY-027's pairs and 12-hour gap). Labels (owner decision 2026-10-13): **contested** = 10 or more listings in the newest scan *and* the lowest buyout changed in at least half of the recent qualifying pairs (at most ten, as STORY-027's item history); **thin** = 2 or fewer listings; **steady** = everything else. With no qualifying pair, label by listings only and say the churn is unknown. The largest-stack share is shown, not used in the label. Record the thresholds in `requirements.md` and show the numbers behind each label. Seller names are not available (ADDON-07); we never guess them.
-- **Overshoots:** an item's lowest buyout or market value against its own recent typical price (owner decision 2026-10-13: the median per-unit lowest buyout over the earlier eligible scans in the last **7 days**, needing at least **5** of them; the newest scan is compared, never part of its own median). Flag **cheap** at **60% or less** of typical and **high** at **150% or more**; both are shown for every chain item, so a cheap output or a high material is visible too, with the material/output role from the catalogs. Show the ratio and how many scans it rests on; too few says so instead of flagging. Launch-day history is short, so the window, minimum scans and both cut-offs are explicit settings in config with these defaults, shown on the page, and recorded in `requirements.md`.
-- **Honest labels:** listings, not sales; no forecast; missing prices never zero; variants never pooled (ADDON-08); stale evidence labelled.
-- **Shown** on the Market explorer's item page and as two short lists in the Market place (most contested chain items; biggest overshoots both ways), each linking to the item page.
-- **Calculation** in a new `brownstone/` module composing `scan_metrics` reads and STORY-027's pairs; display in `views/nicegui_market.py`.
-- **Offline tests** for each label, each threshold boundary, too few scans, variants, scoping and stale evidence. **Real-data check** on the Forever beta source.
-
-### STORY-063 — Launch weeks: where to spend play time
-
-**Implemented; pending owner review.** Rules: `requirements.md` → UI-12; contracts: `design.md` → This session.
-
-Added 2026-10-13 (product owner: "I need to figure out how to spend those first couple weeks effectively… whether it's using cheap mats to improve my professions or getting my characters leveled… or farming certain materials to sell or to craft myself"). Brownstone only; read-only over values already computed. **Refined 2026-10-13** with the product owner: lives on Today, covers the whole team, values levelling as cost plus what it unlocks, and leaves farming to STORY-065.
-
-As the owner, I want the ways each character could spend a play session laid out side by side on current evidence, so that I use my gaming time well in the first weeks when markets swing.
-
-Acceptance:
-- **Where:** a *This session* view in the new app's Today place, one toggle away from the plan, for **every scoped Today character** (the whole team), each in its own section. It answers *what should our company do today?*, so it links to Team and Market rather than repeating them.
-- **Crafting to sell,** per character: the Today plan rows that character can make (STORY-043 statuses), with their planned profit and total, exactly as Today computes them. Each output carries its STORY-064 crowding label (contested outputs say so), and each material its overshoot label (cheap materials say so). **Labels only:** no change to Today's plan, ranking or `today_version`.
-- **Levelling a profession,** per character and profession, from STORY-052 (CRAFT-11) at the Team page's reach window: the estimated cost to reach the next useful recipes, which recipes that unlocks and their current Action Board profit per craft (CRAFT-03/04/05; unvalued recipes keep the board's reason). Show how much of the cost is materials STORY-064 flags **cheap**, so a good moment to level is visible. No payback or forecast number: cost and what it unlocks side by side; the owner weighs them. A profession at its maximum rank says it is capped instead of estimating past the cap.
-- **Order:** within each character, crafting first, then professions by the best current profit per craft they unlock, ties by lower cost; deterministic. Characters in Today's character order. **Revised 2026-10-13 after the owner's first look:** each character answers first with short next-step lines (craft, level a profession, level the character when the next profession tier needs it, train, gather), details folded underneath; the owner still chooses (UI-12).
-- **Farming** is not shown yet. One line says farming rates come later (STORY-065), never an invented rate.
-- **Honest limits:** every figure states the snapshot it rests on and its age (DATA-05); thin or missing evidence says so; missing prices are unknown, never free; incomplete estimates keep their reasons; variants stay separate. Listings, never sales; no forecast.
-- **Calculation** in a new `brownstone/` module composing existing outputs only (Today's plan, `progression`, `flood_signals`); no new price query. Display in `views/nicegui_today.py` with `views/nicegui_theme.py`. Record the rule in `requirements.md` next to UI-11.
-- **Offline tests:** several characters, a character with no profession list, a capped profession, an incomplete estimate, cheap-material share, contested-output labels, missing prices, ordering ties, and that Today's plan is unchanged. **Real-data check** on the Forever beta source.
-
 ### STORY-065 — Farming rates from play sessions
 
 Added 2026-10-13 (product owner, while refining STORY-063: "we can backlog it but make sure we have a story for capturing farming events"). Addon capture plus Brownstone; read-only, manual play only. Needs a beta discovery first.
@@ -339,7 +279,7 @@ Added 2026-10-13 (product owner, while refining STORY-063: "we can backlog it bu
 As the owner, I want to know how many of a material I actually gather per hour of play, so that STORY-063 can compare farming with crafting and levelling on measured rates instead of guesses.
 
 To refine:
-- **Capture (beta discovery):** the journal already records `CHAT_MSG_LOOT` for the player (ADDON-07 rules in `requirements.md`), but not whether the loot came from a gathering node, a mob or a container, nor where. Find out on the Forever beta which read-only evidence tells them apart (for example the loot source's GUID type from the loot window, or the gathering spell) and whether the zone can be recorded with each event. Record what fired, like STORY-033's discovery; nothing that buys, posts or plays for you.
+- **Capture (beta discovery):** the journal already records `CHAT_MSG_LOOT` for the player (ADDON-07 rules in `requirements.md`), but not whether the loot came from a gathering node, a mob or a container, nor where. Find out on the Forever beta which read-only evidence tells them apart (for example the loot source's GUID type from the loot window, or the gathering spell) and whether the zone can be recorded with each event. Record what fired, like STORY-033's discovery; nothing that buys, posts or plays for you. **Capture added 2026-10-13 in addon 0.11.3** (ADDON-12 → *Discovery context*): loot-slot sources, zone and trainer lists; the play checklist is in `addon/README.md`.
 - **Farming stretches:** per character, a stretch of gathering events with its start, end and zone; idle gaps above a limit end a stretch. Units per hour per material per zone, with the number of stretches and minutes it rests on.
 - **Value:** units per hour times the material's current sale value after the auction cut (STORY-064's typical price shown beside it), so a crashed material is visible. Shown in STORY-063's *This session* view once there is enough history; too little says so.
 - **Builds on** STORY-033 (journal) and STORY-034 (ledger's *gathered* reason); no schema change unless the capture needs one (then a numbered migration).
@@ -377,15 +317,22 @@ Acceptance:
 
 ### STORY-015b — Crafting across professions
 
-Split from STORY-015 at grooming (2026-10-04). Builds on the combined board in `status.md` (STORY-015a, implemented). It pays off once there are catalogs that feed each other (for example Leatherworking or Mining for Tailoring); today's Tailoring, Alchemy and Enchanting catalogs share few materials.
+Split from STORY-015 at grooming (2026-10-04). **Refined 2026-10-13** (owner: "let's do all that", agreeing it is the next build while the beta checks run). The nine Forever catalogs now feed each other: on 2026-10-13, 75 items one profession makes are another's material (Mining bars for Blacksmithing and Engineering, Leatherworking's leathers for Tailoring and Engineering, Alchemy's dyes and oils for Tailoring, Tailoring's bolts for Engineering). Only one item, 18258, is made by two professions (Leatherworking and Tailoring). Brownstone only; no schema change.
 
-As a gold maker, I want the board to cost recipes using every profession I have a catalog for, so that a Tailoring recipe can use Leatherworking's Rugged Leather or a smelted bar at its real crafted cost instead of only the auction price.
+As the owner, I want a recipe to be costed with materials another of our characters can make, at their crafted cost, so that Today and Team show what the team as a whole can make and what it costs, instead of only auction prices.
 
 Acceptance:
-- **One recipe graph.** Intermediates from other professions resolve across a market's compatible catalogs, with the cheapest valid buy, craft or vendor route still per CRAFT-03. Decide, and record in `requirements.md`, what happens when two professions make the same item, such as choosing the cheapest valid route and showing which profession it came from.
-- **Your professions.** An optional list of the professions you actually have restricts craft routes to those. Anything else is bought or flagged, never assumed craftable.
-- **Board filters** by tier or skill range, and name, so large catalogs stay usable.
-- **Same rules.** Missing prices are never free, unsupported recipes are isolated per row, and the policy version is shown. Tests cover a cross-profession chain.
+- **One recipe graph per market.** A framework-free builder combines a market's compatible catalogs (same game version, rules version and market: UI-04) into one graph that the existing CRAFT-03 route code walks unchanged: cheapest valid buy, craft or vendor route, missing prices never free, cycles and fractional units rejected per CRAFT-02, equal costs resolved deterministically. Recipe IDs must be unique across the combined catalogs, otherwise the builder refuses with both catalog identities named. Each recipe keeps the catalog and profession it came from, and every row keeps its catalog-qualified identity (`catalog_for_row`), so nothing joins on a recipe ID alone.
+- **Two makers:** when two professions make the same item, use the cheaper valid route; a tie goes to the lower catalog identity. Always show which profession the route came from. Record this as a new CRAFT rule in `requirements.md`.
+- **Items in several catalogs** must agree on the fields routes use (vendor buy price, raw-material flag, availability). If they disagree, show both catalogs and the item as a catalog warning and treat the item as buy-only in the combined graph until the catalogs are fixed. Never pick one value silently.
+- **Only what the team can make.** A cross-profession craft route (material from another catalog) is used only when a scoped Today character is Known or Train now for that recipe (STORY-043 statuses). Otherwise the material is bought, with *no one on the team makes this* shown beside it, never assumed craftable. Routes inside a recipe's own catalog keep today's behaviour. With no character evidence, there are no cross-profession routes.
+- **Where it applies:** the Action Board ranking (`action_board.rank_catalogs`, given the team's makeable recipes), and through it Today's plan, Shopping list and Queue; the Market explorer's made-from and used-in (UI-09); Team's cost to reach (CRAFT-11); and This session (UI-12). The Streamlit pages get no new features: called without team evidence, the board stays catalog-local, exactly as today.
+- **Today:** a cross-profession intermediate names the character who can make it and its profession (for example *Copper Bar · Keenagen, Mining*). The Queue lists its crafts under that character, before the crafts that consume it. Mail between characters is not charged and says so: postage is an unconfirmed claim (`requirements.md` → *Known Forever market facts*).
+- **Versions:** bump the board's `POLICY_VERSION` and `TODAY_VERSION`, because costs change, and record why in `requirements.md`. Saved plan choices and ticks made before the change must not be applied to the new routes: reset them with Today's existing *plan reset* note (`views/nicegui_today.py` → `session_plan`).
+- **Honest labels:** a crafted cost is not a sale price, and shows no profit for the intermediate step unless the board values it. Listings, never sales. Integer copper throughout.
+- **Offline tests:** a two-profession chain (bar → armour); a three-profession chain (bar → buckle → belt); two makers (cheaper wins, tie by catalog identity); a recipe-ID collision refused; disagreeing item fields → warning and buy-only; a cross route used only when a team member is Known or Train now, and bought otherwise; no character evidence → catalog-local, identical to today; a cycle across catalogs rejected; missing prices never free; scoping (another market's or rules version's catalog never joins); Today's Queue ordering and *made by* label; Team cost to reach using a team-made bar.
+- **Real-data check** on the Forever beta source: how many board rows' costs change with the beta team's evidence (it may be none, since Basilly tailors and Keenagen mines at low rank: say so). Also run with a test fixture giving Keenagen Engineering, to show Copper Bar routing into Engineering recipes.
+- **Docs:** the new CRAFT rule in `requirements.md`; the graph builder and where it is used in `design.md`; `status.md`.
 
 ## Later
 

@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.11.2"
+local ADDON_VERSION = "0.11.3"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -865,6 +865,62 @@ function journal.args(...)
     return values
 end
 
+-- Every return value of a read-only call, or nil when it is missing or fails: safe() keeps only two.
+local function readAll(fn, ...)
+    if type(fn) ~= "function" then return nil end
+    local values = journal.args(pcall(fn, ...))
+    if not values[1] then return nil end
+    local result = { n = values.n - 1 }
+    for i = 2, values.n do result[i - 1] = values[i] end
+    return result
+end
+
+local function boundedCount(fn, limit)
+    local value = safe(fn)
+    if type(value) ~= "number" or value < 0 or value % 1 ~= 0 then return nil end
+    return math.min(value, limit)
+end
+
+-- STORY-065 discovery: where the player stood. Raw values; Brownstone interprets them after the beta check.
+function journal.zone()
+    return { zone = safe(GetRealZoneText), subzone = safe(GetSubZoneText),
+        map_id = C_Map and safe(C_Map.GetBestMapForUnit, "player") }
+end
+
+-- What each loot slot came from: GetLootSourceInfo's GUIDs say node (GameObject), mob (Creature) or container.
+function journal.lootSources()
+    local slots = {}
+    for slot = 1, boundedCount(GetNumLootItems, 50) or 0 do
+        slots[#slots + 1] = { slot = slot, link = safe(GetLootSlotLink, slot),
+            sources = readAll(GetLootSourceInfo, slot) }
+    end
+    return { loot_slot_count = boundedCount(GetNumLootItems, 1000), loot_slots = slots, zone = journal.zone() }
+end
+
+-- Tier evidence (UI-12): what the open trainer lists, with its level and skill requirements and cost.
+function journal.trainerServices()
+    local services = {}
+    for index = 1, boundedCount(GetNumTrainerServices, 300) or 0 do
+        services[#services + 1] = { index = index, info = readAll(GetTrainerServiceInfo, index),
+            level_required = readAll(GetTrainerServiceLevelReq, index),
+            skill_required = readAll(GetTrainerServiceSkillReq, index), cost = readAll(GetTrainerServiceCost, index) }
+    end
+    local filters = {}
+    for _, kind in ipairs({ "available", "unavailable", "used" }) do
+        filters[kind] = safe(GetTrainerServiceTypeFilter, kind)
+    end
+    return { trainer_service_count = boundedCount(GetNumTrainerServices, 1000), trainer_services = services,
+        trainer_filters = filters }
+end
+
+-- Extra read-only context for a few events; nil leaves the entry as before.
+function journal.context(event)
+    if event == "LOOT_OPENED" then return journal.lootSources() end
+    if event == "CHAT_MSG_LOOT" then return { zone = journal.zone() } end
+    if event == "TRAINER_SHOW" then return journal.trainerServices() end
+    return nil
+end
+
 function journal.entry(event, family, arguments, context)
     local db = BrownstoneScanDB
     if not db or not db.journal then return nil end
@@ -1407,7 +1463,7 @@ function journal.observe(event, ...)
         journal.owned(event, arguments)
     else
         if event == "MAIL_SEND_INFO_UPDATE" then journal.draft() end
-        journal.add(event, family, arguments)
+        journal.add(event, family, arguments, journal.context(event))
     end
     if close[event] then journal.windows[close[event]] = false end
 end

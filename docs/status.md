@@ -76,7 +76,7 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   market metrics (ADDON-10).
 - **Beta evidence report (STORY-042):** private Markdown/JSON reports under ignored
   `work/beta-reports/` ([usage](#beta-evidence-report)).
-- **Scanning addon:** `addon/BrownstoneScan/` 0.11.2, file format 6, scan format 4: manual scans with
+- **Scanning addon:** `addon/BrownstoneScan/` 0.11.3, file format 6, scan format 4: manual scans with
   the bounded item-info pass, character snapshots, event journal, active auctions, known recipes
   through `C_TradeSkillUI`, reload/clear buttons and the minimap panel. Usage, saved fields and beta
   checklists are in `addon/README.md`.
@@ -105,7 +105,7 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
   unshared, and the greedy plan is affordable, not a global optimum. Sales speed and volatility are
   not modeled.
 - Craft routes stay within each catalog (cross-profession routing is STORY-015b). Multi-yield recipes
-  aren't supported (`requirements.md` → *Not modeled*). Character-level tier requirements are not inferred.
+  aren't supported (`requirements.md` → *Not modeled*). Team infers no character-level tier requirement; This session uses Classic Era's (10/20/35), unconfirmed on Forever until trainer evidence from addon 0.11.3 is checked.
 - On the Classic stand-in, the legacy skill API reports every skill line, so weapon skills and
   languages appear as lines; the Forever client reports professions only.
 - Mankrik has no upstream scan time, so its "stale" measures time since download. Classic historical
@@ -127,7 +127,7 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,297 passed and one explicit PowerShell-unavailable skip (1,298 run where
+Expected on this Mac: 1,300 passed and one explicit PowerShell-unavailable skip (1,301 run where
 PowerShell exists, as in Windows CI), offline, at 96.40% coverage with branches enabled;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).

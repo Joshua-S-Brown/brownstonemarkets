@@ -1,6 +1,7 @@
 """Execute the real journal under Lua 5.1 and exercise the shared offline import contract."""
 import copy
 import gzip
+import json
 import re
 import sys
 from datetime import UTC, datetime
@@ -162,6 +163,68 @@ def test_lua_all_event_families_own_spellcasts_and_loot():
     assert len(entries(g)) == 6
 
 
+def test_lua_loot_sources_zone_and_missing_apis():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        function GetRealZoneText() return "Elwynn Forest" end
+        C_Map = { GetBestMapForUnit = function(unit) return 1429 end }
+        function GetNumLootItems() return 2 end
+        function GetLootSlotLink(slot) return "|Hitem:" .. (slot == 1 and 2770 or 2589) .. "|h" end
+        function GetLootSourceInfo(slot)
+            if slot == 1 then return "GameObject-0-1-2-3-1731-0001", 2 end
+            return "Creature-0-1-2-3-299-0002", 1, "Creature-0-1-2-3-299-0003", 1
+        end
+    ''')
+    fire(g, "LOOT_OPENED", 0)
+    r = entries(g)[-1]
+    assert r["loot_slot_count"] == 2 and r["zone"] == {"zone": "Elwynn Forest", "subzone": "Trade District",
+                                                        "map_id": 1429}
+    first, second = r["loot_slots"]
+    assert first == {"slot": 1, "link": "|Hitem:2770|h", "sources": {"n": 2, 1: "GameObject-0-1-2-3-1731-0001", 2: 2}}
+    assert second["sources"]["n"] == 4 and second["sources"][3].startswith("Creature-")
+    args = ["own"] + [None] * 10 + [g.UnitGUID("player")]
+    fire(g, "CHAT_MSG_LOOT", *args)
+    assert entries(g)[-1]["zone"]["map_id"] == 1429 and "loot_slots" not in entries(g)[-1]
+    # Missing or failing APIs record nothing for that value, never a guess, and never break the entry.
+    lua.execute('''
+        GetLootSourceInfo = function() error("unavailable") end
+        GetNumLootItems = function() return 1 end
+        C_Map = nil
+    ''')
+    fire(g, "LOOT_OPENED", 0)
+    r = entries(g)[-1]
+    assert r["loot_slots"] == [{"slot": 1, "link": "|Hitem:2770|h"}] and "map_id" not in r["zone"]
+    lua.execute('GetNumLootItems = nil')
+    fire(g, "LOOT_OPENED", 0)
+    assert entries(g)[-1].get("loot_slots") in ({}, [], None) and "loot_slot_count" not in entries(g)[-1]
+
+
+def test_lua_trainer_services_levels_costs_and_filters():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        function GetNumTrainerServices() return 2 end
+        function GetTrainerServiceInfo(i)
+            if i == 1 then return "Journeyman Tailoring", "Journeyman", "unavailable" end
+            return "Brown Linen Pants", nil, "available"
+        end
+        function GetTrainerServiceLevelReq(i) return i == 1 and 10 or 0 end
+        function GetTrainerServiceSkillReq(i) if i == 1 then return "Tailoring", 50, false end end
+        function GetTrainerServiceCost(i) return i == 1 and 500 or 50 end
+        function GetTrainerServiceTypeFilter(kind) return kind ~= "used" end
+    ''')
+    fire(g, "TRAINER_SHOW")
+    r = entries(g)[-1]
+    assert r["event"] == "TRAINER_SHOW" and r["trainer_service_count"] == 2
+    tier = r["trainer_services"][0]
+    assert tier["info"] == {"n": 3, 1: "Journeyman Tailoring", 2: "Journeyman", 3: "unavailable"}
+    assert tier["level_required"] == {"n": 1, 1: 10} and tier["cost"] == {"n": 1, 1: 500}
+    assert tier["skill_required"] == {"n": 3, 1: "Tailoring", 2: 50, 3: False}
+    assert r["trainer_services"][1]["skill_required"] == {"n": 0}
+    assert r["trainer_filters"] == {"available": True, "unavailable": True, "used": False}
+    fire(g, "TRAINER_CLOSED")
+    assert "trainer_services" not in entries(g)[-1]
+
+
 def test_lua_trainer_window_and_junk_button_are_vendor_evidence():
     _, g, _ = journal_client()
     fire(g, "TRAINER_SHOW")
@@ -269,6 +332,25 @@ def test_lua_rejected_events_and_missing_late_hooks_are_recorded():
     assert [m for i, m in g.messages.items() if i > loaded and "Journal" in m] == summaries
     diagnostics = python_value(g.BrownstoneScanDB.journal_diagnostics)
     assert diagnostics["installed_hooks"]["SendMail"] and "SendMail" not in diagnostics["missing_hooks"]
+
+
+def test_journal_discovery_context_imports_unchanged(tmp_path):
+    loot = entry("loot", loot_slot_count=1,
+                 loot_slots=[{"slot": 1, "link": "|Hitem:2770|h", "sources": {"n": 2, 1: "GameObject-0-1", 2: 2}}],
+                 zone={"zone": "Elwynn Forest", "subzone": "Goldshire", "map_id": 1429})
+    trainer = entry("trainer", trainer_service_count=1,
+                    trainer_services=[{"index": 1, "level_required": {"n": 1, 1: 10}}],
+                    trainer_filters={"available": True, "used": False})
+    loot.update(family="loot", event="LOOT_OPENED")
+    trainer.update(family="vendor", event="TRAINER_SHOW")
+    config = addon_source(tmp_path / "data", write(tmp_path / "own.lua", [loot, trainer]))
+    assert import_scans(config, now=NOW)["fully_imported"]
+    with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb")) as db:
+        rows = db.execute("SELECT entry_id, record_json FROM character_journal").fetchall()
+    saved = {entry_id: json.loads(record) for entry_id, record in rows}
+    assert saved["loot"]["zone"]["map_id"] == 1429 and saved["loot"]["loot_slots"][0]["link"] == "|Hitem:2770|h"
+    assert saved["trainer"]["trainer_services"][0]["index"] == 1
+    assert saved["trainer"]["trainer_filters"]["used"] is False
 
 
 def test_journal_shared_import_bronze_duplicates_scope_and_guidance(tmp_path):
