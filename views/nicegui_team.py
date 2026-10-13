@@ -1,4 +1,5 @@
 """Team roster and progression; per-tab controls, shared evidence and calculations."""
+from contextlib import contextmanager
 from datetime import UTC, datetime
 
 from nicegui import app, ui
@@ -184,33 +185,35 @@ def render(config, catalogs):
     area = ui.column().classes('w-full')
 
     def update():
-        session.update(character=list(identities[int(choice.value)]), window=int(slider.value))
-        area.clear()
-        results = team_results(catalogs, data, arguments, int(slider.value))
-        roster.clear()
-        heading.set_text(identities[int(choice.value)][0] + "'s next steps")
-        with roster:
-            with ui.row().classes('gap-3 items-center'):
-                theme.chip(f'{len(cards)} characters')
-                if cards:
-                    theme.chip('Last seen ' + cards[0]['last_seen_relative'] +
-                               ' · ' + (cards[0]['machine'] or 'machine unknown'))
-                selected_result = results.get(identities[int(choice.value)])
-                if selected_result and selected_result['freshness']:
-                    freshness_caption(selected_result['freshness'], config, banner=False)
-            with ui.element('div').classes('bs-roster'):
-                for card in cards:
-                    key = (card['name'], card['realm'], card['faction'])
-                    roster_card(card, results.get(key, {'professions': []}),
-                                selected=key == identities[int(choice.value)],
-                                on_select=lambda e, k=key: choice.set_value(str(identities.index(k))))
-        with area:
-            if manifest is None:
-                ui.label('No snapshot for this source and market. Import a scan to estimate progression.')
-            else:
-                result = results[identities[int(choice.value)]]
-                info[0] = lambda: estimates_info(result, config, arguments, cards)
-                progression_detail(result)
+        with route_errors(area):
+            session.update(character=list(identities[int(choice.value)]), window=int(slider.value))
+            area.clear()
+            results = team_results(catalogs, data, arguments, int(slider.value))
+            roster.clear()
+            heading.set_text(identities[int(choice.value)][0] + "'s next steps")
+            with roster:
+                with ui.row().classes('gap-3 items-center'):
+                    theme.chip(f'{len(cards)} characters')
+                    if cards:
+                        theme.chip('Last seen ' + cards[0]['last_seen_relative'] +
+                                   ' · ' + (cards[0]['machine'] or 'machine unknown'))
+                    selected_result = results.get(identities[int(choice.value)])
+                    if selected_result and selected_result['freshness']:
+                        freshness_caption(selected_result['freshness'], config, banner=False)
+                with ui.element('div').classes('bs-roster'):
+                    for card in cards:
+                        key = (card['name'], card['realm'], card['faction'])
+                        roster_card(card, results.get(key, {'professions': []}),
+                                    selected=key == identities[int(choice.value)],
+                                    on_select=lambda e, k=key: choice.set_value(str(identities.index(k))))
+            with area:
+                if manifest is None:
+                    ui.label('No snapshot for this source and market. Import a scan to estimate progression.')
+                else:
+                    result = results[identities[int(choice.value)]]
+                    info[0] = lambda: estimates_info(result, config, arguments, cards)
+                    route_warnings(result)
+                    progression_detail(result)
 
     info = [lambda: team_info_unavailable(config, cards)]
     theme.info_button('How these estimates work', lambda: info[0]())
@@ -255,3 +258,17 @@ def team_info_unavailable(config, cards):
                 character_evidence(card)
     popup.on('hide', popup.delete)
     popup.open()
+
+
+@contextmanager
+def route_errors(area):
+    try:
+        yield
+    except ValueError as error:
+        with area:
+            ui.label(f"Unable to build Team routes: {error}")
+
+
+def route_warnings(result):
+    for warning in result.get("catalog_warnings", []):
+        ui.label(warning).classes("bs-note")

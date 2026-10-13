@@ -6,17 +6,17 @@ from the Classic stand-in to WoW Forever is a configuration change, not a code c
 from .config import MARKET_KEYS
 from .crafting import PRICE_BASES, basis_prices, evaluate_recipe
 from .freshness import assess
+from .recipe_graph import RecipeGraph, catalog_compatible, identity, label_routes, route_catalog
 
-POLICY_VERSION = "0.2"
+POLICY_VERSION = "0.3"
 
 
 def compatible(catalog: dict, market: dict) -> bool:
-    return (catalog["game_version"] == market.get("game_version")
-            and catalog["rules_version"] == market.get("rules_version"))
+    return catalog_compatible(catalog, market)
 
 
 def rank_recipes(catalog, observations, market, snapshot, *, now, sort_by="profit",
-                 basis="cautious", max_age_hours=24, auction_cut=0.05):
+                 basis="cautious", max_age_hours=24, auction_cut=0.05, recipe_graph=None):
     """Rank finished outputs; missing evidence sorts last, stale never signals action.
 
     Observations map item ID to unit copper {"min_buyout", "market_value"} from one scoped
@@ -40,7 +40,7 @@ def rank_recipes(catalog, observations, market, snapshot, *, now, sort_by="profi
         if output["role"] != "finished":
             continue
         try:
-            results = {name: evaluate_recipe(catalog, recipe["recipe_id"], buy, auction_cut, sell)
+            results = {name: _evaluate(catalog, recipe["recipe_id"], buy, sell, auction_cut, recipe_graph)
                        for name, (buy, sell) in prices.items()}
         except ValueError as error:
             # One unsupported recipe (cycle, fractional units) must not hide the rest of the board.
@@ -71,8 +71,7 @@ def _ranked_board(rows, freshness, basis, sort_by):
 
 def catalog_identity(catalog: dict) -> str:
     """Selection-file identity supplied by discovery; header identity for standalone catalogs."""
-    return catalog.get("catalog_id", ":".join(catalog[key] for key in
-                                              ("game_version", "rules_version", "profession", "catalog_version")))
+    return identity(catalog)
 
 
 def compatible_catalogs(catalogs: list[dict], market: dict) -> list[dict]:
@@ -91,18 +90,25 @@ def filter_profession(board: dict, profession: str | None) -> dict:
 
 
 def rank_catalogs(catalogs, observations, market, snapshot, *, now, sort_by="profit",
-                  basis="cautious", max_age_hours=24, auction_cut=0.05):
-    """One board, with independent recipe graphs and a catalog-qualified row identity."""
+                  basis="cautious", max_age_hours=24, auction_cut=0.05, team_makeable=None, recipe_graph=None):
+    """One board with qualified rows; without team evidence retain exact catalog-local routes."""
     selected = compatible_catalogs(catalogs, market)
     if not selected:
         raise ValueError("No compatible recipe catalogs")
     identities = [catalog_identity(catalog) for catalog in selected]
     if len(set(identities)) != len(identities):
         raise ValueError("Catalog identities must be unique")
+    graph = recipe_graph or (RecipeGraph(selected, team_makeable, market) if team_makeable is not None else None)
     rows = []
     for catalog in selected:
         board = rank_recipes(catalog, observations, market, snapshot, now=now, sort_by=sort_by,
-                             basis=basis, max_age_hours=max_age_hours, auction_cut=auction_cut)
+                             basis=basis, max_age_hours=max_age_hours, auction_cut=auction_cut, recipe_graph=graph)
         rows.extend({**row, "catalog_id": catalog_identity(catalog), "profession": catalog["profession"]}
                     for row in board["rows"])
-    return _ranked_board(rows, board["freshness"], basis, sort_by)
+    result = _ranked_board(rows, board["freshness"], basis, sort_by)
+    return result | {"catalog_warnings": graph.warnings} if graph is not None else result
+
+
+def _evaluate(catalog, recipe_id, buy, sell, cut, graph):
+    routed = route_catalog(catalog, recipe_id, buy, graph)
+    return label_routes(evaluate_recipe(routed, recipe_id, buy, cut, sell), routed)

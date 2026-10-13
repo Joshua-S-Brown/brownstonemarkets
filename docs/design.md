@@ -283,11 +283,35 @@ opens. `views/nicegui_market.py` uses shared theme badges/chips, links and short
 - The Crafting view groups unsupported-recipe reasons into one collapsed table and separates catalog
   captions and board explanations into collapsed expanders. Board provenance and freshness remain
   visible. This changes presentation only; board rows and recipe evaluation still use the same paths.
-- `rank_catalogs` selects compatible catalogs, calls `rank_recipes` separately for each graph, and applies the same shared ranking helper to all rows. `filter_profession` preserves combined ranks. Prices and depth are read once for the union of compatible catalog item IDs, using the same source, full market scope and analytical snapshot. See CRAFT-05 and UI-01/UI-04 in `requirements.md` for behavior.
+- `rank_catalogs` selects compatible catalogs, calls `rank_recipes` for their qualified roots, and applies the same shared ranking helper to all rows. `filter_profession` preserves combined ranks. Prices and depth are read once for the union of compatible catalog item IDs, using the same source, full market scope and analytical snapshot. See CRAFT-05 and UI-01/UI-04 in `requirements.md` for behavior.
 - `rank_recipes` checks that the catalog, market and snapshot are compatible, then:
   - evaluates every finished output under both bases
   - labels and sorts the rows (CRAFT-05)
   - isolates per-recipe errors so one bad recipe doesn't hide the others
+
+
+### Team recipe graph (STORY-015b)
+
+Rules live in CRAFT-12 (`requirements.md`). Framework-free `recipe_graph.RecipeGraph(catalogs,
+makeable, market)` indexes compatible catalogs once for the selected market, retaining recipe
+origins and item-conflict warnings. `for_recipe(catalog, recipe_id, buy_prices)` returns a
+catalog-shaped projection: shared `items_by_id`/`recipes_by_id` and a deterministic
+`recipe_for_output` for the root's reachable inputs. It selects competing eligible makers with
+`crafting._craft_route`; `crafting._cheapest_route`, `evaluate_recipe` and `material_plan` walk
+that projection unchanged. Selection runs separately for each price basis. Expansion errors remain
+isolated per board recipe. `label_routes` attaches origins/makers and blocked-cross-route notes to
+the calculated explanation; it adds no costing path.
+
+`today_characters.team_makeable(catalogs, scoped_data)` supplies catalog-qualified maker names
+using `recipe_status`; calculations never load character records. No data returns `None`, which
+keeps `rank_catalogs` on its original catalog-local path. An evidence map with no eligible makers
+still permits local routes and supplies blocked-material labels. `catalog_for_row` always resolves
+the original catalog, while route details use `route_catalog` to obtain the same projection.
+Today retains the board choices for sizing and queue postorder. Team routes its skill-up entries
+through the same graph; This session expands those selected steps; Market uses it for finished and
+unvalued intermediate recipe details. The NiceGUI views show maker/profession, catalog warnings
+and Queue's uncharged-mail note. Session identity includes Today version so the existing reset path
+discards obsolete choices and ticks.
 
 ## Recipe import
 
@@ -427,7 +451,7 @@ Rules live in `requirements.md` → Today. Calculations are framework-free; both
   `purchase_uses(crafts)` groups purchased units per item/route and output (the new app's Buy *For*);
   `session_queue` projects reserved shopping, route steps in postorder and posts without re-quoting.
 - **Session.** `today_session.plan_context` fingerprints catalogs, market, snapshot, settings,
-  freshness limit, auction cut and character evidence (not the clock); a changed context resets
+  freshness limit, auction cut, Today version and character evidence (not the clock); a changed context resets
   choices and ticks. Queue tick identity is the plan without confidence labels (`stable_queue`).
   Streamlit keeps choices and ticks in session state separately from widget keys, which widget cleanup
   can drop; the Craft table's selection key fingerprints plan contents and provenance.
@@ -437,7 +461,7 @@ Rules live in `requirements.md` → Today. Calculations are framework-free; both
 Rules live in `requirements.md` → UI-12. `session_options.build_options(db, config, arguments,
 plan, window=25)` composes the displayed reserved plan with `progression.build_progression` and
 its `estimate_cost` results, using only `today_loading.load_today`'s observations, listings and
-metrics. Selected estimate steps reuse `evaluate_recipe`'s catalog-local shopping quantities for
+metrics. Selected estimate steps reuse `evaluate_recipe`'s team-aware shopping quantities for
 cheap-material attribution; no new price query. One `flood_signals.signals` call covers the union
 of plan and estimate item IDs, retaining full source/market scope and separate variant identities.
 It returns character sections, annotated copies, per-character craft totals, character level,

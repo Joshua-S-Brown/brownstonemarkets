@@ -226,7 +226,7 @@ def test_combined_catalogs_rank_independent_graphs_and_resolve_duplicate_ids(sor
     assert len(rows) == 6
     assert {row["catalog_id"] for row in rows} == {"tailoring", "alchemy"}
     assert len({(row["catalog_id"], row["recipe_id"]) for row in rows}) == 6
-    assert result["policy_version"] == "0.2"
+    assert result["policy_version"] == "0.3"
     primary, secondary = ("profit_copper", "margin") if sort_by == "profit" else ("margin", "profit_copper")
     metrics = [(row[primary], row[secondary]) for row in rows]
     assert metrics == sorted(metrics, reverse=True)

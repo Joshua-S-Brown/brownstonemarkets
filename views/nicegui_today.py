@@ -8,6 +8,7 @@ from nicegui import app, ui
 
 from brownstone.freshness import STALE_WARNING, age_caption
 from brownstone.money import format_money, parse_money
+from brownstone.recipe_graph import step_label
 from brownstone.session_options import build_options
 from brownstone.today import build_today, craft_details, purchase_uses
 from brownstone.today_characters import available_characters, resolve_character
@@ -74,7 +75,7 @@ def details_dialog(row):
         ui.label(f"Batch material cost: {format_money(row['batch_cost_copper'])}. "
                  'Whole-stack surplus has no revenue credit. Vendor stock is unknown.')
         for step in details['intermediate_steps']:
-            ui.label(f"{'↳ ' * step['depth']}{step['item_name']}: {step['crafts']} crafts → "
+            ui.label(f"{'↳ ' * step['depth']}{step_label(step)}: {step['crafts']} crafts → "
                      f"{step['quantity']} units · {tr.state(step)}")
         ui.button('Close', on_click=dialog.close)
     dialog.on('hide', dialog.delete)
@@ -425,8 +426,12 @@ def craft_card(row, sell):
                                  f"· {format_money(material['cost_copper'])} · "
                                  f"highest unit {format_money(material['highest_unit_copper'])}")
                         ui.label(f"{material['quantity']} needed").classes('bs-note')
+                for choice in row['choices']:
+                    if choice.get('route_note'):
+                        ui.label(f"{choice['item_name']} · {choice['route_note']}").classes('bs-note')
                 for step in details['intermediate_steps']:
-                    ui.label(f"{'↳ ' * step['depth']}{step['item_name']}: {step['crafts']} crafts").style(
+                    ui.label(f"{'↳ ' * step['depth']}{step_label(step)}"
+                             f": {step['crafts']} crafts").style(
                         f"margin-left: {step['depth']}rem")
             with ui.column().classes('gap-2'):
                 profit = sell['undercut_batch_profit_copper']
@@ -472,6 +477,7 @@ def competition(sell):
 
 def queue_panel(result, session):
     queue = result['queue']
+    ui.label(queue['mail_note']).classes('bs-note')
     identity = digest({'queue': stable_queue(queue), 'context': session.get('context')})
     if session.get('queue_identity') != identity:
         session.update(queue_identity=identity, ticks={})
@@ -484,7 +490,7 @@ def queue_panel(result, session):
     if result['freshness']['stale']:
         ui.label('stale — inspect only')
     with ui.expansion('Copy as text'):
-        ui.code('\n'.join([*texts, total]), language='text')
+        ui.code('\n'.join([queue['mail_note'], *texts, total]), language='text')
 
 
 def session_plan(arguments, session, reset_note):
@@ -496,6 +502,8 @@ def session_plan(arguments, session, reset_note):
         session.clear()
         session.update(context=context, choices=None, refill=True, rows=[], ticks={})
     result = build_today(**arguments, choices=session['choices'], refill=session['refill'])
+    for warning in result.get('catalog_warnings', []):
+        ui.label(warning).classes('bs-note')
     # As in Streamlit, a dropped choice is unticked so it isn't requested again.
     dropped = {(d['catalog_id'], d['recipe_id']) for d in result['dropped_choices']}
     for choice in session['choices'] or []:

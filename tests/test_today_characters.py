@@ -85,7 +85,12 @@ def test_training_cost_display_not_subtracted_and_unknown_cost():
     result = plan(settings, catalogs=[c], character_data={CHARACTER: state()})
     for field in ("batch_profit_copper", "batch_cost_copper", "batch_size", "purchases", "plan_order"):
         assert result["craft"][0][field] == original["craft"][0][field]
-    assert result["queue"] == original["queue"] and result["buy"] == original["buy"]
+    def without_makers(queue):
+        return queue | {"lines": [{k: v for k, v in line.items() if k != "made_by"}
+                                  for line in queue["lines"]]}
+    assert without_makers(result["queue"]) == without_makers(original["queue"])
+    assert result["buy"] == original["buy"]
+    assert next(line for line in result["queue"]["lines"] if line["stage"] == "craft")["made_by"] == "Basilly"
     assert _character_columns(result["craft"][0]) == {"Can make": "Train now", "Learning": "Training: 1s"}
     c["recipes_by_id"][30].pop("training_cost_copper")
     result = plan(settings, catalogs=[c], character_data={CHARACTER: state()})
@@ -208,11 +213,14 @@ def test_filtered_plan_matches_same_set_including_shared_reservations_and_choice
     first, second, hidden = catalog(), output_catalog(4, "second"), output_catalog(5, "hidden")
     for c in (first, second):
         c["recipes_by_id"][30]["learned_from"] = [6]
+    second["recipes_by_id"][32] = second["recipes_by_id"].pop(30) | {"recipe_id": 32}
+    second["recipe_for_output"][4] = 32
     hidden["recipes_by_id"][31] = hidden["recipes_by_id"].pop(30) | {
         "recipe_id": 31, "learned_from": [5]}
     hidden["recipe_for_output"][5] = 31
     evidence = state(learned=True)
-    evidence["recipes"]["Arbitrary title"]["known_recipes"]["rows"].append({"recipe_id": 31, "learned": False})
+    evidence["recipes"]["Arbitrary title"]["known_recipes"]["rows"].extend([
+        {"recipe_id": 31, "learned": False}, {"recipe_id": 32, "learned": True}])
     settings = TodaySettings(1000, 1, "fixed", max_crafts=1, character=CHARACTER)
     arguments = dict(settings=settings, observations={1: {"min_buyout": 10, "market_value": 20},
                         3: {"min_buyout": 200}, 4: {"min_buyout": 200}, 5: {"min_buyout": 2000}},

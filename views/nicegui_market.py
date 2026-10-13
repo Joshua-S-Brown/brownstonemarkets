@@ -7,6 +7,7 @@ from nicegui import ui
 from brownstone import market_explorer as explorer
 from brownstone.freshness import age_caption
 from brownstone.money import format_money
+from brownstone.recipe_graph import made_by_label
 from views import nicegui_theme as theme
 
 
@@ -110,12 +111,15 @@ def show_item(result, page):
         ui.label('Made from').classes('text-xl font-bold')
         for row in page['made_from']:
             recipe_heading(config, row)
+            catalog_warnings(row['value'])
             for material in row['materials']:
                 with ui.row().classes('items-center gap-2').style(f"padding-left:{material['depth'] * 24}px"):
                     item_link(config, material['item_id'], material['item_name'])
                     ui.label(f"× {material['quantity']} · {material['method']} · "
                              f"{money(material['unit_cost_copper'])} / unit · "
-                             f"{money(material['total_cost_copper'])} total")
+                             f"{money(material['total_cost_copper'])} total"
+                             + (f" · {made_by_label(material)}" if material.get('profession') else '')
+                             + (f" · {material['route_note']}" if material.get('route_note') else ''))
             with ui.expansion('Expanded quantities (catalog recipe; independent of buy route)'):
                 for item_id, units in row['value'].get('expanded_materials', {}).items():
                     item_link(config, item_id, row['catalog']['items_by_id'][item_id]['name'] + f' × {units}')
@@ -230,7 +234,8 @@ def evidence(result):
                 ui.label(f"{catalog['catalog_id']}: {catalog['game_version']} / {catalog['rules_version']} "
                          f"does not match {config['game_version']} / "
                          f"{config.get('rules_version', 'unknown')}; unpriced")
-        ui.label('Cautious Action Board profit per craft. Routes stay within each catalog. '
+        ui.label('Cautious Action Board profit per craft. '
+                 'Routes include team-makeable materials across compatible catalogs. '
                  'Movement sorts by absolute copper change, then absolute units change, and shows at most 10.')
     popup.on('hide', popup.delete)
     popup.open()
@@ -404,3 +409,8 @@ def flood_list_row(config, row, group):
                      f"{overshoot['scans']} earlier scans")
     with ui.expansion('Flood evidence for ' + row['item_name']):
         flood_row(row)
+
+
+def catalog_warnings(value):
+    for warning in value.get("catalog_warnings", []):
+        ui.label(warning).classes("bs-note")

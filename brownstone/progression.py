@@ -1,10 +1,11 @@
-"""Team progression estimates from scoped evidence and catalog-local board routes."""
+"""Team progression estimates from scoped evidence and team-aware board routes."""
 from fractions import Fraction
 from math import ceil
 
 from . import action_board, professions, today_characters
 from .crafting import basis_prices, evaluate_recipe
 from .markets import MARKET_KEYS
+from .recipe_graph import RecipeGraph, route_catalog
 from .today import Ladder, _quote, _sell
 from .today_confidence import confidence, route_notes
 
@@ -44,6 +45,8 @@ def _step_options(entries, state, rank, prices, trained):
             reasons.append(f'{label}: training cost unknown')
             continue
         try:
+            if "route_error" in catalog:
+                raise ValueError(catalog["route_error"])
             result = evaluate_recipe(catalog, recipe['recipe_id'], prices)
         except ValueError as error:
             reasons.append(f'{label}: {error}')
@@ -151,8 +154,10 @@ def summary_sort(row):
 
 
 def build_progression(catalogs, observations, market, snapshot, character_data, character, *, now,
-                      window=25, max_age_hours=24, auction_cut=.05, listings=None, metrics=None):
-    """One character, full-market current scan; callers supply all evidence and the clock."""
+                      window=25, max_age_hours=24, auction_cut=.05, listings=None, metrics=None,
+                      recipe_graph=None):
+    """One character, full-market current scan; callers supply all evidence, the clock and optionally
+    a team RecipeGraph already built from the same catalogs, market and character data."""
     if type(window) is not int or not 5 <= window <= 100:
         raise ValueError('Reach window must be an integer from 5 to 100')
     if snapshot.get('source_id') != market['source_id']:
@@ -163,16 +168,21 @@ def build_progression(catalogs, observations, market, snapshot, character_data, 
     state = character_data.get(character)
     if state is None:
         return {'professions': [], 'unlisted': {}, 'freshness': None}
+    graph = recipe_graph if recipe_graph is not None else team_graph(catalogs, character_data, market)
     board = action_board.rank_catalogs(catalogs, observations, market, snapshot, now=now,
-                                      max_age_hours=max_age_hours, auction_cut=auction_cut) if catalogs else None
+                                      max_age_hours=max_age_hours, auction_cut=auction_cut,
+                                      recipe_graph=graph) if catalogs else None
     rows = {(r['catalog_id'], r['recipe_id']): r for r in board['rows']} if board else {}
     prices, _ = basis_prices(observations, 'cautious')
     groups, unlisted = _groups(catalogs, state)
+    for group in groups.values():
+        group["entries"] = _routed_entries(group["entries"], prices, graph)
     ladders = {i: Ladder(values) for i, values in listings.items()} if listings is not None else None
     for group in groups.values():
         _populate(group, state, rows, prices, board, window, ladders, metrics, max_age_hours, auction_cut)
-    return {'professions': sorted(groups.values(), key=summary_sort), 'unlisted': unlisted,
-            'freshness': board['freshness'] if board else None}
+    result = {'professions': sorted(groups.values(), key=summary_sort), 'unlisted': unlisted,
+              'freshness': board['freshness'] if board else None}
+    return result | {'catalog_warnings': graph.warnings} if graph is not None else result
 
 
 def _populate(group, state, rows, prices, board, window, ladders, metrics, max_age_hours, auction_cut):
@@ -197,3 +207,19 @@ def _populate(group, state, rows, prices, board, window, ladders, metrics, max_a
     group['recipes'].sort(key=lambda r: summary_sort({'best': r, 'profession': group['profession']}))
     group['best'] = next((r for r in group['recipes'] if r['profit_copper'] is not None), None)
     del group['entries']
+
+
+def _routed_entries(entries, prices, graph):
+    result = []
+    for catalog, recipe in entries:
+        try:
+            routed = route_catalog(catalog, recipe["recipe_id"], prices, graph)
+        except ValueError as error:
+            routed = catalog | {"route_error": str(error)}
+        result.append((routed, recipe))
+    return result
+
+
+def team_graph(catalogs, character_data, market):
+    makers = today_characters.team_makeable(catalogs, character_data)
+    return RecipeGraph(catalogs, makers, market) if makers is not None else None

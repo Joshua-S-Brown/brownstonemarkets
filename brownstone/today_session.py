@@ -3,6 +3,8 @@ import hashlib
 import json
 
 from brownstone.money import format_money
+from brownstone.recipe_graph import made_by_label
+from brownstone.today import TODAY_VERSION
 
 
 def digest(value):
@@ -13,6 +15,7 @@ def plan_context(arguments):
     # Listings, observations and metrics are read for the snapshot ID, so the snapshot identifies them.
     context = {key: arguments[key] for key in ("catalogs", "market", "snapshot", "settings",
                                               "max_age_hours", "auction_cut")}
+    context["today_version"] = TODAY_VERSION
     context["character_data"] = sorted(arguments.get("character_data", {}).items())
     return digest(context)
 
@@ -43,7 +46,9 @@ def queue_line_text(line):
         return (f"Buy at {stage}: {name} · {line['purchased_units']} units · "
                 f"highest unit {format_money(line['highest_unit_copper'])} · total {format_money(line['cost_copper'])}")
     if stage == "craft":
-        return f"Craft: {name} · recipe {line['recipe_id']} ({line['catalog_id']}) · {line['batch_size']} crafts"
+        maker = f" · {made_by_label(line)}" if line.get("profession") else ""
+        return (f"Craft: {name}{maker} · recipe {line['recipe_id']} ({line['catalog_id']}) · "
+                f"{line['batch_size']} crafts")
     price = format_money(line["unit_copper"]) if line["unit_copper"] is not None else "unavailable"
     profit = format_money(line["profit_copper"]) if line["profit_copper"] is not None else "unavailable"
     return f"Post: {name} · {line['quantity']} units · undercut unit {price} · profit {profit}"

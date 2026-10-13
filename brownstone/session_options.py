@@ -5,6 +5,7 @@ from math import ceil
 from . import action_board, flood_signals, progression, today_characters
 from .crafting import basis_prices, evaluate_recipe
 from .markets import MARKET_KEYS
+from .recipe_graph import route_catalog
 
 PROGRESSION_KEYS = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut', 'listings', 'metrics')
 # Classic Era's proficiency ladder (warcraft.wiki.gg/wiki/Classic_proficiency): a tier's cap gives the next
@@ -30,21 +31,22 @@ def profession_order(group):
     return (profit is None, -(profit or 0), cost is None, cost or 0, group['profession'])
 
 
-def _materials(estimate, catalogs, prices):
+def _materials(estimate, catalogs, prices, graph):
     """Retain existing cheapest-route quantities for the chosen cost steps, with no new price read."""
     steps = []
     for step in estimate['steps']:
         catalog = catalogs[step['catalog_id']]
+        catalog = route_catalog(catalog, step['recipe_id'], prices, graph)
         choices = evaluate_recipe(catalog, step['recipe_id'], prices)['shopping_choices']
         steps.append(step | {'materials': [m | {'item_name': catalog['items_by_id'][m['item_id']]['name']}
                                            for m in choices]})
     return steps
 
 
-def _profession(group, catalogs, prices):
+def _profession(group, catalogs, prices, graph):
     capped = group['rank'] is not None and group['max_rank'] is not None and group['rank'] >= group['max_rank']
     recipes = [] if capped else [r | {'estimate': r['estimate'] | {
-        'steps': _materials(r['estimate'], catalogs, prices)}} for r in group['recipes']]
+        'steps': _materials(r['estimate'], catalogs, prices, graph)}} for r in group['recipes']]
     return group | {'capped': capped, 'recipes': recipes}
 
 
@@ -153,14 +155,16 @@ def build_options(db, config, arguments, plan, *, window=25):
     by_id = {action_board.catalog_identity(c): c for c in catalogs}
     prices, _ = basis_prices(arguments['observations'], 'cautious')
     data = arguments['character_data']
+    graph = progression.team_graph(catalogs, data, arguments['market'])
     characters = []
     for identity in today_characters.available_characters(data):
         result = progression.build_progression(catalogs=catalogs, character_data=data, character=identity,
-                                              window=window, **{k: arguments[k] for k in PROGRESSION_KEYS})
+                                              window=window, recipe_graph=graph,
+                                              **{k: arguments[k] for k in PROGRESSION_KEYS})
         level = data[identity].get('bags', {}).get('level')
         characters.append({'character': identity, 'level': level if type(level) is int else None,
                            'crafts': _crafts(plan, by_id, data[identity]),
-                           'professions': [_profession(g, by_id, prices) for g in result['professions']],
+                           'professions': [_profession(g, by_id, prices, graph) for g in result['professions']],
                            'unlisted': result['unlisted']})
     signals = flood_signals.signals(db, config, _item_ids(characters, plan), arguments['now'])
     return {'characters': [_label_character(c, signals['rows']) for c in characters],

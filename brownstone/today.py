@@ -1,6 +1,6 @@
-"""Today v5: transparent batch estimates and one funded, supply-reserved plan.
+"""Today v6: transparent batch estimates and one funded, supply-reserved plan.
 
-Routes remain catalog-local board choices. Prefix ladders price complete stacks in O(log n),
+Routes retain the board’s team-aware choices. Prefix ladders price complete stacks in O(log n),
 without expanding units; the clock and all scoped evidence are supplied by the caller.
 """
 from bisect import bisect_left
@@ -8,13 +8,15 @@ from collections import Counter
 from decimal import Decimal
 
 from .action_board import catalog_for_row, compatible_catalogs, rank_catalogs
+from .crafting import basis_prices
 from .freshness import assess
 from .markets import MARKET_KEYS
-from .today_characters import filter_candidates, project_recipes
+from .recipe_graph import RecipeGraph, route_catalog
+from .today_characters import filter_candidates, project_recipes, team_makeable
 from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 
-TODAY_VERSION = 5
+TODAY_VERSION = 6
 ROW_LIMIT = 10
 
 
@@ -114,27 +116,33 @@ def _batch(row, settings, ladders, reserved, funds):
             "limiting_factor": limit, "feasible_size": largest, "purchases": quotes[size]}, None
 
 
-def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut, projection):
+def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut, projection, makers):
     selected = compatible_catalogs(catalogs, market)
     if not selected:
-        return [], Counter()
+        return [], Counter(), []
+    graph = RecipeGraph(selected, makers, market) if makers is not None else None
     board = rank_catalogs(selected, observations, market, snapshot, now=now,
-                          max_age_hours=max_age_hours, auction_cut=auction_cut)
+                          max_age_hours=max_age_hours, auction_cut=auction_cut, recipe_graph=graph)
     filtered, hidden = filter_candidates(board["rows"], projection)
+    prices, _ = basis_prices(observations, "cautious")
     rows = []
     for row in filtered:
         if not row["valid"]:
             hidden[row["action"]] += 1
             continue
         catalog = catalog_for_row(selected, row)
+        catalog = route_catalog(catalog, row["recipe_id"], prices, graph)
         recipe = catalog["recipes_by_id"][row["recipe_id"]]
+        if makers is not None:
+            makes = projection["character"] and row.get("craft_status") in ("Known", "Train now")
+            row["made_by"] = projection["character"][0] if makes else next(iter(row.get("who_can_make_it", [])), None)
         rows.append({**row, "output_quantity": recipe["output_quantity"],
                      "material_names": {p["item_id"]: catalog["items_by_id"][p["item_id"]]["name"]
                                         for p in row["shopping_choices"]},
                      "recipe_source": recipe["source_url"], "catalog_version": catalog["catalog_version"],
                      "availability": recipe.get("availability", "available"),
                      "evidence_notes": route_notes(catalog, recipe, row)})
-    return rows, hidden
+    return rows, hidden, board.get("catalog_warnings", [])
 
 
 def _sort(rows):
@@ -302,8 +310,9 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
     ladders = {i: Ladder(rows) for i, rows in listings.items()} if listings is not None else None
     projection = project_recipes(compatible_catalogs(catalogs, market), character_data or {},
                                  settings.character, settings.include_unknown)
-    candidates, hidden = _candidates(catalogs, observations, market, snapshot, now,
-                                     max_age_hours, auction_cut, projection)
+    makers = team_makeable(compatible_catalogs(catalogs, market), character_data or {})
+    candidates, hidden, warnings = _candidates(catalogs, observations, market, snapshot, now,
+                                              max_age_hours, auction_cut, projection, makers)
     dropped, limits = [], {}
     if choices is None:
         crafts, excluded, rest = _select(candidates, settings, ladders)
@@ -327,6 +336,7 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
     return {**{name: [{**row, **evidence} for row in rows[:ROW_LIMIT]] for name, rows in lists.items()},
             "character": projection["character"], "character_note": projection["character_note"],
             "catalog_checks": projection["catalog_checks"],
+            "catalog_warnings": warnings,
             "hidden": dict(hidden), "remaining": {**{name: max(0, len(rows) - ROW_LIMIT)
                                                       for name, rows in lists.items()}, "craft": rest},
             "freshness": freshness, "listing_evidence_available": ladders is not None,
@@ -380,17 +390,22 @@ def session_queue(crafts, shopping, sells):
         # Retained preorder/depth identifies each branch of the catalog route.
         for step in _route_order(row["intermediate_steps"]):
             lines.append({"stage": "craft", "name": step["item_name"], "recipe_id": step["recipe_id"],
-                          "catalog_id": row["catalog_id"], "batch_size": step["crafts"] * row["batch_size"],
+                          "catalog_id": step.get("catalog_id", row["catalog_id"]),
+                          "profession": step.get("profession"), "made_by": step.get("made_by"),
+                          "batch_size": step["crafts"] * row["batch_size"],
                           **_confidence_fields(row)})
         lines.append({"stage": "craft", "name": row["output_name"], "recipe_id": row["recipe_id"],
-                      "catalog_id": row["catalog_id"], "batch_size": row["batch_size"], **_confidence_fields(row)})
+                      "catalog_id": row["catalog_id"], "batch_size": row["batch_size"],
+                      "profession": row["profession"],
+                      "made_by": row.get("made_by"), **_confidence_fields(row)})
     for row, sell in zip(crafts, sells, strict=True):
         lines.append({"stage": "post", "name": row["output_name"],
                       "quantity": row["output_quantity"] * row["batch_size"],
                       "unit_copper": sell["undercut_copper"], "profit_copper": sell["undercut_batch_profit_copper"],
                       **_confidence_fields(row)})
     profits = [s["undercut_batch_profit_copper"] for s in sells]
-    return {"lines": lines, "gold_needed_copper": sum(p["cost_copper"] for p in shopping),
+    return {"mail_note": "Mail between characters is not charged; postage is unconfirmed on Forever.",
+            "lines": lines, "gold_needed_copper": sum(p["cost_copper"] for p in shopping),
             "expected_profit_copper": sum(profits) if all(p is not None for p in profits) else None}
 
 

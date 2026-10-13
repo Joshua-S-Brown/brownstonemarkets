@@ -8,8 +8,9 @@ from .action_board import catalog_identity, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices, evaluate_recipe
 from .freshness import assess
 from .metrics import read_scan_metrics
+from .recipe_graph import RecipeGraph, label_routes, route_catalog
 from .skillups import build_skillups
-from .today_characters import project_recipes, recipe_status
+from .today_characters import project_recipes, recipe_status, team_makeable
 from .today_loading import load_today, load_today_characters
 from .today_settings import TodaySettings
 
@@ -46,9 +47,12 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
 def recipe_rows(catalogs, arguments, characters) -> list[dict]:
     if not catalogs:
         return []
+    catalogs = compatible_catalogs(catalogs, arguments['market'])
+    makers = team_makeable(catalogs, characters)
+    graph = RecipeGraph(catalogs, makers, arguments["market"]) if makers is not None else None
     keys = ('now', 'max_age_hours', 'auction_cut')
     board = rank_catalogs(catalogs, arguments['observations'], arguments['market'], arguments['snapshot'],
-                          **{key: arguments[key] for key in keys})
+                          **{key: arguments[key] for key in keys}, recipe_graph=graph)
     ranked = {(row['catalog_id'], row['recipe_id']): row for row in board['rows']}
     projection = project_recipes(catalogs, characters, None)
     buy, sell = basis_prices(arguments['observations'], 'cautious')
@@ -58,13 +62,20 @@ def recipe_rows(catalogs, arguments, characters) -> list[dict]:
         for recipe in catalog['recipes_by_id'].values():
             key = (identity, recipe['recipe_id'])
             valued = ranked.get(key)
-            if valued is None:
-                valued = intermediate_value(catalog, recipe, buy, sell, arguments['auction_cut'])
             statuses = [{'character': ' · '.join(c), **recipe_status(recipe, state)}
                         for c, state in sorted(characters.items())]
-            rows.append({'catalog': catalog, 'recipe': recipe, 'value': valued,
+            try:
+                routed = route_catalog(catalog, recipe["recipe_id"], buy, graph)
+            except ValueError as error:
+                rows.append({"catalog": catalog, "recipe": recipe,
+                             "value": {"profit_copper": None, "action": "unsupported recipe: " + str(error)},
+                             "status": projection["statuses"].get(key, {}), "characters": statuses, "materials": []})
+                continue
+            if valued is None:
+                valued = intermediate_value(routed, recipe, buy, sell, arguments['auction_cut'])
+            rows.append({'catalog': routed, 'recipe': recipe, 'value': valued,
                          'status': projection['statuses'].get(key, {}), 'characters': statuses,
-                         'materials': routed_materials(catalog, valued, buy, sell)})
+                         'materials': routed_materials(routed, valued, buy, sell)})
     return sorted(rows, key=lambda r: (r['value']['profit_copper'] is None,
                                       -(r['value']['profit_copper'] or 0),
                                       r['recipe']['recipe_id'], catalog_identity(r['catalog'])))
@@ -72,7 +83,7 @@ def recipe_rows(catalogs, arguments, characters) -> list[dict]:
 
 def intermediate_value(catalog, recipe, buy, sell, cut):
     try:
-        result = evaluate_recipe(catalog, recipe['recipe_id'], buy, cut, sell)
+        result = label_routes(evaluate_recipe(catalog, recipe['recipe_id'], buy, cut, sell), catalog)
         # The board deliberately has no intermediate-profit rows. Do not invent one here.
         return {**result, 'profit_copper': None, 'action': 'Intermediate: no Action Board profit row'}
     except ValueError as error:
@@ -89,7 +100,7 @@ def routed_materials(catalog, value, buy, sell, crafts=1, depth=0) -> list[dict]
         if choice['method'] != 'craft':
             continue
         nested_id = catalog['recipe_for_output'][choice['item_id']]
-        nested = evaluate_recipe(catalog, nested_id, buy, sale_prices=sell)
+        nested = label_routes(evaluate_recipe(catalog, nested_id, buy, sale_prices=sell), catalog)
         made = catalog['recipes_by_id'][nested_id]['output_quantity']
         rows.extend(routed_materials(catalog, nested, buy, sell, quantity // made, depth + 1))
     return rows

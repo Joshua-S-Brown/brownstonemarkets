@@ -2,6 +2,7 @@
 from collections import Counter
 
 from .professions import _first, _order
+from .recipe_graph import identity
 from .scans import _list
 
 # Evidence: requirements.md → Character eligibility → Profession skill-line IDs.
@@ -206,3 +207,16 @@ def filter_candidates(rows: list, projection: dict) -> tuple[list, Counter]:
         else:
             kept.append(row | status)
     return kept, hidden
+
+
+def team_makeable(catalogs, data):
+    """Catalog-qualified makers from scoped data, Known before Train now, then by character."""
+    if not data:
+        return None
+    return {(identity(c), r["recipe_id"]): _makers(r, data) for c in catalogs for r in c["recipes_by_id"].values()}
+
+
+def _makers(recipe, data):
+    statuses = [(recipe_status(recipe, state)["craft_status"], character) for character, state in data.items()]
+    return [character[0] for status, character in sorted(statuses, key=lambda s: (s[0] != "Known", s[1]))
+            if status in ("Known", "Train now")]

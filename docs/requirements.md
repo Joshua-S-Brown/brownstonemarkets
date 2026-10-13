@@ -12,7 +12,7 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   - Blizzard's API publishes no Forever auction data, and TSM has no Forever data.
   - Existing Forever price sites are fed by players' addon scans. Forever addons reportedly use the modern `C_AuctionHouse` API, which has Retail-style commodities.
   - Forever reuses Classic item IDs: 2,323 of the 2,927 items priced in the 2026-10-04 beta scan are also priced on Classic Era Mankrik under the same IDs. Prices differ (see STORY-012), so this allows explicit comparison, never joining (DATA-03).
-  - **Unconfirmed claims** (from outside design notes, 2026-10-06; not evidence, never built on until checked in game, checklist under *Now* in `backlog.md`): a Black Market vendor sells a fixed list of scarce materials at fixed prices (claimed 50g each, Pyrite 5g); a sold auction's gold arrives by mail about 2 minutes after the sale; auction scans are throttled beyond `ReplicateItems`' 15 minutes; the event names for purchases, crafts, posts and mail match Retail's. Added 2026-10-13: profession tiers need character level 10 (Journeyman), 20 (Expert) and 35 (Artisan), as on Classic Era (UI-12 uses this, labelled unconfirmed).
+  - **Unconfirmed claims** (from outside design notes, 2026-10-06; not evidence, never built on until checked in game, checklist under *Now* in `backlog.md`): a Black Market vendor sells a fixed list of scarce materials at fixed prices (claimed 50g each, Pyrite 5g); a sold auction's gold arrives by mail about 2 minutes after the sale; auction scans are throttled beyond `ReplicateItems`' 15 minutes; the event names for purchases, crafts, posts and mail match Retail's. Added 2026-10-13: postage for mail between characters is unconfirmed (CRAFT-12 does not charge it); profession tiers need character level 10 (Journeyman), 20 (Expert) and 35 (Artisan), as on Classic Era (UI-12 uses this, labelled unconfirmed).
   - **Measured, contradicting those notes:** the notes assumed Retail-style commodities (per-unit price tiers) and a seller on every listing. The beta reports neither (ADDON-02, ADDON-07).
   - Sources: [Wikipedia](https://en.wikipedia.org/wiki/World_of_Warcraft:_Forever), [AHledger](https://ahledger.com/wow-forever/auction-house), [WowGuide realms](https://wowguide.net/en/guides/wow-forever-realms-rulesets), [Blizzard API forum: Classic Era auction 404s](https://us.forums.blizzard.com/en/blizzard/t/404-for-all-classic-era-namespace-auction-house-endpoints/54307), [WOW4E_AH_Trader](https://github.com/1nd1v1d/WOW4E_AH_Trader).
 - **Development stand-in:** Mankrik Alliance, Classic Era (TSM public realm CSV). Classic is used to build and prove the product, not as the end market. Switching to Forever must be a configuration and catalog change: add a source whose market fields describe the Forever house and whose `rules_version` matches a Forever catalog. It must not require code changes.
@@ -482,7 +482,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Cautious** is the default for ranking and labels. It buys inputs at the higher, and sells output at the lower, of minimum buyout and market value. When only one value is positive, that value is used.
   - **Listed** uses minimum buyout only.
   - Every board row shows profit under both bases.
-- **CRAFT-05 Action Board:** ranks finished outputs of every catalog compatible with the selected source (same game version and `rules_version`) on one board. Each recipe is costed within its own catalog; routes never cross catalogs.
+- **CRAFT-05 Action Board:** ranks finished outputs of every catalog compatible with the selected source (same game version and `rules_version`) on one board. Routes follow CRAFT-12 when scoped team evidence is supplied; without it each recipe keeps its catalog-local costs.
   - Profession is shown and can be filtered without renumbering the combined ranks. Catalog identity plus recipe ID selects a row and its own recipe details; catalogs making the same item retain separate rows.
   - Shows craft cost, sale price, net revenue after the auction cut, profit and margin, where margin = profit / net revenue.
   - Labels, in precedence order:
@@ -558,7 +558,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Estimated cost to reach:** at each rank below required skill, choose the cheapest catalog craft
     attributed to that profession that gives a skill-up and is Known, or trainer-learnable through
     Today's status rule once its required skill is reached. Charge its training cost only on first
-    use. Materials use CRAFT-03's cheapest route within the craft's catalog, including intermediates;
+    use. Materials use CRAFT-03/12's cheapest route, including team-made intermediates;
     no revenue credit. Orange takes one expected craft per point. Yellow assumes the community
     Classic chance `(grey - rank) / (grey - yellow)`: **unconfirmed on Forever**, an estimate, not
     established game evidence. Green/grey give no qualifying points. Expected material copper is
@@ -570,6 +570,32 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
     points needed, cost estimate and profit. Sort profit descending, then complete estimates before
     incomplete at ties, then cost ascending; retain incomplete rows. Label once: current-scan profit
     is not a forecast, sales speed/demand unknown, beta prices and estimated yellow skill-up chances.
+
+
+- **CRAFT-12 Crafting across professions (STORY-015b, decided 2026-10-13):** combine catalogs
+  compatible with the selected full market, game version and rules version into a recipe graph.
+  Recipe IDs must be unique in that graph; collisions refuse with both catalog identities. Keep each
+  recipe's catalog/profession and each board row's catalog-qualified identity. Local routes retain
+  their existing eligibility; a material from another catalog is craftable only if a scoped team
+  character is **Known** or **Train now** under Today's status rule. Otherwise buy it and label
+  *no one on the team makes this*. Without character evidence, costs remain exactly catalog-local.
+  - Several professions making one item compete on valid crafted unit cost; equal crafted costs
+    choose the lower catalog identity. Show the chosen profession. Buy/craft/vendor routes still use
+    CRAFT-03, and cycles/fractional units remain rejected under CRAFT-02.
+  - Shared items must agree on vendor buy price, raw-material flag and availability. A field one
+    catalog omits takes the value another catalog records (decided 2026-10-13: the generated catalogs
+    record no vendor prices, so omission is missing data, not a disagreement). Two different recorded
+    values warn with item and both catalog identities and make the item buy-only until fixed; never
+    silently choose between them or treat missing/zero prices as free.
+  - Applies to Action Board, Today plan/Shopping list/Queue, Market made-from/used-in, Team reach
+    estimates and This session. Today names the maker and profession on cross-profession steps;
+    Queue assigns those crafts to that maker before the consuming crafts. Mail between characters
+    is not charged and explicitly says postage is unconfirmed (Known Forever market facts).
+    Crafted intermediate cost is not a sale price; no intermediate profit without a Board valuation.
+    Listings remain listings, never sales; all costs use integer copper.
+  - Board **policy version 0.3** and **Today version 6** introduce these changed material costs.
+    Today's existing plan-reset note accompanies discarding pre-change choices and Queue ticks.
+    Streamlit gains no new features; board calls without team evidence retain catalog-local routes.
 
 ### Watchlist (STORY-048)
 
@@ -594,7 +620,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   and after a successful addon import, and is absent when there are no hits. It changes neither
   Today's numbers/ranking nor the import.
 
-### Today (today_version 5, STORY-025/039/043/046/057; STORY-039 reviewed 2026-10-08)
+### Today (today_version 6, STORY-025/039/043/046/057/015b; STORY-039 reviewed 2026-10-08)
 
 - **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
   source during the session. Each source has its own ignored preferences file,
@@ -681,8 +707,8 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   | mining | 186 | [Mining](https://www.wowhead.com/classic/skill=186/mining) |
   | tailoring | 197 | [Tailoring](https://www.wowhead.com/classic/skill=197/tailoring) |
 
-- **Routes and batch costs:** reuse compatible Action Board catalog-local routes under the cautious
-  basis (CRAFT-03/04/05); no cross-profession routing. Routes are selected once from aggregate evidence,
+- **Routes and batch costs:** reuse compatible Action Board routes under the cautious
+  basis (CRAFT-03/04/05/12). Routes are selected once from aggregate evidence,
   then held fixed while sizing. Today changes auction purchase costs to the exact listing ladder, ordered
   by positive unit-buyout-ceiling, then quantity and buyout for deterministic ties. **Whole listings** are
   bought: include the entire buyout when the final stack exceeds required units. Show required and purchased
@@ -847,7 +873,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
 
 - **UI-07 The new app (decided 2026-10-12; built from STORY-058):** Brownstone's main app is the NiceGUI app (`nicegui_app.py`), bound to `127.0.0.1` only and opened in its own desktop window by `Start Brownstone`, or in the browser with a one-line explanation if the window can't open. Its places are **Today**, **Team**, **Market** and **Data** (Import), in that order, Data visually separate. The browser fallback stops after five minutes with no connected tabs; native mode stops when its window closes. `launch_nicegui.py` fingerprints the Python code and restarts only its own authenticated app on a code change. Place, selected source and Today tab survive browser refresh through the URL. Navigation uses wrapping place tabs in the top header, with Data separated, the selected source's short label/source menu and a page-specific ⓘ dialog at the right; Today's gear opens its settings dialog. Each place has one business-question subtitle. All new-app pages use the shared always-light theme, selectable text and controls at least 44 px; the native window enables text_select. Evidence, provenance, rules versions, IDs and hidden-reason counts are retained on demand. Team uses selectable roster cards, a look-ahead slider that commits on release, summary tiles, reachable recipes and cost steps/assumptions on demand. Data leads with saved-evidence chips, Check for new scans, reviewed results and explicit Import; files, problems and imported character evidence remain on demand. UI-01's source resolution (Forever first, never merged), collection-only-on-click and provenance rules, and UI-05's launcher rule, apply to it as well. The Streamlit app (`Start Brownstone (old app)`) keeps every existing page under UI-01 to UI-06 and gets no new features; All recipes, Watchlist, Below usual price, Scan changes and Recipe catalogs are not rebuilt in the new app. New features are built for WoW Forever; Classic and Retail sources stay selectable for development and regression but get no features of their own.
 
-- **UI-09 Market explorer (STORY-055):** read-only browsing of the selected source and full market's newest snapshot, searchable by name or ID regardless of price. Item URLs carry `item=<id>`. Compatible catalogs supply made-from routes/quantities, used-in recipes ordered by cautious Action Board profit per craft, team eligibility and catalog skill-up bands. Costs reuse CRAFT-03 within each catalog; intermediate outputs without Board rows explicitly have no Board profit. Items outside catalogs retain price/supply evidence only. Variant identities remain separate; they never feed base-item routes. The trial movement section uses UI-06's newest two eligible scans, limited to catalog-chain IDs: at most ten distinct items, ordered by absolute lowest-buyout copper change then absolute units change, with deterministic identity ties. For multiple identities of an item, show its largest changing identity, labelled, without pooling. New/vanished listings remain separate with blank changes. Snapshot UTC time/freshness and chain count are chips; provenance/catalogs and comparison details are on demand. Listings and catalog skill-up needs are not sales, observed demand or a forecast. Missing/nonpositive prices are unknown, never free.
+- **UI-09 Market explorer (STORY-055):** read-only browsing of the selected source and full market's newest snapshot, searchable by name or ID regardless of price. Item URLs carry `item=<id>`. Compatible catalogs supply made-from routes/quantities, used-in recipes ordered by cautious Action Board profit per craft, team eligibility and catalog skill-up bands. Costs reuse CRAFT-03/12; intermediate outputs without Board rows explicitly have no Board profit. Items outside catalogs retain price/supply evidence only. Variant identities remain separate; they never feed base-item routes. The trial movement section uses UI-06's newest two eligible scans, limited to catalog-chain IDs: at most ten distinct items, ordered by absolute lowest-buyout copper change then absolute units change, with deterministic identity ties. For multiple identities of an item, show its largest changing identity, labelled, without pooling. New/vanished listings remain separate with blank changes. Snapshot UTC time/freshness and chain count are chips; provenance/catalogs and comparison details are on demand. Listings and catalog skill-up needs are not sales, observed demand or a forecast. Missing/nonpositive prices are unknown, never free.
 
 - **UI-11 Flood signals (STORY-064, owner thresholds 2026-10-13):** read-only metrics from the newest UI-06 eligible scan of one source and full market, with ADDON-08 identities and legacy/base compatibility; variants never pool. Show listing count, units listed and largest-stack units/all units (display only). Lowest-buyout churn counts changes among comparable positive-priced identities in at most ten newest qualifying UI-10 consecutive pairs (gap at most 12 hours); absent identities and missing/nonpositive prices cannot supply a comparison, and eligible scans are never bridged. **Contested** means at least `flood_contested_listings` (default **10**) listings and changes in at least `flood_churn_percent` (default **50%**) of comparable pairs; **thin** means at most `flood_thin_listings` (default **2**); otherwise **steady**. Without comparable pairs, use listings only and label churn unknown. Show the counts behind labels; never infer sellers.
   - Compare the newest lowest unit buyout (not market value, so like is compared with like) with its own median positive per-unit lowest buyout from earlier eligible scans within `flood_window_days` (default **7 days**, inclusive, measured back from the newest scan). Require `flood_min_scans` (default **5**) matching priced scans; the newest never enters its median. Median uses the middle price, or the mean of the two middle prices rounded down to integer copper. **Cheap** is at most `flood_cheap_percent` (default **60%**) of typical; **high** is at least `flood_high_percent` (default **150%**). Integer cross-products decide boundaries. Show ratio, typical price and scan count; too few scans or missing prices never flag. All seven settings inherit shared config and allow source overrides; positive integers, thin below contested, churn at most 100%, price cut-offs straddling 100%.
