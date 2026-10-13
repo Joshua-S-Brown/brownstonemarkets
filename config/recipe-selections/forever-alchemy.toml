@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "alchemy"
 status = "beta-observed"
-catalog_version = "0.3"
+catalog_version = "0.4"
 
 [recipe_defaults]
 output_quantity_verified = false
@@ -511,3 +511,27 @@ recipe_id = 1293561  # Flask of Natural Precision
 
 [[recipes]]
 recipe_id = 1293562  # Flask of Natural Swiftness
+
+[[items]]
+item_id = 3371  # Empty Vial
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 3372  # Leaded Vial
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4342  # Purple Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 8925  # Crystal Vial
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."

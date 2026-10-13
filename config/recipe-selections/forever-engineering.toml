@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "engineering"
 status = "beta-observed"
-catalog_version = "0.3"
+catalog_version = "0.4"
 
 [recipe_defaults]
 output_quantity_verified = false
@@ -625,3 +625,45 @@ recipe_id = 1319164  # Large White Rocket Cluster
 
 [[recipes]]
 recipe_id = 1319165  # Large Yellow Rocket Cluster
+
+[[items]]
+item_id = 159  # Refreshing Spring Water
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2880  # Weak Flux
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4399  # Wooden Stock
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4400  # Heavy Stock
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 6530  # Nightcrawlers
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 10647  # Engineer's Ink
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 10648  # Blank Parchment
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."

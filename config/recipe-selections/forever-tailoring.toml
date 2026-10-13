@@ -6,7 +6,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"  # Game build rules; not a Forever server type.
 profession = "tailoring"
 status = "beta-observed"
-catalog_version = "0.5"
+catalog_version = "0.6"
 notes = "Forever beta, first tiers: Linen, Red Linen and Woolen bags with their bolts, plus Runecloth Bag for launch. Revalidate after material game builds by re-saving the page and regenerating."
 
 # Output counts: Wowhead's list data gives every recipe exactly 1. The "(2)" in its spell tooltips is the
@@ -1293,3 +1293,75 @@ item_id = 14341  # Rune Thread
 vendor = true
 vendor_verified = false
 vendor_note = "Confirm at a Forever trade supplies vendor."
+
+[[items]]
+item_id = 2324  # Bleach
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2325  # Black Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2605  # Green Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4291  # Silken Thread
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4340  # Gray Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4341  # Yellow Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4342  # Purple Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4470  # Simple Wood
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 6260  # Blue Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 6261  # Orange Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 8343  # Heavy Silken Thread
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 10290  # Pink Dye
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."

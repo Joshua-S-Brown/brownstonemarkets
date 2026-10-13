@@ -21,7 +21,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 
 **Through the last full beta testing day, 21 October** (manual, in game):
 - **Keep scanning.** Sixteen complete scans of the Normal Alliance house are imported (`status.md` → *Limitations*). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
-- **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. At a trade supplies vendor, check that Coarse Thread, Fine Thread, Red Dye and Rune Thread are sold, and their prices. Record each result by hand in `config/recipe-selections/forever-tailoring.toml` with the date, then regenerate on the Recipe catalogs page. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
+- **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. Buy your crafting reagents (thread, dye, flux, vials, spices) from a trade-supplies vendor rather than the auction house when you need them: the addon records each purchase, and Claude confirms the marked vendor prices from it. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
 - **Widen the Forever catalogs** (manual, on the Recipe catalogs page): the rest of Tailoring, then the professions you plan to level at launch. The board and Today's *Craft* list only cover catalog recipes, so this is what gives them something to show.
 - **If any yield is more than 1** (now unlikely: Wowhead's "(2)" is an effect number, not a count; see `requirements.md` → CRAFT-08), *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
 - **Prepare a beta character for the character-data tests** (added 2026-10-06): level one **gathering** profession (Mining or Herbalism) and one **crafting** profession that uses it, far enough to gather, craft, post, sell, let something expire and cancel. Keep a little gold to buy and vendor with. This is what STORY-032 and STORY-033 are tested on.
@@ -42,22 +42,21 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-015b crafting across professions (Brownstone; medium; refined 2026-10-13, ready for handoff)
-2. STORY-065 farming rates from play sessions (addon + Brownstone; needs its beta discovery, in the play session before 21 October)
-3. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
-4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-5. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
-6. STORY-035 auction deposits (needs a beta check)
-7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-8. STORY-036 vendor price ceilings
-9. STORY-021 item page and charts (would live in the Market explorer)
-10. STORY-026 scan coverage and rhythm
-11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-12. STORY-006 replay
+1. STORY-065 farming rates from play sessions (addon + Brownstone; needs its beta discovery, in the play session before 21 October)
+2. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
+3. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+4. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
+5. STORY-035 auction deposits (needs a beta check)
+6. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+7. STORY-036 vendor price ceilings
+8. STORY-021 item page and charts (would live in the Market explorer)
+9. STORY-026 scan coverage and rhythm
+10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+11. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040, STORY-044 and STORY-027 (checklists in `addon/README.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 060, 063, 064 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 060, 063, 064 and SPIKE-009/009b.
 
 **Added 2026-10-12 (product owner, after SPIKE-009b: "instead of migrating all the pages… what do we really need?"):** NiceGUI becomes the app, but only for what running the business needs. Four places move, each a story: **Today** (STORY-058, then STORY-054's cards), **Team**: the employee roster, their skills and where to invest (STORY-052, then STORY-059), **Market**: an explorer for browsing materials, crafts and supply chains, plus what moved since the last scan, kept for now to judge its use (STORY-055), and **Data**: Import (STORY-058). Everything else (All recipes, Watchlist, Below usual price, Scan changes, Recipe catalogs) stays in the Streamlit app, which is kept, unchanged and reachable, but gets no new features. The new app is built for WoW Forever; Classic stays development test data with no features of its own (`requirements.md` → *Interface*). This supersedes the Streamlit placements in STORY-053 for future work.
 
@@ -168,7 +167,7 @@ Acceptance:
 
 ### STORY-036 — Vendor price ceilings
 
-Added 2026-10-06. Waits for the in-game check under *Now*.
+Added 2026-10-06. Waits for the in-game check under *Now*. Trade-supplies reagents in every Forever catalog were marked as vendor items on 2026-10-13 from the saved pages' buy prices, unconfirmed except Coarse Thread (`status.md` → *Limitations*); this story confirms them and adds the caps.
 
 As a gold maker, I want items a vendor sells at a fixed price to be capped at that price, so that the board never values them above it or suggests buying them for more.
 
@@ -177,7 +176,6 @@ Acceptance:
 - **Buying:** already capped by CRAFT-03's cheapest route; Today's *Buy* never lists an auction purchase above the vendor price.
 - **Selling:** a sale value above the vendor price is capped at it, with a label, and the rule is recorded in `requirements.md`.
 - **Limited stock** (if the vendor has any) is noted, since vendor stock is otherwise *not modeled*.
-- **Every catalog's vendor reagents** (added 2026-10-13): the generated Forever catalogs record no vendor prices; only Tailoring's four threads and dyes were added by hand. The pages already saved by hand carry each item's buy price; only Tailoring's selection marks its vendor items, so the others got none. Mark each trade-supplies reagent the catalogs use (flux, vials, spices, salt, coal, threads, dyes, bleach) as a vendor item in its `config/recipe-selections/` file, `vendor_verified = false` like Tailoring's, and regenerate, so CRAFT-03 can choose the vendor. No new Wowhead access: a buy price alone is not vendor evidence (CRAFT-08), and scripted fetching is not allowed (*Recipe data → Terms*). Confirm from the addon's vendor-purchase records during normal play, not a separate errand. Weak Flux is the known case: the beta Market page shows it unpriced.
 
 ### STORY-040 — Your active auctions
 
@@ -316,25 +314,6 @@ Acceptance:
 - **Every source.** Covers TSM CSVs and addon scans (bronze `.lua` and `.lua.gz` files; silver already holds per-scan listings and prices).
 - **Documented.** It's the recovery procedure for partial runs referenced in `status.md`. Backup is STORY-016.
 
-### STORY-015b — Crafting across professions
-
-Split from STORY-015 at grooming (2026-10-04). **Refined 2026-10-13** (owner: "let's do all that", agreeing it is the next build while the beta checks run). The nine Forever catalogs now feed each other: on 2026-10-13, 75 items one profession makes are another's material (Mining bars for Blacksmithing and Engineering, Leatherworking's leathers for Tailoring and Engineering, Alchemy's dyes and oils for Tailoring, Tailoring's bolts for Engineering). Only one item, 18258, is made by two professions (Leatherworking and Tailoring). Brownstone only; no schema change.
-
-As the owner, I want a recipe to be costed with materials another of our characters can make, at their crafted cost, so that Today and Team show what the team as a whole can make and what it costs, instead of only auction prices.
-
-Acceptance:
-- **One recipe graph per market.** A framework-free builder combines a market's compatible catalogs (same game version, rules version and market: UI-04) into one graph that the existing CRAFT-03 route code walks unchanged: cheapest valid buy, craft or vendor route, missing prices never free, cycles and fractional units rejected per CRAFT-02, equal costs resolved deterministically. Recipe IDs must be unique across the combined catalogs, otherwise the builder refuses with both catalog identities named. Each recipe keeps the catalog and profession it came from, and every row keeps its catalog-qualified identity (`catalog_for_row`), so nothing joins on a recipe ID alone.
-- **Two makers:** when two professions make the same item, use the cheaper valid route; a tie goes to the lower catalog identity. Always show which profession the route came from. Record this as a new CRAFT rule in `requirements.md`.
-- **Items in several catalogs** must agree on the fields routes use (vendor buy price, raw-material flag, availability). A field one catalog omits takes the value another records (2026-10-13 review). If two recorded values disagree, show both catalogs and the item as a catalog warning and treat the item as buy-only in the combined graph until the catalogs are fixed. Never pick one value silently.
-- **Only what the team can make.** A cross-profession craft route (material from another catalog) is used only when a scoped Today character is Known or Train now for that recipe (STORY-043 statuses). Otherwise the material is bought, with *no one on the team makes this* shown beside it, never assumed craftable. Routes inside a recipe's own catalog keep today's behaviour. With no character evidence, there are no cross-profession routes.
-- **Where it applies:** the Action Board ranking (`action_board.rank_catalogs`, given the team's makeable recipes), and through it Today's plan, Shopping list and Queue; the Market explorer's made-from and used-in (UI-09); Team's cost to reach (CRAFT-11); and This session (UI-12). The Streamlit pages get no new features: called without team evidence, the board stays catalog-local, exactly as today.
-- **Today:** a cross-profession intermediate names the character who can make it and its profession (for example *Copper Bar · Keenagen, Mining*). The Queue lists its crafts under that character, before the crafts that consume it. Mail between characters is not charged and says so: postage is an unconfirmed claim (`requirements.md` → *Known Forever market facts*).
-- **Versions:** bump the board's `POLICY_VERSION` and `TODAY_VERSION`, because costs change, and record why in `requirements.md`. Saved plan choices and ticks made before the change must not be applied to the new routes: reset them with Today's existing *plan reset* note (`views/nicegui_today.py` → `session_plan`).
-- **Honest labels:** a crafted cost is not a sale price, and shows no profit for the intermediate step unless the board values it. Listings, never sales. Integer copper throughout.
-- **Offline tests:** a two-profession chain (bar → armour); a three-profession chain (bar → buckle → belt); two makers (cheaper wins, tie by catalog identity); a recipe-ID collision refused; disagreeing item fields → warning and buy-only; a cross route used only when a team member is Known or Train now, and bought otherwise; no character evidence → catalog-local, identical to today; a cycle across catalogs rejected; missing prices never free; scoping (another market's or rules version's catalog never joins); Today's Queue ordering and *made by* label; Team cost to reach using a team-made bar.
-- **Real-data check** on the Forever beta source: how many board rows' costs change with the beta team's evidence (it may be none, since Basilly tailors and Keenagen mines at low rank: say so). Also run with a test fixture giving Keenagen Engineering, to show Copper Bar routing into Engineering recipes.
-- **Docs:** the new CRAFT rule in `requirements.md`; the graph builder and where it is used in `design.md`; `status.md`.
-
 ## Later
 
 **Optional client-version cutover guard:** investigate whether recorded client versions can flag a misconfigured beta/live source during STORY-020b and first live imports. Source configuration remains authoritative (DATA-03); STORY-017 adds no client-version evidence checks.
@@ -350,7 +329,7 @@ These are grouped by what unblocks them.
 - **Stockpile:** materials below their own multi-day typical price, worth buying ahead for recipes you craft often, with a holding limit tied to gold available. Needs price history across days (*History chain*), so after launch.
 - **Volatility:** how much an item's typical price swings across scans, shown as a risk note and used to demote unstable crafts. Needs the same history.
 - **Restock:** what you hold in bags and bank, so *Buy* skips it and *Sell* includes it. Needs STORY-032 (and STORY-037 for characters on the Windows PC); pairs with STORY-039's chosen plan.
-- **Whole chains:** ore → bars → armor across professions, with the gain at each stage (sell bars or craft on). Needs STORY-015b.
+- **Whole chains:** ore → bars → armor across professions, with the gain at each stage (sell bars or craft on). Routing exists (CRAFT-12).
 - **Gold per hour:** if the scaled minimum gain feels wrong in play, try a time-based minimum instead. Decide after using version 1.
 
 **Demand from your own scans** (needs repeated scans and STORY-018; optional sources from STORY-011b can add more data points):
@@ -437,7 +416,7 @@ Acceptance:
 - Check whether `/bscan start` works without the button click.
 
 **Recipe coverage** (unblocked by STORY-004):
-- **More recipes and professions:** added in the app on the Recipe catalogs page and shown together on the board (`status.md`); routing across professions is STORY-015b.
+- **More recipes and professions:** added in the app on the Recipe catalogs page and shown together on the board (`status.md`); routing across professions is CRAFT-12.
 - **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*). **Moves to the top of Next if the Bolt of Linen Cloth check finds a yield above 1.**
 - **Skill-up demand map:** now STORY-047 in Next (2026-10-08).
 - **In-game recipe reader:** now part of *Known recipes and skill* under *Your own character's data* (reading your own character's data was approved 2026-10-06).

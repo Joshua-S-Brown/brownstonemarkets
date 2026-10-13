@@ -108,8 +108,10 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 - Today keeps aggregate-selected routes while quoting whole listings; surplus is uncredited and
   unshared, and the greedy plan is affordable, not a global optimum. Sales speed and volatility are
   not modeled.
-- The generated Forever catalogs record no vendor prices; only Tailoring's four threads and dyes have
-  one, so vendor reagents such as Weak Flux are priced from the auction house or unpriced (STORY-036).
+- Forever vendor reagents (threads, dyes, bleach, salt, fluxes, vials, wood, rods, stocks, ink,
+  parchment, spices, flour, drinks, nightcrawlers) are marked in every catalog with the saved pages'
+  buy prices, `vendor_verified = false` except Coarse Thread; coal, Elemental Flux, Imbued Vial and
+  seasonal items are not marked (STORY-036 confirms).
 - Cross-profession routes require scoped Known/Train now team evidence (CRAFT-12); without it
   costs remain catalog-local. Mail postage remains unconfirmed and uncharged. Multi-yield recipes
   aren't supported (`requirements.md` → *Not modeled*). Team infers no character-level tier requirement; This session uses Classic Era's (10/20/35), unconfirmed on Forever until trainer evidence from addon 0.11.3 is checked.
@@ -135,7 +137,7 @@ git diff --check
 ```
 
 Expected on this Mac: 1,343 passed and one explicit PowerShell-unavailable skip (1,344 run where
-PowerShell exists, as in Windows CI), offline, at 96.44% coverage with branches enabled;
+PowerShell exists, as in Windows CI), offline, at 96.50% coverage with branches enabled;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the

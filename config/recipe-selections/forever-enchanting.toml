@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "enchanting"
 status = "beta-observed"
-catalog_version = "0.3"
+catalog_version = "0.4"
 
 [recipe_defaults]
 output_quantity_verified = false
@@ -94,3 +94,15 @@ recipe_id = 1306524  # Idol of Swiftness
 
 [[recipes]]
 recipe_id = 1306525  # Idol of the Ursine Twins
+
+[[items]]
+item_id = 4470  # Simple Wood
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 6217  # Copper Rod
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."

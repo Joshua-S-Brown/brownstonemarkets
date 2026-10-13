@@ -99,7 +99,7 @@ def test_status_reports_page_evidence_unconfirmed_values_and_refresh_due(workspa
     kinds = [value["kind"] for value in rc.unconfirmed_values(real["catalog"])]
     # Every Forever yield stays unconfirmed except the two counted in game on 2026-10-09.
     assert kinds.count("yield") == len(real["catalog"]["recipes"]) - 2
-    assert kinds.count("vendor") == 3 and kinds.count("post-launch") == 3
+    assert kinds.count("vendor") == 15 and kinds.count("post-launch") == 3
 
     moved = rc.catalog_status(entry, [source(rules_version="forever-1.61", label="Forever AH"),
                                       source(game_version="classic", rules_version="classic-era")],
@@ -295,7 +295,10 @@ def test_editing_a_selection_keeps_comments_and_drops_notes_nothing_uses():
     data = tomllib.loads(edited)
     assert [pick["recipe_id"] for pick in data["recipes"]] == [3755, 3757, 18401]
     assert {item["item_id"] for item in data["items"]} == {2320, 2321}
-    assert set(dropped) == {"Magenta Dye", "Cerulean Dye", "Red Dye", "Rune Thread"}
+    # Notes for items the three recipes no longer use, including the 2026-10-13 vendor reagent marks.
+    assert set(dropped) == {"Magenta Dye", "Cerulean Dye", "Red Dye", "Rune Thread", "Bleach", "Simple Wood",
+                            "Silken Thread", "Heavy Silken Thread", *(f"{c} Dye" for c in (
+                                "Black", "Blue", "Gray", "Green", "Orange", "Pink", "Purple", "Yellow"))}
     assert "recipe_id = 18401  # Bolt of Runecloth" in edited
     build_catalog(extract, parse_selection(data))  # The importer accepts the result.
 
@@ -310,7 +313,8 @@ def test_vendor_marks_are_added_into_existing_notes_and_removed_without_losing_t
     edited, dropped = selection_files.edit_recipes(text, extract, recipes, marks, used)
     items = {item["item_id"]: item for item in tomllib.loads(edited)["items"]}
     assert items[249430]["availability"] == "post-launch" and items[249430]["vendor_verified"] is False
-    assert 14341 not in items and dropped == ["Rune Thread (vendor mark)"]
+    # Only Rune Thread loses a mark it still needs; the other drops are notes for items these recipes don't use.
+    assert 14341 not in items and [d for d in dropped if d.endswith("(vendor mark)")] == ["Rune Thread (vendor mark)"]
 
     classic = (ROOT / "config/recipe-selections/classic-era-tailoring.toml").read_text(encoding="utf-8")
     extract = fixture_extract("classic")

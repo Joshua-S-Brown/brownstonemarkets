@@ -165,7 +165,8 @@ def test_forever_catalog_has_beta_tiers_new_dyes_and_only_forever_evidence():
         assert recipe["output_quantity"] == 1
         assert recipe["output_quantity_verified"] is (recipe["recipe_id"] in counted)
     assert {i: item["vendor_verified"] for i, item in catalog["items_by_id"].items()
-            if item["role"] == "vendor_material"} == {2320: True, 2321: False, 2604: False, 14341: False}
+            if item["role"] == "vendor_material"} == {2320: True} | {i: False for i in (
+                2321, 2324, 2325, 2604, 2605, 4291, 4340, 4341, 4342, 4470, 6260, 6261, 8343, 10290, 14341)}
 
 
 def test_archive_keeps_bytes_once_and_remembers_the_saved_date(tmp_path):

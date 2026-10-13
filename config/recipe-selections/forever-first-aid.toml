@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "first-aid"
 status = "beta-observed"
-catalog_version = "0.3"
+catalog_version = "0.4"
 
 [recipe_defaults]
 output_quantity_verified = false
@@ -103,3 +103,93 @@ recipe_id = 1262996  # Toxin Study
 
 [[recipes]]
 recipe_id = 1263001  # Plague Doctor's Laboratory
+
+[[items]]
+item_id = 159  # Refreshing Spring Water
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2321  # Fine Thread
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2594  # Flagon of Dwarven Honeymead
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2596  # Skin of Dwarven Stout
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2678  # Mild Spices
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2686  # Thunder Ale
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2692  # Hot Spices
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 2723  # Bottle of Dalaran Noir
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 3371  # Empty Vial
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 3372  # Leaded Vial
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 3713  # Soothing Spices
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4291  # Silken Thread
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 4470  # Simple Wood
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 8343  # Heavy Silken Thread
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
+
+[[items]]
+item_id = 8925  # Crystal Vial
+vendor = true
+vendor_verified = false
+vendor_note = "Marked in the app; confirm at a vendor."
