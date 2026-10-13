@@ -17,6 +17,25 @@ _SLUG = re.compile(r"[a-z0-9_-]+")
 NEUTRAL_AUCTION_CUT = 0.15
 
 
+FLOOD_DEFAULTS = {
+    'flood_contested_listings': 10, 'flood_thin_listings': 2, 'flood_churn_percent': 50,
+    'flood_window_days': 7, 'flood_min_scans': 5, 'flood_cheap_percent': 60, 'flood_high_percent': 150,
+}
+
+
+def _validate_flood(source):
+    for key, default in FLOOD_DEFAULTS.items():
+        value = source.setdefault(key, default)
+        if type(value) is not int or value <= 0:
+            raise ValueError(f'{key} must be a positive integer')
+    if source['flood_thin_listings'] >= source['flood_contested_listings']:
+        raise ValueError('flood_thin_listings must be below flood_contested_listings')
+    if source['flood_churn_percent'] > 100:
+        raise ValueError('flood_churn_percent must be at most 100')
+    if not source['flood_cheap_percent'] < 100 < source['flood_high_percent']:
+        raise ValueError('flood cut-offs must straddle 100 percent')
+
+
 class Source(TypedDict):
     """One feed observing one market, plus the shared settings it inherits from market.toml.
 
@@ -38,6 +57,13 @@ class Source(TypedDict):
     auction_cut: float
     min_discount: float
     top_n: int
+    flood_contested_listings: int
+    flood_thin_listings: int
+    flood_churn_percent: int
+    flood_window_days: int
+    flood_min_scans: int
+    flood_cheap_percent: int
+    flood_high_percent: int
     label: NotRequired[str]
     rules_version: NotRequired[str]  # Required for crafting; matches a catalog's rules_version.
     allow_missing_updated_at: NotRequired[bool]
@@ -75,6 +101,7 @@ def build_source(shared: dict, entry: dict) -> Source:
     markets.validate(source)
     source["market_id"] = markets.market_id(source)
     _validate_feed(source)
+    _validate_flood(source)
     if source["max_age_hours"] <= 0 or source["top_n"] <= 0:
         raise ValueError("max_age_hours and top_n must be positive")
     if not 0 <= source["auction_cut"] < 1 or not 0 <= source["min_discount"] < 1:

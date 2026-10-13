@@ -4,6 +4,14 @@ max_age_hours = 24
 auction_cut = 0.05  # Neutral auction houses default to 0.15 unless a source sets its own.
 min_discount = 0.20
 top_n = 20
+# UI-11 Flood signals; shared settings, overridable per source.
+flood_contested_listings = 10
+flood_thin_listings = 2
+flood_churn_percent = 50
+flood_window_days = 7
+flood_min_scans = 5
+flood_cheap_percent = 60
+flood_high_percent = 150
 
 # Each [[sources]] entry is one feed (source_id, provider, and a URL or scan file) observing one market.
 # The market is the auction house: game_version + region + scope + realm/server_type + faction + environment.

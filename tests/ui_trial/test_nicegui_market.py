@@ -169,3 +169,57 @@ async def test_removed_history_failure_keeps_item_page(user, tmp_path, monkeypat
     await user.open('/?place=Market&item=2589')
     await user.should_see('Unable to read removed listings: locked')
     await user.should_see('Made from')
+
+
+async def test_flood_lists_links_counts_roles_settings_stale_and_lazy_item(user, tmp_path, monkeypatch):
+    import duckdb
+
+    from brownstone import market_explorer as me
+    config, _ = market_app(tmp_path, monkeypatch, count=6)
+    with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb')) as db:
+        db.execute("UPDATE scan_metrics SET listings=10, min_buyout=6 "
+                   "WHERE scan_id='scan-5' AND item_id=2589")
+        db.execute("UPDATE scan_metrics SET listings=3, min_buyout=200 WHERE scan_id='scan-5' AND item_id=2996")
+    calls = []
+    original = me.item_floods
+    def tracked(config, item_id, now):
+        calls.append(item_id)
+        return original(config, item_id, now)
+    monkeypatch.setattr(me, 'item_floods', tracked)
+    await user.open('/?place=Market')
+    assert calls == []
+    await user.should_see('Most contested')
+    await user.should_see('Biggest overshoots · cheap and high')
+    await user.should_see('cheap')
+    await user.should_see('high')
+    await user.should_see('Thin items (≤ 2 listings) are left out here; their item pages still flag them.')
+    await user.should_see('material / output')
+    await user.should_see('Typical: earlier 7 days · at least 5 scans · cheap ≤ 60% · high ≥ 150%.')
+    await user.should_see('Stale')
+    linen = next(e for e in user.find(ui.link).elements if e.text == 'Linen Cloth')
+    await user.open(linen._props['href'])
+    await user.should_see('Crowding and overshoots')
+    assert calls == [2589]
+    await user.should_see('contested')
+    await user.should_see('10 listings · 15 units listed · largest stack 15/15 units (100.0%)')
+    await user.should_see('Lowest buyout changed: 5/5 comparable pairs')
+    await user.should_see('50.0% of typical')
+    await user.open('/?place=Market&item=99999')
+    await user.should_see('too few scans')
+    await user.should_see('Outside catalog chains')
+    await user.open('/?place=Market&item=123456')
+    await user.should_see('Not listed in the newest eligible scan; no flood signal.')
+
+
+async def test_flood_failure_preserves_item_and_one_scan_unknown_churn(user, tmp_path, monkeypatch):
+    from brownstone import market_explorer as me
+    market_app(tmp_path, monkeypatch, count=1)
+    await user.open('/?place=Market&item=2589')
+    await user.should_see('Lowest buyout churn unknown: no comparable pairs')
+    await user.should_see('too few scans')
+    def broken(*args):
+        raise RuntimeError('locked')
+    monkeypatch.setattr(me, 'item_floods', broken)
+    await user.open('/?place=Market&item=2589')
+    await user.should_see('Unable to read flood signals: locked')
+    await user.should_see('Used in')

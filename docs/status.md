@@ -3,7 +3,7 @@
 Current implemented state, limitations and how to verify. History, including dated real-data checks
 and beta play sessions, lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-12 (STORY-055)._
+_Last updated 2026-10-13 (STORY-064)._
 
 ## Implemented
 
@@ -59,6 +59,11 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   and matching evidence. Read-only listing multisets, full scope and variant/legacy identity retained.
   Verify with `tests/test_removed_listings.py` and `tests/ui_trial/test_nicegui_market.py`.
   Classic Era time-left bounds require the Forever in-game confirmation in `addon/README.md`.
+- **Flood signals (STORY-064, UI-11):** Market's contested-chain and cheap/high overshoot lists
+  link to lazy item evidence, including listing/units/stack share, lowest-buyout churn, typical price,
+  history count, catalog roles, configured thresholds/window and scan freshness. Short history and
+  missing prices remain explicit; variants stay separate. Verify with `tests/test_flood_signals.py`
+  and `tests/ui_trial/test_nicegui_market.py`; real-data inspection uses copied Forever beta data.
 - **Other pages:** Characters (STORY-051), Watchlist (STORY-048), Skill-up demand (CRAFT-10), Scan
   changes (UI-06), Browse market and Below usual price (UI-02/03), version-scoped item names (DATA-02),
   market metrics (ADDON-10).
@@ -115,8 +120,8 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,223 passed and one explicit PowerShell-unavailable skip (1,224 run where
-PowerShell exists, as in Windows CI), offline, at 96.33% coverage with branches enabled;
+Expected on this Mac: 1,264 passed and one explicit PowerShell-unavailable skip (1,265 run where
+PowerShell exists, as in Windows CI), offline, at 96.29% coverage with branches enabled;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the

@@ -256,6 +256,19 @@ pairs. `market_explorer.load_explorer` adds the small top-list projection. `item
 read-only connection only when `views/nicegui_market.show_item` opens the item page. Shared theme
 cards/badges and expansions show evidence and keep identities separate, including noncatalog items.
 
+### Flood signals (STORY-064)
+
+Rules and config defaults live in `requirements.md` → UI-11. `flood_signals.signals` reads
+`scan_metrics` under `scope_predicate`, exact scan/snapshot identity and metrics version, reusing
+`scan_changes.eligible_scans`, its loaded-name query and `removed_listings.scan_pairs`. Item-ID
+filters retain all variant states to check ADDON-08's pure-base compatibility. The newest eligible
+scan supplies counts and largest-stack numerator/denominator; earlier windowed scans supply the
+median, and at most ten qualifying adjacent pairs supply comparable lowest-buyout churn.
+All monetary arithmetic uses integer copper; ranking ratios use exact fractions. No migration,
+write, price path or seller inference. `market_explorer.load_explorer` reads only catalog-chain
+signals for the two top lists; `item_floods` opens a read-only connection only when an item page
+opens. `views/nicegui_market.py` uses shared theme badges/chips, links and short-history explanations.
+
 ## Crafting calculation
 
 - `basis_prices(observations, basis)` turns observed prices into buy and sell unit price maps (CRAFT-04).
@@ -510,7 +523,7 @@ missing prices remain blank and shared freshness/time captions stay visible. No 
 
 ## Market explorer (STORY-055)
 
-Rules live in `requirements.md` → UI-09 (with UI-02/04/06/08 and CRAFT-03).
+Rules live in `requirements.md` → UI-09 (with UI-02/04/06/08, UI-10/11 and CRAFT-03).
 `market_explorer.load_explorer` composes `today_loading.load_today`'s scoped snapshot/evidence,
 `analysis.browse` (all items, including nonpositive prices), `metrics.read_scan_metrics`, compatible
 catalogs, `action_board.rank_catalogs`, `today_characters` and `skillups.build_skillups`. All database

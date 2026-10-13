@@ -56,6 +56,7 @@ def render(config, catalogs, item: int | None = None):
     search_panel(result)
     if item is not None:
         show_item(result, explorer.item_page(result, item))
+    flood_lists(result)
     removal_list(result)
     movement(result)
 
@@ -96,6 +97,7 @@ def show_item(result, page):
     with ui.card().classes('bs-card').mark('market-item'):
         ui.label(page['name']).classes('text-2xl font-bold')
         prices(page)
+        load_item_floods(config, page)
         try:
             history = explorer.item_removals(config, page['item_id'])
         except Exception as error:
@@ -309,3 +311,96 @@ def removal_list(result):
             removal_counts(row)
         if not removed['rows']:
             ui.label('No units removed early in our catalog chains.')
+
+
+def flood_heading(floods):
+    options = floods['settings']
+    ui.label(f"Typical: earlier {options['flood_window_days']} days · at least {options['flood_min_scans']} scans · "
+             f"cheap ≤ {options['flood_cheap_percent']}% · high ≥ {options['flood_high_percent']}%.").classes('bs-note')
+    ui.label(f"Contested: ≥ {options['flood_contested_listings']} listings and lowest buyout changes in "
+             f"≥ {options['flood_churn_percent']}% of up to 10 comparable consecutive pairs (gap ≤ 12 hours). "
+             f"Thin: ≤ {options['flood_thin_listings']} listings. Without pairs: listings only, churn unknown."
+             ).classes(
+                 'bs-note')
+    ui.label('Listed supply, not sales or a forecast. Variants never pooled; sellers unknown.').classes('bs-note')
+    if floods['note']:
+        ui.label(floods['note'])
+    if floods['scan']:
+        theme.chip(f"Scan {floods['scan']['finished_at']:%Y-%m-%d %H:%M:%S} UTC")
+        theme.chip(f"{floods['freshness']['age_hours']:.1f} hours old")
+        if floods['freshness']['stale']:
+            theme.badge('Stale', 'warn')
+
+
+def flood_row(row):
+    churn, overshoot = row['churn'], row['overshoot']
+    theme.badge(row['crowding'], 'warn' if row['crowding'] == 'contested' else 'neutral')
+    theme.badge((row['variant_state'] or 'legacy') + (f" · {row['variant_id']}" if row['variant_id'] else ''))
+    ui.label(f"{row['listings']:,} listings · {row['units']:,} units listed · largest stack "
+             f"{row['largest_stack_units']:,}/{row['units']:,} units "
+             f"({100 * row['largest_stack_units'] / row['units']:.1f}%)")
+    ui.label(f"Lowest buyout changed: {churn['changed']}/{churn['pairs']} comparable pairs" if churn['pairs']
+             else 'Lowest buyout churn unknown: no comparable pairs')
+    theme.badge(overshoot['label'], 'warn' if overshoot['label'] in ('cheap', 'high') else 'neutral')
+    ratio = overshoot['ratio']
+    ui.label(f"Lowest buyout / unit: {money(row['min_buyout'])} · typical: {money(overshoot['typical_copper'])} · "
+             f"{overshoot['scans']} earlier priced scans" +
+             (f" · {100 * ratio['numerator'] / ratio['denominator']:.1f}% of typical" if ratio else ''))
+
+
+def flood_lists(result):
+    floods = result['floods']
+    with ui.card().classes('bs-card').mark('market-floods'):
+        ui.label('Flood signals in our chains').classes('text-xl font-bold')
+        flood_heading(floods)
+        for key, title in (('contested', 'Most contested'), ('overshoots', 'Biggest overshoots · cheap and high')):
+            ui.label(title).classes('text-lg font-bold')
+            for row in floods[key]:
+                flood_list_row(result['config'], row, key)
+            if not floods[key]:
+                ui.label('No contested chain items.' if key == 'contested' else
+                         'No qualifying overshoots; item pages show thin, short or missing history.')
+            if key == 'overshoots':
+                ui.label(f"Thin items (≤ {floods['settings']['flood_thin_listings']} listings) are left out here; "
+                         'their item pages still flag them.').classes('bs-note')
+
+
+def item_floods(floods, page):
+    with ui.column().classes('w-full').mark('item-floods'):
+        ui.label('Crowding and overshoots').classes('text-xl font-bold')
+        flood_heading(floods)
+        roles = [label for key, label in (('used_in', 'material'), ('made_from', 'output')) if page[key]]
+        ui.label(' / '.join(roles) or 'Outside catalog chains').classes('bs-note')
+        for row in floods['rows']:
+            flood_row(row)
+        if not floods['rows'] and not floods['note']:
+            ui.label('Not listed in the newest eligible scan; no flood signal.')
+
+
+def load_item_floods(config, page):
+    try:
+        floods = explorer.item_floods(config, page['item_id'], datetime.now(UTC))
+    except Exception as error:
+        ui.label(f'Unable to read flood signals: {error}. Use Data to check saved scans.')
+    else:
+        item_floods(floods, page)
+
+
+def flood_list_row(config, row, group):
+    with ui.row().classes('items-center gap-2'):
+        item_link(config, row['item_id'], row['item_name'])
+        theme.badge((row['variant_state'] or 'legacy') + (f" · {row['variant_id']}" if row['variant_id'] else ''))
+        ui.label(row['role']).classes('bs-note')
+        if group == 'contested':
+            theme.badge('contested', 'warn')
+            churn = row['churn']
+            ui.label(f"{row['listings']:,} listings · changes {churn['changed']}/{churn['pairs']} pairs"
+                     if churn['pairs'] else f"{row['listings']:,} listings · churn unknown")
+        else:
+            overshoot = row['overshoot']
+            theme.badge(overshoot['label'], 'warn')
+            ratio = overshoot['ratio']
+            ui.label(f"{100 * ratio['numerator'] / ratio['denominator']:.1f}% of typical · "
+                     f"{overshoot['scans']} earlier scans")
+    with ui.expansion('Flood evidence for ' + row['item_name']):
+        flood_row(row)

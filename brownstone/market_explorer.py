@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import duckdb
 
-from . import analysis, removed_listings, scan_changes
+from . import analysis, flood_signals, removed_listings, scan_changes
 from .action_board import catalog_identity, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices, evaluate_recipe
 from .freshness import assess
@@ -29,12 +29,14 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
         items = analysis.browse(db, snapshot['snapshot_id'], config, limit=2_147_483_647).to_dicts()
         metrics = read_scan_metrics(db, config, snapshot['snapshot_id']) or []
+        roles = flood_signals.catalog_roles(selected)
+        floods = flood_signals.top_lists(flood_signals.signals(db, config, sorted(roles), now), roles)
         movement = scan_movement(db, config, selected, now)
         removals = removed_listings.top_removals(db, config, sorted(
             {item for catalog in selected for item in catalog['items_by_id']}))
     items = [{**row, **{k: row[k] if row[k] and row[k] > 0 else None
                         for k in ('min_buyout', 'market_value')}} for row in items]
-    result.update(snapshot=snapshot, items=items, metrics=metrics, movement=movement, removals=removals,
+    result.update(snapshot=snapshot, items=items, metrics=metrics, movement=movement, removals=removals, floods=floods,
                   vendors=arguments['vendor_prices'], freshness=assess(snapshot, now, config['max_age_hours']),
                   recipes=recipe_rows(selected, arguments, characters),
                   demand=skill_demand(selected))
@@ -151,3 +153,8 @@ def skill_demand(catalogs) -> list[dict]:
 def item_removals(config, item_id):
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
         return removed_listings.item_history(db, config, item_id)
+
+
+def item_floods(config, item_id, now):
+    with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
+        return flood_signals.signals(db, config, [item_id], now)
