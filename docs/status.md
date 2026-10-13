@@ -3,7 +3,7 @@
 Current implemented state, limitations and how to verify. History, including dated real-data checks
 and beta play sessions, lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-12 (STORY-052)._
+_Last updated 2026-10-12 (STORY-060)._
 
 ## Implemented
 
@@ -11,7 +11,9 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
 
 - **Main app (NiceGUI, UI-07):** Today, Team (roster and progression), Market (STORY-055 placeholder) and
   Data → Import. Start it from `Start Brownstone.command` / `.cmd` or `launch_nicegui.py`
-  ([New app](#new-app)). Runs on the Mac only; the Windows PC plays and drops scan files.
+  ([New app](#new-app)). Shared light theme, wrapping header navigation, page information dialogs
+  and Today settings behind the gear (STORY-060, UI-08). Native text selection is enabled.
+  Runs on the Mac only; the Windows PC plays and drops scan files.
 - **Old app (Streamlit, UI-01 to UI-06):** unchanged and reachable from
   `Start Brownstone (old app).command` / `.cmd` (`launch.py`). Places: Today (Today plan, All
   recipes), Team (Characters), Market (Browse market, Skill-up demand, Watchlist, Below usual price),
@@ -36,9 +38,12 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   Recipe catalogs page (CRAFT-08), learning sources and training costs (STORY-050).
 - **Today (`today_version` 5):** funded, supply-reserved plan with Buy/Sell/Below vendor/Queue,
   choices and refill, confidence labels, character eligibility and recorded funds (`requirements.md`
-  → Today). The new app shows Craft as cards with Table one toggle away (STORY-054).
+  → Today). The new app shows Plan cards with Table one toggle away, status chips, summary tiles and
+  helpful empty-state reasons; Shopping list, Sell, Queue and Extras retain their existing evidence.
+  Provenance and hidden counts are in the ⓘ dialog; fixed/scaled settings retain Save-only behaviour.
 - **Team (STORY-052, CRAFT-11):** shared character cards with Next step lines, a scoped character
-  choice and 5–100-point window, profession comparison and per-point material/training estimates.
+  choice and 5–100-point window that updates on release, summary tiles, reachable recipes,
+  profession comparison and per-point material/training estimates on demand.
   Current Action Board profit, reused Today statuses/confidence, incomplete reasons and cap guidance;
   yellow chances remain an unconfirmed Classic assumption. Streamlit Characters is unchanged.
 - **Other pages:** Characters (STORY-051), Watchlist (STORY-048), Skill-up demand (CRAFT-10), Scan
@@ -96,7 +101,9 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,166 passed and one explicit PowerShell-unavailable skip (1,167 run where PowerShell exists, as in Windows CI), offline, at 96.46% coverage with branches enabled; `ruff check .` and `mypy` report no issues. CI runs the same
+Expected on this Mac: 1,182 passed and one explicit PowerShell-unavailable skip (1,183 run where
+PowerShell exists, as in Windows CI), offline, at 96.27% coverage with branches enabled;
+`ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the
 old app, or addon preview/import in Data. Real-data checks run on a copy of `data/` under ignored
@@ -110,6 +117,10 @@ and restarts only the authenticated app it started when the code changed. If the
 start, it prints one line and opens the browser; that server stops after five minutes without a
 connected tab. For a copied-data browser check:
 `.venv/bin/python nicegui_app.py --data-dir /path/to/copied-data --port 8081`.
+
+STORY-060's desktop comparison screenshots are under ignored `work/story-060/`; approved mockups
+remain until closure review. Native clipboard use and switching macOS appearance still need a manual
+check. A phone-width screenshot remains unverified because the browser viewport override did not apply.
 
 ### Beta evidence report
 

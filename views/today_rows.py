@@ -1,4 +1,6 @@
 """Framework-free Today table projections and wording shared by both apps; copper conversion uses money.py."""
+from datetime import UTC, datetime
+
 from brownstone.money import format_money, to_gold
 
 ROW_LIMIT_NOTE = "more rows outside this list's 10-row limit"
@@ -107,3 +109,97 @@ def material_row(row, *, item_id=False):
             "Required units": row["quantity"], "Purchased units": row["purchased_units"],
             "Cost (g)": to_gold(row["cost_copper"]), "Highest unit price (g)": to_gold(row["highest_unit_copper"]),
             "State": state(row)}
+
+
+def summary_tiles(result, *, hide_low=False):
+    """Display totals from the reserved plan, using Sell's undercut profits without re-quoting.
+
+    Hiding Low confidence filters the shown crafts like the cards; gold needed stays the reserved plan's.
+    """
+    crafts = [r for r in result['craft'] if not (hide_low and r['confidence'] == 'Low')]
+    shown = {r['output_item_id'] for r in crafts} if hide_low else None
+    sells = [r for r in result['sell'] if shown is None or r['output_item_id'] in shown]
+    valued = [r for r in sells if r['undercut_batch_profit_copper'] is not None]
+    best = max(valued, key=lambda r: r['undercut_batch_profit_copper'], default=None)
+    profit = (format_money(sum(r['undercut_batch_profit_copper'] for r in valued))
+              if len(valued) == len(sells) else 'unavailable')
+    return [('Crafts', str(len(crafts))), ('Gold needed', format_money(result['shopping_total_copper'])),
+            ('Expected profit', profit), ('Best craft',
+             f"{best['output_name']} · {format_money(best['undercut_batch_profit_copper'])}"
+             if best else 'none valued')]
+
+
+def empty_sentence(hidden, minimum_copper, gold_copper):
+    """Explain the largest exclusions without claiming knowledge or prices we do not have."""
+    reasons = sorted(((reason, count) for reason, count in hidden.items() if count),
+                     key=lambda entry: (-entry[1], entry[0]))[:2]
+    wording = {
+        'no character has this profession': 'your team does not have the required professions',
+        'rank below required skill': 'profession ranks are below the required skill',
+        'below minimum gain': 'profit is below minimum gain',
+        'one craft exceeds funds': 'one craft costs more than the available gold',
+        'insufficient listed materials': 'there are not enough listed materials',
+        'missing prices': 'prices are missing',
+    }
+    why = ' Most recipes are hidden because ' + ' and '.join(
+        wording.get(r, r) for r, _ in reasons) + '.' if reasons else ''
+    return (f"No craft meets the {format_money(minimum_copper)} minimum batch gain with "
+            f"{format_money(gold_copper)} available.{why} Review your settings or inspect all reasons.")
+
+
+def scan_status(freshness):
+    """Short age chip; unknown upstream time remains explicit."""
+    age = freshness['age_hours']
+    if age < 0:
+        return 'Scan dated in the future'
+    basis = 'Scan' if freshness['upstream_known'] else 'Download (price age unknown)'
+    return f'{basis} {age:.0f} hours old'
+
+
+def stale_banner(freshness):
+    if freshness['age_hours'] < 0:
+        return 'These prices are dated in the future. Check the clock and scan again before you buy.'
+    return 'Prices are from an older scan. Treat this plan as a preview; scan again before you buy.'
+
+
+def planning_label(character, data):
+    if character is None or character not in data:
+        return 'Planning for Our team'
+    from brownstone.today_characters import profession_rank
+
+    skills = []
+    for name, record in data[character].get('recipes', {}).items():
+        rank, _ = profession_rank(data[character], record)
+        skills.append(f"{name} {rank if rank is not None else 'rank unknown'}")
+    return 'Planning for ' + character[0] + (' · ' + ', '.join(skills) if skills else '')
+
+
+def material_card_rows(materials):
+    """Reserved purchases in the approved card table, with in-game money and surplus explicit."""
+    return [{'Material': r['item_name'], 'Where': 'Vendor' if r['method'] == 'vendor' else 'Auction house',
+             'Units': str(r['purchased_units']) + (f" ({r['quantity']} needed)"
+                       if r['purchased_units'] != r['quantity'] else ''),
+             'Cost': format_money(r['cost_copper']), 'State': state(r)} for r in materials]
+
+
+def display_hidden(result, hide_low):
+    """Display filtering is counted without changing the reserved plan or its hidden reasons."""
+    counts = dict(result['hidden'])
+    if hide_low:
+        counts['low confidence'] = sum(r['confidence'] == 'Low' for r in result['craft'])
+    return counts
+
+
+def recorded_gold_rows(data, character):
+    """Captured balances alongside an entered budget; zero/missing captures remain unknown."""
+    identities = [character] if character in data else sorted(data)
+    rows = []
+    for identity in identities:
+        bags = data[identity].get('bags', {})
+        gold, captured = bags.get('gold_copper'), bags.get('captured_at')
+        readable = type(gold) is int and gold > 0 and type(captured) is int
+        rows.append({'Character': ' · '.join(identity),
+                     'Recorded gold': format_money(gold) if readable else 'unknown',
+                     'Captured (UTC)': datetime.fromtimestamp(captured, UTC).strftime('%Y-%m-%d %H:%M UTC')
+                     if type(captured) is int else 'unknown'})
+    return rows

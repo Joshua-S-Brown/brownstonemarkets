@@ -745,17 +745,32 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   Count remaining feasible outputs (each output once, whatever its routes) outside the 10-row selection
   separately from hidden rows. Every list
   caps at **10 rows**, with a count of the rest; shopping totals include materials beyond its display cap.
-- **Presentation (STORY-054, new NiceGUI app only):** Craft opens as cards in the existing displayed
-  plan order, with the same 10-row limit and remaining count; Table is one click away. Each card
-  initially shows its output, batch, batch profit and profit per craft through `money.py`, confidence,
-  character status or capable names, and a why line of cautious sale price, competing listings/units,
-  limiting factor and thin flag. One click opens its complete reserved materials (name, auction-house
-  or vendor route, purchased units, cost, highest unit price), summed material cost, indented intermediate
-  steps, and Sell's undercut price, competing listings/units and batch profit at that price. Every stale
-  card says *stale — inspect only*; Unknown stays marked. Buy's **For** column names each contributing
-  output with its purchased units, including whole-stack surplus, from the same per-craft purchases.
-  Cards and For never re-quote listings or change calculations, reservations, queue, settings or version.
-  The Streamlit Today page remains unchanged.
+- **Presentation (STORY-060, new NiceGUI app only):** Today answers its business question once,
+  with chips for character/profession rank or Our team, scan age (Stale badge when applicable),
+  available gold and its origin, and a hidden-recipes button. Stale or future-dated prices show
+  one plain-language preview banner with **How to scan**. Summary tiles show selected outputs,
+  shopping cost, expected profit at Sell's undercut and the best valued craft at that price;
+  unavailable undercut evidence is never zero. Tabs are **Plan, Shopping list, Sell, Queue, Extras**;
+  the URL retains the selected tab (older Craft/Buy/Below vendor URLs resolve to the new labels).
+  Plan opens as cards in the existing displayed plan order, with the same 10-row limit; Table
+  is one toggle away. Cards lead with output, batch, large batch profit, per-craft profit and cost,
+  status/confidence badges and a purchase/sell line. **What to buy and where to sell** opens all
+  reserved materials (purchased and needed units, route, cost, highest paid unit), intermediate
+  steps and undercut price, competing listings/units, profit and confidence reasons. Stale cards
+  remain *stale — inspect only*; Unknown remains explicit. Shopping list's **For** retains each
+  contributing output's purchased units, including whole-stack surplus. Queue retains ticks,
+  totals and Copy as text. Session adjustments, refill and Hide Low confidence remain available.
+  **ⓘ How this plan was made** contains scan/snapshot identity and time, source and full market,
+  auction cut, rules version, cautious price basis, gold origin/capture notes (including recorded
+  balances beside an entered budget), all hidden-reason
+  counts and row-limit counts. The gear opens **Today settings**, with the existing validated
+  fields and Save-only persistence. Fixed/scaled mode is retained; the percentage and explanation
+  appear only in scaled mode (the greater of the fixed minimum and that percentage of gold).
+  Cancel/Close discard the draft; successful Save closes the dialog and reports success.
+  An empty plan leads with one explanatory card naming the largest hidden reasons, available
+  gold and minimum gain, with buttons for settings and all reasons; other plan views remain
+  reachable on demand. Cards and summaries never re-quote listings or change calculations,
+  reservations, queue, settings format or today_version. The Streamlit Today page remains unchanged.
 - **Buy:** merge the selected batches' purchases by base item and buy/vendor route, summing required units,
   purchased units and full buyouts, and taking the highest paid unit-buyout-ceiling. Sort by cost descending,
   item ID, route. *Cheap now* is informational only: for auction purchases, full cost divided by purchased
@@ -815,7 +830,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
 - **UI-04:** Crafting has no catalog selector. Incompatible catalogs for the selected game version remain inspectable without pricing; their catalog and source `rules_version` mismatch is explained. If none is compatible, the view explains this and offers navigation to Recipe catalogs. Recipe catalogs shows the sidebar experience's catalogs and has no game-version switch of its own (decided 2026-10-04); an experience without catalogs (Retail) says so.
 - **UI-06 Scan changes:** compare two distinct complete, non-partial, priced addon scans within the sidebar's selected source and full market identity (DATA-03/DATA-08). Choices come from scan IDs, never import manifests, newest finish first; the newest two are the default. Display both finish times in UTC, their gap and freshness (DATA-05); only the later scan carries the stale warning, since the earlier one is deliberately historical. Show per-unit minimum buyout and market value, listing counts and units for each scan, and later-minus-earlier changes. An item is listed if any listing exists, including one without a buyout. Absent items show **not listed**, with blank changes; listed items without usable prices show **no buyout** or **no market value**, never free. New and vanished items have separate lists. Shared items are changed if any price or supply metric differs. The catalog filter uses only item IDs from catalogs compatible with the selected source (UI-04). A non-addon source or fewer than two eligible scans explains why no comparison is available.
 - **UI-05:** the launcher reuses a running server only if its code is current. It restarts its own outdated server and never stops a server it did not start.
-- **UI-07 The new app (decided 2026-10-12; built from STORY-058):** Brownstone's main app is the NiceGUI app (`nicegui_app.py`), bound to `127.0.0.1` only and opened in its own desktop window by `Start Brownstone`, or in the browser with a one-line explanation if the window can't open. Its places are **Today**, **Team**, **Market** and **Data** (Import), in that order, Data visually separate. The browser fallback stops after five minutes with no connected tabs; native mode stops when its window closes. `launch_nicegui.py` fingerprints the Python code and restarts only its own authenticated app on a code change. Place, selected source and Today tab survive browser refresh through the URL. UI-01's source resolution (Forever first, never merged), collection-only-on-click and provenance rules, and UI-05's launcher rule, apply to it as well. The Streamlit app (`Start Brownstone (old app)`) keeps every existing page under UI-01 to UI-06 and gets no new features; All recipes, Watchlist, Below usual price, Scan changes and Recipe catalogs are not rebuilt in the new app. New features are built for WoW Forever; Classic and Retail sources stay selectable for development and regression but get no features of their own.
+- **UI-07 The new app (decided 2026-10-12; built from STORY-058):** Brownstone's main app is the NiceGUI app (`nicegui_app.py`), bound to `127.0.0.1` only and opened in its own desktop window by `Start Brownstone`, or in the browser with a one-line explanation if the window can't open. Its places are **Today**, **Team**, **Market** and **Data** (Import), in that order, Data visually separate. The browser fallback stops after five minutes with no connected tabs; native mode stops when its window closes. `launch_nicegui.py` fingerprints the Python code and restarts only its own authenticated app on a code change. Place, selected source and Today tab survive browser refresh through the URL. Navigation uses wrapping place tabs in the top header, with Data separated, the selected source's short label/source menu and a page-specific ⓘ dialog at the right; Today's gear opens its settings dialog. Each place has one business-question subtitle. All new-app pages use the shared always-light theme, selectable text and controls at least 44 px; the native window enables text_select. Evidence, provenance, rules versions, IDs and hidden-reason counts are retained on demand. Team uses selectable roster cards, a look-ahead slider that commits on release, summary tiles, reachable recipes and cost steps/assumptions on demand. Data leads with saved-evidence chips, Check for new scans, reviewed results and explicit Import; files, problems and imported character evidence remain on demand. UI-01's source resolution (Forever first, never merged), collection-only-on-click and provenance rules, and UI-05's launcher rule, apply to it as well. The Streamlit app (`Start Brownstone (old app)`) keeps every existing page under UI-01 to UI-06 and gets no new features; All recipes, Watchlist, Below usual price, Scan changes and Recipe catalogs are not rebuilt in the new app. New features are built for WoW Forever; Classic and Retail sources stay selectable for development and regression but get no features of their own.
 
 - **UI-08 Design checklist (decided 2026-10-12, product owner):** every new-app page passes these before review, checked on screenshots, not only code. STORY-060 brings the existing pages into line.
   1. **Answer first:** the top of the page answers its place's question; one subtle business-question subtitle per place.

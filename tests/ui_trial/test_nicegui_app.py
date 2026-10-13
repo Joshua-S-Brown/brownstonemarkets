@@ -40,19 +40,23 @@ async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, m
     user.find(marker='place-Market').click()
     await user.should_see(QUESTIONS['Market'])
     await user.should_see('STORY-055')
+    assert user.client.request.query_params['place'] == 'Market'
+    assert user.client.request.query_params['source'] == 'test'
     user.find(marker='place-Today').click()
     await user.should_see('Save Today settings')
-    assert next(iter(user.find(ui.tabs).elements)).value == 'Buy'
+    assert next(iter(user.find(ui.tabs).elements)).value == 'Shopping list'
     user.find('Queue').click()
     user.find(marker='place-Team').click()
     await user.should_see('No characters imported for this source')
+    assert user.client.request.query_params['tab'] == 'Queue'
     user.find(marker='place-Today').click()
     await user.should_see('Save Today settings')
     assert next(iter(user.find(ui.tabs).elements)).value == 'Queue'
     await user.open('/?game=classic&source=other&place=Data&tab=Queue')
     await user.should_see("old app's Refresh from TSM")
+    user.find(marker='page-info').click()
     await user.should_see('source other')
-    await user.should_not_see('Preview addon scans')
+    await user.should_not_see('Check for new scans')
 
 
 async def test_preview_subset_import_matches_streamlit_records(user, tmp_path, monkeypatch):
@@ -60,18 +64,18 @@ async def test_preview_subset_import_matches_streamlit_records(user, tmp_path, m
     old = source.copy()
     source['data_dir'] = tmp_path / 'nicegui-data'
     await user.open('/?place=Data')
-    await user.should_see('Preview addon scans')
-    await user.should_not_see('Import addon scan')
+    await user.should_see('Check for new scans')
+    await user.should_not_see(marker='import-action')
     before = source['scan_path'].read_bytes()
-    user.find('Preview addon scans').click()
+    user.find('Check for new scans').click()
     await user.should_see('New partial scan: two')
     assert not source['data_dir'].exists()
     assert [r['Import state'] for r in table(user, 'Scan preview').rows] == ['New', 'New']
     select = next(iter(user.find(kind=ui.select, content='New scans to import').elements))
     select.set_value([])
-    await user.should_not_see('Import addon scan')
+    await user.should_not_see(marker='import-action')
     next(iter(user.find(kind=ui.select, content='New scans to import').elements)).set_value(['one'])
-    user.find('Import addon scan').click()
+    user.find(marker='import-action').click()
     await user.should_see('Imported. Collection prices come from scan one')
     await user.should_not_see(marker='Scan preview')
     assert source['scan_path'].read_bytes() == before
@@ -96,11 +100,11 @@ async def test_drop_rejected_file_cleanup_and_stale_review(user, tmp_path, monke
     bad.write_text('truncated')
     source.update(drop_folder=folder)
     await user.open('/?place=Data')
-    await user.should_see('Preview addon scans')
-    user.find('Preview addon scans').click()
+    await user.should_see('Check for new scans')
+    user.find('Check for new scans').click()
     await user.should_see(bad.name)
     assert not source['data_dir'].exists()
-    user.find('Import addon scan').click()
+    user.find(marker='import-action').click()
     await user.should_see(f'{good}: imported')
     await user.should_see('1 dropped file is fully imported')
     await user.should_see("don't /bscan clear; its latest drop is not fully imported")
@@ -110,7 +114,7 @@ async def test_drop_rejected_file_cleanup_and_stale_review(user, tmp_path, monke
     select = next(iter(user.find(kind=ui.select, content='Files to import').elements))
     select.set_value([str(good)])
     good.write_bytes(good.read_bytes() + b'\n')
-    user.find('Import addon scan').click()
+    user.find(marker='import-action').click()
     await user.should_see('Nothing was imported')
     await user.should_not_see(marker='Files')
     assert bad.read_text() == 'truncated'
@@ -121,16 +125,16 @@ async def test_preview_error_and_identity_change_discard_review(user, tmp_path, 
     before = source['scan_path'].read_bytes()
     source['scan_path'].unlink()
     await user.open('/?place=Data')
-    await user.should_see('Preview addon scans')
-    user.find('Preview addon scans').click()
+    await user.should_see('Check for new scans')
+    user.find('Check for new scans').click()
     await user.should_see('Preview failed')
     assert not source['data_dir'].exists()
     source['scan_path'].write_bytes(before)
-    user.find('Preview addon scans').click()
-    await user.should_see('Import addon scan')
+    user.find('Check for new scans').click()
+    await user.should_see(marker='import-action')
     second = source | {'source_id': 'second'}
     monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [source, second])
     await user.open('/?game=forever&source=second&place=Data')
-    await user.should_not_see('Import addon scan')
+    await user.should_not_see(marker='import-action')
     await user.open('/?game=forever&source=' + source['source_id'] + '&place=Data')
-    await user.should_not_see('Import addon scan')
+    await user.should_not_see(marker='import-action')

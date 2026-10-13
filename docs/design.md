@@ -31,7 +31,17 @@ framework-free module both use, never a copy: `brownstone/` for calculations and
 table projections and wording.
 
 **Main app (NiceGUI, UI-07).** `nicegui_app.py` is the entry; views are `views/nicegui_today.py`,
-`views/nicegui_team.py` and `views/nicegui_import.py`. Place, source and Today tab live in the URL;
+`views/nicegui_team.py` and `views/nicegui_import.py`. `views/nicegui_theme.py` owns the approved
+colour/spacing tokens and common chips, badges, banners, tiles, cards, dialogs and empty states;
+it forces light mode and selectable text. The native entry sets `app.native.window_args['text_select']`.
+`nicegui_app.header` renders wrapping place tabs, separated Data and the source menu, with page-specific
+information and Today settings buttons. Pages have one title/question; technical evidence lives in
+dialogs or disclosures. Today uses status chips, reserved-plan summary projections from `today_rows`,
+Plan/Shopping list/Sell/Queue/Extras panels and an explanatory empty card. Its settings dialog preserves
+all fields/validation and Save-only persistence, with the percentage visible only in scaled mode;
+opening resets drafts to the last saved settings. Data's explicit review/import lifecycle is unchanged;
+status chips read saved evidence through `import_review.status_chips`, and files/holdings are disclosures.
+Place, source and Today tab live in the URL;
 the active Today tab survives place changes. Session state is per-tab `app.storage.tab`: Today choices, refill, display
 preferences and queue ticks per source, Team character/window per source, and one import review
 that a source/configuration change discards. ImportPage replaces the review with results; drop imports refresh their file evidence.
@@ -398,7 +408,10 @@ Rules live in `requirements.md` → Today. Calculations are framework-free; both
 
 Rules live in CRAFT-11 and Characters page (`requirements.md`). `views/nicegui_team.py` renders
 `characters.build_characters` cards and progression underneath, with character/window in
-`app.storage.tab['team-' + source_id]`. It reads `professions.latest_data` through the shared
+`app.storage.tab['team-' + source_id]`. Roster cards select the character; the look-ahead slider
+updates the estimates on release (`change`), with no rebuild on intermediate model updates.
+Profession tiles and the reachable-recipes table lead; per-recipe cost steps, profession comparison,
+roster history, provenance and assumptions remain on demand in disclosures/the ⓘ dialog. It reads `professions.latest_data` through the shared
 `load_today_characters`, then `today_loading.load_today` for the newest full-market/source snapshot
 and read-only evidence; no new price SQL, writes, schema or Streamlit changes.
 

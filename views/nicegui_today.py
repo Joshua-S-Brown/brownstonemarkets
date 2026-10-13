@@ -15,9 +15,11 @@ from brownstone.today_loading import load_today, load_today_characters
 from brownstone.today_session import digest, plan_context, queue_line, queue_total, stable_queue
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
+from views import nicegui_theme as theme
 from views import today_rows as tr
 
-TABS = ['Craft', 'Buy', 'Sell', 'Below vendor', 'Queue']
+TABS = ['Plan', 'Shopping list', 'Sell', 'Queue', 'Extras']
+LEGACY_TABS = {'Craft': 'Plan', 'Buy': 'Shopping list', 'Below vendor': 'Extras'}
 
 
 def table(rows, *, label, row_key='id'):
@@ -42,6 +44,12 @@ def table(rows, *, label, row_key='id'):
     widget = ui.table(columns=columns(decisions), rows=rows, row_key=row_key, pagination=10)
     widget.props('dense flat bordered')
     widget.classes('w-full').mark(label)
+    if label == 'Reachable recipes':
+        widget.add_slot('body-cell-Status', '<q-td :props="props"><span class="bs-badge bs-neutral">'
+                        '{{props.value}}</span></q-td>')
+        widget.add_slot('body-cell-Confidence', '<q-td :props="props"><span class="bs-badge" '
+                        ':class="props.value === \'High\' ? \'bs-good\' : \'bs-warn\'">'
+                        '{{props.value}}</span></q-td>')
     evidence.on_value_change(lambda e: setattr(widget, 'columns', columns(keys if e.value else decisions)))
     search.bind_value_to(widget, 'filter')
     if not rows:
@@ -71,12 +79,26 @@ def details_dialog(row):
     dialog.open()
 
 
-def freshness_caption(freshness, config):
-    ui.label(age_caption(freshness, config['max_age_hours']))
-    if freshness['stale']:
-        with ui.card().props('flat bordered'):
-            ui.icon('warning', color='warning')
-            ui.label(STALE_WARNING)
+def freshness_caption(freshness, config, *, banner=True):
+    with ui.row().classes('bs-chip'):
+        if freshness['stale']:
+            theme.badge('Stale', 'warn')
+        ui.label(tr.scan_status(freshness))
+    if freshness['stale'] and banner:
+        scan_banner(freshness)
+
+
+def scan_banner(freshness):
+    theme.banner(tr.stale_banner(freshness), 'How to scan', scan_help)
+
+
+def scan_help():
+    with theme.dialog('How to scan') as popup:
+        ui.label('Open the auction house and run /bscan. Wait for the scan to finish, then /reload '
+                 'or log out to save the file. Use Data → Import to check for new scans and import.')
+        ui.label("Don't /bscan clear until the new scan is imported.")
+    popup.on('hide', popup.delete)
+    popup.open()
 
 
 def watchlist_hits(config, catalogs):
@@ -101,21 +123,25 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
     selected = resolve_character(saved.character, character_data)
     if saved.character is not None and selected is None:
         ui.label(tr.MISSING_CHARACTER)
-    funds = resolve_funds(saved, character_data, datetime.now(UTC), config['max_age_hours'])
-    with ui.expansion('Today settings', value=unreadable or funds.settings.gold_copper == 0).classes('w-full'):
+    with theme.dialog('Today settings') as dialog:
         ui.label(tr.SETTINGS_NOTE)
-        with ui.row():
+        stored = [saved]
+        with ui.element('div').classes('bs-settings-grid'):
             character = ui.select({str(i): 'Our team' if c is None else ' · '.join(c)
                                    for i, c in enumerate(identities)}, value=str(identities.index(selected)),
-                                  label='Character')
+                                  label='Character').classes('w-full')
             unknown = ui.switch('Include unknown recipes', value=saved.include_unknown)
             override = ui.switch('Enter an amount instead', value=saved.gold_override)
             gold = ui.input('Gold available', value=format_money(saved.gold_copper))
-            mode = ui.select(['scaled', 'fixed'], value=saved.mode, label='Minimum gain mode')
+            mode = ui.select({'fixed': 'Fixed amount', 'scaled': 'Scale with available gold'},
+                             value=saved.mode, label='Minimum gain mode').classes('w-full')
             minimum = ui.input('Fixed minimum gain', value=format_money(saved.minimum_copper))
             percent = ui.number('Percentage of gold available', value=saved.percent_basis_points / 100,
                                 min=0, max=100, step=.1)
             crafts = ui.number('Most crafts per item', value=saved.max_crafts, min=1, max=1000, step=1)
+        percent.bind_visibility_from(mode, 'value', backward=lambda value: value == 'scaled')
+        ui.label('Scaled uses the greater of the fixed minimum and this percentage of available gold.').classes(
+            'bs-note').bind_visibility_from(mode, 'value', backward=lambda value: value == 'scaled')
         message = ui.label('')
 
         def save():
@@ -130,31 +156,54 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
             except (ValueError, TypeError, OSError) as error:
                 message.set_text(f'Settings not saved: {error}. Tables still use the last saved settings.')
             else:
+                stored[0] = entered
                 message.set_text('Today settings saved locally.')
                 on_saved(entered)
+                dialog.close()
+                ui.notify('Today settings saved locally.', type='positive')
 
-        ui.button('Save Today settings', on_click=save)
+        with ui.row().classes('w-full justify-end'):
+            ui.button('Cancel', on_click=dialog.close).props('flat')
+            ui.button('Save Today settings', on_click=save)
+    def open_settings():
+        current = stored[0]
+        character.set_value(str(identities.index(resolve_character(current.character, character_data))))
+        unknown.set_value(current.include_unknown)
+        override.set_value(current.gold_override)
+        gold.set_value(format_money(current.gold_copper))
+        mode.set_value(current.mode)
+        minimum.set_value(format_money(current.minimum_copper))
+        percent.set_value(current.percent_basis_points / 100)
+        crafts.set_value(current.max_crafts)
+        message.set_text('')
 
+        dialog.open()
+
+    theme.settings_button(open_settings)
+    if unreadable:
+        open_settings()
+    return open_settings
 
 def plan_tables(result, names, active_tab, config, session=None, on_change=None):
     sells = {r['output_item_id']: r for r in result['sell']}
     crafts = [{**tr.craft_row(r, sells[r['output_item_id']]), 'id': i} for i, r in enumerate(result['craft'])]
-    with ui.tabs(value=active_tab) as tabs:
+    with ui.tabs(value=active_tab).classes('bs-tabs') as tabs:
         for name in TABS:
             ui.tab(name)
     tabs.on_value_change(lambda e: app.storage.tab.update({'today-active-tab': e.value}))
     tabs.on_value_change(lambda e: ui.navigate.history.replace('/?' + urlencode({
         'game': config['game_version'], 'source': config['source_id'], 'place': 'Today', 'tab': e.value})))
     with ui.tab_panels(tabs, value=active_tab).classes('w-full'):
-        with ui.tab_panel('Craft'):
+        with ui.tab_panel('Plan'):
             if result['character_note']:
                 ui.label(result['character_note'])
             if session is not None:
-                adjustment_controls(result, session, on_change)
+                with ui.expansion('Plan controls', value=session.get('controls_open', False),
+                                  on_value_change=lambda e: session.update(controls_open=e.value)):
+                    adjustment_controls(result, session, on_change)
                 if session.get('hide_low'):
                     crafts = [r for r in crafts if r['Confidence'] != 'Low']
-                    ui.label(f"Hidden Low confidence: {len(result['craft']) - len(crafts)}")
-            with ui.row():
+            with ui.row().classes('w-full justify-end'):
                 display = ui.toggle(['Cards', 'Table'], value=(session or {}).get('display', 'Cards'))
             table_area = ui.column().classes('w-full')
             card_area = ui.column().classes('w-full')
@@ -169,25 +218,23 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
             with table_area:
                 widget = table(crafts, label='Craft')
             widget.on('rowClick', lambda e: details_dialog(result['craft'][e.args[1]['id']]))
-            ui.label(f"{result['remaining']['craft']} {tr.ROW_LIMIT_NOTE}.")
-            ui.label('Open a card or click a table row to inspect materials and catalog steps.')
-            ui.label(tr.hidden_line(result['hidden']))
+
             with ui.expansion('Catalog checks'):
                 if result['catalog_checks']:
                     table(result['catalog_checks'], label='Catalog checks')
                 else:
                     ui.label('No differences in comparable matched recipe evidence.')
-        with ui.tab_panel('Buy'):
+        with ui.tab_panel('Shopping list'):
             table(buy_rows(result, names), label='Buy')
-            ui.label(f"{result['remaining']['buy']} {tr.ROW_LIMIT_NOTE}.")
+
             ui.label(tr.shopping_line(result))
         with ui.tab_panel('Sell'):
             table([tr.sell_row(r) for r in result['sell']], label='Sell')
-            ui.label(f"{result['remaining']['sell']} {tr.ROW_LIMIT_NOTE}.")
-        with ui.tab_panel('Below vendor'):
+
+        with ui.tab_panel('Extras'):
             ui.label(tr.VENDOR_ASIDE)
             table([tr.vendor_row(r, names) for r in result['below_vendor']], label='Below vendor')
-            ui.label(f"{result['remaining']['below_vendor']} {tr.ROW_LIMIT_NOTE}.")
+
         with ui.tab_panel('Queue'):
             queue_panel(result, session if session is not None else {})
     return tabs
@@ -195,12 +242,13 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
 
 def render(config, catalogs, character_data, active_tab='Craft'):
     saved, unreadable = read_saved_settings(config)
-    current_tab = active_tab if active_tab in TABS else 'Craft'
+    active_tab = LEGACY_TABS.get(active_tab, active_tab)
+    current_tab = active_tab if active_tab in TABS else 'Plan'
     storage = app.storage.tab
     key = 'today-plan-' + config['source_id']
     session = storage.setdefault(key, {})
     reset_note = ui.label('')
-    summary = ui.label('')
+    reset_note.bind_visibility_from(reset_note, 'text', backward=bool)
     plan = ui.column().classes('w-full')
 
     def update(settings):
@@ -208,13 +256,10 @@ def render(config, catalogs, character_data, active_tab='Craft'):
         latest_characters, warning = load_today_characters(config)
         funds = resolve_funds(settings, latest_characters, datetime.now(UTC), config['max_age_hours'])
         settings = funds.settings
-        summary.set_text(funds.summary)
         plan.clear()
         with plan:
             if warning:
                 ui.label(warning)
-            for note in funds.notes:
-                ui.label(note)
             if not settings.gold_copper:
                 ui.label(tr.ZERO_GOLD_HINT)
             try:
@@ -226,13 +271,14 @@ def render(config, catalogs, character_data, active_tab='Craft'):
             except Exception as error:
                 ui.label(f'Unable to build Today: {error}')
                 return
-            freshness_caption(result['freshness'], config)
-            ui.label(tr.provenance(result, config, manifest, arguments['snapshot']['snapshot_id']))
+            info[0] = lambda: plan_info(result, config, manifest, arguments, funds, session)
+            plan_status(result, settings, funds, config, settings_dialog, open_info, latest_characters, session)
             if not result['listing_evidence_available']:
                 ui.label(tr.NO_LISTINGS)
             watchlist_hits(config, catalogs)
             names = {i: item['name'] for c in catalogs for i, item in c['items_by_id'].items()}
-            tabs = plan_tables(result, names, current_tab, config, session, lambda: update(saved_settings[0]))
+            with ui.expansion('Other plan views') if not result['craft'] else ui.column().classes('w-full gap-3'):
+                tabs = plan_tables(result, names, current_tab, config, session, lambda: update(saved_settings[0]))
 
             def remember(e):
                 nonlocal current_tab
@@ -240,14 +286,40 @@ def render(config, catalogs, character_data, active_tab='Craft'):
 
             tabs.on_value_change(remember)
 
+    info = [lambda: no_plan_info(config, saved, character_data)]
+
+    def open_info():
+        info[0]()
+
+    theme.info_button('How this plan was made', open_info)
     saved_settings = [saved]
 
     def settings_saved(settings):
         saved_settings[0] = settings
         update(settings)
 
-    settings_form(config, saved, character_data, settings_saved, unreadable=unreadable)
+    settings_dialog = settings_form(config, saved, character_data, settings_saved, unreadable=unreadable)
     update(saved)
+
+
+def plan_status(result, settings, funds, config, settings_dialog, open_info, character_data, session):
+    with ui.row().classes('items-center gap-3'):
+        theme.chip(tr.planning_label(settings.character, character_data))
+        freshness_caption(result['freshness'], config, banner=False)
+        theme.chip(f'Gold {format_money(settings.gold_copper)} · ' +
+                   ('entered' if funds.origin == 'entered amount' else 'recorded'))
+        theme.chip(f"{sum(tr.display_hidden(result, session.get('hide_low')).values()):,} recipes hidden · why?",
+                   on_click=open_info)
+    if result['freshness']['stale']:
+        scan_banner(result['freshness'])
+    if not result['craft']:
+        theme.empty(tr.empty_sentence(result['hidden'], settings.minimum_gain, settings.gold_copper),
+                    settings_dialog, open_info)
+    else:
+        with ui.element('div').classes('bs-tiles'):
+            for label, value in tr.summary_tiles(result, hide_low=session.get('hide_low', False)):
+                theme.tile(label, value, profit=label in ('Expected profit', 'Best craft'),
+                           compact=label == 'Best craft')
 
 
 def adjustment_controls(result, session, on_change):
@@ -311,33 +383,79 @@ def batch_change(value, identity, maximum, change):
 
 def craft_card(row, sell):
     details = craft_details(row)
-    with ui.card().classes('w-full rounded-xl shadow-sm border-l-4 border-amber-800').mark('craft-card'):
-        ui.label(f"{row['output_name']} · {row['batch_size']} crafts").classes('text-xl font-semibold')
-        ui.label(f"Batch profit {format_money(row['batch_profit_copper'])} · "
-                 f"per craft {format_money(row['profit_per_craft_copper'])}")
-        character = tr.craft_row(row, sell)
-        capability = [f"{key}: {character[key]}" for key in ('Can make', 'Who can make it') if key in character]
-        ui.label(' · '.join([f"{row['confidence']} confidence", *capability, tr.state(row)]))
-        if character.get('Learning'):
-            ui.label(character['Learning'])
-        ui.label(f"Cautious sale {format_money(row['sale_price_copper'])} · "
-                 f"{competition(sell)} · "
-                 f"limited by {row['limiting_factor']}" + (' · thin' if sell['thin'] else ''))
-        with ui.expansion('What to buy and where to sell').classes('w-full'):
-            ui.label(f"What to buy · Material cost {format_money(row['batch_cost_copper'])}").classes('font-semibold')
-            for material in details['materials']:
-                route = 'vendor' if material['method'] == 'vendor' else 'auction house'
-                ui.label(f"{material['item_name']} · {route} · {material['purchased_units']} units · "
-                         f"{format_money(material['cost_copper'])} · "
-                         f"highest unit {format_money(material['highest_unit_copper'])}")
-            for step in details['intermediate_steps']:
-                ui.label(f"{'↳ ' * step['depth']}{step['item_name']}: {step['crafts']} crafts").style(
-                    f"margin-left: {step['depth']}rem")
-            price, profit = sell['undercut_copper'], sell['undercut_batch_profit_copper']
-            ui.label(f"Where to sell · Auction house · "
-                     f"Sell at {format_money(price) if price is not None else 'unavailable'} · "
-                     f"{competition(sell)} · "
-                     f"profit {format_money(profit) if profit is not None else 'unavailable'}")
+    character = tr.craft_row(row, sell)
+    with ui.card().classes('bs-card').mark('craft-card'):
+        with ui.row().classes('w-full justify-between items-start'):
+            with ui.column().classes('gap-2 flex-1 min-w-64'):
+                with ui.row().classes('items-center'):
+                    ui.label(f"{row['output_name']} · {row['batch_size']} crafts").classes('text-xl font-bold')
+                    status = character.get('Can make', 'Our team' if row.get('who_can_make_it') else 'Unknown')
+                    theme.badge(status, 'good' if status == 'Known' else 'neutral')
+                    theme.badge(f"{row['confidence']} confidence", 'good' if row['confidence'] == 'High' else 'warn')
+                    if row['stale']:
+                        theme.badge('stale — inspect only', 'warn')
+                purchases = ', '.join(f"{m['purchased_units']} {m['item_name']}" for m in details['materials'])
+                price = sell['undercut_copper']
+                ui.label(f"Buy {purchases} · sell at {format_money(price) if price is not None else 'unavailable'} "
+                         f"each · {competition(sell)}")
+                ui.label(f"Limited by {row['limiting_factor']}" + (' · thin' if sell['thin'] else '')).classes(
+                    'bs-note')
+            with ui.column().classes('items-end gap-0'):
+                ui.label(format_money(row['batch_profit_copper'])).classes('bs-big bs-profit')
+                ui.label(f"per craft {format_money(row['profit_per_craft_copper'])} · "
+                         f"costs {format_money(row['batch_cost_copper'])}").classes('bs-note')
+        with (ui.expansion('What to buy and where to sell').classes('w-full'),
+              ui.element('div').classes('bs-details')):
+            with ui.column().classes('gap-2'):
+                ui.label(f"What to buy · Material cost {format_money(row['batch_cost_copper'])}")
+                purchases = tr.material_card_rows(details['materials'])
+                ui.table(columns=[{'name': key, 'label': key, 'field': key, 'align': 'left'}
+                                  for key in ('Material', 'Where', 'Units', 'Cost')], rows=purchases,
+                         row_key='Material').classes('w-full').props('flat hide-bottom').mark('Reserved purchases')
+                with ui.expansion('Material evidence'):
+                    for material in details['materials']:
+                        route = 'vendor' if material['method'] == 'vendor' else 'auction house'
+                        ui.label(f"{material['item_name']} · {route} · {material['purchased_units']} units "
+                                 f"· {format_money(material['cost_copper'])} · "
+                                 f"highest unit {format_money(material['highest_unit_copper'])}")
+                        ui.label(f"{material['quantity']} needed").classes('bs-note')
+                for step in details['intermediate_steps']:
+                    ui.label(f"{'↳ ' * step['depth']}{step['item_name']}: {step['crafts']} crafts").style(
+                        f"margin-left: {step['depth']}rem")
+            with ui.column().classes('gap-2'):
+                profit = sell['undercut_batch_profit_copper']
+                ui.label(f"Where to sell · Auction house · Sell at "
+                         f"{format_money(price) if price is not None else 'unavailable'} · "
+                         f"{competition(sell)} · profit "
+                         f"{format_money(profit) if profit is not None else 'unavailable'}")
+                ui.label(f"Batch profit {format_money(row['batch_profit_copper'])}")
+                ui.label(f"Cautious sale {format_money(row['sale_price_copper'])} · {competition(sell)} · "
+                         f"limited by {row['limiting_factor']}" + (' · thin' if sell['thin'] else ''))
+                capability = [f"{key}: {character[key]}" for key in ('Can make', 'Who can make it')
+                              if key in character]
+                ui.label(' · '.join(capability))
+                ui.label(character.get('Learning', ''))
+                ui.label('Why: ' + '; '.join(row['confidence_reasons']))
+
+def plan_info(result, config, manifest, arguments, funds, session):
+    with theme.dialog('How this plan was made') as popup:
+        ui.label(tr.provenance(result, config, manifest, arguments['snapshot']['snapshot_id']))
+        ui.label(age_caption(result['freshness'], config['max_age_hours']))
+        if result['freshness']['stale']:
+            ui.label(STALE_WARNING)
+        ui.label(funds.summary)
+        if funds.settings.gold_override:
+            table(tr.recorded_gold_rows(arguments['character_data'], funds.settings.character), label='Recorded gold')
+        for note in funds.notes:
+            ui.label(note)
+        ui.label(tr.SETTINGS_NOTE)
+        ui.label(tr.hidden_line(result['hidden']))
+        if session.get('hide_low'):
+            ui.label(f"Hidden Low confidence: {tr.display_hidden(result, True)['low confidence']}")
+        for name, count in result['remaining'].items():
+            ui.label(f"{name}: {count} {tr.ROW_LIMIT_NOTE}.")
+    popup.on('hide', popup.delete)
+    popup.open()
 
 
 def competition(sell):
@@ -394,3 +512,15 @@ def read_saved_settings(config):
         ui.label(tr.unreadable_settings(error))
         return TodaySettings(), True
     return saved, False
+
+
+def no_plan_info(config, saved, character_data):
+    funds = resolve_funds(saved, character_data, datetime.now(UTC), config['max_age_hours'])
+    with theme.dialog('How this plan was made') as popup:
+        ui.label(f"source {config['source_id']} · market {config['market_id']}")
+        ui.label(tr.NO_SNAPSHOT)
+        ui.label(funds.summary)
+        for note in funds.notes:
+            ui.label(note)
+    popup.on('hide', popup.delete)
+    popup.open()

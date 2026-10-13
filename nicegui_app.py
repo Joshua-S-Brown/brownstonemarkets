@@ -13,6 +13,7 @@ from brownstone import config as configuration
 from brownstone import pipeline, recipe_catalogs
 from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences
 from brownstone.today_loading import load_today_characters
+from views import nicegui_theme as theme
 from views.nicegui_import import render as render_import
 from views.nicegui_team import render as render_team
 from views.nicegui_today import render
@@ -30,10 +31,7 @@ def read_catalogs():
 @ui.page('/')
 async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place: str = 'Today'):
     place = place if place in ('Today', 'Team', 'Market', 'Data') else 'Today'
-    ui.colors(primary='#594235', secondary='#8b7355', accent='#42766b')
-    with ui.header():
-        menu = ui.button(icon='menu').props('flat aria-label="Open navigation"')
-        ui.label('Brownstone Markets')
+    theme.install()
     try:
         sources = [s for s in configuration.read_sources(ROOT / 'config/market.toml',
                    ROOT / 'config' / configuration.LOCAL_OVERRIDES) if s['enabled']]
@@ -43,18 +41,17 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
     if not sources:
         ui.label('No enabled data source.')
         return
-    chosen, selected_game, drawer = sidebar(sources, game, source, place, tab)
-    menu.on_click(drawer.toggle)
+    chosen, selected_game = header(sources, game, source, place, tab)
     if chosen is None:
         await ui.context.client.connected()
         app.storage.tab['import-identity'] = None
         app.storage.tab['import-review'] = {}
         ui.label('This experience has several enabled sources. Choose one above.')
         return
-    ui.label(place).classes('text-h4')
-    ui.label(QUESTIONS[place])
-    ui.label(f"Showing {EXPERIENCES.get(selected_game, selected_game)} · "
-             f"source {chosen.get('label', chosen['source_id'])} · market {chosen['market_id']}")
+    ui.context.client.content.classes('bs-main')
+    with ui.column().classes('gap-1'):
+        ui.label(place).classes('bs-title')
+        ui.label(QUESTIONS[place]).classes('bs-question')
     await ui.context.client.connected()
     # Switching sources, including TSM, invalidates any active addon review.
     identity = pipeline.preview_configuration(chosen) if chosen['provider'] == 'addon' else None
@@ -62,24 +59,22 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
         app.storage.tab['import-identity'] = identity
         app.storage.tab['import-review'] = {}
     if place == 'Data':
-        ui.label('Import').classes('text-h5')
-        ui.label(QUESTIONS['Import'])
         render_import(chosen)
         return
     if place == 'Team':
         render_team(chosen, read_catalogs())
         return
     if place == 'Market':
+        theme.info_button('Source details', lambda: theme.source_info(chosen))
         ui.label('Materials, crafts, supply chains and scan changes are coming in STORY-055.')
         return
-    ui.label(QUESTIONS['Today plan'])
     character_data, warning = load_today_characters(chosen)
     if warning:
         ui.label(warning)
     render(chosen, read_catalogs(), character_data, tab)
 
 
-def sidebar(sources, game, source, place, tab):
+def header(sources, game, source, place, tab):
     games = experiences(sources)
     selected_game = game if game in games else games[0]
     options = [s for s in sources if s['game_version'] == selected_game]
@@ -90,23 +85,28 @@ def sidebar(sources, game, source, place, tab):
         values.update(changes)
         ui.navigate.to('/?' + urlencode(values))
 
-    with ui.left_drawer() as drawer:
-        ui.select({g: EXPERIENCES.get(g, g) for g in games}, value=selected_game, label='Experience',
-                  on_change=lambda e: navigate(game=e.value, source=''))
-        if len(options) > 1:
-            ui.select({s['source_id']: s.get('label', s['source_id']) for s in options},
-                      value=chosen['source_id'] if chosen else None, label='Data source',
-                      on_change=lambda e: navigate(source=e.value))
-        for name in ('Today', 'Team', 'Market', 'Data'):
-            if name == 'Data':
-                ui.separator().classes('my-3')
-            ui.button(name, on_click=lambda n=name: navigate(place=n)).props(
-                'flat' if name != place else 'unelevated').classes('w-full').mark('place-' + name)
-        with ui.expansion('Source details'):
-            if chosen:
-                ui.label(f"Source {chosen['source_id']} · market {chosen['market_id']} · {chosen['provider']} feed")
-            ui.label('Configure sources in config/market.toml')
-    return chosen, selected_game, drawer
+    with ui.header().classes('p-0'), ui.row().classes('bs-bar'):
+        ui.label('Brownstone').classes('bs-brand')
+        with ui.row().classes('bs-nav'):
+            for name in ('Today', 'Team', 'Market', 'Data'):
+                if name == 'Data':
+                    ui.separator().props('vertical').classes('mx-2')
+                ui.button(name, color=None, on_click=lambda n=name: navigate(place=n)).props('flat').classes(
+                    'selected' if name == place else '').mark('place-' + name)
+        with ui.row().classes('items-center gap-2'):
+            with ui.button(source_label(chosen) if chosen else 'Choose source', color=None).props(
+                    'flat').classes('bs-source'), ui.menu():
+                ui.select({g: EXPERIENCES.get(g, g) for g in games}, value=selected_game, label='Experience',
+                          on_change=lambda e: navigate(game=e.value, source=''))
+                if len(options) > 1:
+                    ui.select({s['source_id']: s.get('label', s['source_id']) for s in options},
+                              value=chosen['source_id'] if chosen else None, label='Data source',
+                              on_change=lambda e: navigate(source=e.value))
+            ui.button(icon='info_outline', color=None).props('flat aria-label="Page information"').classes(
+                'bs-icon').mark('page-info')
+            ui.button(icon='settings', color=None).props('flat aria-label="Today settings"').classes(
+                'bs-icon').mark('page-settings').set_visibility(False)
+    return chosen, selected_game
 
 
 def main(argv=None):
@@ -125,6 +125,7 @@ def main(argv=None):
             return [{**s, 'data_dir': args.data_dir.resolve()} for s in original(*arguments)]
 
         configuration.read_sources = sources
+    app.native.window_args['text_select'] = True
     configure_launch(args)
     ui.run(host='127.0.0.1', port=None if args.native else args.port, native=args.native,
            window_size=(1280, 900) if args.native else None, reload=False, show=False,
@@ -180,6 +181,14 @@ class BrowserIdle:
             self.disconnected_since = time.monotonic()
         elif time.monotonic() - self.disconnected_since >= 300:
             app.shutdown()
+
+
+def source_label(source):
+    game = EXPERIENCES.get(source['game_version'], source['game_version'])
+    place = source.get('server_type') or source.get('realm') or source.get('scope', '')
+    faction = source.get('faction', '')
+    environment = source.get('environment', 'live')
+    return f"{game} · {place.title()} {faction.title()}" + (f" ({environment})" if environment != 'live' else '')
 
 
 if __name__ == '__main__':

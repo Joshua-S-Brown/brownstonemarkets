@@ -1,5 +1,8 @@
 """Framework-free import review projections shared by both apps."""
+from datetime import UTC
+
 from brownstone import character_snapshots, journal, professions
+from brownstone.freshness import observed_at
 from brownstone.pipeline import import_guidance
 
 _NO_SCANS = "The file has no scans."
@@ -146,3 +149,38 @@ def preview_notes(preview):
     if reasons:
         notes.append("Not importable into this source (another auction house): " + "; ".join(reasons))
     return notes
+
+
+def status_chips(config, preview=None):
+    """Read saved evidence only; checking drop files remains an explicit action."""
+    from brownstone.storage import completed_snapshots
+
+    manifests = completed_snapshots(config)
+    count = imported_scan_count(manifests)
+    newest = manifests[0] if manifests else None
+    stamp = observed_at(newest).astimezone(UTC).strftime('%d %b %H:%M UTC') if newest else 'none yet'
+    characters = len(professions.latest_data(config))
+    folder = 'not configured' if not config.get('drop_folder') else 'check for new scans'
+    if preview is not None and hasattr(preview, 'files'):
+        drops = [f for f in preview.files if f.drop_time]
+        folder = f'{len(drops)} files · {sum(f.fully_imported for f in drops)} imported'
+    return [f'{count} scans imported · newest {stamp}', f'Drop folder · {folder}', f'{characters} characters']
+
+
+def imported_scan_count(manifests):
+    """Count unique imported complete scans, rather than collection manifests or stopped scans."""
+    if not any('scans' in m for m in manifests):
+        return len(manifests)
+    return len({s['scan_id'] for m in manifests for s in m.get('scans', [])
+                if s['status'] == 'completed' and s['outcome'] in {'imported', 'duplicate'}})
+
+
+def file_status_lines(preview):
+    """Per-machine locations and local empty-file guidance from the existing review evidence."""
+    lines = [f"{f.machine} · latest drop {f.drop_time:%d %b %H:%M UTC}" for f in preview.latest()]
+    for file in preview.files:
+        if not file.drop_time:
+            empty = file.preview is not None and not file.preview.summaries
+            note = 'no scans in the file' if empty else 'see file details'
+            lines.append(f'{file.machine} · game file · {note}')
+    return lines

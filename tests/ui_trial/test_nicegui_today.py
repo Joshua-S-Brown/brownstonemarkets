@@ -21,6 +21,8 @@ pytestmark = pytest.mark.asyncio
 async def test_page_matches_shared_plan_and_row_details(user, tmp_path, monkeypatch, addon):
     _, source, *_ = (listing_evidence_app(tmp_path, monkeypatch, -1) if addon else app(tmp_path, monkeypatch))
     await user.open('/')
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('Gold available: 10g')
     from brownstone.crafting import parse_recipe_catalog
     catalogs = [{**parse_recipe_catalog(catalog()), 'catalog_id': 'fixture'}]
@@ -39,6 +41,8 @@ async def test_page_matches_shared_plan_and_row_details(user, tmp_path, monkeypa
     assert tables['Sell'].rows == [{**sell_row(r), 'id': i} for i, r in enumerate(result['sell'])]
     vendor = next(t for t in all_tables(user) if 'vendor' in t._markers)
     assert vendor.rows == [{**r, 'id': i} for i, r in enumerate(vendor_row(r, names) for r in result['below_vendor'])]
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     for remaining in result['remaining'].values():
         await user.should_see(f"{remaining} more rows outside this list's 10-row limit.")
     user.find(kind=ui.table, marker='Craft').trigger('rowClick', [{}, craft_table.rows[0], 0])
@@ -54,6 +58,8 @@ async def test_page_matches_shared_plan_and_row_details(user, tmp_path, monkeypa
 async def test_stale_rows_and_settings_round_trip(user, tmp_path, monkeypatch):
     _, source, path = app(tmp_path, monkeypatch, stale=True)
     await user.open('/')
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('Saved prices are stale')
     tables = list(all_tables(user))
     assert all(row['State'] == 'stale — inspect only' for table in tables for row in table.rows)
@@ -80,7 +86,7 @@ async def test_source_resolution_tabs_filter_and_corrupt_settings(user, tmp_path
     await user.should_see('Choose one above')
     await user.open('/?game=classic&source=test&tab=Buy')
     await user.should_see('Could not read Today settings')
-    assert next(iter(user.find(ui.tabs).elements)).value == 'Buy'
+    assert next(iter(user.find(ui.tabs).elements)).value == 'Shopping list'
     assert path.read_text() == 'not json'
     user.find('Filter Buy').type('Material')
     buy = next(t for t in all_tables(user) if 'Buy' in t._markers)
@@ -91,6 +97,8 @@ async def test_source_resolution_tabs_filter_and_corrupt_settings(user, tmp_path
 async def test_addon_stale_and_future_labels(user, tmp_path, monkeypatch, hours):
     listing_evidence_app(tmp_path, monkeypatch, hours)
     await user.open('/')
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('Saved prices are stale')
     assert all(r['State'] == 'stale — inspect only' for t in all_tables(user) for r in t.rows)
 
@@ -108,6 +116,8 @@ async def test_character_watchlist_and_failed_save_keep_plan(user, tmp_path, mon
     user.find(kind=ui.select, content='Character').click()
     user.find('Basilly · Beta · Alliance').click()
     user.find('Save Today settings').click()
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('No captured gold for Basilly; using the entered amount.')
     assert load_settings(path).character == CHARACTER
     row = next(t for t in all_tables(user) if 'Craft' in t._markers).rows[0]
@@ -141,7 +151,7 @@ async def test_forever_first_disabled_and_no_snapshot(user, tmp_path, monkeypatc
     disabled = {**source, 'source_id': 'disabled', 'enabled': False}
     monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [disabled, source, forever])
     await user.open('/')
-    await user.should_see('Showing WoW Forever')
+    await user.should_see('WoW Forever')
     await user.should_see('Refresh or import a scan')
     experiences = next(s for s in user.find(ui.select).elements if s.label == 'Experience')
     assert list(experiences.options) == ['forever', 'classic']
@@ -158,6 +168,8 @@ async def test_recorded_funds_summary_plan_override_and_missing(user, tmp_path, 
     _, _, path = app(tmp_path, monkeypatch)
     save_settings(path, TodaySettings(250000, 1, 'fixed', character=CHARACTER))
     await user.open('/')
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('Gold available: 2s 55c (Basilly, captured 2026-10-11 10:57 UTC')
     assert load_settings(path).gold_copper == 250000  # Resolved funds are never saved automatically.
     buy = next(t for t in all_tables(user) if 'Buy' in t._markers)
@@ -165,11 +177,18 @@ async def test_recorded_funds_summary_plan_override_and_missing(user, tmp_path, 
     user.find('Enter an amount instead').click()
     user.find(kind=ui.input, content='Gold available').clear().type('1s')
     user.find('Save Today settings').click()
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('Gold available: 1s (entered amount)')
+    recorded = next(t for t in all_tables(user) if 'Recorded' in t._markers)
+    assert recorded.rows[0]['Recorded gold'] == '2s 55c'
+    assert recorded.rows[0]['Captured (UTC)'] == '2026-10-11 10:57 UTC'
     assert load_settings(path).gold_override
     data[CHARACTER]['bags'] = {}
     user.find('Enter an amount instead').click()
     user.find('Save Today settings').click()
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('No captured gold for Basilly; using the entered amount.')
 
 
@@ -185,6 +204,8 @@ async def test_team_unknown_switch_counts_and_no_evidence_notice(user, tmp_path,
     await user.should_see('Save Today settings')
     choices = next(e for e in user.find(ui.select).elements if e.label == 'Character')
     assert choices.options['0'] == 'Our team'
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('unknown for every character: 1')
     assert not next(t for t in all_tables(user) if 'Craft' in t._markers).rows
     user.find('Include unknown recipes').click()
@@ -247,6 +268,7 @@ async def test_adjustments_match_planner_queue_ticks_and_reset(user, tmp_path, m
     path = source['data_dir'] / f"today-settings.{source['source_id']}.local.json"
     await user.open('/')
     await user.should_see('Adjust crafts')
+    user.find(kind=ui.expansion, content='Plan controls').trigger('update:modelValue', True)
     from brownstone.crafting import parse_recipe_catalog
     catalogs = [{**parse_recipe_catalog(catalog()), 'catalog_id': 'fixture'}]
     _, arguments = load_today(source, catalogs, load_settings(path), {}, datetime.now(UTC))
@@ -257,7 +279,9 @@ async def test_adjustments_match_planner_queue_ticks_and_reset(user, tmp_path, m
     tick_text = queue_tick.text
     user.find(kind=ui.checkbox, content=tick_text).click()
     user.find('Hide Low confidence').click()
+    user.find(marker='page-info').click()
     await user.should_see('Hidden Low confidence')
+    assert next(iter(user.find(kind=ui.expansion, content='Plan controls').elements)).value
     assert next(e for e in user.find(ui.checkbox).elements if e.text == tick_text).value
     assert next(iter(user.find(ui.tabs).elements)).value == 'Queue'
     user.find('Hide Low confidence').click()
@@ -308,6 +332,8 @@ async def test_cards_reserved_cost_unknown_and_stale(user, tmp_path, monkeypatch
     for card in cards:
         assert_card_cost(card)
         assert 'Who can make it: unknown' in card_text(card)
+        assert any(e.text == 'Unknown' for e in card.descendants()
+                   if isinstance(e, ui.label) and 'bs-badge' in e.classes)
         assert 'stale — inspect only' in card_text(card)
         assert not next(e for e in card.descendants() if isinstance(e, ui.expansion)).value
     user.find(kind=ui.expansion, content='What to buy and where to sell').trigger('update:modelValue', True)
@@ -365,6 +391,8 @@ async def test_refill_next_output_cards_and_source_isolation(user, tmp_path, mon
     user.find(ui.toggle).elements.pop().set_value('Table')
     crafts = next(t for t in all_tables(user) if 'Craft' in t._markers)
     assert len(crafts.rows) == 10
+    await user.should_see('recipes hidden')
+    user.find(marker='page-info').click()
     await user.should_see('1 more rows outside this list')
     original = [r['Item'] for r in crafts.rows]
     checkbox = next(e for e in user.find(ui.checkbox).elements if e.text == original[0])
@@ -471,7 +499,7 @@ async def test_cards_shared_buy_uses_vendor_and_intermediate(user, monkeypatch):
     assert '↳ Intermediate 5: ' in card_text(chain)
     assert '↳ ↳ Intermediate 6: ' in card_text(chain)
     assert any(e.style.get('margin-left') == '2rem' for e in chain.descendants() if isinstance(e, ui.label))
-    user.find('Buy').click()
+    user.find('Shopping list').click()
     buy = next(t for t in all_tables(user) if 'Buy' in t._markers)
     assert 'For' in [c['name'] for c in buy.columns]
     for displayed, merged in zip(buy.rows, result['buy'], strict=True):

@@ -44,9 +44,13 @@ async def test_roster_next_steps_choice_window_summary_and_isolation(user, tmp_p
     await user.should_see('Keenagen')
     assert len(user.find(marker='team-character').elements) == 2
     await user.should_see('Level 5 · Gold 2s 55c')
+    user.find(marker='page-info').click()
     await user.should_see('stale')
     await user.should_see('Next step · Arbitrary title: Recipe 31 · +25 points')
+    user.find(marker='page-info').click()
     await user.should_see('Current-scan profit, not a forecast')
+    await user.should_see(f"rules {source['rules_version']}")
+    await user.should_see('Cost to reach: cheapest usable skill-up craft')
     choice = next(e for e in user.find(ui.select).elements if e.label == 'Progression character')
     assert choice.value == '0' and len(choice.options) == 2
     summary = next(e for e in user.find(ui.table).elements if 'Profession' in e._markers and 'summary' in e._markers)
@@ -60,9 +64,15 @@ async def test_roster_next_steps_choice_window_summary_and_isolation(user, tmp_p
     slider = next(iter(user.find(marker='reach-window').elements))
     with user.client:
         slider.set_value(26)
+    # Intermediate movement doesn't rebuild; release commits the look-ahead.
+    await user.should_not_see('Recipe 32 · skill 34 · +26 points')
+    user.find(marker='reach-window').trigger('change')
     await user.should_see('Recipe 32 · skill 34 · +26 points')
     with user.client:
-        choice.set_value('1')
+        selection = user.find(marker='team-character')
+        selection.elements.intersection_update(
+            e for e in selection.elements if e._props['aria-label'] == 'Select Keenagen')
+        selection.click()
     await user.should_see('Recipe 33 · skill 13 · +10 points')
     await user.should_not_see('Recipe 32 · skill 34 · +31 points')
     with user.client:
@@ -117,6 +127,8 @@ async def test_unknown_bags_empty_history_recipes_unknown_and_pattern(user, tmp_
     # Bags-only skill: no recipe attribution by profession names.
     data[list(data)[1]]['recipes'] = {}
     await user.open('/?place=Team')
+    await user.should_see('Basilly')
+    user.find(marker='page-info').click()
     await user.should_see('No readable bags snapshot')
     await user.should_see('No readable level or rank history yet.')
     await user.should_see('recipes unknown')

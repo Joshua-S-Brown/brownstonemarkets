@@ -18,6 +18,7 @@ def test_native_and_browser_arguments(monkeypatch, tmp_path):
     monkeypatch.delenv('NICEGUI_USER_SIMULATION', raising=False)
     monkeypatch.setattr(nicegui_app.configuration, 'read_sources', lambda *args: [{'data_dir': Path('data')}])
     nicegui_app.main(['--native', '--data-dir', str(tmp_path)])
+    assert nicegui_app.app.native.window_args['text_select'] is True
     assert run.call_args.kwargs['native'] and run.call_args.kwargs['port'] is None
     assert run.call_args.kwargs['host'] == '127.0.0.1'
     assert nicegui_app.configuration.read_sources()[0]['data_dir'] == tmp_path.resolve()
