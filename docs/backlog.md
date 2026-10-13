@@ -44,18 +44,19 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 **Order:**
 1. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
 2. STORY-064 flood signals: crowding and overshoots (Brownstone; medium; ready for launch on 4 November)
-3. STORY-063 launch weeks: where to spend play time (Brownstone; medium; refine before handoff, after STORY-064)
-4. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
-5. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-6. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
-7. STORY-035 auction deposits (needs a beta check)
-8. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-9. STORY-036 vendor price ceilings
-10. STORY-015b crafting across professions
-11. STORY-021 item page and charts (would live in the Market explorer)
-12. STORY-026 scan coverage and rhythm
-13. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-14. STORY-006 replay
+3. STORY-063 launch weeks: where to spend play time (Brownstone; medium; refined 2026-10-13, ready for handoff)
+4. STORY-065 farming rates from play sessions (addon + Brownstone; needs a beta discovery first)
+5. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
+6. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+7. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
+8. STORY-035 auction deposits (needs a beta check)
+9. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+10. STORY-036 vendor price ceilings
+11. STORY-015b crafting across professions
+12. STORY-021 item page and charts (would live in the Market explorer)
+13. STORY-026 scan coverage and rhythm
+14. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+15. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040, STORY-044 and STORY-027 (checklists in `addon/README.md`).
 
@@ -315,20 +316,32 @@ Acceptance:
 
 ### STORY-063 — Launch weeks: where to spend play time
 
-Added 2026-10-13 (product owner: "I need to figure out how to spend those first couple weeks effectively… whether it's using cheap mats to improve my professions or getting my characters leveled… or farming certain materials to sell or to craft myself"). Brownstone only. Draft: refine with the product owner before handoff, after STORY-064. It ties together answers that today sit on separate pages.
+Added 2026-10-13 (product owner: "I need to figure out how to spend those first couple weeks effectively… whether it's using cheap mats to improve my professions or getting my characters leveled… or farming certain materials to sell or to craft myself"). Brownstone only; read-only over values already computed. **Refined 2026-10-13** with the product owner: lives on Today, covers the whole team, values levelling as cost plus what it unlocks, and leaves farming to STORY-065.
 
-As the owner, I want the main ways to spend a play session compared side by side on current evidence, so that I use my gaming time well in the first weeks when markets swing.
+As the owner, I want the ways each character could spend a play session laid out side by side on current evidence, so that I use my gaming time well in the first weeks when markets swing.
+
+Acceptance:
+- **Where:** a *This session* view in the new app's Today place, one toggle away from the plan, for **every scoped Today character** (the whole team), each in its own section. It answers *what should our company do today?*, so it links to Team and Market rather than repeating them.
+- **Crafting to sell,** per character: the Today plan rows that character can make (STORY-043 statuses), with their planned profit and total, exactly as Today computes them. Each output carries its STORY-064 crowding label (contested outputs say so), and each material its overshoot label (cheap materials say so). **Labels only:** no change to Today's plan, ranking or `today_version`.
+- **Levelling a profession,** per character and profession, from STORY-052 (CRAFT-11) at the Team page's reach window: the estimated cost to reach the next useful recipes, which recipes that unlocks and their current Action Board profit per craft (CRAFT-03/04/05; unvalued recipes keep the board's reason). Show how much of the cost is materials STORY-064 flags **cheap**, so a good moment to level is visible. No payback or forecast number: cost and what it unlocks side by side; the owner weighs them. A profession at its maximum rank says it is capped instead of estimating past the cap.
+- **Order:** within each character, crafting first, then professions by the best current profit per craft they unlock, ties by lower cost; deterministic. Characters in Today's character order. The page orders the options; it does not decide between crafting and levelling.
+- **Farming** is not shown yet. One line says farming rates come later (STORY-065), never an invented rate.
+- **Honest limits:** every figure states the snapshot it rests on and its age (DATA-05); thin or missing evidence says so; missing prices are unknown, never free; incomplete estimates keep their reasons; variants stay separate. Listings, never sales; no forecast.
+- **Calculation** in a new `brownstone/` module composing existing outputs only (Today's plan, `progression`, `flood_signals`); no new price query. Display in `views/nicegui_today.py` with `views/nicegui_theme.py`. Record the rule in `requirements.md` next to UI-11.
+- **Offline tests:** several characters, a character with no profession list, a capped profession, an incomplete estimate, cheap-material share, contested-output labels, missing prices, ordering ties, and that Today's plan is unchanged. **Real-data check** on the Forever beta source.
+
+### STORY-065 — Farming rates from play sessions
+
+Added 2026-10-13 (product owner, while refining STORY-063: "we can backlog it but make sure we have a story for capturing farming events"). Addon capture plus Brownstone; read-only, manual play only. Needs a beta discovery first.
+
+As the owner, I want to know how many of a material I actually gather per hour of play, so that STORY-063 can compare farming with crafting and levelling on measured rates instead of guesses.
 
 To refine:
-- **The four activities:**
-  - **Crafting to sell:** Today's plan.
-  - **Levelling a profession:** STORY-052's cost to reach the next useful recipes, cheaper when STORY-064 flags its materials below typical.
-  - **Farming a material:** its sale value per hour at current prices. The gathering rate is the owner's estimate for now and is labelled as one; the ledger (STORY-034) could measure it later.
-  - **Levelling a character:** which recipes or professions it unlocks, valued only as what those recipes would earn on current prices, never invented.
-- **One comparison** per session length the owner chooses, using STORY-064's flood signals to demote crowded outputs and promote overshot materials, and STORY-027's removals where they exist.
-- **Honest limits:** early launch evidence is thin and moves fast, so each activity shows what it rests on and its age. No forecast. The owner decides; the page only orders the options.
-- **Where it lives:** probably Today (a *This session* view) or Team; decide while refining.
-- **Open:** whether to compare one character or the whole team, and how to value levelling that only pays off later.
+- **Capture (beta discovery):** the journal already records `CHAT_MSG_LOOT` for the player (ADDON-07 rules in `requirements.md`), but not whether the loot came from a gathering node, a mob or a container, nor where. Find out on the Forever beta which read-only evidence tells them apart (for example the loot source's GUID type from the loot window, or the gathering spell) and whether the zone can be recorded with each event. Record what fired, like STORY-033's discovery; nothing that buys, posts or plays for you.
+- **Farming stretches:** per character, a stretch of gathering events with its start, end and zone; idle gaps above a limit end a stretch. Units per hour per material per zone, with the number of stretches and minutes it rests on.
+- **Value:** units per hour times the material's current sale value after the auction cut (STORY-064's typical price shown beside it), so a crashed material is visible. Shown in STORY-063's *This session* view once there is enough history; too little says so.
+- **Builds on** STORY-033 (journal) and STORY-034 (ledger's *gathered* reason); no schema change unless the capture needs one (then a numbered migration).
+- **Honest limits:** rates are your own past sessions, not a promise; respawn competition at launch varies.
 
 ### STORY-028 — Sellers and their supply chains
 
