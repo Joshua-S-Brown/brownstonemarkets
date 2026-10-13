@@ -402,7 +402,12 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   included): such a list never becomes that profession's known recipes, though it still counts as
   activity, and the beta report warns *stale recipe list*. The newest trustworthy list per
   character/profession is then given the rank and time of any newer `profession_rank` entry. Raw
-  bytes and journal rows are preserved unchanged; only the projection skips stale lists.
+  bytes and journal rows are preserved unchanged; only the projection skips stale lists. **Confirmed
+  on the beta 2026-10-13 with 0.12.0:** every stale switch read was refused, each profession's list
+  was saved with its own rows, and two Mining skill-ups were saved as rank records. **0.12.1:** change
+  detection also ignores the display name inside item, recipe and info links, which the client fills
+  in after the first read (`[]`, then `[Molten Foundry]`); 0.12.0 re-saved Cooking's 250 KB list for that
+  alone. Saved lists keep the links exactly as read.
 - **Seen crafted (STORY-049):** the shared profession projection reads existing scoped craft journal
   entries. A positive recipe ID in `C_TradeSkillUI.CraftRecipe` or the player's successful craft
   cast establishes known evidence from that observation, labelled *seen crafted*. Deduplicate IDs

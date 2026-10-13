@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.0"
+local ADDON_VERSION = "0.12.1"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -1280,10 +1280,20 @@ end
 -- Craftable counts change with every craft or bag change, and the rank with every skill-up; comparing
 -- without them saves a new list only when recipes, headers or filters change. Saved lists still carry
 -- both; a rank-only change is saved as a small profession_rank record (0.12.0 beta finding).
+-- Link display names arrive after the first read (empty "[]" first; 0.12.0 beta file), so they are not a change.
+local function linkIdentity(link)
+    if type(link) ~= "string" then return link end
+    return (link:gsub("|h%[.-%]|h", "|h[]|h"))
+end
+
 function professions.structure(state)
     local copy = journal.copy(state)
     copy.rank, copy.max_rank, copy.profession = nil, nil, nil
     for _, row in pairs(copy.rows) do
+        row.item_link, row.recipe_link = linkIdentity(row.item_link), linkIdentity(row.recipe_link)
+        if type(row.info) == "table" and state.api == "C_TradeSkillUI" then
+            row.info.hyperlink = linkIdentity(row.info.hyperlink)
+        end
         row.craftable = nil
         if row.info then
             if state.api == "C_TradeSkillUI" then row.info.numAvailable = nil

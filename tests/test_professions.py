@@ -28,7 +28,7 @@ def test_skills_both_apis_level_missing_and_raw_tuples():
     ''')
     fire(g, "PLAYER_LOGOUT")
     record = python_value(g.BrownstoneScanDB.snapshots)[-1]
-    assert record["level"] == 22 and record["addon_version"] == "0.12.0"
+    assert record["level"] == 22 and record["addon_version"] == "0.12.1"
     assert record["skills"]["legacy"]["rows"][1]["rank"] == 55
     assert "skill_id" not in record["skills"]["legacy"]["rows"][1]
     assert record["skills"]["modern"]["indexes"]["n"] == 3
@@ -743,3 +743,19 @@ def test_profession_rank_record_validated():
         professions.validate_recipes({"profession_rank": {"name": "Mining", "rank": -1}})
     with pytest.raises(ValueError, match="table"):
         professions.validate_recipes({"profession_rank": 5})
+
+
+def test_link_names_loading_later_save_no_new_list():
+    lua, g = modern_client()
+    lua.execute('''shown, id = "", 279952
+        C_TradeSkillUI.GetRecipeItemLink = function()
+            return "|cnIQ1:|Hitem:" .. id .. "::::::::8:1486:::1:3524::::::|h[" .. shown .. "]|h|r"
+        end''')
+    fire(g, "TRADE_SKILL_SHOW")
+    assert entries(g)[-1]["known_recipes"]["rows"][0]["item_link"].endswith("|h[]|h|r")
+    lua.execute('shown = "Molten Foundry"')
+    fire(g, "TRADE_SKILL_DATA_SOURCE_CHANGED")
+    assert len(entries(g)) == 1  # the client filled in names; nothing about the list changed
+    lua.execute('id = 279953')
+    fire(g, "TRADE_SKILL_DATA_SOURCE_CHANGED")
+    assert len(entries(g)) == 2 and "Molten Foundry" in entries(g)[-1]["known_recipes"]["rows"][0]["item_link"]

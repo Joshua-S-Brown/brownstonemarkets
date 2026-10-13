@@ -1,4 +1,4 @@
-# Brownstone Scan 0.12.0
+# Brownstone Scan 0.12.1
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -32,14 +32,11 @@ game doesn't offer and carry on.
 `addon/BrownstoneScan` into `_classic_beta_/Interface/AddOns/` as in step 1 of *Windows scans to the
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
-**Done on 2026-10-13** (addon 0.11.3, checked with the beta report): farming and loot, trainer lists,
-crafting in Cooking/Mining/Tailoring, fishing, mail both ways, vendor buy/sell, posting (2h and 8h),
-two scans, then bank in/out, a repair, posting and cancelling an auction, and collecting money and a
-returned item from the mailbox, and buying a commodity. Still to do, with addon **0.12.0**:
-
-1. **Profession switch (0.12.0 fix):** with Arille, open Cooking, then cast Smelting (or fish) so the
-   window switches, and craft or fish until you gain a skill point. Close it.
-2. **Scan the auction house** once, `/reload`, then log out and run the drop script.
+**Done on 2026-10-13** (checked with the beta report): farming and loot, trainer lists, crafting in
+Cooking/Mining/Tailoring, fishing, mail both ways, vendor buy/sell, posting (2h and 8h), scans, bank
+in/out, a repair, cancelling an auction, collecting sale money and a returned item, buying a commodity,
+and 0.12.0's profession-switch fix. Nothing from this checklist is left. Install **0.12.1** before the
+next play session (it saves less when item names load late); no special actions are needed for it.
 
 ## Run a scan
 
@@ -106,7 +103,7 @@ After `/reload` or logout:
 ```
 
 It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
-`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.12.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.12.1** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |

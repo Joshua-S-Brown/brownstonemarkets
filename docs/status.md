@@ -90,7 +90,7 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   market metrics (ADDON-10).
 - **Beta evidence report (STORY-042):** private Markdown/JSON reports under ignored
   `work/beta-reports/` ([usage](#beta-evidence-report)).
-- **Scanning addon:** `addon/BrownstoneScan/` 0.12.0 (stale profession-switch lists refused, rank-only records), file format 6, scan format 4: manual scans with
+- **Scanning addon:** `addon/BrownstoneScan/` 0.12.1 (stale profession-switch lists refused, rank-only records, link names ignored for change detection), file format 6, scan format 4: manual scans with
   the bounded item-info pass, character snapshots, event journal, active auctions, known recipes
   through `C_TradeSkillUI`, reload/clear buttons and the minimap panel. Usage, saved fields and beta
   checklists are in `addon/README.md`.
@@ -105,7 +105,7 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 open and close, repair, commodity posting, cancelling (the `C_AuctionHouse.CancelAuction` hook fires;
 `AUCTION_HOUSE_AUCTION_CANCELED` never did), the owned-auctions list, mail money and item collection,
 loot, trainer lists, crafts and a commodity purchase (`ConfirmCommoditiesPurchase` and
-`AUCTION_HOUSE_PURCHASE_COMPLETED`; one Linen Cloth for 18c). Still unseen: 0.12.0's profession-switch fix.
+`AUCTION_HOUSE_PURCHASE_COMPLETED`; one Linen Cloth for 18c). 0.12.0's profession-switch fix and rank-only records are confirmed too.
 Deposit and cut evidence for STORY-035: one Stringy Wolf Meat posted for 8h at 47c cost a 1s deposit,
 which cancelling did not refund; five Copper Bars sold for 295c paid 381c by mail, with the invoice
 showing the 100c deposit returned and a 14c cut (5% of 295c, rounded down).
@@ -153,7 +153,7 @@ showing the 100c deposit returned and a 14c cut (5% of 295c, rounded down).
 git diff --check
 ```
 
-Expected on this Mac: 1,383 passed and one explicit PowerShell-unavailable skip (1,384 run where
+Expected on this Mac: 1,384 passed and one explicit PowerShell-unavailable skip (1,385 run where
 PowerShell exists, as in Windows CI), offline, at or above the 88% branch-coverage floor.
 The full suite measures 96.54%;
 `ruff check .` and `mypy` report no issues. CI runs the same
