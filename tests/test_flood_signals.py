@@ -178,3 +178,15 @@ def test_top_lists_roles_both_directions_limits_determinism_and_no_pooling(tmp_p
 def test_config_rejects_invalid_settings(tmp_path, key, value):
     with pytest.raises(ValueError, match='flood'):
         addon_source(tmp_path / 'data', **{key: value})
+
+
+def test_item_index_matches_plain_scan_rows():
+    from brownstone.flood_signals import Rows, _compatible, _match
+    rows = [{'item_id': 1, 'variant_id': None, 'variant_state': 'base', 'min_buyout': 5},
+            {'item_id': 2, 'variant_id': 7, 'variant_state': 'variant', 'min_buyout': 9},
+            {'item_id': 2, 'variant_id': None, 'variant_state': 'base', 'min_buyout': 8}]
+    legacy = {'item_id': 1, 'variant_id': None, 'variant_state': None}
+    for current in (*rows, legacy, {'item_id': 3, 'variant_id': None, 'variant_state': None}):
+        assert _match(current, Rows(rows)) == _match(current, rows)
+        assert _compatible(current, Rows(rows), Rows(rows)) == _compatible(current, rows, rows)
+    assert Rows(rows).by_item[2] == rows[1:]

@@ -27,7 +27,7 @@ On Windows, use `py -m venv .venv` and `.venv\Scripts\python.exe` in place of `.
 
 ## Run
 
-Double-click **Start Brownstone.command** (macOS) or **Start Brownstone.cmd** (Windows), or run:
+Double-click **Open Brownstone App.command** (macOS) or **Open Brownstone App.cmd** (Windows), or run:
 
 ```bash
 .venv/bin/python launch_nicegui.py
@@ -43,7 +43,7 @@ Choose an experience (WoW Forever first), then a source when there are several. 
 Team and Market show what is coming. **Data → Import** previews addon inputs without writing,
 then imports only after your explicit selection and **Import addon scan** click.
 
-The complete Streamlit app remains available as **Start Brownstone (old app).command** / **.cmd**,
+The complete Streamlit app remains available as **Open Old Streamlit App.command** / **.cmd**,
 or `.venv/bin/python launch.py`, at `http://127.0.0.1:8501`. Use it for **Refresh from TSM** and
 pages that have not moved to the new app. Its pages and launcher behavior are unchanged.
 

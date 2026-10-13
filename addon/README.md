@@ -32,18 +32,14 @@ game doesn't offer and carry on.
 `addon/BrownstoneScan` into `_classic_beta_/Interface/AddOns/` as in step 1 of *Windows scans to the
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
-**Done in the 2026-10-13 session** (addon 0.11.3, checked with the beta report): farming and loot,
-trainer lists, crafting in Cooking/Mining/Tailoring, fishing, mail both ways, vendor buy/sell, posting
-(2h and 8h) and two scans. Still to do, with addon **0.12.0**:
+**Done on 2026-10-13** (addon 0.11.3, checked with the beta report): farming and loot, trainer lists,
+crafting in Cooking/Mining/Tailoring, fishing, mail both ways, vendor buy/sell, posting (2h and 8h),
+two scans, then bank in/out, a repair, posting and cancelling an auction, and collecting money and a
+returned item from the mailbox, and buying a commodity. Still to do, with addon **0.12.0**:
 
-1. **Bank (STORY-032):** on any character, open the bank, put one item in, take one out, close it.
-2. **Auction house (STORY-033, STORY-040, STORY-035):** buy one cheap item. Post one cheap item,
-   open the Auctions tab, then cancel it.
-3. **Repair:** let something take a little damage and repair it at a vendor.
-4. **Profession switch (0.12.0 fix):** with Arille, open Cooking, then cast Smelting (or fish) so the
+1. **Profession switch (0.12.0 fix):** with Arille, open Cooking, then cast Smelting (or fish) so the
    window switches, and craft or fish until you gain a skill point. Close it.
-5. **Mailbox:** collect anything sold or expired from today's posts.
-6. **Scan the auction house** once, `/reload`, then log out and run the drop script.
+2. **Scan the auction house** once, `/reload`, then log out and run the drop script.
 
 ## Run a scan
 

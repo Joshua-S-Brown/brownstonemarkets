@@ -134,7 +134,14 @@ def main(argv=None):
 
 
 def configure_launch(args):
+    activated = []
+
     def ready():
+        # macOS opens the window without making it the active, key window, so clicks were dropped until the
+        # owner switched away and back (2026-10-13). Activate it once, after its first page has loaded.
+        if args.native and not activated and app.native.main_window is not None:
+            activated.append(True)
+            app.native.main_window.show()
         if args.ready_file:
             # Write then rename, so the launcher polling for this file never reads it half-written.
             partial = args.ready_file.with_suffix('.tmp')

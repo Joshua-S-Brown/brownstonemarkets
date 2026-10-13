@@ -31,9 +31,23 @@ def _read(db, config, scan, item_ids):
     return [dict(zip(columns, row, strict=True)) for row in rows]
 
 
+class Rows(list):
+    """One scan's rows with an item index: matching every row against a whole scan was quadratic."""
+
+    def __init__(self, rows):
+        super().__init__(rows)
+        self.by_item: dict[int, list[dict]] = {}
+        for row in self:
+            self.by_item.setdefault(row['item_id'], []).append(row)
+
+
+def _same_item(rows, item_id):
+    return rows.by_item.get(item_id, []) if isinstance(rows, Rows) else [r for r in rows if r['item_id'] == item_id]
+
+
 def _match(current, rows):
     """ADDON-08: exact identity, with legacy/base compatibility only for pure base scans."""
-    same_item = [r for r in rows if r['item_id'] == current['item_id']]
+    same_item = _same_item(rows, current['item_id'])
     exact = next((r for r in same_item if (r['variant_id'], r['variant_state']) ==
                   (current['variant_id'], current['variant_state'])), None)
     if exact is not None:
@@ -51,7 +65,7 @@ def _compatible(current, rows, newest):
     if match is None or current['variant_state'] == match['variant_state']:
         return match
     base_rows = rows if current['variant_state'] is None else newest
-    if all(r['variant_state'] == 'base' for r in base_rows if r['item_id'] == current['item_id']):
+    if all(r['variant_state'] == 'base' for r in _same_item(base_rows, current['item_id'])):
         return match
     return None
 
@@ -113,7 +127,7 @@ def signals(db, config, item_ids, now):
     needed = {s['scan_id']: s for s in [scans[0], *earlier]}
     for pair in pairs:
         needed.update({pair[side]['scan_id']: pair[side] for side in ('earlier', 'later')})
-    history = {key: _read(db, config, scan, item_ids) for key, scan in needed.items()}
+    history = {key: Rows(_read(db, config, scan, item_ids)) for key, scan in needed.items()}
     newest = history[scans[0]['scan_id']]
     result.update(scan=scans[0], note='', freshness=assess(
         {'updated_at': scans[0]['finished_at'].isoformat()}, now, config['max_age_hours']))

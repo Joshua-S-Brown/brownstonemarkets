@@ -10,12 +10,12 @@ _Last updated 2026-10-13 (STORY-059)._
 Rules live in `requirements.md` and contracts in `design.md`; each bullet names where.
 
 - **Main app (NiceGUI, UI-07):** Today, Team (roster, progression and hiring comparison), Market (item explorer and scan movement) and
-  Data → Import. Start it from `Start Brownstone.command` / `.cmd` or `launch_nicegui.py`
+  Data → Import. Start it from `Open Brownstone App.command` / `.cmd` or `launch_nicegui.py`
   ([New app](#new-app)). Shared light theme, wrapping header navigation, page information dialogs
   and Today settings behind the gear (STORY-060, UI-08). Native text selection is enabled.
   Runs on the Mac only; the Windows PC plays and drops scan files.
 - **Old app (Streamlit, UI-01 to UI-06):** unchanged and reachable from
-  `Start Brownstone (old app).command` / `.cmd` (`launch.py`). Places: Today (Today plan, All
+  `Open Old Streamlit App.command` / `.cmd` (`launch.py`). Places: Today (Today plan, All
   recipes), Team (Characters), Market (Browse market, Skill-up demand, Watchlist, Below usual price),
   Data (Import or Refresh from TSM, Recipe catalogs, Scan changes). TSM refresh lives only here.
 - **Ingestion:** TSM CSV → bronze/silver/DuckDB/gold with manifests, validation and analytical
@@ -101,7 +101,14 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
 (STORY-035). Confirmed on the beta so far:
 format-3 scans and the reload/clear buttons (addon 0.3.1), readable logout bags (0.10.0) and the
 fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-recipe lists
-(0.11.1; the empty first read is refused since 0.11.2).
+(0.11.1; the empty first read is refused since 0.11.2). On 2026-10-13 (0.11.3): bank snapshots at
+open and close, repair, commodity posting, cancelling (the `C_AuctionHouse.CancelAuction` hook fires;
+`AUCTION_HOUSE_AUCTION_CANCELED` never did), the owned-auctions list, mail money and item collection,
+loot, trainer lists, crafts and a commodity purchase (`ConfirmCommoditiesPurchase` and
+`AUCTION_HOUSE_PURCHASE_COMPLETED`; one Linen Cloth for 18c). Still unseen: 0.12.0's profession-switch fix.
+Deposit and cut evidence for STORY-035: one Stringy Wolf Meat posted for 8h at 47c cost a 1s deposit,
+which cancelling did not refund; five Copper Bars sold for 295c paid 381c by mail, with the invoice
+showing the 100c deposit returned and a 14c cut (5% of 295c, rounded down).
 
 ## Limitations
 
@@ -146,9 +153,9 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,382 passed and one explicit PowerShell-unavailable skip (1,383 run where
+Expected on this Mac: 1,383 passed and one explicit PowerShell-unavailable skip (1,384 run where
 PowerShell exists, as in Windows CI), offline, at or above the 88% branch-coverage floor.
-The full suite measures 96.53%;
+The full suite measures 96.54%;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the
@@ -157,7 +164,7 @@ old app, or addon preview/import in Data. Real-data checks run on a copy of `dat
 
 ### New app
 
-Install `requirements.lock.txt`, then double-click `Start Brownstone.command` / `.cmd` (or run
+Install `requirements.lock.txt`, then double-click `Open Brownstone App.command` / `.cmd` (or run
 `launch_nicegui.py`). It opens a native window, focuses it on a second launch when the code is current,
 and restarts only the authenticated app it started when the code changed. If the native window can't
 start, it prints one line and opens the browser; that server stops after five minutes without a

@@ -118,8 +118,13 @@ def test_readiness_and_focus_endpoint(monkeypatch, tmp_path, native):
     monkeypatch.setenv('NICEGUI_PORT', '12345')
     args = argparse.Namespace(native=native, ready_file=tmp_path / 'ready', focus_token='token',
                               code_fingerprint='current')
+    opened = MagicMock()
+    monkeypatch.setattr(nicegui_app.app.native, 'main_window', opened)
     nicegui_app.configure_launch(args)
     handlers['loaded' if native else 'startup']()
+    if native:
+        handlers['loaded']()  # later page loads never re-activate the window
+    assert opened.show.call_count == (1 if native else 0)
     state = json.loads(args.ready_file.read_text())
     assert state == {'url': 'http://127.0.0.1:12345', 'native': native, 'token': 'token', 'code': 'current'}
     assert not handlers['focus']('wrong')['focused']
