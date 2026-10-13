@@ -59,6 +59,6 @@ fail_under = 88
 
 [tool.mypy]
 python_version = "3.12"  # The tested version; installed stubs (numpy) need 3.12 syntax.
-files = ["brownstone", "launch.py", "launch_nicegui.py", "nicegui_app.py", "views/nicegui_theme.py", "views/nicegui_today.py", "views/nicegui_import.py", "views/nicegui_team.py", "views/nicegui_market.py", "views/today_rows.py"]
+files = ["brownstone", "launch.py", "launch_nicegui.py", "nicegui_app.py", "views/nicegui_theme.py", "views/nicegui_today.py", "views/nicegui_import.py", "views/nicegui_team.py", "views/nicegui_market.py", "views/nicegui_stock.py", "views/today_rows.py"]
 ignore_missing_imports = true
 warn_unused_ignores = true

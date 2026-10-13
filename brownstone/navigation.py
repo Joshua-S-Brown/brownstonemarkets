@@ -14,6 +14,7 @@ QUESTIONS = {
     "Today": "What should I do today to make gold?",
     "Team": "Who can do what, and how are my characters progressing?",
     "Market": "What is the market telling me?",
+    "Stock": "What do we hold, and what should we restock?",
     "Data": "What evidence do I have, and how do I bring it up to date?",
     "Today plan": "What should I craft, buy and sell today?",
     "All recipes": "Which recipes could make a profit at the current prices?",

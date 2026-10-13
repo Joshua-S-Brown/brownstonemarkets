@@ -42,20 +42,20 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; ready for handoff: bank snapshots confirmed on the beta 2026-10-13)
+1. STORY-066 retire the old app and slim the docs (Brownstone; medium; decided 2026-10-13; after STORY-061 is committed, since both touch the docs)
 2. STORY-065 farming rates from play sessions (addon + Brownstone; discovery captured 2026-10-13 with addon 0.11.3: refine from that evidence first)
 3. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
 4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
 5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-7. STORY-036 vendor price ceilings
-8. STORY-021 item page and charts (would live in the Market explorer)
-9. STORY-026 scan coverage and rhythm
-10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-11. STORY-006 replay
+6. STORY-036 vendor price ceilings
+7. STORY-021 item page and charts (would live in the Market explorer)
+8. STORY-026 scan coverage and rhythm
+9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+10. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040, STORY-044 and STORY-027 (checklists in `addon/README.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 059, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 060, 063, 064 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 059, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 060, 061, 063, 064 and SPIKE-009/009b.
 
 **Added 2026-10-12 (product owner, after SPIKE-009b: "instead of migrating all the pages… what do we really need?"):** NiceGUI becomes the app, but only for what running the business needs. Four places move, each a story: **Today** (STORY-058, then STORY-054's cards), **Team**: the employee roster, their skills and where to invest (STORY-052, then STORY-059), **Market**: an explorer for browsing materials, crafts and supply chains, plus what moved since the last scan, kept for now to judge its use (STORY-055), and **Data**: Import (STORY-058). Everything else (All recipes, Watchlist, Below usual price, Scan changes, Recipe catalogs) stays in the Streamlit app, which is kept, unchanged and reachable, but gets no new features. The new app is built for WoW Forever; Classic stays development test data with no features of its own (`requirements.md` → *Interface*). This supersedes the Streamlit placements in STORY-053 for future work.
 
@@ -65,6 +65,19 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 3. **Market: what are the market indicators, and how do they affect our strategy?** One brief that ties what moved to what it means for our plan (STORY-055).
 
 STORY-053 sets up the navigation first, so each later story has a home. New feature stories wait behind these four. Display and wiring only unless a story says otherwise: no change to calculations, ranking or `today_version`.
+
+### STORY-066 — Retire the old app and slim the docs
+
+Added 2026-10-13 (product owner: "I haven't really used them at all because the new app is much nicer and more efficient… let's plan to sunset it and clean up documentation as part of that initiative"). Brownstone and docs only; no change to any calculation, rule meaning, schema, data file or the addon. Start after STORY-061 is committed: both edit the docs.
+
+As the owner, I want one app and short, current docs, so that every change is cheaper to make, test and review.
+
+Acceptance:
+- **Nothing needed is lost:** before deleting, list each old-app page (Today plan, All recipes, Characters, Browse market, Skill-up demand, Watchlist, Below usual price, Import, Recipe catalogs, Scan changes, Refresh from TSM) with where its job lives in the new app, or that it is dropped. Decided with the owner: nothing moves; All recipes and the Recipe catalogs page are dropped; Watchlist's page is dropped (its engine stays: the new Import page shows watchlist hits, and STORY-061's targets cover buy limits; existing watchlist files stay on disk); TSM refresh and recipe refresh stay available through the CLI (`python -m brownstone`, `recipes`), which must keep working. Put the list in the report, not the docs.
+- **Remove the old app:** `app.py`, the Streamlit-only modules in `views/` (keep every module the new app imports, such as `today_rows.py`), their tests, the **Open Old Streamlit App** launchers, `launch.py` (move `code_fingerprint`, which `launch_nicegui.py` imports, into `launch_nicegui.py`), and Streamlit from `pyproject.toml` and `requirements.lock.txt`. Functions in `brownstone/` that only the removed screens called go too, with their tests; anything the CLI or the new app uses stays.
+- **Slim the docs** (`AGENTS.md`: "Describe *now*; history belongs in Git"): `requirements.md` keeps every current rule with its ID and meaning, but drops decision dates, beta-finding narratives, superseded wording and old-app rules; `design.md` describes current modules only; `status.md` describes now; `README.md` and `addon/README.md` drop old-app instructions and finished checklists. Targets: `requirements.md` at most 90 KB (from 141 KB), `design.md` at most 45 KB (from 67 KB). Where a rule's evidence matters (for example ADDON-07's seller finding or the whole-silver finding), keep one sentence of it. No rule ID is lost or renumbered; a removed rule is listed in the report with why.
+- **Gates:** `pytest --cov` at or above the coverage floor, `ruff check .`, `mypy` (update its `files`), with the full-suite time before and after in the report. The new app launches from **Open Brownstone App** and every place opens (real-data check on the Forever beta source).
+- **Out of scope:** `data/`, the database, bronze and the addon stay untouched.
 
 ### STORY-031 — Item info pass after a scan
 
@@ -231,24 +244,6 @@ Acceptance:
 - **Your rhythm:** the hours and days you usually scan, from scan times only.
 - **What's missing:** which slots need scans before timing claims can be made, with the thresholds recorded in `requirements.md`.
 - Works on beta scans now. Depends on nothing (uses `addon_scans`). Feeds *Plan ahead* under Later.
-
-### STORY-061 — Stock on hand and targets
-
-Added 2026-10-13 (product owner: "see how much I have as well as set targets per material, see what's short, and have kind of a price factor"). Brownstone only; read-only over imported snapshots and the newest scan. No change to Today's plan, ranking or `today_version` (Today skipping what you hold stays *Restock* under Later). Built in the new app as a new **Stock** place between Market and Data (a UI-07 change, recorded there).
-
-As the owner, I want to see every material our team holds, what it's worth today, and which materials are below the stock I want to keep, so that I restock the right things at a price I accept.
-
-Acceptance:
-- **Holdings:** every item in the latest readable bags and bank snapshot of each character of the selected source and full market (STORY-032's `character_snapshots.latest_data`), units per character and location, total per item, each location with its capture time and age. A bank never opened is *bank unknown* and never counted as zero; an unreadable bag is excluded and said so. Search by name or ID; a filter for items in our catalogs' chains.
-- **Value at today's prices** from the newest complete scan of the same source and full market: units × cautious unit price (`requirements.md` → Cautious), labelled *at listed prices, not what it would sell for*. A missing price shows *no price* and is left out of totals, never zero; the total says how many items it excludes. Stale scans labelled.
-- **Targets per item:** the owner sets target units for the whole team per item, with an optional **buy limit**: either a fixed most-per-unit in copper, or a percentage of the item's market value in the same scan (ADDON-03). Stored per source in `data/stock_targets.<source_id>.local.json` like the watchlist (validated, one entry per item ID, Save-only, a rejected save keeps the last saved targets). Only items with an item ID; names are never guessed.
-- **What's short:** for each target, held, short (target − held, never negative), and the cost to fill it by walking the scan's listings cheapest first (the same depth-aware ladder Today uses), split into units **within the buy limit** (buy now) and above it (wait). Fewer listed units than short is said, never priced. An item with *bank unknown* for any character shows its shortfall as *at most*.
-- **Presentation** (UI-08, `views/nicegui_theme.py`): status chips (characters and capture ages, scan age), tiles (items held, value at listed prices, items short, cost to fill within limits), then a table of short items first; holdings and evidence on demand; ⓘ dialog with snapshot, captures and the price rule.
-- **Calculation** in a new `brownstone/stock.py` (no NiceGUI or Streamlit), integer copper, composing existing readers and the purchase ladder; display in a new `views/nicegui_stock.py`.
-- **Responsiveness:** the app can't handle clicks while a page builds (2026-10-13), so Stock reads snapshots, the scan and targets once per page, never once per row, and computes the cost to fill only for items with a target.
-- **Offline tests:** holdings across two characters and bank/bags; bank unknown; unreadable bags; scoping (another source's or house's snapshot never used); missing and stale prices; targets save, reject and survive reload; shortfall with fixed and percentage limits; too few listings; *at most* with unknown bank.
-- **Real-data check:** on the Forever beta source, the four characters' holdings (Basilly and Cicelyna have opened, currently empty banks; Keenagen and Arille have *bank unknown*) and a target for one material, such as Linen Cloth.
-- **Docs:** a *Stock* rule in `requirements.md` (and UI-07's places), `design.md`, `status.md`.
 
 ### STORY-062 — Sales speed and suggested stock levels
 

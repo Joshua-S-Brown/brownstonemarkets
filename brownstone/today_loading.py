@@ -9,7 +9,7 @@ from brownstone.today_data import read_today_evidence
 from brownstone.today_funds import resolve_funds
 
 
-def load_today(config, catalogs, settings, character_data, now: datetime):
+def load_today(config, catalogs, settings, character_data, now: datetime, *, item_ids=()):
     """Return the latest manifest and build_today arguments, or None when no snapshot exists.
 
     Reads retain the existing full market/source predicates. The caller owns settings,
@@ -18,7 +18,7 @@ def load_today(config, catalogs, settings, character_data, now: datetime):
     manifest, sid, _ = latest_snapshot(config)
     if manifest is None:
         return None, None
-    ids = sorted({item for catalog in catalogs for item in catalog["items_by_id"]})
+    ids = sorted({item for catalog in catalogs for item in catalog["items_by_id"]} | set(item_ids))
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb"), read_only=True) as db:
         observations, listings, metrics, vendors = read_today_evidence(db, config, sid, ids)
     settings = resolve_funds(settings, character_data, now, config["max_age_hours"]).settings

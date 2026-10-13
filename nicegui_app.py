@@ -16,6 +16,7 @@ from brownstone.today_loading import load_today_characters
 from views import nicegui_theme as theme
 from views.nicegui_import import render as render_import
 from views.nicegui_market import render as render_market
+from views.nicegui_stock import render as render_stock
 from views.nicegui_team import render as render_team
 from views.nicegui_today import render
 
@@ -32,7 +33,7 @@ def read_catalogs():
 @ui.page('/')
 async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place: str = 'Today',
                      item: int | None = None):
-    place = place if place in ('Today', 'Team', 'Market', 'Data') else 'Today'
+    place = place if place in ('Today', 'Team', 'Market', 'Stock', 'Data') else 'Today'
     theme.install()
     try:
         sources = [s for s in configuration.read_sources(ROOT / 'config/market.toml',
@@ -66,6 +67,9 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
     if place == 'Team':
         render_team(chosen, read_catalogs())
         return
+    if place == 'Stock':
+        render_stock(chosen, read_catalogs())
+        return
     if place == 'Market':
         render_market(chosen, read_catalogs(), item)
         return
@@ -89,7 +93,7 @@ def header(sources, game, source, place, tab):
     with ui.header().classes('p-0'), ui.row().classes('bs-bar'):
         ui.label('Brownstone').classes('bs-brand')
         with ui.row().classes('bs-nav'):
-            for name in ('Today', 'Team', 'Market', 'Data'):
+            for name in ('Today', 'Team', 'Market', 'Stock', 'Data'):
                 if name == 'Data':
                     ui.separator().props('vertical').classes('mx-2')
                 ui.button(name, color=None, on_click=lambda n=name: navigate(place=n)).props('flat').classes(

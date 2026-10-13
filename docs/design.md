@@ -31,7 +31,7 @@ framework-free module both use, never a copy: `brownstone/` for calculations and
 table projections and wording.
 
 **Main app (NiceGUI, UI-07).** `nicegui_app.py` is the entry; views are `views/nicegui_today.py`,
-`views/nicegui_team.py`, `views/nicegui_market.py` and `views/nicegui_import.py`. `views/nicegui_theme.py` owns the approved
+`views/nicegui_team.py`, `views/nicegui_market.py`, `views/nicegui_stock.py` and `views/nicegui_import.py`. `views/nicegui_theme.py` owns the approved
 colour/spacing tokens and common chips, badges, banners, tiles, cards, dialogs and empty states;
 it forces light mode and selectable text. The native entry sets `app.native.window_args['text_select']`.
 `nicegui_app.header` renders wrapping place tabs, separated Data and the source menu, with page-specific
@@ -51,6 +51,7 @@ that a source/configuration change discards. ImportPage replaces the review with
 | Today | Today plan with cards | STORY-054 |
 | Team | Roster, progression, and *Add a character?* | STORY-052, STORY-059 |
 | Market | Item explorer with supply chains and what moved | STORY-055 |
+| Stock | Team holdings, listed value and manual restock targets | STORY-061 |
 | Data | Import (TSM refresh stays in the old app) | STORY-058 |
 
 **Old app (Streamlit, frozen).** `views/navigation.py` renders one sidebar radio (Data visually
@@ -97,6 +98,7 @@ brownstone/                     importable without Streamlit or NiceGUI
   progression.py                Team reach windows, current board values and skill-up cost estimates
   hiring.py                     New-hire cumulative costs, tier profits and team feed savings
   today*.py                     Today plan, confidence, data, settings, funds, eligibility, loading, session
+  stock.py                      team holdings, local targets and depth-aware fill estimates
   watchlist.py                  watchlist entries, evidence and hit text
   beta_report.py, beta_evidence.py, beta_markdown.py   beta evidence report
   freshness.py, money.py, navigation.py   staleness policy and captions; g/s/c; questions and experiences
@@ -616,3 +618,23 @@ UI-09 defines ordering, distinct-item limit and handling of missing evidence.
 item ID. Standard URL navigation retains browser history and refresh. Search renders up to 30 item
 links after a query; refining the query reaches every observed item. IDs, incompatible catalog versions,
 expanded quantities and comparison evidence remain in disclosures/dialogs. No session price cache or writes.
+
+## Stock contracts
+
+`brownstone/stock.py` composes `character_snapshots.latest_data` once, validated per-source
+`Entry` targets once, and `today_loading.load_today` once. The loader's optional `item_ids`
+adds held/target IDs to compatible catalog IDs in the existing `read_today_evidence` read;
+there is no separate price query. Stock selects each location's latest fully readable capture
+from scoped observations, preserving excluded-capture counts, UTC time and age. Holdings aggregate
+slots by item, character and location; link labels and compatible catalogs supply names without
+inferring IDs or categories. `build_stock` is a pure projection with cautious sale values and
+`fill` uses `today.Ladder.quote` only for targets. Missing full-fill quotes remain nullable;
+buy/wait quantities describe short units, while purchased units and costs include whole stacks.
+Rules live in `requirements.md` → Stock.
+
+`views/nicegui_stock.py` uses the shared theme, cached search/chain filtering, disclosures and
+page information dialog. The target dialog copies saved entries into a fresh draft on opening;
+Update/remove changes only that draft, Save revalidates the current file and atomically replaces
+it, then reloads the page. Malformed files are preserved and explained. No schema or Today
+version/state changes. Offline coverage: `tests/test_stock.py` and
+`tests/ui_trial/test_nicegui_stock.py`.

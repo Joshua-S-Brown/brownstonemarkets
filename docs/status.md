@@ -3,17 +3,26 @@
 Current implemented state, limitations and how to verify. History, including dated real-data checks
 and beta play sessions, lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-13 (STORY-059)._
+_Last updated 2026-10-13 (STORY-061)._
 
 ## Implemented
 
 Rules live in `requirements.md` and contracts in `design.md`; each bullet names where.
 
-- **Main app (NiceGUI, UI-07):** Today, Team (roster, progression and hiring comparison), Market (item explorer and scan movement) and
+- **Main app (NiceGUI, UI-07):** Today, Team (roster, progression and hiring comparison), Market (item explorer and scan movement), Stock (holdings and targets) and
   Data → Import. Start it from `Open Brownstone App.command` / `.cmd` or `launch_nicegui.py`
   ([New app](#new-app)). Shared light theme, wrapping header navigation, page information dialogs
   and Today settings behind the gear (STORY-060, UI-08). Native text selection is enabled.
   Runs on the Mac only; the Windows PC plays and drops scan files.
+- **Stock (STORY-061):** scoped latest readable bags/bank holdings, cautious listed value and
+  Save-only per-source manual team targets with fixed or market-value percentage buy limits.
+  Restock estimates reuse Today's whole-stack ladder; unknown banks/bags, unreadable captures,
+  missing prices, stale scans and insufficient listings remain explicit. No Today plan changes.
+  Rules: `requirements.md` → Stock; contracts: `design.md` → Stock contracts. Verify with
+  `tests/test_stock.py`, `tests/ui_trial/test_nicegui_stock.py`, and a copied `data/` run using
+  `nicegui_app.py --data-dir <copy>`: select Forever beta → Stock, set a Linen Cloth target,
+  inspect capture chips/holdings/evidence, Save and reload. Basilly/Cicelyna have known empty
+  banks in current imported evidence; Keenagen/Arille have bank unknown.
 - **Old app (Streamlit, UI-01 to UI-06):** unchanged and reachable from
   `Open Old Streamlit App.command` / `.cmd` (`launch.py`). Places: Today (Today plan, All
   recipes), Team (Characters), Market (Browse market, Skill-up demand, Watchlist, Below usual price),
@@ -153,9 +162,9 @@ showing the 100c deposit returned and a 14c cut (5% of 295c, rounded down).
 git diff --check
 ```
 
-Expected on this Mac: 1,384 passed and one explicit PowerShell-unavailable skip (1,385 run where
+Expected on this Mac: 1,401 passed and one explicit PowerShell-unavailable skip (1,402 run where
 PowerShell exists, as in Windows CI), offline, at or above the 88% branch-coverage floor.
-The full suite measures 96.54%;
+The full suite measures 96.62%;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the
