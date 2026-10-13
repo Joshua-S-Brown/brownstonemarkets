@@ -53,6 +53,12 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   ten distinct chain items from the newest two eligible scans, with comparison evidence on demand.
   Verify offline with `tests/test_market_explorer.py` and `tests/ui_trial/test_nicegui_market.py`;
   on copied Forever data check Linen Cloth (2589), Bolt of Linen Cloth (2996) and the movement section.
+- **Removed listings (STORY-027, UI-10):** Market shows the newest qualifying consecutive pair's
+  top ten catalog-chain items by units removed early; item pages lazily show at most ten qualifying
+  pairs, skipped long gaps, early/possible-expiry/unknown counts and units, excluded no-buyout counts
+  and matching evidence. Read-only listing multisets, full scope and variant/legacy identity retained.
+  Verify with `tests/test_removed_listings.py` and `tests/ui_trial/test_nicegui_market.py`.
+  Classic Era time-left bounds require the Forever in-game confirmation in `addon/README.md`.
 - **Other pages:** Characters (STORY-051), Watchlist (STORY-048), Skill-up demand (CRAFT-10), Scan
   changes (UI-06), Browse market and Below usual price (UI-02/03), version-scoped item names (DATA-02),
   market metrics (ADDON-10).
@@ -65,7 +71,8 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
 
 **Pending in-game beta checks** (checklists in `addon/README.md`): the item-info pass measurement
 (STORY-031), snapshots on both machines (STORY-032), the event journal (STORY-033), active auctions
-(STORY-040), the panel (STORY-044) and auction deposits (STORY-035). Confirmed on the beta so far:
+(STORY-040), the panel (STORY-044), removed-listing time-left bounds (STORY-027) and auction deposits
+(STORY-035). Confirmed on the beta so far:
 format-3 scans and the reload/clear buttons (addon 0.3.1), readable logout bags (0.10.0) and the
 fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-recipe lists
 (0.11.1; the empty first read is refused since 0.11.2).
@@ -108,8 +115,8 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,182 passed and one explicit PowerShell-unavailable skip (1,183 run where
-PowerShell exists, as in Windows CI), offline, at 96.27% coverage with branches enabled;
+Expected on this Mac: 1,223 passed and one explicit PowerShell-unavailable skip (1,224 run where
+PowerShell exists, as in Windows CI), offline, at 96.33% coverage with branches enabled;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the

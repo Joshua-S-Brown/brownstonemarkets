@@ -241,6 +241,21 @@ Unknown values are absent in Lua and nullable in Python; raw argument tuples nev
 - The result carries earlier/later scan metadata, their time gap, shared `items`, `new` and `vanished`. Each row has item ID/name, earlier/later metric dictionaries (minimum buyout, market value, listings, units), later-minus-earlier changes and a changed flag. A missing side is `None`; unavailable prices and changes are `None`, with integer copper for all valid prices. Optional item IDs filter every list; an empty list matches nothing.
 - `views/scan_changes.py` renders UI-06, using `compatible_catalogs` for the item-ID filter, shared context/freshness display and money helpers. Data registers it as the **Scan changes** section. Existing calculation pages keep their contracts.
 
+### Removed listings (STORY-027)
+
+Rules live in `requirements.md` → UI-10; raw time-left capture remains ADDON-09.
+`removed_listings.scan_pairs` uses `scan_changes.eligible_scans` without bridging eligible scans.
+`compare_pair` validates adjacency and reads only `scan_listings` through `scope_predicate`, scan ID
+and snapshot ID. SQL aggregates exact identities/quantities/whole-stack buyouts/time-left buckets,
+then reuses `scan_changes._MATCH_SQL` for legacy compatibility. Item filters retain every identity
+of each selected ID. Python compares key multiplicities and assigns the shortest earlier buckets
+first, returning integer counts/units plus matching evidence and excluded no-buyout counts.
+There is no migration, persistence, price path or forecast. `top_removals` reads only the newest
+qualifying pair and catalog-chain IDs; `item_history` retains skipped gaps and at most ten qualifying
+pairs. `market_explorer.load_explorer` adds the small top-list projection. `item_removals` opens a
+read-only connection only when `views/nicegui_market.show_item` opens the item page. Shared theme
+cards/badges and expansions show evidence and keep identities separate, including noncatalog items.
+
 ## Crafting calculation
 
 - `basis_prices(observations, basis)` turns observed prices into buy and sell unit price maps (CRAFT-04).

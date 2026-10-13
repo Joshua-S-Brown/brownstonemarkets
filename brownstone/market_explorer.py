@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import duckdb
 
-from . import analysis, scan_changes
+from . import analysis, removed_listings, scan_changes
 from .action_board import catalog_identity, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices, evaluate_recipe
 from .freshness import assess
@@ -21,7 +21,8 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
     result = {'config': config, 'catalogs': selected,
               'incompatible': [c for c in catalogs if c not in selected], 'warning': warning, 'snapshot': None,
               'items': [], 'metrics': [], 'vendors': {}, 'recipes': [], 'demand': [], 'freshness': None,
-              'movement': {'note': 'No earlier scan', 'rows': [], 'comparison': None}}
+              'movement': {'note': 'No earlier scan', 'rows': [], 'comparison': None},
+              'removals': {'pair': None, 'rows': [], 'note': 'Fewer than two eligible scans.'}}
     if manifest is None:
         return result
     snapshot = arguments['snapshot']
@@ -29,9 +30,11 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
         items = analysis.browse(db, snapshot['snapshot_id'], config, limit=2_147_483_647).to_dicts()
         metrics = read_scan_metrics(db, config, snapshot['snapshot_id']) or []
         movement = scan_movement(db, config, selected, now)
+        removals = removed_listings.top_removals(db, config, sorted(
+            {item for catalog in selected for item in catalog['items_by_id']}))
     items = [{**row, **{k: row[k] if row[k] and row[k] > 0 else None
                         for k in ('min_buyout', 'market_value')}} for row in items]
-    result.update(snapshot=snapshot, items=items, metrics=metrics, movement=movement,
+    result.update(snapshot=snapshot, items=items, metrics=metrics, movement=movement, removals=removals,
                   vendors=arguments['vendor_prices'], freshness=assess(snapshot, now, config['max_age_hours']),
                   recipes=recipe_rows(selected, arguments, characters),
                   demand=skill_demand(selected))
@@ -143,3 +146,8 @@ def skill_demand(catalogs) -> list[dict]:
                                   key=lambda b: int(b.split('–')[0]) if b != 'skill unknown' else 100000),
              'professions': sorted(row['professions'])}
             for row in combined.values()]
+
+
+def item_removals(config, item_id):
+    with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
+        return removed_listings.item_history(db, config, item_id)

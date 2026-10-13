@@ -43,20 +43,21 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 
 **Order:**
 1. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
-2. STORY-027 removed listings (first step towards sales speed; shown on the Market explorer's item pages)
-3. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
-4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-5. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
-6. STORY-035 auction deposits (needs a beta check)
-7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-8. STORY-036 vendor price ceilings
-9. STORY-015b crafting across professions
-10. STORY-021 item page and charts (would live in the Market explorer)
-11. STORY-026 scan coverage and rhythm
-12. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-13. STORY-006 replay
+2. STORY-064 flood signals: crowding and overshoots (Brownstone; medium; ready for launch on 4 November)
+3. STORY-063 launch weeks: where to spend play time (Brownstone; medium; refine before handoff, after STORY-064)
+4. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
+5. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+6. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
+7. STORY-035 auction deposits (needs a beta check)
+8. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+9. STORY-036 vendor price ceilings
+10. STORY-015b crafting across professions
+11. STORY-021 item page and charts (would live in the Market explorer)
+12. STORY-026 scan coverage and rhythm
+13. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+14. STORY-006 replay
 
-**Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040 and STORY-044 (checklists in `addon/README.md`).
+**Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040, STORY-044 and STORY-027 (checklists in `addon/README.md`).
 
 **Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 056, 057, 058, 060 and SPIKE-009/009b.
 
@@ -266,25 +267,6 @@ Acceptance:
 - **What's missing:** which slots need scans before timing claims can be made, with the thresholds recorded in `requirements.md`.
 - Works on beta scans now. Depends on nothing (uses `addon_scans`). Feeds *Plan ahead* under Later.
 
-### STORY-027 — Removed listings between scans
-
-Moved from *Demand from your own scans* (Later) at grooming (2026-10-05). **Refined 2026-10-13** with the product owner: maximum gap 12 hours; split removals by time left, with source evidence for the bucket durations. Brownstone only; read-only over saved scans; no schema change. Using it in Today stays with STORY-062.
-
-As the owner, I want to see which listings disappeared between two consecutive scans, and which of them could not have simply expired, so that I have evidence of what moves, since the game shows no sales.
-
-Acceptance:
-- **Scan pairs:** only consecutive eligible scans (UI-06's rules: complete, not partial, priced, same source and full market), with a finish-to-finish gap of at most **12 hours**. A longer gap says so and gives no removals. Never skip a scan to make a pair.
-- **Matching:** there is no auction ID or seller (ADDON-07's beta finding), so listings match per item identity (ADDON-08: `item_id, variant_id, variant_state`, never pooled; legacy rows follow UI-06's match rule) on **stack quantity and buyout**. Per matching key, removed listings = earlier count − later count when positive; a smaller later count is never offset by a new listing at another price. Listings without a buyout are left out and counted separately. Report removed listings and removed units.
-- **Time left:** within a matching key, the removed listings are taken to be the earlier scan's shortest time left first (the cautious choice: as many removals as possible count as possible expiries). A removed listing **could have expired** when the gap reaches its bucket's lower bound; otherwise it was **removed early** (bought or cancelled). A missing time left is *time left unknown*, never early. Record the bucket bounds (1–4) in `requirements.md` with a cited source; ADDON-09 says the raw bucket has no duration mapping, so amend it to point to the new rule. If the source is for Classic Era rather than Forever, add a beta check to `addon/README.md` and list the story under *Pending an in-game beta check*.
-- **Honest labels:** always *removed*, never *sold*: a sale, a cancellation, a reprice and an expiry can look the same, so removed early is an upper bound on sales. No forecast.
-- **Shown in the Market explorer (STORY-055):**
-  - **Item page:** a *Removed between scans* section for that item over the most recent qualifying pairs (at most 10, newest first): each pair's times and gap, listings and units removed early, could have expired and time left unknown, plus listings without a buyout. Too-long gaps are listed as skipped, not hidden. Matching evidence on demand.
-  - **List:** in the Market place, the newest qualifying pair's top 10 catalog-chain items by **units removed early**, each linking to its item page. With no qualifying pair, say why (one scan, gap too long, TSM source).
-- **Calculation** in a new `brownstone/removed_listings.py` (no NiceGUI or Streamlit), reading `scan_listings` under `scope_predicate` and reusing `scan_changes.eligible_scans`; integer copper and units. Display through `views/nicegui_market.py` and the shared theme (UI-08). Keep `market_explorer`'s load fast: removals for an item page are computed when the item is opened.
-- **Offline tests:** identical listings (two removed of three); a reprice (counted removed, the new price never offsets it); quantity and buyout as part of the key; variants and legacy rows never pooled; listings without a buyout left out; shortest-time-left-first; each bucket's could-have-expired boundary; time left unknown; gap over 12 hours; non-consecutive scans never paired; partial or unpriced scans skipped; one scan; TSM source; scoping (another source or any `MARKET_KEYS` field never used); the item-page section and the list in the NiceGUI user fixture.
-- **Real-data check:** on the Forever beta source, the newest qualifying pair: its gap, and the list's top items; then Linen Cloth's item page across pairs.
-- **Docs:** a *Removed listings* rule in `requirements.md` next to UI-06 (pairs, 12-hour gap, matching, bucket bounds with source, labels), the ADDON-09 amendment, `design.md`, `status.md`.
-
 ### STORY-061 — Stock on hand and targets
 
 Added 2026-10-13 (product owner: "see how much I have as well as set targets per material, see what's short, and have kind of a price factor"). Brownstone only; read-only over imported snapshots and the newest scan. No change to Today's plan, ranking or `today_version` (Today skipping what you hold stays *Restock* under Later). Built in the new app as a new **Stock** place between Market and Data (a UI-07 change, recorded there).
@@ -314,6 +296,37 @@ Acceptance (to refine):
 - **Suggested target** in STORY-061: removal rate × the days of cover the owner chooses (one setting), capped at a share of typical listed supply so we never plan to hold more than the market moves. Shown next to the manual target, never replacing it.
 - **Shown** on the Market explorer's item page (STORY-055) and in Stock (STORY-061).
 - Feeds *Sales speed instead of a fixed cap* (Later) for Today, which stays a separate story.
+
+### STORY-064 — Flood signals: crowding and overshoots
+
+Added 2026-10-13 (product owner: "when the game launches, I may need to consider market saturation as everyone's leveling up their professions"). Promoted from *Strategy ideas* (Later): *Crowding without seller names* and *Buy the overshoots*. Brownstone only; read-only over saved scans and the market metrics layer (ADDON-10); no schema change. Must be ready for launch on 4 November; it is built and tested on beta scans. Refine the thresholds with the product owner before handoff.
+
+As the owner, I want to see which markets are flooded or crashed right now, so that in the first weeks I buy cheap materials and avoid crafting into crowded markets.
+
+Acceptance (to refine):
+- **Crowding per item** from the newest scan and the scans before it, all from the same source and full market: listing count, units listed, the share of units in the largest stack, and how often the lowest buyout changed across recent consecutive scans (STORY-027's pairs and 12-hour gap). It is labelled *contested*, *steady* or *thin* by thresholds recorded in `requirements.md`, and the numbers behind the label are shown. Seller names are not available (ADDON-07); we never guess them.
+- **Overshoots:** an item's lowest buyout or market value against its own recent typical price (the median over the scans in a window recorded in `requirements.md`). Flag materials well **below** (cheap to buy, e.g. for profession levelling) and outputs well **above** (worth selling into). Show how many scans it rests on; too few says so instead of flagging. Launch-day history is short, so the window and the minimum number of scans are explicit settings, not hidden.
+- **Honest labels:** listings, not sales; no forecast; missing prices never zero; variants never pooled (ADDON-08); stale evidence labelled.
+- **Shown** on the Market explorer's item page and as two short lists in the Market place (most contested chain items; biggest overshoots both ways), each linking to the item page.
+- **Calculation** in a new `brownstone/` module composing `scan_metrics` reads and STORY-027's pairs; display in `views/nicegui_market.py`.
+- **Offline tests** for each label, each threshold boundary, too few scans, variants, scoping and stale evidence. **Real-data check** on the Forever beta source.
+
+### STORY-063 — Launch weeks: where to spend play time
+
+Added 2026-10-13 (product owner: "I need to figure out how to spend those first couple weeks effectively… whether it's using cheap mats to improve my professions or getting my characters leveled… or farming certain materials to sell or to craft myself"). Brownstone only. Draft: refine with the product owner before handoff, after STORY-064. It ties together answers that today sit on separate pages.
+
+As the owner, I want the main ways to spend a play session compared side by side on current evidence, so that I use my gaming time well in the first weeks when markets swing.
+
+To refine:
+- **The four activities:**
+  - **Crafting to sell:** Today's plan.
+  - **Levelling a profession:** STORY-052's cost to reach the next useful recipes, cheaper when STORY-064 flags its materials below typical.
+  - **Farming a material:** its sale value per hour at current prices. The gathering rate is the owner's estimate for now and is labelled as one; the ledger (STORY-034) could measure it later.
+  - **Levelling a character:** which recipes or professions it unlocks, valued only as what those recipes would earn on current prices, never invented.
+- **One comparison** per session length the owner chooses, using STORY-064's flood signals to demote crowded outputs and promote overshot materials, and STORY-027's removals where they exist.
+- **Honest limits:** early launch evidence is thin and moves fast, so each activity shows what it rests on and its age. No forecast. The owner decides; the page only orders the options.
+- **Where it lives:** probably Today (a *This session* view) or Team; decide while refining.
+- **Open:** whether to compare one character or the whole team, and how to value levelling that only pays off later.
 
 ### STORY-028 — Sellers and their supply chains
 
@@ -363,7 +376,7 @@ Acceptance:
 
 These are grouped by what unblocks them.
 
-**Seller capture** (found 2026-10-06; blocks STORY-028 and seller matching in STORY-027): the Forever beta's bulk scan returns no seller names (ADDON-07). Left blocked until after go-live (product owner, 2026-10-06): check whether live scans return seller names. Only if they don't, decide between another read-only way of getting them (such as per-item searches, at the cost of many more auction-house requests and a longer scan) and dropping or reshaping STORY-028.
+**Seller capture** (found 2026-10-06; blocks STORY-028): the Forever beta's bulk scan returns no seller names (ADDON-07). Left blocked until after go-live (product owner, 2026-10-06): check whether live scans return seller names. Only if they don't, decide between another read-only way of getting them (such as per-item searches, at the cost of many more auction-house requests and a longer scan) and dropping or reshaping STORY-028.
 
 **Snapshot coverage** (added 2026-10-07; needs a character with more bags and bank slots, possibly after go-live): STORY-032's checks that a new beta character can't reach. Every equipped bag slot full; several bank bags, including the last bank bag slot; the keyring and any reagent containers the client has; a full bank compared item by item; and bank-close reads with many bags open. Use the checklist in `addon/README.md` (*All containers* and *Bank open and close*) and record the client's `container_layout` values. Until then, container coverage is confirmed only for the containers actually tested.
 
@@ -376,7 +389,7 @@ These are grouped by what unblocks them.
 - **Gold per hour:** if the scaled minimum gain feels wrong in play, try a time-based minimum instead. Decide after using version 1.
 
 **Demand from your own scans** (needs repeated scans and STORY-018; optional sources from STORY-011b can add more data points):
-- *Removed listings* is now STORY-027 in Next.
+- *Removed listings* (STORY-027) is implemented; the time-left beta check is pending above.
 - **Did the board hold up?** Whether "potential craft" rows were still profitable at the next scan. A tiny check is possible with beta scans; it means something after one to two weeks of live scans.
 
 **Market timing and a daily brief** (requested 2026-10-04; needs post-launch history, not beta scans (STORY-017)). The goal is to know when to buy and sell each kind of item (materials, crafted goods, equipment), and to open the app to a short list of the day's priorities without being online all day.
@@ -438,8 +451,7 @@ Acceptance:
 - **How well the plan worked:** planned against actual buy and sale prices, how often Today's rows were done, and realized margin per craft.
 
 **Strategy ideas for the next grooming** (product owner, 2026-10-06; not scheduled; the session proposes, the product owner decides). The aim is to beat other gold makers on decisions, not speed: no sniping or undercut wars, and the addon stays read-only and manual. Several build on items above; say which data each needs and whether we will have it.
-- **Crowding without seller names:** while scans carry no sellers (*Seller capture*), measure how contested a market is from what we do have: listing count, the share of units in the largest stack, and how often the lowest price changes between scans. Steers away from crowded markets and towards steady, quiet ones that guides don't cover.
-- **Buy the overshoots:** early economies swing as gatherers and guide-followers flood the same items. Flag materials well below, and outputs well above, their own recent typical price. Extends *Stockpile* and *Volatility* above and needs the same history.
+- **Crowding** and **Buy the overshoots:** moved to Next on 2026-10-13 as STORY-064.
 - **Demand waves as the population levels:** leveling gear, bags and profession-leveling materials first, end-game consumables later. Show each wave from consistent scans instead of guessing from guides (*Market timing* above).
 - **Spread across many markets:** prefer several modest, steady markets over one contested one, for example a cap on how much of one market's supply Today plans to add. Needs sales speed (STORY-027, then the ledger).
 - **Average cost and procurement:** what each item in inventory cost on average, and buying below that average to drive it down. Decide whether *Cost basis* (FIFO lots, under *Ledger analytics*) also shows a weighted average, and combine it with *Market timing*'s cheapest-to-buy windows.

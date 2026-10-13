@@ -56,6 +56,7 @@ def render(config, catalogs, item: int | None = None):
     search_panel(result)
     if item is not None:
         show_item(result, explorer.item_page(result, item))
+    removal_list(result)
     movement(result)
 
 
@@ -95,6 +96,12 @@ def show_item(result, page):
     with ui.card().classes('bs-card').mark('market-item'):
         ui.label(page['name']).classes('text-2xl font-bold')
         prices(page)
+        try:
+            history = explorer.item_removals(config, page['item_id'])
+        except Exception as error:
+            ui.label(f'Unable to read removed listings: {error}. Use Data to check saved scans.')
+        else:
+            removal_history(history)
         if not page['in_chain']:
             ui.label('This item is in no compatible catalog. Price evidence only.')
             return
@@ -242,3 +249,63 @@ def comparison_detail(row):
                      f"{values['listings']} listings · {values['units']} units")
         ui.label('Later minus earlier: ' + ' · '.join(
             f"{key.replace('_', ' ')}: {change(value, key)}" for key, value in row['change'].items()))
+
+
+REMOVAL_LABELS = {'early': 'Removed early', 'expiry': 'Could have expired', 'unknown': 'Time left unknown'}
+
+
+def removal_pair_heading(pair):
+    ui.label(f"{pair['earlier']['finished_at']:%Y-%m-%d %H:%M:%S} UTC → "
+             f"{pair['later']['finished_at']:%Y-%m-%d %H:%M:%S} UTC · gap {pair['gap']}")
+
+
+def removal_counts(row):
+    theme.badge(row['variant_state'] + (f" · {row['variant_id']}" if row['variant_id'] else ''))
+    for key, label in REMOVAL_LABELS.items():
+        value = row[key]
+        ui.label(f"{label}: {value['listings']:,} listings · {value['units']:,} units")
+    ui.label(f"Listings without a buyout (excluded): earlier {row['without_buyout']['earlier']:,} · "
+             f"later {row['without_buyout']['later']:,}")
+    with ui.expansion('Matching evidence'):
+        ui.label(f"Item {row['item_id']} · variant {row['variant_id'] or 'none'} · state {row['variant_state']}")
+        for group in row['evidence']:
+            ui.label(f"Stack {group['quantity']} · whole-stack buyout {format_money(group['buyout'])} · "
+                     f"earlier {group['earlier']} → later {group['later']} · removed {group['removed']}")
+            for bucket in group['chosen_buckets']:
+                ui.label(f"Time-left bucket {bucket['time_left'] or 'unknown'}: {bucket['listings']} listings · "
+                         f"{REMOVAL_LABELS[bucket['category']]}")
+
+
+def removal_history(history):
+    with ui.column().classes('w-full').mark('item-removals'):
+        ui.label('Removed between scans').classes('text-xl font-bold')
+        ui.label('Removed early is an upper bound on sales: bought or cancelled. '
+                 'Time-left bounds use Classic Era evidence; Forever beta check pending.').classes('bs-note')
+        if history['note']:
+            ui.label(history['note'])
+        for pair in history['pairs']:
+            removal_pair_heading(pair)
+            if pair['skipped']:
+                theme.badge('Skipped: gap exceeds 12 hours', 'warn')
+                continue
+            for row in pair['items']:
+                removal_counts(row)
+            if not pair['items']:
+                ui.label('No listings for this item in either scan; no removals.')
+
+
+def removal_list(result):
+    removed = result['removals']
+    with ui.card().classes('bs-card').mark('market-removals'):
+        ui.label('Removed early in our chains').classes('text-xl font-bold')
+        ui.label('Upper bound on sales; cancellations and reprices can look the same. '
+                 'Largest identity per item; variants never pooled.').classes('bs-note')
+        if removed['note']:
+            ui.label(removed['note'])
+            return
+        removal_pair_heading(removed['pair'])
+        for row in removed['rows']:
+            item_link(result['config'], row['item_id'], row['item_name'])
+            removal_counts(row)
+        if not removed['rows']:
+            ui.label('No units removed early in our catalog chains.')

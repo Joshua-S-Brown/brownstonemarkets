@@ -638,3 +638,16 @@ Record actual API support and failures before 21 October; offline tests do not e
    `tests/test_journal.py`; never commit the full raw account file, private log or personal paths.
 5. Run `.venv/bin/pytest --cov`, `.venv/bin/ruff check .`, `.venv/bin/mypy` and `git diff --check`.
    Record results and measurements here; real-recording acceptance stays pending until this is done.
+
+
+### Removed listings time-left beta check (STORY-027) — pending
+
+UI-10 in `docs/requirements.md` uses Classic Era's legacy auction time-left bounds; Forever's
+raw 1–4 capture alone does not establish their durations. In the Forever beta, record client build,
+date, API family and the auction UI's time-left tooltip text for buckets 1–4. Check short (<30 min),
+medium (30 min–2 h), long (2–12 h), very long (>12 h), especially the 30-minute, 2-hour and 12-hour
+transitions. Use manually observed listings with known posting/expiry times where possible;
+retain raw scans and local evidence. Compare `GetReplicateItemTimeLeft` (or the guarded legacy API
+if available) with the UI labels; never request unattended scans. Record any different Forever
+bounds in UI-10 before interpreting removed-early counts as timing evidence. No exact expiry or
+sale can be confirmed from disappearance alone.
