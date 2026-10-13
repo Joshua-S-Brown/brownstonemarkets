@@ -155,9 +155,9 @@ def summary_sort(row):
 
 def build_progression(catalogs, observations, market, snapshot, character_data, character, *, now,
                       window=25, max_age_hours=24, auction_cut=.05, listings=None, metrics=None,
-                      recipe_graph=None):
+                      recipe_graph=None, board=None):
     """One character, full-market current scan; callers supply all evidence, the clock and optionally
-    a team RecipeGraph already built from the same catalogs, market and character data."""
+    a team RecipeGraph and its Action Board already built from the same catalogs, market and character data."""
     if type(window) is not int or not 5 <= window <= 100:
         raise ValueError('Reach window must be an integer from 5 to 100')
     if snapshot.get('source_id') != market['source_id']:
@@ -169,9 +169,9 @@ def build_progression(catalogs, observations, market, snapshot, character_data, 
     if state is None:
         return {'professions': [], 'unlisted': {}, 'freshness': None}
     graph = recipe_graph if recipe_graph is not None else team_graph(catalogs, character_data, market)
-    board = action_board.rank_catalogs(catalogs, observations, market, snapshot, now=now,
-                                      max_age_hours=max_age_hours, auction_cut=auction_cut,
-                                      recipe_graph=graph) if catalogs else None
+    if board is None and catalogs:
+        board = action_board.rank_catalogs(catalogs, observations, market, snapshot, now=now,
+                                          max_age_hours=max_age_hours, auction_cut=auction_cut, recipe_graph=graph)
     rows = {(r['catalog_id'], r['recipe_id']): r for r in board['rows']} if board else {}
     prices, _ = basis_prices(observations, 'cautious')
     groups, unlisted = _groups(catalogs, state)

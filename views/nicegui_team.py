@@ -4,8 +4,9 @@ from datetime import UTC, datetime
 
 from nicegui import app, ui
 
+from brownstone import hiring
 from brownstone.characters import build_characters
-from brownstone.money import format_money
+from brownstone.money import format_money, to_gold
 from brownstone.progression import build_progression
 from brownstone.recipe_catalogs import learning_label
 from brownstone.today_characters import available_characters
@@ -166,6 +167,7 @@ def render(config, catalogs):
     if not identities:
         theme.info_button('How these estimates work', lambda: team_info_unavailable(config, cards))
         ui.label('No characters imported for this source. Use Data → Import.')
+        hiring_section(catalogs, data, arguments)
         return
     session = app.storage.tab.setdefault('team-' + config['source_id'], {})
     selected = tuple(session.get('character', identities[0]))
@@ -183,6 +185,8 @@ def render(config, catalogs):
         ui.label('Look ahead · points within reach (5–100)').classes('bs-note')
         ui.label('Updates when you let go.').classes('bs-note')
     area = ui.column().classes('w-full')
+    # Built once: opened hire rows keep their detail; only the window-dependent comparison refreshes.
+    show_comparisons = hiring_section(catalogs, data, arguments, window=window)
 
     def update():
         with route_errors(area):
@@ -206,6 +210,7 @@ def render(config, catalogs):
                         roster_card(card, results.get(key, {'professions': []}),
                                     selected=key == identities[int(choice.value)],
                                     on_select=lambda e, k=key: choice.set_value(str(identities.index(k))))
+            show_comparisons(int(slider.value))
             with area:
                 if manifest is None:
                     ui.label('No snapshot for this source and market. Import a scan to estimate progression.')
@@ -272,3 +277,116 @@ def route_errors(area):
 def route_warnings(result):
     for warning in result.get("catalog_warnings", []):
         ui.label(warning).classes("bs-note")
+
+
+HIRING_LABELS = ('Current-scan prices are not a forecast; listings never sales; sales speed and demand unknown; '
+                 'beta prices; estimated yellow chances and tier levels unconfirmed on Forever. '
+                 'Costs give no credit for selling results. No gathering income. Tier fees not included (unknown).')
+
+
+def hiring_section(catalogs, data, arguments, *, window=25):
+    """Render the section; return a callable that re-renders the comparison card for a new window."""
+    ui.label('Add a character?').classes('text-2xl font-bold').mark('hiring-section')
+    ui.label(HIRING_LABELS).classes('bs-note')
+    if arguments is None:
+        ui.label('Import a current scan to compare new hires.')
+        return lambda window: None
+    keys = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut')
+    try:
+        context = hiring.prepare(catalogs=catalogs, character_data=data,
+                                 **{k: arguments[k] for k in keys})
+        result = hiring.summaries(context, window=window)
+    except ValueError as error:
+        ui.label(f'Unable to compare new hires: {error}')
+        return lambda window: None
+    if context['board']['freshness']:
+        freshness_caption(context['board']['freshness'], arguments['market'], banner=False)
+    for warning in context['catalog_warnings']:
+        ui.label(warning).classes('bs-note')
+    with ui.element('div').classes('bs-details'):
+        with ui.column().classes('w-full'):
+            for row in result['rows']:
+                hiring_row(context, row)
+            for name in result['no_catalog']:
+                ui.label(hiring.profession_title(name) + ' · ' + hiring.NO_CATALOG).classes('bs-note')
+        card = ui.card().classes('bs-card')
+    shown = [None]
+
+    def show(new_window):
+        if new_window == shown[0]:
+            return
+        comparisons = result['comparisons'] if shown[0] is None else hiring.comparisons(context, window=new_window)
+        shown[0] = new_window
+        card.clear()
+        with card:
+            hiring_comparisons(comparisons, new_window)
+
+    show(window)
+    return show
+
+
+def hiring_comparisons(comparisons, window):
+    ui.label('Instead of a new hire').classes('text-xl font-semibold')
+    ui.label('Two primary professions: Classic Era limit, unconfirmed on Forever. '
+             'Comparison only; no recommendation to drop a profession. Secondary skills use no slot. '
+             f'Best reachable profit within {window} points (CRAFT-11).').classes('bs-note')
+    for character in comparisons:
+        ui.label(' · '.join(character['character'])).classes('font-semibold')
+        for group in character['professions']:
+            best = group['best']
+            ui.label(hiring.profession_title(group['profession']) + ' · ' +
+                     money(best['profit_copper'] if best else None) + ' per craft')
+    if not comparisons:
+        ui.label('No character has two evidenced primary professions.')
+
+
+def hiring_row(context, row):
+    name = hiring.profession_title(row['profession'])
+    best = row['best']
+    cost = money(row['estimate']['cost_copper']) if row['estimate']['complete'] else 'incomplete'
+    label = (name + ' · best at 300: ' + money(best['profit_copper'] if best else None)
+             + ' per craft · cost to 300: ' + cost)
+    holders = ('Team: ' + ('; '.join(' · '.join(h['character']) +
+               f" · {h['rank'] if h['rank'] is not None else 'unknown'} / "
+               f"{h['max_rank'] if h['max_rank'] is not None else 'unknown'}" for h in row['holders'])
+               or 'no evidenced holder'))
+    with ui.expansion(label, caption=holders).mark('hire-' + row['profession']) as exp:
+        area = ui.column().classes('w-full')
+    loaded = False
+
+    def opened(e):
+        nonlocal loaded
+        if not e.value or loaded:
+            return
+        with area:
+            hiring_detail(hiring.detail(context, row))
+        loaded = True
+
+    exp.on_value_change(opened)
+
+
+def hiring_detail(result):
+    ui.label(f"New hire: rank 1, no known recipes · {result['needs_pattern']} needs pattern or other source · "
+             f"{result['unknown_source']} learning source unknown")
+    for tier in result['tiers']:
+        level = (f" · character level {tier['required_level']} (Classic Era; unconfirmed on Forever)"
+                 if tier['required_level'] is not None else '')
+        ui.label(f"Rank {tier['cap']}" + level).classes('text-lg font-semibold')
+        ui.label('Cumulative cost from rank 1: ' + estimate_text(tier['estimate']))
+        ui.label(tier['tier_fees']).classes('bs-note')
+        best = tier['best']
+        ui.label('Best trainer recipe: ' + (best['output_name'] + ' · ' + money(best['profit_copper'])
+                                          + ' per craft' if best else 'no valued board recipe'))
+        feeds = tier['feeds']
+        ui.label(f"What it feeds: {feeds['count']} current team board rows become cheaper" if feeds['count']
+                 else 'What it feeds: feeds nothing')
+        for saving in feeds['top']:
+            ui.label(f"{saving['material']} → {saving['recipe']} · {money(saving['saved_copper'])} saved per craft")
+        with ui.expansion('Cost steps to ' + str(tier['cap'])):
+            steps = table([{'Rank': s['rank'], 'Recipe': s['recipe'], 'Expected crafts': s['expected_crafts'],
+                            'Cost (g)': to_gold(s['cost_copper']),
+                            'Training (g)': to_gold(s['training_cost_copper'])}
+                           for s in tier['estimate']['steps']], label='New hire cost steps')
+            for column in ('Cost (g)', 'Training (g)'):
+                steps.add_slot('body-cell-' + column, '<q-td :props="props">'
+                               '{{ props.value === null ? "unknown" : Number(props.value).toFixed(4) }}</q-td>')

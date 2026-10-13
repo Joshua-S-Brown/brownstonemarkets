@@ -597,6 +597,40 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
     Today's existing plan-reset note accompanies discarding pre-change choices and Queue ticks.
     Streamlit gains no new features; board calls without team evidence retain catalog-local routes.
 
+- **CRAFT-13 Add a character? (STORY-059):** Team compares a hypothetical rank-one new hire,
+  knowing no recipes, for each compatible catalog profession, including professions already held.
+  Show existing holders/rank/max using CRAFT-11 attribution. Professions without catalogs appear
+  once at the bottom: *no catalog: gathering income and supply are not modelled*.
+  - Only recipes whose learning evidence includes trainer code 6 count; recipes with other learning
+    evidence are counted as *needs pattern or other source*, and recipes with no learning evidence as
+    *learning source unknown* (never assumed trainer or starter). When the walk stops, its reason adds
+    how many unknown-source recipes sit at or below that rank. For caps 75, 150, 225 and 300, show cumulative cost from
+    rank 1 using CRAFT-11's unchanged cheapest skill-up walk, training charged once and incomplete
+    reasons retained. Own catalog-local material routes contain trainer recipes plus recipes a current
+    team member already makes (Known or Train now); the hire's own skill-ups stay trainer-only; other
+    professions' routes require current-team evidence under CRAFT-03/12. A new hire never makes
+    another profession's materials. Tier fees are absent from catalogs: *tier fees not included
+    (unknown)*. Tier levels reuse UI-12's Classic Era ladder, unconfirmed on Forever.
+  - Best current per-craft profit at each cap comes from current Action Board rows for trainer
+    recipes with required skill at most the cap. *What it feeds* compares CRAFT-12 costs after adding
+    the hire as a maker of that tier's trainer recipes with the current team's board: count cheaper
+    rows that are Known or Train now for a team member, and show the three largest per-craft savings
+    with material, consuming recipe and copper saved. No feeds says *feeds nothing*. Savings are
+    cost reductions; no gathering income, sales speed or intermediate profit is assumed.
+  - Beside the rows, list characters with two evidenced primary professions (Classic Era's limit,
+    unconfirmed on Forever) and their professions' best CRAFT-11 reachable profits at Team's window.
+    Cooking, First Aid and Fishing take no primary slot. Comparison only, no drop recommendation.
+    Slot-only ID evidence checked 2026-10-13 against Wowhead Classic skill-page identities:
+    [Herbalism 182](https://www.wowhead.com/classic/skill=182/herbalism),
+    [Skinning 393](https://www.wowhead.com/classic/skill=393/skinning),
+    [Fishing 356](https://www.wowhead.com/classic/skill=356/fishing). Other IDs reuse Character
+    eligibility's profession table; these mappings add no gathering model or catalog values.
+  - Sort by best profit at 300 descending, then complete before incomplete costs, cost ascending,
+    then name; no profit last. Label once: current-scan prices are not a forecast, listings never
+    sales, sales speed/demand unknown, beta prices, estimated yellow chances and unconfirmed tier
+    levels. Integer copper, MONEY-02 display. Per-profession tier/feed detail loads when opened.
+    No changes to Today, board ranking, policy/Today versions, storage or price queries.
+
 ### Watchlist (STORY-048)
 
 - **Entries and storage:** one base-item entry per positive item ID, with an optional note and at

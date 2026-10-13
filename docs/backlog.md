@@ -42,10 +42,10 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-065 farming rates from play sessions (addon + Brownstone; needs its beta discovery, in the play session before 21 October)
-2. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
-3. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-4. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
+1. STORY-059 should we add a character? (Brownstone; medium; refined 2026-10-13, ready for handoff)
+2. STORY-065 farming rates from play sessions (addon + Brownstone; needs its beta discovery, in the play session before 21 October)
+3. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
+4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
 5. STORY-035 auction deposits (needs a beta check)
 6. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
 7. STORY-036 vendor price ceilings
@@ -69,11 +69,23 @@ STORY-053 sets up the navigation first, so each later story has a home. New feat
 
 ### STORY-059 — Should we add a character?
 
-Added 2026-10-12 (product owner: "or if I need to get another character with a different profession stack"). Brownstone only. Draft: refine with the product owner before handoff; depends on STORY-052.
+Added 2026-10-12 (product owner: "or if I need to get another character with a different profession stack"). **Refined 2026-10-13** with the product owner: one row per profession as a new hire, every training tier, and supply shown as what a profession feeds, with no gathering income. Brownstone only; no schema change, no new price query, and no change to Today's plan, the board's ranking, `POLICY_VERSION` or `today_version`.
 
-As the owner, I want to compare what our team can make now with what one more character, or a profession change, would add, so that I know whether to invest in a new employee and with which professions.
+As the owner, I want to compare what one more character with a given profession would add to the team, so that I know whether to invest in a new employee and with which professions.
 
-To refine: which professions and ranks a new character is assumed to reach (and by when); how its profit is shown when nobody on the team has the profession (catalog recipes priced on the current snapshot, with STORY-052's cost-to-reach estimate from rank 1); whether profession pairs that feed each other (gathering → crafting) are scored together; honest labels (current prices, no sales speed, Unknown never assumed). Built in the new app's Team place.
+Acceptance:
+- **Where:** an *Add a character?* section in the new app's Team place (`views/nicegui_team.py`), below the roster. Calculations live in a framework-free `brownstone/` module; per-profession detail is computed when its row is opened, like Market's history.
+- **One row per profession** with a catalog compatible with the selected source (CRAFT-05). Professions the team already has still appear, with who has them and at what rank/max (CRAFT-11 attribution). Herbalism, Skinning and any profession without a catalog appear once at the bottom: *no catalog: gathering income and supply are not modelled* (until STORY-065).
+- **A new hire** starts at rank 1 knowing no recipes. Only trainer-learnable recipes count (learning source includes 6, CRAFT-08); the rest are counted as *needs pattern or other source*, never assumed. Recipe training costs are charged once; an unknown one makes that estimate incomplete with the reason, never free.
+- **Each training tier** (caps 75, 150, 225, 300): the estimated cost from rank 1 to the tier's cap, cumulative, using CRAFT-11's cheapest skill-up walk unchanged (same colour rules, yellow chance labelled unconfirmed, expected copper rounded up per point; gaps and missing prices make it incomplete). Also the best current per-craft profit among trainer-learnable recipes whose required skill is at most that cap, from the Action Board's rows (CRAFT-05). Show the tier's character level (10, 20, 35: UI-12's Classic Era values, labelled unconfirmed on Forever). Tier training fees are not in the catalogs: say *tier fees not included (unknown)*, never show them as zero.
+- **Materials** use CRAFT-03/12 routes with the current team's evidence, plus the new hire's own profession's recipes as catalog-local routes. A new hire never makes another profession's materials.
+- **What it feeds:** for each tier, how many of the team's current board rows (Known or Train now for someone on the team) would become cheaper if the new hire could make that tier's trainer-learnable recipes, and the three largest per-craft savings with the material, the consuming recipe and the copper saved, using CRAFT-12 routing. Savings are cost reductions, never profit: no gathering income, no sales speed. A profession that feeds nothing says so.
+- **Instead of a new hire:** each team character with two primary professions (Classic Era's limit, labelled unconfirmed on Forever) is listed with their current professions' best profit from CRAFT-11, beside the rows, for comparison only. No recommendation to drop a profession; secondary skills (Cooking, First Aid, Fishing) don't take a slot.
+- **Sort and labels:** professions by best profit at 300 descending, then complete cost estimates before incomplete, then cost ascending, then name; rows without any profit last. One label block: current-scan prices are not a forecast, listings never sales, sales speed and demand unknown, beta prices, estimated yellow chances and unconfirmed tier levels. Integer copper throughout, displayed with `brownstone/money.py`.
+- **Rule:** record it as CRAFT-13 in `requirements.md`, next to CRAFT-11 and CRAFT-12.
+- **Offline tests:** a new hire with only trainer recipes (a pattern recipe excluded and counted); cumulative tier costs equal CRAFT-11's walk from rank 1; an unknown training cost and a missing material price each make the estimate incomplete, never free; tier fees labelled, never zero; best profit per tier limited by required skill; *what it feeds* counts and top savings on a two-profession fixture (bar → armour), and *feeds nothing* on an unrelated one; a profession the team already has shows who has it; the comparison list shows only two-primary characters and leaves out secondary skills; no catalog gives the bottom note; sort order including ties; Today's plan, the board's rows and `today_version` unchanged (a test proves it); scoping (another market's or rules version's catalog never joins).
+- **Real-data check** on the Forever beta source: list the rows with their tier costs, best profits and top feeds, and say which are incomplete and why.
+- **Docs:** CRAFT-13 in `requirements.md`; the module and the Team section in `design.md`; `status.md`.
 
 ### STORY-031 — Item info pass after a scan
 

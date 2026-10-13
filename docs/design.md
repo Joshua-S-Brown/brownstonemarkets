@@ -49,7 +49,7 @@ that a source/configuration change discards. ImportPage replaces the review with
 | Place | New app | Built by |
 | --- | --- | --- |
 | Today | Today plan with cards | STORY-054 |
-| Team | Roster, progression, and later *should we add a character?* | STORY-052, STORY-059 |
+| Team | Roster, progression, and *Add a character?* | STORY-052, STORY-059 |
 | Market | Item explorer with supply chains and what moved | STORY-055 |
 | Data | Import (TSM refresh stays in the old app) | STORY-058 |
 
@@ -95,6 +95,7 @@ brownstone/                     importable without Streamlit or NiceGUI
   recipe_import.py, recipe_catalogs.py, selection_files.py   saved page → catalog TOML; catalog
                                 discovery, status and writes; in-place selection edits
   progression.py                Team reach windows, current board values and skill-up cost estimates
+  hiring.py                     New-hire cumulative costs, tier profits and team feed savings
   today*.py                     Today plan, confidence, data, settings, funds, eligibility, loading, session
   watchlist.py                  watchlist entries, evidence and hit text
   beta_report.py, beta_evidence.py, beta_markdown.py   beta evidence report
@@ -501,6 +502,33 @@ in `estimate_cost`. Training is charged once per catalog/recipe in the chosen st
 reuses Today's quote/sell projections and `today_confidence` for a single craft, without changing
 board profit or the progression estimate; insufficient quoted supply is Low. No batch funding,
 reservation, output sales credit or new learning/status rule.
+
+### Hiring comparison (STORY-059)
+
+Rules live in CRAFT-13 (`requirements.md`). Framework-free `hiring.prepare` accepts the same
+scoped scan/character evidence as progression and builds the unchanged current-team board once.
+`summaries` returns one compatible profession row, existing holders, a rank-300 `estimate`, nullable
+`best`, and one shared `skillup_walk` from rank 1; no-catalog professions and two-primary comparisons
+are separate lists. `comparisons` reuses `build_progression` at Team's current window. Exact recipe
+IDs and evidenced skill IDs attribute holders and primary slots; display names do not attribute.
+
+New-hire recipe evidence is synthetic, all trainer recipes unlearned. Cost projections retain
+current-team routes elsewhere; the hire's own local routes keep trainer recipes plus any the team
+already makes, while its skill-up entries stay trainer-only. Summary
+rank-300 estimates are eager because costs break sorting ties; `detail` reuses the walk's prefixes
+for all tiers and creates tier-specific `RecipeGraph` maker maps only when opened. `feeds` adds
+trainer makers up to each cap, evaluates eligible current board roots through the existing integer
+cost walker and compares with their current costs. Unknown baseline costs and unsupported routes
+produce no claimed savings. Top entries are consuming board rows with their total per-craft cost
+reduction and the hire-made intermediate material(s), avoiding double counting nested savings.
+
+`views/nicegui_team.py` builds *Add a character?* once, below the roster and the selected
+character's next steps, using the shared theme's
+`bs-details` columns and comparison card. Each profession expansion computes detail on its first
+open and keeps it while the page is open; character and window changes re-render only the
+comparison card (passing the prepared board to `build_progression`), and only when the window changes. Empty character evidence still permits the hiring
+comparison; absent scans show guidance. All evidence comes from the existing Team loading path;
+no new SQL, calculation I/O, schema, Streamlit or Today state changes.
 
 ## Beta evidence report (STORY-042)
 

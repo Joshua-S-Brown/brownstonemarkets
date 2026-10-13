@@ -3,13 +3,13 @@
 Current implemented state, limitations and how to verify. History, including dated real-data checks
 and beta play sessions, lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-13 (STORY-015b)._
+_Last updated 2026-10-13 (STORY-059)._
 
 ## Implemented
 
 Rules live in `requirements.md` and contracts in `design.md`; each bullet names where.
 
-- **Main app (NiceGUI, UI-07):** Today, Team (roster and progression), Market (item explorer and scan movement) and
+- **Main app (NiceGUI, UI-07):** Today, Team (roster, progression and hiring comparison), Market (item explorer and scan movement) and
   Data → Import. Start it from `Start Brownstone.command` / `.cmd` or `launch_nicegui.py`
   ([New app](#new-app)). Shared light theme, wrapping header navigation, page information dialogs
   and Today settings behind the gear (STORY-060, UI-08). Native text selection is enabled.
@@ -57,6 +57,16 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   profession comparison and per-point material/training estimates on demand.
   Current Action Board profit, reused Today statuses/confidence, incomplete reasons and cap guidance;
   yellow chances remain an unconfirmed Classic assumption. Streamlit Characters is unchanged.
+- **Add a character? (STORY-059, CRAFT-13):** Team shows compatible professions as rank-one
+  hires, existing holders, cumulative costs to all four caps and current trainer-recipe profits.
+  Tier details open lazily, with current-team feed counts/top per-craft cost savings. Beside them,
+  two-primary characters show CRAFT-11 best reachable profits. No-catalog professions, unknown tier
+  fees, incomplete cost reasons and unconfirmed tier levels stay explicit. Today/board versions
+  remain unchanged. Verify with `tests/test_hiring.py` and `tests/ui_trial/test_nicegui_hiring.py`.
+  **Limitation (Forever beta, 2026-10-13):** only Tailoring, Alchemy and Blacksmithing produce cost
+  estimates. The other six catalogs give starter recipes (Linen Bandage, Rough Blasting Powder, Light
+  Leather, Runed Copper Rod) no learning source, and Mining records Smelt Copper at skill 25, so those
+  walks stop at rank 1 until catalog evidence is added.
 - **Market explorer (STORY-055, UI-09):** name/ID search across the newest scoped snapshot;
   addressable item pages with prices, listings/units, vendor references, made-from routes and nested
   quantities, used-in recipes sorted by Board profit, team eligibility and skill-up bands. Compatible
@@ -136,8 +146,9 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,343 passed and one explicit PowerShell-unavailable skip (1,344 run where
-PowerShell exists, as in Windows CI), offline, at 96.50% coverage with branches enabled;
+Expected on this Mac: 1,369 passed and one explicit PowerShell-unavailable skip (1,370 run where
+PowerShell exists, as in Windows CI), offline, at or above the 88% branch-coverage floor.
+The full suite measures 96.58%;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the
