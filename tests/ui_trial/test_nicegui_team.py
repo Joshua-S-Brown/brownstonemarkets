@@ -115,7 +115,9 @@ async def test_no_snapshot_roster_missing_choice_and_evidence_errors(user, tmp_p
 
     monkeypatch.setattr('brownstone.professions.latest_data', broken)
     await user.open('/?place=Team')
-    await user.should_see('Unable to read Team evidence: fixture unreadable')
+    # Evidence is read once; its failure is explained, never retried by the roster cards.
+    await user.should_see('Unable to read character evidence: fixture unreadable')
+    await user.should_see('No characters imported for this source')
 
 
 async def test_unknown_bags_empty_history_recipes_unknown_and_pattern(user, tmp_path, monkeypatch):

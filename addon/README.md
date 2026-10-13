@@ -1,4 +1,4 @@
-# Brownstone Scan 0.11.3
+# Brownstone Scan 0.12.0
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -32,25 +32,18 @@ game doesn't offer and carry on.
 `addon/BrownstoneScan` into `_classic_beta_/Interface/AddOns/` as in step 1 of *Windows scans to the
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
-1. **Farming (STORY-065), on Keenagen:** mine about 10 nodes in one zone, then about 5 in another
-   zone. Kill and loot 3 or 4 mobs. Open one container if you have one (a clam, a lockbox or a bag
-   of loot). Loot normally; auto-loot is fine.
-2. **Trainers (tier levels):** with Keenagen, visit the Mining trainer and open the training list,
-   then close it. Log in to Basilly and do the same at the Tailoring trainer. If any other trainer is
-   on your way (Engineering, First Aid, Cooking), open it too.
-3. **Bank (STORY-032):** on Basilly, open the bank, put one item in, take one out, close it.
-4. **Professions (STORY-041):** open Tailoring, close it, and open it again. Craft one cheap thing.
-5. **Auction house (STORY-033, STORY-040, STORY-035):** buy one cheap item. Post two small stacks
-   of something cheap for the shortest time, then cancel one of them. Open the Auctions tab once
-   before posting and once after.
-6. **Mail (STORY-033):** send a cheap item and a few copper to Keenagen. Later, log in to Keenagen
-   and take it. Open the mailbox on Basilly too and take anything waiting (sold or returned items).
-7. **Vendor:** buy one cheap reagent and sell one grey item.
-8. **Scan the auction house** once, as usual, then `/reload`.
-9. **Log out** of the last character and run the drop script.
+**Done in the 2026-10-13 session** (addon 0.11.3, checked with the beta report): farming and loot,
+trainer lists, crafting in Cooking/Mining/Tailoring, fishing, mail both ways, vendor buy/sell, posting
+(2h and 8h) and two scans. Still to do, with addon **0.12.0**:
 
-Next login, collect anything that sold or expired from the mailbox and log out again: Claude checks
-that file too.
+1. **Bank (STORY-032):** on any character, open the bank, put one item in, take one out, close it.
+2. **Auction house (STORY-033, STORY-040, STORY-035):** buy one cheap item. Post one cheap item,
+   open the Auctions tab, then cancel it.
+3. **Repair:** let something take a little damage and repair it at a vendor.
+4. **Profession switch (0.12.0 fix):** with Arille, open Cooking, then cast Smelting (or fish) so the
+   window switches, and craft or fish until you gain a skill point. Close it.
+5. **Mailbox:** collect anything sold or expired from today's posts.
+6. **Scan the auction house** once, `/reload`, then log out and run the drop script.
 
 ## Run a scan
 
@@ -117,7 +110,7 @@ After `/reload` or logout:
 ```
 
 It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
-`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.11.3** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.12.0** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |

@@ -28,7 +28,7 @@ def test_skills_both_apis_level_missing_and_raw_tuples():
     ''')
     fire(g, "PLAYER_LOGOUT")
     record = python_value(g.BrownstoneScanDB.snapshots)[-1]
-    assert record["level"] == 22 and record["addon_version"] == "0.11.3"
+    assert record["level"] == 22 and record["addon_version"] == "0.12.0"
     assert record["skills"]["legacy"]["rows"][1]["rank"] == 55
     assert "skill_id" not in record["skills"]["legacy"]["rows"][1]
     assert record["skills"]["modern"]["indexes"]["n"] == 3
@@ -322,7 +322,15 @@ def test_craftable_count_changes_alone_save_no_new_list(craft):
     assert len(entries(g)) == 1
     lua.execute('available = 2; rank = 21')
     fire(g, event + "_UPDATE")
-    assert len(entries(g)) == 2 and entries(g)[-1]["known_recipes"]["rows"][0]["craftable"] == 2
+    # A skill-up alone saves a small rank record, never the whole list again (addon 0.12.0).
+    assert len(entries(g)) == 2 and "known_recipes" not in entries(g)[-1]
+    assert {k: entries(g)[-1]["profession_rank"][k] for k in ("name", "rank", "max_rank")} == {
+        "name": "Engineering", "rank": 21, "max_rank": 75}
+    fire(g, event + "_UPDATE")
+    assert len(entries(g)) == 2
+    lua.execute('rank = 22')
+    fire(g, event + "_UPDATE")
+    assert entries(g)[-1]["profession_rank"]["rank"] == 22
 
 
 def test_closed_window_updates_ignored_and_unchanged_show_still_journalled():
@@ -673,3 +681,65 @@ def test_forever_first_opening_empty_list_is_not_ready_then_data_source_list_sav
     lua.execute('C_TradeSkillUI.IsTradeSkillReady = function() return false end')
     fire(g, "TRADE_SKILL_CLOSE")
     assert [k for k in ("known_recipes", "trade_skill_read") if k in entries(g)[-1]] == []
+
+
+def test_profession_switch_stale_rows_skipped_rank_only_saved_small_and_imported(tmp_path):
+    from datetime import UTC, datetime
+
+    lua, g = modern_client()
+    lua.execute('''ids, title, skill = {2963, 3755, 999}, "Tailoring", 7
+        C_TradeSkillUI.GetAllRecipeIDs = function() return ids end
+        C_TradeSkillUI.GetBaseProfessionInfo = function()
+            return {professionName=title, skillLevel=skill, maxSkillLevel=75, professionID=197}
+        end''')
+    fire(g, "TRADE_SKILL_SHOW")
+    # Forever renames the window first: Mining with Tailoring's exact rows is stale, never a Mining list.
+    lua.execute('title = "Mining"')
+    fire(g, "TRADE_SKILL_SHOW")
+    stale = entries(g)[-1]
+    assert "known_recipes" not in stale
+    assert stale["trade_skill_read"] == {"stale_rows": True, "listed_profession": "Mining",
+                                         "rows_profession": "Tailoring", "recipe_id_count": 3}
+    lua.execute('ids = {2657}')
+    fire(g, "TRADE_SKILL_DATA_SOURCE_CHANGED")
+    assert entries(g)[-1]["known_recipes"]["name"] == "Mining"
+    lua.execute('skill = 9')
+    fire(g, "TRADE_SKILL_LIST_UPDATE")
+    assert entries(g)[-1]["profession_rank"]["rank"] == 9 and "known_recipes" not in entries(g)[-1]
+    fire(g, "PLAYER_LOGOUT")
+    raw = entries(g)
+    path = write(tmp_path / "switch.lua", raw, python_value(g.BrownstoneScanDB.snapshots))
+    config = addon_source(tmp_path / "data", path)
+    import_scans(config, now=datetime.fromtimestamp(raw[-1]["captured_at"], UTC))
+    state = next(iter(professions.latest_data(config).values()))
+    assert sorted(state["recipes"]) == ["Mining", "Tailoring"]
+    mining = state["recipes"]["Mining"]["known_recipes"]
+    assert [r["recipe_id"] for r in mining["rows"]] == [2657] and mining["rank"] == 9
+    assert state["recipes"]["Tailoring"]["known_recipes"]["rank"] == 7
+
+
+def test_older_addon_stale_list_ignored_on_import(tmp_path):
+    cooking = {"name": "Cooking", "api": "C_TradeSkillUI", "recipe_ids": [2538, 2540], "rank": 2, "max_rank": 75,
+               "rows": [{"recipe_id": 2538, "learned": True}, {"recipe_id": 2540, "learned": True}]}
+    stale = cooking | {"name": "Fishing", "rank": 1}
+    fishing = {"name": "Fishing", "api": "C_TradeSkillUI", "recipe_ids": [7620], "rank": 1, "max_rank": 75,
+               "rows": [{"recipe_id": 7620, "learned": False}]}
+    records = [recipes("a", sequence=3, known_recipes=cooking), recipes("b", sequence=4, known_recipes=stale)]
+    config = addon_source(tmp_path / "data", write(tmp_path / "old.lua", records))
+    import_scans(config, now=NOW)
+    state = next(iter(professions.latest_data(config).values()))
+    assert sorted(state["recipes"]) == ["Cooking"]  # the stale list never becomes Fishing
+    write(tmp_path / "old.lua", [*records, recipes("c", sequence=5, known_recipes=fishing),
+                                 recipes("d", sequence=6, known_recipes=fishing | {"name": "Mining", "rank": 9})])
+    import_scans(config, reviewed=preview_scans(config, now=NOW), now=NOW)
+    state = next(iter(professions.latest_data(config).values()))
+    assert sorted(state["recipes"]) == ["Cooking", "Fishing"]
+    assert [r["recipe_id"] for r in state["recipes"]["Fishing"]["known_recipes"]["rows"]] == [7620]
+    assert len(state["observations"]) == 4  # stale lists still count as activity
+
+
+def test_profession_rank_record_validated():
+    with pytest.raises(ValueError, match="rank"):
+        professions.validate_recipes({"profession_rank": {"name": "Mining", "rank": -1}})
+    with pytest.raises(ValueError, match="table"):
+        professions.validate_recipes({"profession_rank": 5})

@@ -10,6 +10,10 @@ from .recipe_catalogs import CONFIG_DIR, find_catalogs, profession_title
 from .scans import _list, _utc
 from .storage import has_table
 
+LIST = "json_extract(record_json, '$.known_recipes') IS NOT NULL"
+ORDER = ("ORDER BY captured_at, TRY_CAST(json_extract_string(record_json, '$.sequence') AS BIGINT) "
+         "NULLS FIRST, entry_id")
+
 
 def latest_data(config) -> dict[tuple, dict]:
     """Share scoped snapshots and craft projections with the Characters page."""
@@ -30,25 +34,65 @@ def latest_data(config) -> dict[tuple, dict]:
     scope, params = scope_predicate(config)
     with duckdb.connect(str(path), read_only=True) as db:
         if has_table(db, "character_journal"):
-            records = db.execute(
-                f"SELECT character, character_realm, character_faction, record_json, machine "
-                f"FROM character_journal WHERE {scope} ORDER BY captured_at, "
-                "TRY_CAST(json_extract_string(record_json, '$.sequence') AS BIGINT) "
-                "NULLS FIRST, entry_id",
-                params,
-            ).fetchall()
-            for name, realm, faction, raw, machine in records:
-                state = characters.setdefault(
-                    (name, realm, faction), {"bags": {}, "recipes": {}, "history": [], "observations": []}
-                )
-                record = json.loads(raw)
-                state["observations"].append((record, machine))
-                if record.get("family") == "craft":
-                    _observe(state, record)
+            _read_journal(db, scope, params, characters)
     catalog_ids = _catalog_recipe_ids(config)
     for state in characters.values():
         _project_crafts(state, catalog_ids)
     return characters
+
+
+def _read_journal(db, scope: str, params: list, characters: dict) -> None:
+    """Small records in full; recipe lists (large) only as the newest trustworthy list per profession."""
+    rows = db.execute(
+        f"SELECT character, character_realm, character_faction, machine, entry_id, "
+        f"CASE WHEN {LIST} THEN NULL ELSE record_json END, "
+        "json_extract_string(record_json, '$.known_recipes.name'), "
+        "md5(json_extract(record_json, '$.known_recipes.recipe_ids')::VARCHAR), "
+        "TRY_CAST(json_extract_string(record_json, '$.captured_at') AS BIGINT), "
+        "TRY_CAST(json_extract_string(record_json, '$.sequence') AS BIGINT) "
+        f"FROM character_journal WHERE {scope} {ORDER}",
+        params,
+    ).fetchall()
+    previous: dict[tuple, tuple] = {}
+    winners: dict[tuple, tuple] = {}
+    for name, realm, faction, machine, entry_id, raw, list_name, ids, captured, sequence in rows:
+        key = (name, realm, faction)
+        state = characters.setdefault(key, {"bags": {}, "recipes": {}, "history": [], "observations": []})
+        if raw is not None:
+            record = json.loads(raw)
+            state["observations"].append((record, machine))
+            if record.get("family") == "craft":
+                _observe(state, record)
+            continue
+        order = (-1 if captured is None else captured, -1 if sequence is None else sequence)
+        state["observations"].append(({"captured_at": captured, "sequence": sequence, "family": "craft"}, machine))
+        if _stale(previous.get(key), list_name, ids):
+            continue
+        if ids is not None:
+            previous[key] = (list_name, ids)
+        if isinstance(list_name, str) and order > winners.get((key, list_name), ((-1, -1), None))[0]:
+            winners[(key, list_name)] = (order, entry_id)
+    if winners:
+        chosen = [entry_id for _, entry_id in winners.values()]
+        full = dict(db.execute(f"SELECT entry_id, record_json FROM character_journal WHERE {scope} "
+                               "AND list_contains(?, entry_id)", [*params, chosen]).fetchall())
+        for (key, list_name), (_, entry_id) in winners.items():
+            characters[key]["recipes"][list_name] = _with_rank(json.loads(full[entry_id]),
+                                                               characters[key].get("ranks", {}).get(list_name))
+
+
+def _stale(previous: tuple | None, name, ids) -> bool:
+    """Forever renames the window before its rows change: another profession's exact recipe IDs are stale."""
+    return ids is not None and previous is not None and previous[0] != name and previous[1] == ids
+
+
+def _with_rank(record: dict, rank: dict | None) -> dict:
+    """A newer rank-only record (addon 0.12.0) confirms the unchanged list at its own time and rank."""
+    if rank is None or _order(rank) <= _order(record):
+        return record
+    update = {k: rank["profession_rank"][k] for k in ("rank", "max_rank") if k in rank["profession_rank"]}
+    return record | {"captured_at": rank["captured_at"], "sequence": rank.get("sequence"),
+                     "known_recipes": record["known_recipes"] | update}
 
 
 def latest_rows(config) -> list[dict]:
@@ -62,6 +106,11 @@ def _order(record: dict) -> tuple:
 def _observe(state: dict, record: dict) -> None:
     if _crafted_id(record) is not None:
         state.setdefault("crafts", []).append(record)
+    rank = record.get("profession_rank")
+    ranks = state.setdefault("ranks", {})
+    if isinstance(rank, dict) and isinstance(rank.get("name"), str) and _order(record) > _order(
+            ranks.get(rank["name"], {})):
+        ranks[rank["name"]] = record
     recipes = record.get("known_recipes")
     if isinstance(recipes, dict) and isinstance(recipes.get("name"), str):
         previous = state["recipes"].get(recipes["name"], {})
@@ -262,6 +311,12 @@ def validate_skills(record: dict) -> None:
 
 
 def validate_recipes(record: dict) -> None:
+    rank = record.get("profession_rank")
+    if rank is not None:
+        if not isinstance(rank, dict):
+            raise ValueError("Profession rank must be a table")
+        _text(rank, ("name", "api"))
+        _integers(rank, ("rank", "max_rank"))
     state = record.get("known_recipes")
     if state is None:
         return

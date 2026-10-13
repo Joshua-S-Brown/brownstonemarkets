@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.11.3"
+local ADDON_VERSION = "0.12.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -203,7 +203,7 @@ end
 ---------------------------------------------------------------------------
 -- Character snapshots: event-driven reads only, no requests, timers or item movement.
 ---------------------------------------------------------------------------
-local professions = { open = {}, last = {} }  -- open: trade/craft window shown and not yet closed
+local professions = { open = {}, last = {}, ranks = {}, read = {} }  -- open: trade/craft window shown and not yet closed
 local bankOpen = false
 local sessionKey, loginTime
 local sessionSeen = false  -- the first PLAYER_ENTERING_WORLD since this addon file was loaded
@@ -1277,10 +1277,12 @@ function professions.modern()
     return state
 end
 
--- Craftable counts change with every craft or bag change; comparing without them saves a new list
--- only when recipes, ranks, headers or filters change. Saved lists still carry the counts.
+-- Craftable counts change with every craft or bag change, and the rank with every skill-up; comparing
+-- without them saves a new list only when recipes, headers or filters change. Saved lists still carry
+-- both; a rank-only change is saved as a small profession_rank record (0.12.0 beta finding).
 function professions.structure(state)
     local copy = journal.copy(state)
+    copy.rank, copy.max_rank, copy.profession = nil, nil, nil
     for _, row in pairs(copy.rows) do
         row.craftable = nil
         if row.info then
@@ -1322,11 +1324,30 @@ function professions.window(event, arguments, inventory, modernOnly)
     if not state then return nil, failure end
     local identity = characterKey()
     if not identity then return end
+    -- Forever switches the profession name before the rows: a list naming a new profession but holding
+    -- exactly the previous profession's recipe IDs is the old window's rows (2026-10-13 beta file).
+    local ids = state.recipe_ids and table.concat(state.recipe_ids, ",")
+    local previous = professions.read[identity]
+    if ids and previous and previous.name ~= state.name and previous.ids == ids then
+        return nil, { stale_rows = true, listed_profession = state.name, rows_profession = previous.name,
+            recipe_id_count = #state.recipe_ids }
+    end
+    if ids then professions.read[identity] = { name = state.name, ids = ids } end
     local key = identity .. ":" .. state.name
     local structure = professions.structure(state)
-    if journal.equal(structure, professions.last[key]) then return "unchanged" end
+    local rank = { state.rank, state.max_rank }
+    if journal.equal(structure, professions.last[key]) then
+        if journal.equal(rank, professions.ranks[key]) then return "unchanged" end
+        if journal.add(event, "craft", arguments, { profession_rank = { api = state.api, name = state.name,
+            rank = state.rank, max_rank = state.max_rank, profession = state.profession } }) then
+            professions.ranks[key] = rank
+            return "recorded"
+        end
+        return
+    end
     if journal.add(event, "craft", arguments, { known_recipes = state, trade_skill_api_inventory = inventory }) then
         professions.last[key] = structure
+        professions.ranks[key] = rank
         if inventory then professions.inventoried = true end
         return "recorded"
     end

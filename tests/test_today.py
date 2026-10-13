@@ -356,7 +356,7 @@ def test_craft_details_reserved_costs_reconcile_across_crafts_and_vendor(monkeyp
     for buy in result['buy']:
         assert totals[(buy['item_id'], buy['method'])] == {field: buy[field] for field in totals[(1, 'buy')]}
     assert [craft_details(r)['materials'][0]['cost_copper'] for r in result['craft']] == [30, 80]
-    assert result['today_version'] == 6
+    assert result['today_version'] == 7
 
 
 def chain_catalog():
@@ -544,3 +544,17 @@ def test_queue_preserves_sibling_catalog_route_order():
     steps = [{'recipe_id': recipe, 'depth': depth} for recipe, depth in
              [(10, 1), (11, 2), (12, 2), (13, 3), (20, 1), (21, 2)]]
     assert [s['recipe_id'] for s in _route_order(steps)] == [11, 13, 12, 10, 21, 20]
+
+
+@pytest.mark.parametrize("lowest,stack,expected", [(300, 1, 200), (350, 1, 300), (101, 1, 100), (100, 1, None),
+                                                   (300, 20, 299), (300, None, 299), (1, 20, None), (None, 1, None)])
+def test_unstackable_items_undercut_in_whole_silver(lowest, stack, expected):
+    from brownstone.today import undercut_price
+    assert undercut_price(lowest, stack) == expected
+
+
+def test_sell_reports_whole_silver_step_for_unstackable_output():
+    row = plan(metrics={3: {"min_buyout": 350, "listings": 3, "units": 3, "largest_stack_units": 1,
+                           "max_stack_size": 1}})["sell"][0]
+    assert (row["undercut_copper"], row["price_step"]) == (300, "whole silver")
+    assert plan()["sell"][0]["price_step"] == "1c"

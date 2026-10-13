@@ -45,18 +45,24 @@ def _holders(catalogs, data, profession):
     return result
 
 
-def prepare(catalogs, observations, market, snapshot, character_data, *, now, max_age_hours=24, auction_cut=.05):
-    """Build the unchanged team board once, plus the eligible consuming rows and cautious prices."""
+def prepare(catalogs, observations, market, snapshot, character_data, *, now, max_age_hours=24, auction_cut=.05,
+            shared=None):
+    """Build the unchanged team board once, plus the eligible consuming rows and cautious prices.
+
+    ``shared`` is ``progression.team_board``'s (graph, board) for the same evidence, reused when present.
+    """
     if snapshot.get('source_id') != market['source_id']:
         raise ValueError('The snapshot belongs to a different source')
     if any(snapshot.get(k) != market.get(k) for k in MARKET_KEYS):
         raise ValueError('The snapshot belongs to a different market')
     catalogs = action_board.compatible_catalogs(catalogs, market)
     makers = today_characters.team_makeable(catalogs, character_data) or {}
-    graph = RecipeGraph(catalogs, makers, market)
-    board = action_board.rank_catalogs(catalogs, observations, market, snapshot, now=now,
-                                      max_age_hours=max_age_hours, auction_cut=auction_cut,
-                                      recipe_graph=graph) if catalogs else {'rows': [], 'freshness': None}
+    graph, board = shared if shared is not None and shared[0] is not None else (RecipeGraph(catalogs, makers, market),
+                                                                                 None)
+    if board is None:
+        board = action_board.rank_catalogs(catalogs, observations, market, snapshot, now=now,
+                                          max_age_hours=max_age_hours, auction_cut=auction_cut,
+                                          recipe_graph=graph) if catalogs else {'rows': [], 'freshness': None}
     return {'catalogs': catalogs, 'market': market, 'data': character_data, 'makers': makers, 'board': board,
             'prices': basis_prices(observations, 'cautious')[0],
             'consumers': [r for r in board['rows'] if makers.get((r['catalog_id'], r['recipe_id']))],

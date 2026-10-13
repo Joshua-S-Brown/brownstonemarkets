@@ -16,7 +16,7 @@ from .today_characters import filter_candidates, project_recipes, team_makeable
 from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 
-TODAY_VERSION = 6
+TODAY_VERSION = 7
 ROW_LIMIT = 10
 
 
@@ -266,10 +266,22 @@ def _shopping(rows, metrics):
     return sorted(grouped.values(), key=lambda r: (-r["cost_copper"], r["item_id"], r["method"]))
 
 
+SILVER = 100
+
+
+def undercut_price(lowest, max_stack_size):
+    """The highest postable unit price below the lowest; unstackable items post in whole silver (Today → Sell)."""
+    if lowest is None or lowest <= 1:
+        return None
+    if max_stack_size == 1:
+        return (lowest - 1) // SILVER * SILVER or None
+    return lowest - 1
+
+
 def _sell(row, metrics, auction_cut):
     metric = (metrics or {}).get(row["output_item_id"], {})
     lowest = metric.get("min_buyout")
-    undercut = lowest - 1 if lowest is not None and lowest > 1 else None
+    undercut = undercut_price(lowest, metric.get("max_stack_size"))
     profit = (_net(undercut, row["output_quantity"], auction_cut) * row["batch_size"] - row["batch_cost_copper"]
               if undercut else None)
     thin = (metric["listings"] < 3 or metric["largest_stack_units"] * 2 >= metric["units"]) if metric else None
@@ -277,7 +289,8 @@ def _sell(row, metrics, auction_cut):
             "catalog_id": row["catalog_id"], "recipe_id": row["recipe_id"], "batch_size": row["batch_size"],
             "lowest_copper": lowest, "listings": metric.get("listings"), "units": metric.get("units"),
             "largest_stack_units": metric.get("largest_stack_units"), "thin": thin,
-            "undercut_copper": undercut, "undercut_batch_profit_copper": profit}
+            "undercut_copper": undercut, "undercut_batch_profit_copper": profit,
+            "price_step": "whole silver" if metric.get("max_stack_size") == 1 else "1c"}
 
 
 def _vendor(ladders, vendor_prices, minimum):

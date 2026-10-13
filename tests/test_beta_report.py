@@ -459,3 +459,19 @@ def test_unreadable_bags_fail_and_snapshot_gold_matches_the_login_money():
     report = analyze(db)
     assert checks(report, "bags readable", "fail")
     assert not checks(report, "snapshot vs journal gold") and not checks(report, "snapshot gold")
+
+
+def test_stale_recipe_list_after_profession_switch_warned_and_skipped():
+    from brownstone import beta_evidence
+
+    def record(seq, name, ids):
+        return {"entry_id": f"e{seq}", "character": "Arille", "realm": "Beta", "faction": "Alliance",
+                "captured_at": 100, "sequence": seq, "family": "craft",
+                "known_recipes": {"name": name, "api": "C_TradeSkillUI", "recipe_ids": ids, "rows": []}}
+
+    report = {"checks": []}
+    beta_evidence.profession_checks(report, [record(2, "Fishing", [1, 2]), record(1, "Cooking", [1, 2]),
+                                             record(3, "Fishing", [7]), record(4, "Fishing", [7])])
+    stale = [c for c in report["checks"] if c["check"] == "stale recipe list"]
+    assert len(stale) == 1 and stale[0]["detail"]["rows_profession"] == "Cooking"
+    assert sum(c["check"] == "profession name" for c in report["checks"]) == 3

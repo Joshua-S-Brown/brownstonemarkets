@@ -220,6 +220,15 @@ def _routed_entries(entries, prices, graph):
     return result
 
 
+def team_board(catalogs, observations, market, snapshot, character_data, *, now, max_age_hours=24, auction_cut=.05):
+    """The team RecipeGraph and Action Board that build_progression builds, once for every character."""
+    catalogs = action_board.compatible_catalogs(catalogs, market)
+    graph = team_graph(catalogs, character_data, market)
+    board = action_board.rank_catalogs(catalogs, observations, market, snapshot, now=now, max_age_hours=max_age_hours,
+                                       auction_cut=auction_cut, recipe_graph=graph) if catalogs else None
+    return graph, board
+
+
 def team_graph(catalogs, character_data, market):
     makers = today_characters.team_makeable(catalogs, character_data)
     return RecipeGraph(catalogs, makers, market) if makers is not None else None

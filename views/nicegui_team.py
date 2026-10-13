@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from nicegui import app, ui
 
-from brownstone import hiring
+from brownstone import hiring, progression
 from brownstone.characters import build_characters
 from brownstone.money import format_money, to_gold
 from brownstone.progression import build_progression
@@ -158,16 +158,17 @@ def render(config, catalogs):
     if warning:
         ui.label(warning)
     try:
-        cards = build_characters(config)
+        cards = build_characters(config, data=data)
         manifest, arguments = load_today(config, catalogs, TodaySettings(), data, datetime.now(UTC))
     except Exception as error:
         ui.label(f'Unable to read Team evidence: {error}')
         return
+    shared = team_board(catalogs, data, arguments)
     identities = available_characters(data)
     if not identities:
         theme.info_button('How these estimates work', lambda: team_info_unavailable(config, cards))
         ui.label('No characters imported for this source. Use Data → Import.')
-        hiring_section(catalogs, data, arguments)
+        hiring_section(catalogs, data, arguments, shared=shared)
         return
     session = app.storage.tab.setdefault('team-' + config['source_id'], {})
     selected = tuple(session.get('character', identities[0]))
@@ -186,13 +187,13 @@ def render(config, catalogs):
         ui.label('Updates when you let go.').classes('bs-note')
     area = ui.column().classes('w-full')
     # Built once: opened hire rows keep their detail; only the window-dependent comparison refreshes.
-    show_comparisons = hiring_section(catalogs, data, arguments, window=window)
+    show_comparisons = hiring_section(catalogs, data, arguments, window=window, shared=shared)
 
     def update():
         with route_errors(area):
             session.update(character=list(identities[int(choice.value)]), window=int(slider.value))
             area.clear()
-            results = team_results(catalogs, data, arguments, int(slider.value))
+            results = team_results(catalogs, data, arguments, int(slider.value), shared)
             roster.clear()
             heading.set_text(identities[int(choice.value)][0] + "'s next steps")
             with roster:
@@ -227,12 +228,27 @@ def render(config, catalogs):
     update()
 
 
-def team_results(catalogs, data, arguments, window):
+BOARD_KEYS = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut')
+
+
+def team_board(catalogs, data, arguments):
+    """One team graph and board for every character's progression and the hiring section."""
+    if arguments is None or not data:
+        return None
+    try:
+        return progression.team_board(catalogs, character_data=data, **{k: arguments[k] for k in BOARD_KEYS})
+    except ValueError:
+        return None  # unbuildable routes: each section reports them where it builds its own
+
+
+def team_results(catalogs, data, arguments, window, shared=None):
     if arguments is None:
         return {}
-    keys = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut', 'listings', 'metrics')
+    keys = (*BOARD_KEYS, 'listings', 'metrics')
+    graph, board = shared or (None, None)
     return {c: build_progression(catalogs=catalogs, character_data=data, character=c, window=window,
-                                **{key: arguments[key] for key in keys}) for c in available_characters(data)}
+                                recipe_graph=graph, board=board, **{key: arguments[key] for key in keys})
+            for c in available_characters(data)}
 
 
 def estimates_info(result, config, arguments, cards):
@@ -284,17 +300,16 @@ HIRING_LABELS = ('Current-scan prices are not a forecast; listings never sales; 
                  'Costs give no credit for selling results. No gathering income. Tier fees not included (unknown).')
 
 
-def hiring_section(catalogs, data, arguments, *, window=25):
+def hiring_section(catalogs, data, arguments, *, window=25, shared=None):
     """Render the section; return a callable that re-renders the comparison card for a new window."""
     ui.label('Add a character?').classes('text-2xl font-bold').mark('hiring-section')
     ui.label(HIRING_LABELS).classes('bs-note')
     if arguments is None:
         ui.label('Import a current scan to compare new hires.')
         return lambda window: None
-    keys = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut')
     try:
-        context = hiring.prepare(catalogs=catalogs, character_data=data,
-                                 **{k: arguments[k] for k in keys})
+        context = hiring.prepare(catalogs=catalogs, character_data=data, shared=shared,
+                                 **{k: arguments[k] for k in BOARD_KEYS})
         result = hiring.summaries(context, window=window)
     except ValueError as error:
         ui.label(f'Unable to compare new hires: {error}')

@@ -10,6 +10,7 @@ from brownstone.today_data import read_today_evidence
 def test_today_reads_base_identity_and_observed_vendor_price_only(tmp_path):
     record = rich()
     record['items'][1]['vendor_sell_copper'] = 80
+    record['items'][1]['max_stack_size'] = 20
     config = import_records(tmp_path, record)
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
         observations, ladders, metrics, vendors = read_today_evidence(db, config, 'my-scans:rich', [2589, 6538])
@@ -17,6 +18,7 @@ def test_today_reads_base_identity_and_observed_vendor_price_only(tmp_path):
     assert ladders == {2589: [(20, 701, 36)]}
     assert metrics[2589]['units'] == 30 and metrics[2589]['listings'] == 2  # no-buyout counts remain
     assert vendors == {2589: 80}
+    assert metrics[2589]['max_stack_size'] == 20  # Sell's price step comes from the scan's item reference
     assert 6538 not in metrics  # unresolved and suffix identities never fill catalog prices
 
 

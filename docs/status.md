@@ -40,7 +40,7 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   feed Today/Queue, Team reach, Market and This session. Competing makers resolve by cost/catalog;
   a field one catalog omits takes another's recorded value; differing values warn and stay buy-only. Verify with `tests/test_recipe_graph.py` and
   `tests/ui_trial/test_nicegui_recipe_graph.py`.
-- **Today (`today_version` 6):** funded, supply-reserved plan with Buy/Sell/Below vendor/Queue,
+- **Today (`today_version` 7; whole-silver undercuts for unstackable items):** funded, supply-reserved plan with Buy/Sell/Below vendor/Queue,
   choices and refill, confidence labels, character eligibility and recorded funds (`requirements.md`
   → Today). The new app shows Plan cards with Table one toggle away, status chips, summary tiles and
   helpful empty-state reasons; Shopping list, Sell, Queue and Extras retain their existing evidence.
@@ -90,7 +90,7 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   market metrics (ADDON-10).
 - **Beta evidence report (STORY-042):** private Markdown/JSON reports under ignored
   `work/beta-reports/` ([usage](#beta-evidence-report)).
-- **Scanning addon:** `addon/BrownstoneScan/` 0.11.3, file format 6, scan format 4: manual scans with
+- **Scanning addon:** `addon/BrownstoneScan/` 0.12.0 (stale profession-switch lists refused, rank-only records), file format 6, scan format 4: manual scans with
   the bounded item-info pass, character snapshots, event journal, active auctions, known recipes
   through `C_TradeSkillUI`, reload/clear buttons and the minimap panel. Usage, saved fields and beta
   checklists are in `addon/README.md`.
@@ -146,9 +146,9 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 git diff --check
 ```
 
-Expected on this Mac: 1,369 passed and one explicit PowerShell-unavailable skip (1,370 run where
+Expected on this Mac: 1,382 passed and one explicit PowerShell-unavailable skip (1,383 run where
 PowerShell exists, as in Windows CI), offline, at or above the 88% branch-coverage floor.
-The full suite measures 96.58%;
+The full suite measures 96.53%;
 `ruff check .` and `mypy` report no issues. CI runs the same
 on macOS and Windows from the lock file, with a branch-coverage floor of 88% (`pyproject.toml`).
 Windows uses `.venv\Scripts\python.exe`. Live ingestion is a manual check: **Refresh from TSM** in the

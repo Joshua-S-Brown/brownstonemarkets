@@ -255,9 +255,11 @@ def render(config, catalogs, character_data, active_tab='Craft'):
     reset_note.bind_visibility_from(reset_note, 'text', backward=bool)
     plan = ui.column().classes('w-full')
 
+    first = [character_data]  # the page already read evidence; later updates re-read it
+
     def update(settings):
         nonlocal current_tab
-        latest_characters, warning = load_today_characters(config)
+        latest_characters, warning = (first.pop(), None) if first else load_today_characters(config)
         funds = resolve_funds(settings, latest_characters, datetime.now(UTC), config['max_age_hours'])
         settings = funds.settings
         plan.clear()
@@ -403,8 +405,9 @@ def craft_card(row, sell):
                         theme.badge('stale — inspect only', 'warn')
                 purchases = ', '.join(f"{m['purchased_units']} {m['item_name']}" for m in details['materials'])
                 price = sell['undercut_copper']
-                ui.label(f"Buy {purchases} · sell at {format_money(price) if price is not None else 'unavailable'} "
-                         f"each · {competition(sell)}")
+                step = ' (whole silver: unstackable)' if sell.get('price_step') == 'whole silver' else ''
+                ui.label(f"Buy {purchases} · sell at {format_money(price) if price is not None else 'unavailable'}"
+                         f"{step} each · {competition(sell)}")
                 ui.label(f"Limited by {row['limiting_factor']}" + (' · thin' if sell['thin'] else '')).classes(
                     'bs-note')
             with ui.column().classes('items-end gap-0'):

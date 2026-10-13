@@ -243,12 +243,21 @@ def _bag_residual(report: dict, before: dict, after: dict, interval: list[dict])
 
 
 def profession_checks(report: dict, records: list[dict]) -> None:
-    for r in records:
+    previous: dict[tuple, tuple] = {}
+    for r in sorted(records, key=lambda r: (r["captured_at"], r.get("sequence", 0))):
         if r.get("kind") == "bags":
             _skill_check(report, r)
         if "known_recipes" not in r:
             continue
         state = r["known_recipes"]
+        ids = str(state["recipe_ids"]) if state.get("recipe_ids") is not None else None
+        before = previous.get(identity(r))
+        if professions._stale(before, state.get("name"), ids):
+            check(report, "stale recipe list", "warn", {"profession": state.get("name"),
+                  "rows_profession": before[0] if before else None, "ignored_on_import": True}, [identifier(r)])
+            continue
+        if ids is not None:
+            previous[identity(r)] = (state.get("name"), ids)
         name = state.get("name")
         valid = isinstance(name, str) and bool(name.strip()) and name.strip().upper() != "UNKNOWN"
         check(report, "profession name", "pass" if valid else "fail", {"profession": name}, [identifier(r)])

@@ -6,10 +6,14 @@ from . import professions
 STALE_DAYS = 7
 
 
-def build_characters(config, now: datetime | None = None) -> list[dict]:
-    """Return plain card data; unknown values remain None and money stays integer copper."""
+def build_characters(config, now: datetime | None = None, data: dict | None = None) -> list[dict]:
+    """Return plain card data; unknown values remain None and money stays integer copper.
+
+    ``data`` is an already-read ``professions.latest_data(config)``, to avoid reading it twice.
+    """
     now = now or datetime.now(UTC)
-    cards = [_card(key, state, now) for key, state in professions.latest_data(config).items()]
+    data = professions.latest_data(config) if data is None else data
+    cards = [_card(key, state, now) for key, state in data.items()]
     return sorted(cards, key=lambda card: (-card["last_seen"], card["name"], card["realm"], card["faction"]))
 
 

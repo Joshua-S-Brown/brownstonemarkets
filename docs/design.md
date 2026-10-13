@@ -222,7 +222,11 @@ Unknown values are absent in Lua and nullable in Python; raw argument tuples nev
 - **Projections.** `character_snapshots.latest_data` returns scoped latest readable bags/bank, bags
   history and every observation; `professions.latest_data` adds scoped journal observations, the latest
   known-recipe list per profession and *seen crafted* evidence (catalog recipe IDs supply profession
-  metadata only). `characters.build_characters` builds the Characters cards; `journal.active_auction_rows`
+  metadata only). Recipe lists are the bulk of the journal, so it parses only the newest trustworthy
+  list per character/profession in Python: one ordered query returns small records whole and lists as
+  name, recipe-ID hash and order; stale lists (ADDON-12 â†’ *Profession switches*) are skipped, winners are
+  fetched by `entry_id`, and a newer `profession_rank` entry updates their rank. Callers that already hold
+  the result pass it on (`build_characters(config, data=...)`, Today's first render) rather than re-reading. `characters.build_characters` builds the Characters cards; `journal.active_auction_rows`
   and the `latest_rows`/`preview_rows` functions supply the import page tables. If both skill surfaces
   report a name, display prefers the modern row and never fills one API's holes from the other.
 - **Reference shapes** come from Blizzard's
@@ -484,8 +488,13 @@ roster history, provenance and assumptions remain on demand in disclosures/the â
 `load_today_characters`, then `today_loading.load_today` for the newest full-market/source snapshot
 and read-only evidence; no new price SQL, writes, schema or Streamlit changes.
 
+`progression.team_board` builds the team `RecipeGraph` and Action Board once; Team passes that pair to
+every character's `build_progression` and to `hiring.prepare(shared=...)`, so a page builds one board
+instead of one per character plus one for hiring.
+
 `progression.build_progression(catalogs, observations, market, snapshot, character_data, character,
-*, now, window=25, max_age_hours=24, auction_cut=.05, listings=None, metrics=None)` returns sorted
+*, now, window=25, max_age_hours=24, auction_cut=.05, listings=None, metrics=None, recipe_graph=None,
+board=None)` returns sorted
 `professions`, per-catalog `unlisted` counts and board `freshness`. Profession rows retain rank/max,
 note, reachable `recipes` and nullable `best`. Recipe rows retain the shared Today status, learning
 fields, board profit/reason, confidence and `estimate` (`complete`, nullable integer `cost_copper`,

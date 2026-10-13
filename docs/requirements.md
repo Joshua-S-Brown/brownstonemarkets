@@ -389,6 +389,20 @@ a changed definition requires a new metrics version and an explicit rebuild poli
   `C_TradeSkillUI` function names and accepted candidate profession-event names, even when the list
   cannot be read. Attach it to the changed list or plain opening entry, avoiding another entry.
   Existing change detection, legacy capture, cap, clear, silent/read-only rules apply unchanged.
+- **Profession switches and skill-ups (addon 0.12.0, 2026-10-13 beta finding):** switching from one
+  profession window to another (fishing and smelting re-open it on every cast) renames the window
+  before its rows change, so 0.11.3 saved 11 lists naming one profession with the previous one's
+  rows, and re-saved a whole list (about 1 MB for Tailoring) for every skill point; recipe lists were
+  14 MB of a 20.9 MB file. Since 0.12.0 a modern read whose recipe IDs exactly equal the previous
+  read's for a *different* profession (same character, this load) is refused as stale: its show entry
+  carries `trade_skill_read = {stale_rows, listed_profession, rows_profession, recipe_id_count}`.
+  Change detection also ignores rank, max rank and the raw profession returns; a rank-only change adds
+  a small family `craft` entry with `profession_rank = {api, name, rank, max_rank, profession}`
+  instead of the list. **Import** applies the same stale rule to every file (older addon lists
+  included): such a list never becomes that profession's known recipes, though it still counts as
+  activity, and the beta report warns *stale recipe list*. The newest trustworthy list per
+  character/profession is then given the rank and time of any newer `profession_rank` entry. Raw
+  bytes and journal rows are preserved unchanged; only the projection skips stale lists.
 - **Seen crafted (STORY-049):** the shared profession projection reads existing scoped craft journal
   entries. A positive recipe ID in `C_TradeSkillUI.CraftRecipe` or the player's successful craft
   cast establishes known evidence from that observation, labelled *seen crafted*. Deduplicate IDs
@@ -654,7 +668,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   and after a successful addon import, and is absent when there are no hits. It changes neither
   Today's numbers/ranking nor the import.
 
-### Today (today_version 6, STORY-025/039/043/046/057/015b; STORY-039 reviewed 2026-10-08)
+### Today (today_version 7, STORY-025/039/043/046/057/015b; STORY-039 reviewed 2026-10-08)
 
 - **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
   source during the session. Each source has its own ignored preferences file,
@@ -854,7 +868,12 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   least the minimum gain**. Sort gain descending then item ID. Nothing implies a completed sale.
 - **Sell:** one row per selected output, with its chosen catalog/recipe identity.
   Show lowest positive competing unit price, all listings/units (including no-buyout listings), largest
-  stack, and **1c** below the lowest as undercut price. A lowest price of **1c** has no valid positive
+  stack, and **1c** below the lowest as undercut price. An item whose scan reference says it doesn't stack
+  (`max_stack_size` 1) can only be posted in **whole silver** on Forever (beta evidence 2026-10-13: a
+  299c post was refused and 300c accepted; all 29,366 unstackable listings in that scan were whole
+  silver, while stackable goods carried copper prices), so its undercut is the highest whole-silver price
+  below the lowest; an unknown stack size keeps 1c, and Sell shows the price step. **Today version 7**
+  introduces this. A lowest price of **1c** (or under 1s for an unstackable item) has no valid positive
   undercut and no undercut-profit estimate. Profit at undercut uses the selected batch costs and auction
   cut; it can be negative. **Thin** means **fewer than 3 listings**, or the largest stack holds **at least
   half** of listed units. No claim about demand, sales speed, deposits, or actual sales is made.

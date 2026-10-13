@@ -21,10 +21,13 @@ def read_today_evidence(db, config, snapshot_id, item_ids):
     for item_id, quantity, buyout, unit in rows:
         ladders.setdefault(item_id, []).append((quantity, buyout, unit))
     base_metrics = _base_metrics(metrics)
-    vendor_rows = db.execute(f"SELECT item_id, vendor_sell_copper FROM effective_scan_items WHERE {predicate} "
-                             "AND snapshot_id=? AND scan_id=? AND vendor_sell_copper>0",
-                             [*parameters, snapshot_id, scan[0]]).fetchall()
-    return observations, ladders, base_metrics, dict(vendor_rows)
+    references = db.execute(f"SELECT item_id, vendor_sell_copper, max_stack_size FROM effective_scan_items "
+                            f"WHERE {predicate} AND snapshot_id=? AND scan_id=?",
+                            [*parameters, snapshot_id, scan[0]]).fetchall()
+    for item_id, _, stack in references:
+        if item_id in base_metrics:
+            base_metrics[item_id] = base_metrics[item_id] | {"max_stack_size": stack}
+    return observations, ladders, base_metrics, {i: v for i, v, _ in references if v is not None and v > 0}
 
 
 def _base_metrics(metrics):

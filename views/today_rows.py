@@ -68,7 +68,7 @@ def sell_row(row):
     return {"Output": row["output_name"], "Catalog": row["catalog_id"], "Recipe": row["recipe_id"],
             "Batch": row["batch_size"], "Lowest competing unit (g)": to_gold(row["lowest_copper"]),
             "Listings": row["listings"], "Units": row["units"], "Largest stack units": row["largest_stack_units"],
-            "Undercut unit (g)": to_gold(row["undercut_copper"]),
+            "Undercut unit (g)": to_gold(row["undercut_copper"]), "Price step": row.get("price_step", "1c"),
             "Profit at undercut for batch (g)": to_gold(row["undercut_batch_profit_copper"]),
             "Thin": row["thin"], **_confidence_columns(row), "State": state(row)}
 

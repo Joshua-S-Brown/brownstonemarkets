@@ -138,5 +138,5 @@ def test_shared_loader_matches_plan_with_same_funds(tmp_path, monkeypatch):
     assert arguments['settings'].gold_copper == 255
     result = build_today(**arguments)
     expected = build_today(**(arguments | {'settings': replace(settings, gold_copper=255)}))
-    assert result == expected and result['today_version'] == 6
+    assert result == expected and result['today_version'] == 7
     assert result['shopping_total_copper'] <= 255
