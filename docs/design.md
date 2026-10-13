@@ -31,7 +31,7 @@ framework-free module both use, never a copy: `brownstone/` for calculations and
 table projections and wording.
 
 **Main app (NiceGUI, UI-07).** `nicegui_app.py` is the entry; views are `views/nicegui_today.py`,
-`views/nicegui_team.py` and `views/nicegui_import.py`. `views/nicegui_theme.py` owns the approved
+`views/nicegui_team.py`, `views/nicegui_market.py` and `views/nicegui_import.py`. `views/nicegui_theme.py` owns the approved
 colour/spacing tokens and common chips, badges, banners, tiles, cards, dialogs and empty states;
 it forces light mode and selectable text. The native entry sets `app.native.window_args['text_select']`.
 `nicegui_app.header` renders wrapping place tabs, separated Data and the source menu, with page-specific
@@ -492,3 +492,22 @@ leads with totals and renders collapsed bands. Its optional context uses `latest
 DuckDB and `today_data.read_skillup_market`: scoped `price_observations` and ADDON-10 `read_scan_metrics`,
 excluding unresolved/variant identities. Context is joined only after quantities/order are computed;
 missing prices remain blank and shared freshness/time captions stay visible. No schema change.
+
+## Market explorer (STORY-055)
+
+Rules live in `requirements.md` → UI-09 (with UI-02/04/06/08 and CRAFT-03).
+`market_explorer.load_explorer` composes `today_loading.load_today`'s scoped snapshot/evidence,
+`analysis.browse` (all items, including nonpositive prices), `metrics.read_scan_metrics`, compatible
+catalogs, `action_board.rank_catalogs`, `today_characters` and `skillups.build_skillups`. All database
+connections are read-only. It adds no price SQL or pricing policy. Finished-output costs/profit/reasons
+come from Board rows; intermediates use `crafting.evaluate_recipe` for routes and `material_plan`'s
+expanded quantities, retaining no Board profit. Routed nested choices multiply by the recorded craft
+count and carry depth. Skill bands combine direct and raw memberships without multiplying quantities.
+`item_page` returns all observed variant identities separately, vendor references, catalog-qualified
+made-from/used-in rows and team statuses. Catalog-only items remain reachable with unknown market prices.
+`scan_movement` calls `eligible_scans`/`compare_scans`, retaining exact identities and comparison facts;
+UI-09 defines ordering, distinct-item limit and handling of missing evidence.
+`views/nicegui_market.py` uses the shared theme and anchor links carrying source, game, Market and
+item ID. Standard URL navigation retains browser history and refresh. Search renders up to 30 item
+links after a query; refining the query reaches every observed item. IDs, incompatible catalog versions,
+expanded quantities and comparison evidence remain in disclosures/dialogs. No session price cache or writes.

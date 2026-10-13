@@ -3,13 +3,13 @@
 Current implemented state, limitations and how to verify. History, including dated real-data checks
 and beta play sessions, lives in Git; keep this file describing *now*.
 
-_Last updated 2026-10-12 (STORY-060)._
+_Last updated 2026-10-12 (STORY-055)._
 
 ## Implemented
 
 Rules live in `requirements.md` and contracts in `design.md`; each bullet names where.
 
-- **Main app (NiceGUI, UI-07):** Today, Team (roster and progression), Market (STORY-055 placeholder) and
+- **Main app (NiceGUI, UI-07):** Today, Team (roster and progression), Market (item explorer and scan movement) and
   Data → Import. Start it from `Start Brownstone.command` / `.cmd` or `launch_nicegui.py`
   ([New app](#new-app)). Shared light theme, wrapping header navigation, page information dialogs
   and Today settings behind the gear (STORY-060, UI-08). Native text selection is enabled.
@@ -46,6 +46,13 @@ Rules live in `requirements.md` and contracts in `design.md`; each bullet names 
   profession comparison and per-point material/training estimates on demand.
   Current Action Board profit, reused Today statuses/confidence, incomplete reasons and cap guidance;
   yellow chances remain an unconfirmed Classic assumption. Streamlit Characters is unchanged.
+- **Market explorer (STORY-055, UI-09):** name/ID search across the newest scoped snapshot;
+  addressable item pages with prices, listings/units, vendor references, made-from routes and nested
+  quantities, used-in recipes sorted by Board profit, team eligibility and skill-up bands. Compatible
+  catalogs only; unknown prices stay unknown, variants stay separate. Trial movement shows at most
+  ten distinct chain items from the newest two eligible scans, with comparison evidence on demand.
+  Verify offline with `tests/test_market_explorer.py` and `tests/ui_trial/test_nicegui_market.py`;
+  on copied Forever data check Linen Cloth (2589), Bolt of Linen Cloth (2996) and the movement section.
 - **Other pages:** Characters (STORY-051), Watchlist (STORY-048), Skill-up demand (CRAFT-10), Scan
   changes (UI-06), Browse market and Below usual price (UI-02/03), version-scoped item names (DATA-02),
   market metrics (ADDON-10).
@@ -65,8 +72,8 @@ fresh-login bag baseline (0.10.1), level and profession ranks, and modern known-
 
 ## Limitations
 
-- **Beta scans:** sixteen complete Normal Alliance scans and one stopped scan are imported, the newest
-  `20261011T105714Z-cf2f26`. No Roleplaying or neutral house has been scanned.
+- **Beta scans:** eighteen complete Normal Alliance scans and one stopped scan are imported, the newest
+  `20261013T003719Z-89214e`. No Roleplaying or neutral house has been scanned.
 - **No sellers on the beta:** the bulk scan API returns no owner names (ADDON-07); STORY-028 is blocked
   on *Seller capture* (Later in `backlog.md`).
 - **Forever values still to confirm in game** (shown on the recipe view): every Forever yield is
@@ -118,8 +125,8 @@ start, it prints one line and opens the browser; that server stops after five mi
 connected tab. For a copied-data browser check:
 `.venv/bin/python nicegui_app.py --data-dir /path/to/copied-data --port 8081`.
 
-STORY-060's desktop comparison screenshots are under ignored `work/story-060/`; approved mockups
-remain until closure review. Native clipboard use and switching macOS appearance still need a manual
+STORY-060's desktop comparison screenshots are under ignored `work/story-060/`; the app is now the
+design reference (the mockups are in Git history). Native clipboard use and switching macOS appearance still need a manual
 check. A phone-width screenshot remains unverified because the browser viewport override did not apply.
 
 ### Beta evidence report

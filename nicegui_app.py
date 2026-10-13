@@ -15,6 +15,7 @@ from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences
 from brownstone.today_loading import load_today_characters
 from views import nicegui_theme as theme
 from views.nicegui_import import render as render_import
+from views.nicegui_market import render as render_market
 from views.nicegui_team import render as render_team
 from views.nicegui_today import render
 
@@ -29,7 +30,8 @@ def read_catalogs():
 
 
 @ui.page('/')
-async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place: str = 'Today'):
+async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place: str = 'Today',
+                     item: int | None = None):
     place = place if place in ('Today', 'Team', 'Market', 'Data') else 'Today'
     theme.install()
     try:
@@ -65,8 +67,7 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
         render_team(chosen, read_catalogs())
         return
     if place == 'Market':
-        theme.info_button('Source details', lambda: theme.source_info(chosen))
-        ui.label('Materials, crafts, supply chains and scan changes are coming in STORY-055.')
+        render_market(chosen, read_catalogs(), item)
         return
     character_data, warning = load_today_characters(chosen)
     if warning:

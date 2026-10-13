@@ -42,22 +42,23 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-060 a polished new app (Brownstone; medium; display only; approved mockup)
-2. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
-3. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
-4. STORY-035 auction deposits (needs a beta check)
-5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-6. STORY-036 vendor price ceilings
-7. STORY-027 removed listings
-8. STORY-015b crafting across professions
-9. STORY-021 item page and charts (would live in the Market explorer)
-10. STORY-026 scan coverage and rhythm
-11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-12. STORY-006 replay
+1. STORY-055 Market explorer (Brownstone; medium-large; in the new app)
+2. STORY-027 removed listings (first step towards sales speed; shown on the Market explorer's item pages)
+3. STORY-061 stock on hand and targets (Brownstone; medium; new Stock place; needs STORY-032's beta check for bank evidence)
+4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+5. STORY-059 should we add a character? (Brownstone; medium; refine before handoff, after STORY-052)
+6. STORY-035 auction deposits (needs a beta check)
+7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+8. STORY-036 vendor price ceilings
+9. STORY-015b crafting across professions
+10. STORY-021 item page and charts (would live in the Market explorer)
+11. STORY-026 scan coverage and rhythm
+12. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+13. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040 and STORY-044 (checklists in `addon/README.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 056, 057, 058 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-025, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 056, 057, 058, 060 and SPIKE-009/009b.
 
 **Added 2026-10-12 (product owner, after SPIKE-009b: "instead of migrating all the pages… what do we really need?"):** NiceGUI becomes the app, but only for what running the business needs. Four places move, each a story: **Today** (STORY-058, then STORY-054's cards), **Team**: the employee roster, their skills and where to invest (STORY-052, then STORY-059), **Market**: an explorer for browsing materials, crafts and supply chains, plus what moved since the last scan, kept for now to judge its use (STORY-055), and **Data**: Import (STORY-058). Everything else (All recipes, Watchlist, Below usual price, Scan changes, Recipe catalogs) stays in the Streamlit app, which is kept, unchanged and reachable, but gets no new features. The new app is built for WoW Forever; Classic stays development test data with no features of its own (`requirements.md` → *Interface*). This supersedes the Streamlit placements in STORY-053 for future work.
 
@@ -68,32 +69,9 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 
 STORY-053 sets up the navigation first, so each later story has a home. New feature stories wait behind these four. Display and wiring only unless a story says otherwise: no change to calculations, ranking or `today_version`.
 
-### STORY-060 — A polished new app
-
-Added 2026-10-12 (product owner: "it doesn't feel like a polished web app… I can't even copy paste text in the app"). Brownstone only; display and layout in the new app. No calculation, ranking, storage, settings-file or `today_version` change; the Streamlit app is unchanged.
-
-As the owner of a gold-making business, I want each page to show the answer first and keep the evidence one click away, so that I can act without reading paragraphs of text.
-
-**Approved design:** `docs/mockups/` (`today.html`, `team.html`, `data.html`, shared `mockup.css`/`mockup.js`; open them in a browser), built from real Forever beta evidence; Today was approved 2026-10-12 (product owner: "feels amazing and so much easier to use"). Build to them; where this text and a mockup differ, ask. Each mockup's *Mockup controls* line switches example states and is not part of the design. Every page must pass UI-08 in `requirements.md`.
-
-Acceptance:
-- **Copy and paste work** in the native window (pywebview defaults `text_select` to false; enable it through `app.native.window_args`), and the app is **always light**, readable whatever the macOS appearance.
-- **Header navigation:** Today, Team, Market, then a separated Data, as tabs in the top header (the left drawer goes; at phone width the tabs wrap). The selected source's short label, an ⓘ button and a gear button sit at the right. Place, source and Today tab stay in the URL.
-- **One subtle business question per place** under its title; section questions are dropped.
-- **Status chips** at the top of Today: who the plan is for (character and profession rank, or Our team), scan age with a coloured Stale badge, gold available with its origin, and *N recipes hidden · why?* (opens the ⓘ dialog). A stale or future-dated scan shows one plain-language banner ("Prices are from yesterday… scan again before you buy") with a link to how to scan.
-- **Summary tiles:** crafts, gold needed, expected profit at undercut, and the best craft with its profit.
-- **Tabs Plan, Shopping list, Sell, Queue, Extras** (renaming Craft and Below vendor; Table stays available inside Plan). Plan cards show output, crafts, profit large with per-craft profit and cost, status and confidence as badges, and one line of what to buy and where to sell; *What to buy and where to sell* opens materials (with purchased and needed units), intermediate steps and the sell price, competition and profit. Shopping list keeps *For*; Queue keeps ticks, totals and Copy as text.
-- **ⓘ How this plan was made** (dialog): scan ID and time, market and auction cut, Today rules version and price basis, gold origin, and every hidden-recipe reason with its count. This replaces the inline provenance, per-character gold notes, row-limit counts and hidden-reason text.
-- **Settings in a dialog** behind the gear button, with the same fields, validation and Save-only behaviour.
-- **Empty state:** with no crafts, one card that says why in a sentence (from the top hidden reasons and the minimum gain), with buttons to open settings and the ⓘ reasons.
-- **Data → Import and Team** follow their mockups: Data leads with status chips (scans imported, drop folder, characters), one *Check for new scans* action, a result card (up to date with per-machine clear guidance, or new evidence with Import), and files, problems and imported character tables on demand. Team shows selectable roster cards with a Next step line, then the selected character's look-ahead slider (updates on release), summary tiles and a reachable-recipes table, with cost steps and estimate assumptions on demand.
-- **One shared theme module** (`views/nicegui_theme.py`): colours, spacing and helpers for chips, badges, banners, tiles, dialogs and empty states, used by every new-app page.
-- **Offline tests** (NiceGUI user fixture): every existing displayed value still appears (numbers, labels, stale states); the ⓘ dialog lists provenance and hidden reasons; the settings dialog saves and rejects as before; the empty state names its reasons; header navigation keeps URL state; text selection is enabled in native window arguments.
-- **Real-data check:** screenshots of Today (with an entered gold amount so crafts appear, and the saved settings for the empty state), Team and Data on a copy of `data/`, compared with the mockup.
-- **Docs:** `requirements.md` → Today → Presentation and UI-07 (header navigation, dialogs, light theme); `design.md` (theme module, page structure); `status.md`.
-- **Cleanup at closure:** once reviewed, delete `docs/mockups/` (Git keeps it; the app becomes the reference). Review screenshots stay under ignored `work/`, never in the repository.
-
 ### STORY-055 — Market explorer
+
+**Implemented; pending owner review.** Rules: `requirements.md` → UI-09; contracts: `design.md` → Market explorer.
 
 Added 2026-10-11 as *Market brief*; **rewritten 2026-10-12** (product owner: "the broader views of the materials and crafting market and supply chains… so that I can browse certain things and explore the data myself"; on what moved since the last scan: "keep it for now and I'll see how useful it is"). Brownstone only; read-only over values already computed. Built in the new app's Market place (after STORY-058). Supply chains here mean materials → crafts → outputs from our catalogs, not sellers (STORY-028).
 
@@ -108,6 +86,7 @@ Acceptance:
   Every item named in a chain opens its own page in one click, so you can walk the chain in either direction.
 - **What moved since the last scan** (kept on trial; the owner will judge its use): a section comparing the newest two complete scans of the same source and full market (UI-06's rules), listing at most 10 items whose lowest buyout or units changed most, limited to items in our catalogs' chains, each with its change in copper and units and a link to its page. With one scan, it says *no earlier scan*. A TSM source says it has no scan comparison.
 - **Honest labels:** listings, not sales or demand; no forecast; missing prices never free or zero; stale evidence labelled.
+- **Presentation** follows the rest of the new app (STORY-060): replace the Market placeholder, use `views/nicegui_theme.py` (chips, tiles, cards, badges, empty states, dialogs) and pass UI-08. Status chips at the top (snapshot age with Stale badge, items in our chains); the header ⓘ opens a dialog with snapshot ID and time, source, market and catalogs used. The open item is in the URL (`item=<id>`), so refresh and the browser's back button keep it.
 - **Calculation** in a new `brownstone/market_explorer.py` (no NiceGUI or Streamlit) composing existing outputs: `analysis` browse queries, `crafting`, `action_board.rank_catalogs`, `today_characters`, `skillups`, `scan_changes`. No second pricing path. Display in a new `views/nicegui_market.py`.
 - **Offline tests (NiceGUI user fixture where it's display):** search by name and ID; an item with made-from, used-in and skill-up sections; an item in no catalog (price only, says so); a missing price (never free); walking from a material to an output and back; what-moved with two scans, one scan, and a TSM source; scoping (another source's snapshot never used); a stale snapshot.
 - **Real-data check:** on the Forever beta source: Linen Cloth's used-in list, Bolt of Linen Cloth's made-from, and what moved across the two newest scans.
@@ -299,6 +278,36 @@ Acceptance:
 - **Only consecutive scans** within a maximum gap recorded in `requirements.md`.
 - Shown per item (on the item page) and as a list, and usable by Today as evidence: it is the first step towards replacing Today's fixed *most crafts per item* with sales speed.
 - Depends on the implemented market metrics layer (ADDON-10); better with STORY-023.
+
+### STORY-061 — Stock on hand and targets
+
+Added 2026-10-13 (product owner: "see how much I have as well as set targets per material, see what's short, and have kind of a price factor"). Brownstone only; read-only over imported snapshots and the newest scan. No change to Today's plan, ranking or `today_version` (Today skipping what you hold stays *Restock* under Later). Built in the new app as a new **Stock** place between Market and Data (a UI-07 change, recorded there).
+
+As the owner, I want to see every material our team holds, what it's worth today, and which materials are below the stock I want to keep, so that I restock the right things at a price I accept.
+
+Acceptance:
+- **Holdings:** every item in the latest readable bags and bank snapshot of each character of the selected source and full market (STORY-032's `character_snapshots.latest_data`), units per character and location, total per item, each location with its capture time and age. A bank never opened is *bank unknown* and never counted as zero; an unreadable bag is excluded and said so. Search by name or ID; a filter for items in our catalogs' chains.
+- **Value at today's prices** from the newest complete scan of the same source and full market: units × cautious unit price (`requirements.md` → Cautious), labelled *at listed prices, not what it would sell for*. A missing price shows *no price* and is left out of totals, never zero; the total says how many items it excludes. Stale scans labelled.
+- **Targets per item:** the owner sets target units for the whole team per item, with an optional **buy limit**: either a fixed most-per-unit in copper, or a percentage of the item's market value in the same scan (ADDON-03). Stored per source in `data/stock_targets.<source_id>.local.json` like the watchlist (validated, one entry per item ID, Save-only, a rejected save keeps the last saved targets). Only items with an item ID; names are never guessed.
+- **What's short:** for each target, held, short (target − held, never negative), and the cost to fill it by walking the scan's listings cheapest first (the same depth-aware ladder Today uses), split into units **within the buy limit** (buy now) and above it (wait). Fewer listed units than short is said, never priced. An item with *bank unknown* for any character shows its shortfall as *at most*.
+- **Presentation** (UI-08, `views/nicegui_theme.py`): status chips (characters and capture ages, scan age), tiles (items held, value at listed prices, items short, cost to fill within limits), then a table of short items first; holdings and evidence on demand; ⓘ dialog with snapshot, captures and the price rule.
+- **Calculation** in a new `brownstone/stock.py` (no NiceGUI or Streamlit), integer copper, composing existing readers and the purchase ladder; display in a new `views/nicegui_stock.py`.
+- **Offline tests:** holdings across two characters and bank/bags; bank unknown; unreadable bags; scoping (another source's or house's snapshot never used); missing and stale prices; targets save, reject and survive reload; shortfall with fixed and percentage limits; too few listings; *at most* with unknown bank.
+- **Real-data check:** on the Forever beta source, the three characters' holdings and a target for one material.
+- **Docs:** a *Stock* rule in `requirements.md` (and UI-07's places), `design.md`, `status.md`.
+
+### STORY-062 — Sales speed and suggested stock levels
+
+Added 2026-10-13 (product owner: "turnover, how fast items sell in the market is really kind of the point… I don't know how else you determine how much stock or inventory you keep"). Brownstone only. Needs STORY-027 and enough consecutive scans: refine the minimum before handoff with the beta's scan count. Draft.
+
+As the owner, I want to see how fast each item moves on the auction house and a suggested stock level from it, so that targets come from evidence instead of guesses.
+
+Acceptance (to refine):
+- **Removal rate** per item from STORY-027: units removed per hour across consecutive scan pairs within the maximum gap, as a median with the number of scan pairs it rests on. Always *removed*, an upper bound on sales, never *sold*. Too few pairs says so instead of a number.
+- **Turnover:** listed units divided by the removal rate (how long today's supply would last), shown beside it.
+- **Suggested target** in STORY-061: removal rate × the days of cover the owner chooses (one setting), capped at a share of typical listed supply so we never plan to hold more than the market moves. Shown next to the manual target, never replacing it.
+- **Shown** on the Market explorer's item page (STORY-055) and in Stock (STORY-061).
+- Feeds *Sales speed instead of a fixed cap* (Later) for Today, which stays a separate story.
 
 ### STORY-028 — Sellers and their supply chains
 

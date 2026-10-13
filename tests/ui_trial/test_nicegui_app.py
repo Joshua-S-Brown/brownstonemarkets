@@ -39,7 +39,7 @@ async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, m
     await user.should_see('No characters imported for this source')
     user.find(marker='place-Market').click()
     await user.should_see(QUESTIONS['Market'])
-    await user.should_see('STORY-055')
+    await user.should_see('Find an item')
     assert user.client.request.query_params['place'] == 'Market'
     assert user.client.request.query_params['source'] == 'test'
     user.find(marker='place-Today').click()
