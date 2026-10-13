@@ -268,16 +268,22 @@ Acceptance:
 
 ### STORY-027 — Removed listings between scans
 
-Moved from *Demand from your own scans* (Later) at grooming (2026-10-05).
+Moved from *Demand from your own scans* (Later) at grooming (2026-10-05). **Refined 2026-10-13** with the product owner: maximum gap 12 hours; split removals by time left, with source evidence for the bucket durations. Brownstone only; read-only over saved scans; no schema change. Using it in Today stays with STORY-062.
 
-As a gold maker, I want to see which listings disappeared between two scans, so that I have some evidence of what moves, since the game shows no sales.
+As the owner, I want to see which listings disappeared between two consecutive scans, and which of them could not have simply expired, so that I have evidence of what moves, since the game shows no sales.
 
 Acceptance:
-- **Matching:** listings present in one scan and gone from the next, matched on item, quantity and buyout, plus seller and time left when STORY-023 provides them. Time left separates expiry from an early disappearance.
-- **Honest labels:** always *removed*, never *sold*. Scans carry no auction ID, so a sale, a cancellation and an expiry can look the same; it's an upper bound on sales.
-- **Only consecutive scans** within a maximum gap recorded in `requirements.md`.
-- Shown per item (on the item page) and as a list, and usable by Today as evidence: it is the first step towards replacing Today's fixed *most crafts per item* with sales speed.
-- Depends on the implemented market metrics layer (ADDON-10); better with STORY-023.
+- **Scan pairs:** only consecutive eligible scans (UI-06's rules: complete, not partial, priced, same source and full market), with a finish-to-finish gap of at most **12 hours**. A longer gap says so and gives no removals. Never skip a scan to make a pair.
+- **Matching:** there is no auction ID or seller (ADDON-07's beta finding), so listings match per item identity (ADDON-08: `item_id, variant_id, variant_state`, never pooled; legacy rows follow UI-06's match rule) on **stack quantity and buyout**. Per matching key, removed listings = earlier count − later count when positive; a smaller later count is never offset by a new listing at another price. Listings without a buyout are left out and counted separately. Report removed listings and removed units.
+- **Time left:** within a matching key, the removed listings are taken to be the earlier scan's shortest time left first (the cautious choice: as many removals as possible count as possible expiries). A removed listing **could have expired** when the gap reaches its bucket's lower bound; otherwise it was **removed early** (bought or cancelled). A missing time left is *time left unknown*, never early. Record the bucket bounds (1–4) in `requirements.md` with a cited source; ADDON-09 says the raw bucket has no duration mapping, so amend it to point to the new rule. If the source is for Classic Era rather than Forever, add a beta check to `addon/README.md` and list the story under *Pending an in-game beta check*.
+- **Honest labels:** always *removed*, never *sold*: a sale, a cancellation, a reprice and an expiry can look the same, so removed early is an upper bound on sales. No forecast.
+- **Shown in the Market explorer (STORY-055):**
+  - **Item page:** a *Removed between scans* section for that item over the most recent qualifying pairs (at most 10, newest first): each pair's times and gap, listings and units removed early, could have expired and time left unknown, plus listings without a buyout. Too-long gaps are listed as skipped, not hidden. Matching evidence on demand.
+  - **List:** in the Market place, the newest qualifying pair's top 10 catalog-chain items by **units removed early**, each linking to its item page. With no qualifying pair, say why (one scan, gap too long, TSM source).
+- **Calculation** in a new `brownstone/removed_listings.py` (no NiceGUI or Streamlit), reading `scan_listings` under `scope_predicate` and reusing `scan_changes.eligible_scans`; integer copper and units. Display through `views/nicegui_market.py` and the shared theme (UI-08). Keep `market_explorer`'s load fast: removals for an item page are computed when the item is opened.
+- **Offline tests:** identical listings (two removed of three); a reprice (counted removed, the new price never offsets it); quantity and buyout as part of the key; variants and legacy rows never pooled; listings without a buyout left out; shortest-time-left-first; each bucket's could-have-expired boundary; time left unknown; gap over 12 hours; non-consecutive scans never paired; partial or unpriced scans skipped; one scan; TSM source; scoping (another source or any `MARKET_KEYS` field never used); the item-page section and the list in the NiceGUI user fixture.
+- **Real-data check:** on the Forever beta source, the newest qualifying pair: its gap, and the list's top items; then Linen Cloth's item page across pairs.
+- **Docs:** a *Removed listings* rule in `requirements.md` next to UI-06 (pairs, 12-hour gap, matching, bucket bounds with source, labels), the ADDON-09 amendment, `design.md`, `status.md`.
 
 ### STORY-061 — Stock on hand and targets
 
