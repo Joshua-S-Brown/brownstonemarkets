@@ -44,19 +44,22 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - An optional AI narration layer can come later. It may only explain those defined metrics, never invent numbers (*Out of scope*).
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
-**Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data):
-1. STORY-067 price warnings on Today's plan (ready for handoff)
-2. STORY-068 use what the team holds (refine first)
-3. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
-4. STORY-069 Today in player terms
-5. STORY-070 Team's next recipe you can actually learn
-6. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-8. STORY-036 vendor price ceilings
-9. STORY-021 item page and charts (would live in the Market explorer)
-10. STORY-026 scan coverage and rhythm
-11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-12. STORY-006 replay
+**Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
+1. STORY-067 price warnings on Today's plan (with GPT)
+2. STORY-071 vendor price lists (addon; time-critical: needs a beta play session before 21 October, can be built alongside STORY-067)
+3. STORY-072 typical price from one point per day
+4. STORY-068 use what the team holds (refine first)
+5. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
+6. STORY-073 your own sale rate (refine first)
+7. STORY-069 Today in player terms
+8. STORY-070 Team's next recipe you can actually learn
+9. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+10. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+11. STORY-036 vendor price ceilings (after STORY-071)
+12. STORY-021 item page and charts (would live in the Market explorer)
+13. STORY-026 scan coverage and rhythm
+14. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+15. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
@@ -115,7 +118,44 @@ Acceptance:
 - **Best next recipe** prefers recipes the character can learn from a trainer, vendor or quest, then drops and unknown sources; within each, the current CRAFT-11 order. The full list keeps every recipe, with its source.
 - **Gathering professions** (Mining, Herbalism, Skinning, Fishing) with no craftable catalog recipe in reach say *levels by gathering* instead of an empty *No data available* table.
 - **Profession comparison:** when every cost to 300 is incomplete, say so once at the top instead of on every row.
+- **Training payback** (added 2026-10-14 from CraftProfit): beside each recipe that needs training, how many crafts at its current per-craft profit pay back the training cost (rounded up); *never* when the profit is zero or negative, *unknown* when the cost or profit is.
 - Today's plan, ranking and versions unchanged.
+
+### STORY-071 — Vendor price lists (addon, read-only)
+
+Added 2026-10-14 from the addon comparison (aux and CraftProfit both record a vendor's full list when it opens). Today we only learn a vendor price when we buy something, so catalog vendor prices stay *unconfirmed* (the reason White Linen Shirt was Medium confidence) and STORY-036 has little to work with. **Time-critical:** it needs one beta play session before 21 October.
+
+As the owner, I want every vendor I open to record what it sells and for how much, so that Brownstone can confirm vendor prices without me buying anything.
+
+Acceptance:
+- **Addon capture (read-only):** while a merchant window is open, record each merchant item: link and item ID, price and quantity per purchase, available stock (unlimited or a number), whether it costs something other than gold (extended cost; such items are kept as evidence but never used as a gold price), plus the vendor's NPC ID from its GUID and the zone (`journal.zone()`). Follow `journal.trainerServices`/`journal.trainerRead`: the list can load after `MERCHANT_SHOW`, so save a later read only while the window is open, non-empty and different from the last saved list. Bounded counts, `safe`/`readAll` calls, no clicks, purchases or automation. Bump the addon version.
+- **Reputation:** prices can include a reputation discount, so record the player's standing with the vendor (`UnitReaction` on the open NPC) with the list. A price seen at a discount never confirms a full price.
+- **Brownstone:** imports these entries through the existing journal (family `vendor`; no schema change) and adds a *vendor prices* section to the STORY-042 beta report: per item, each vendor, zone, price, stock and standing, and whether it confirms, contradicts or adds to the catalog's marked vendor price. Catalog values change only through the existing confirmation path, with this evidence cited (AGENTS.md).
+- **Offline tests:** Lua tests in `addon/BrownstoneScan/test_addon.py` for the late-loading list, unchanged list not re-saved, extended cost and limited stock; Python tests for import scope and the report's confirm/contradict/new cases.
+- **Beta check** (play actions only, added to `addon/README.md` → *Last beta play session*): open a trade-supplies vendor, a general goods vendor and one other vendor, without buying.
+- **Docs:** the capture in `requirements.md` under the ADDON journal rules; `design.md`; `status.md`.
+
+### STORY-072 — Typical price from one point per day
+
+Added 2026-10-14 from the addon comparison: aux, Auctioneer and CraftProfit all collapse many scans into one point per time period before taking a typical price. UI-11 takes the median over every eligible scan, so an evening with six scans outweighs the other days. This matters more once STORY-067 caps Today's sale prices at the typical price.
+
+Acceptance:
+- **Daily points:** for each UTC day in the window, the day's point is the median of that day's eligible scans' lowest positive buyouts for the identity (ADDON-08 rules unchanged). The typical price is the median of the daily points. Daily points use earlier eligible scans only: the newest scan is never part of its own typical price, as now.
+- **Enough history:** `flood_min_days` (default **3** distinct days) replaces `flood_min_scans`; the window stays `flood_window_days`. Config validation and inheritance as for the other flood settings; an old `flood_min_scans` setting is rejected with a message naming the replacement.
+- **Shown:** evidence says *N days, M scans* instead of *N earlier scans*. Market, *This session* and Today (after STORY-067) all use the new value; nothing else changes.
+- **Version:** if STORY-067 is done, `TODAY_VERSION` increases again.
+- **Offline tests:** six scans on one day and one on each of two others give three equal-weight points; two days are *too few days*; integer copper; variants never pooled.
+- **Real-data check:** on the Forever beta source, list the items whose label changes (cheap, typical, high, too few) and why.
+- **Docs:** UI-11 in `requirements.md`, `design.md`, `status.md`.
+
+### STORY-073 — Your own sale rate
+
+Added 2026-10-14 from the addon comparison (Journalator's *sale rate*: sold against expired and cancelled per item, with the average sale price). Our journal already records posts, invoices and returned mail; nothing shows them. It's the only direct proof that something sells, and it fills in by itself from launch. **Refine first.**
+
+Proposed acceptance (to confirm when refined):
+- Per item and character: units posted, sold (from seller invoices), expired and cancelled (from returned mail), sale rate and average sale price after the cut, in integer copper; shown on Today's *Sell* rows and the Market item page.
+- **Decision for refinement:** a seller invoice carries the item's name but no link. Matching it to an item ID needs a rule that respects *names never decide anything*, for example matching to the same character's earlier post by name, count and price, or keeping unmatched invoices as *unidentified*. Check what the beta capture actually holds first.
+- This is the first slice of STORY-034's ledger; build it so the ledger can reuse it.
 
 ### STORY-034 — Movement ledger and reconciliation
 
@@ -130,6 +170,8 @@ Acceptance:
 - **Integer copper,** all characters kept separate unless summed explicitly, and the 5% (or 15% neutral) cut taken from invoices, not assumed.
 - **Offline tests** from beta fixtures: a full buy → craft → post → sale cycle, an expiry, a mail between characters and a gathering residual.
 - **Across machines** (moved from STORY-037): mail between characters on different machines appears once as sent and once as received; a missing drop shows as an unmatched mail.
+- **Known gold categories** (added 2026-10-14 from Journalator): gold in and out by category (auction sales and purchases, deposits, vendor, repairs, training, flights, quests, mail) by day and character, from the events the journal already records. Only what no event explains stays in the *other* residual.
+- **Sale rate:** reuse STORY-073's per-item results rather than computing them again.
 
 ### STORY-035 — Auction deposits
 
@@ -141,6 +183,7 @@ Acceptance:
 - **Formula from evidence:** the beta tests under *Now* record the deposit for a few posts of known vendor price, stack size and duration. The formula is recorded in `requirements.md` with that evidence; if it can't be confirmed, deposits stay *not modeled*.
 - **Shown, not ranked:** Today's *Sell* shows the deposit for the planned post and the loss if it expires. Ranking stays on batch profit (the deposit is refunded on a sale) until sell-through data exists (STORY-034).
 - Needs the item's vendor price (STORY-031); missing vendor price shows *deposit unknown*, never zero.
+- **Formula to test** (added 2026-10-14 from aux, a Classic addon): deposit = vendor sell price × 5% (25% neutral) × stack size, rounded down, × hours ÷ 2 for the duration. The 2026-10-10 post below already contradicts it (100c against about 3c), which points to a minimum deposit on Forever; test both against all captured posts.
 
 **Beta evidence so far (2026-10-10):** one post: 5 Linen Cloth (vendor 13c) cost a **100c** deposit, more than a Classic-style formula gives (`PostCommodity` with duration argument 3; money went 145c → 45c; status 1 *sold* 30 s later, no invoice mail captured yet). **Next play session** (play actions only; Claude checks the file): post an item worth more to a vendor (a stack of 5 and a single, for example Bolt of Linen Cloth or a crafted shirt) once at each of the three durations; post one more stack of Linen Cloth at the shortest duration; then open the mailbox after the sale and take the gold. That separates a minimum from the per-vendor-value rate and duration, and times the sale-to-mail delay.
 
@@ -311,6 +354,7 @@ Acceptance:
 - **Market for our levels** (walkthrough 2026-10-13): Market's front-page lists were dominated by Wool, Silk and Mithril-level items while the team was level 1–8. Filter or order them by the skill bands the team can reach (Team's window), with the full lists one click away.
 - **Plain identity labels** (walkthrough 2026-10-13): *base* and *unresolved* tags, and items listed twice under each, mean nothing to a player. Say *variant* or *unidentified link* only where it matters, keeping identities separate (ADDON-08).
 - **Shorter removal history** (walkthrough 2026-10-13): an item page lists every scan gap, mostly zeros. Summarise (removed early and could-have-expired totals over the comparable gaps), with each gap on demand.
+- **Vendor value as a floor** (2026-10-14, from CraftProfit's *vendor net*): for leveling crafts whose auction market is flooded, show what the output fetches from a vendor (vendor sell price × output − cost) beside the auction profit, so a craft that only breaks even at the vendor is visible.
 - **Vendor the junk** (walkthrough 2026-10-13): Stock showed 20 of 43 held items with no price, mostly vendor trash. Suggest vendoring held items with a vendor price and no auction price, using captured vendor prices only.
 - **Best use of a material:** for an item such as Linen or Wool Cloth, compare selling it with each craft it feeds, at current prices.
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
