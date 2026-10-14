@@ -239,3 +239,109 @@ def test_spot_scope_map_seconds_and_excluded_stretches():
         r['entry_id'] += ':other'
         r['login_at'] = 2
     assert farming.history(events + duplicate)['spots'][0]['npc_id'] == 10
+
+
+def positioned(time, x, y, **kwargs):
+    events = mob_loot(time, 10, **kwargs)
+    events[0][0]['zone'].update(x=x, y=y)
+    return events
+
+
+def test_position_cell_floor_median_distinct_windows_and_missing():
+    events = positioned(0, .45, .70) + positioned(150, .49, .74) + positioned(300, .91, .11)
+    # Several messages in one window do not overweight its position.
+    for time in (301, 302, 303):
+        events.append(record('CHAT_MSG_LOOT', time, arguments={'1': '|Hitem:2589|h[x]|h'}))
+    result = farming.history(events)
+    assert result['spots'][0]['cell'] == (45, 70)
+    assert result['stretches'][0]['cell'] == (45, 70)
+    assert farming.history(events, cell_percent=10)['spots'][0]['cell'] == (40, 70)
+    assert farming.history(mob_loot(0, 10))['stretches'][0]['cell'] is None
+    even = farming.gathered(positioned(0, .40, .60) + positioned(150, .50, .80))
+    assert farming.position_cell(even) == (45, 70)
+    boundary = farming.gathered(positioned(0, .30, .60) + positioned(150, .60, .80))
+    assert farming.position_cell(boundary) == (45, 70)
+    even[0]['zone']['x'] = float('nan')
+    assert farming.position_cell(even) == (50, 80)
+
+
+def test_position_splits_same_npc_into_spots_and_preserves_item_rows():
+    events = sum((positioned(t, .42, .72) for t in (0, 150, 300)), [])
+    events += sum((positioned(t, .63, .81) for t in (2000, 2150, 2300)), [])
+    history = farming.history(events)
+    assert [(s['npc_id'], s['cell'], s['seconds']) for s in history['spots']] == [
+        (10, (40, 70), 300), (10, (60, 80), 300)]
+    assert history['rows'][0]['seconds'] == 600 and history['rows'][0]['units'] == 6
+
+
+@pytest.mark.parametrize(('scan_price', 'chosen', 'disagreement'), [(None, 7, False), (0, 7, False),
+                                                                   (7, 7, False), (9, 9, True)])
+def test_loot_vendor_fallback_scan_preference_and_disagreement(scan_price, chosen, disagreement):
+    events = sum((mob_loot(t, 10, quantity=2) for t in (0, 150, 300)), [])
+    for r, _ in events:
+        if r['event'] == 'LOOT_OPENED':
+            r['loot_slots'][0]['vendor_sell_copper'] = 7
+    result = farming.valued(farming.history(events), {}, [], .05, {2589: scan_price})['spots'][0]
+    assert result['vendor_value_copper'] == 6 * chosen
+    assert result['items'][0]['unit_copper'] == chosen
+    assert bool(result['vendor_disagreements']) is disagreement
+    assert farming.valued(farming.history(events), {2589: 100}, [], .05)['spots'][0]['items'][0]['basis'] == 'auction'
+
+
+def test_coin_slot_money_after_close_dedup_and_machine_login_scope():
+    events = sum((mob_loot(t, 10) for t in (0, 150, 300)), [])
+    events[0][0]['loot_slots'].append({'slot_type': 2, 'quantity': 0})
+    events += [record('LOOT_CLOSED', 1), record('PLAYER_MONEY', 2, before_copper=10, after_copper=110)]
+    result = farming.valued(farming.history(events + events), {2589: 10}, [], .05)['spots'][0]
+    assert result['coin_copper'] == 100 and result['value_copper'] == 128
+    other = events[:-1] + [(events[-1][0], 'other')]
+    assert farming.history(other)['spots'][0]['coin_copper'] is None
+    events[-1][0]['login_at'] = 2
+    assert farming.history(events)['spots'][0]['coin_copper'] is None
+
+
+@pytest.mark.parametrize('block', ['vendor', 'mail', 'craft', 'trade', 'auction', 'next_window', 'late', 'negative'])
+def test_coin_needs_slot_and_bounded_uninterrupted_money(block):
+    events = sum((mob_loot(t, 10) for t in (0, 150, 300)), [])
+    events[0][0]['loot_slots'].append({'slot_type': 2, 'quantity': 0})
+    if block == 'next_window':
+        events.append(record('LOOT_OPENED', 1, loot_slots=[]))
+    elif block not in ('late', 'negative'):
+        events.append(record('other', 1, family=block))
+    events.append(record('PLAYER_MONEY', 6 if block == 'late' else 2, before_copper=100,
+                         after_copper=90 if block == 'negative' else 200))
+    assert farming.history(events)['spots'][0]['coin_copper'] is None
+
+
+def test_cell_setting_default_inheritance_override_validation(tmp_path):
+    from test_scans import addon_source
+
+    from brownstone.config import build_source
+    base = dict(addon_source(tmp_path, tmp_path / 'scan.lua'))
+    for key in ('market_id', 'data_dir', 'farming_cell_percent'):
+        base.pop(key, None)
+    assert build_source(base, {})['farming_cell_percent'] == 5
+    assert build_source(base | {'farming_cell_percent': 10}, {})['farming_cell_percent'] == 10
+    assert build_source(base | {'farming_cell_percent': 10}, {'farming_cell_percent': 3})['farming_cell_percent'] == 3
+    for invalid in (0, -1, 101, True, 1.5, '5'):
+        with pytest.raises(ValueError, match='farming_cell_percent'):
+            build_source(base, {'farming_cell_percent': invalid})
+
+
+def test_coin_only_window_inside_stretch_counts_and_vendor_reports_all_disagreements():
+    events = sum((mob_loot(t, 10) for t in (0, 150, 300)), [])
+    events += [record('LOOT_OPENED', 100, zone={'map_id': 1}, loot_slots=[{'slot_type': 2, 'quantity': 0}]),
+               record('PLAYER_MONEY', 101, before_copper=10, after_copper=110)]
+    events[0][0]['loot_slots'][0]['vendor_sell_copper'] = 7
+    events[2][0]['loot_slots'][0]['vendor_sell_copper'] = 9
+    spot = farming.valued(farming.history(events), {}, [], .05, {2589: 9})['spots'][0]
+    assert spot['coin_copper'] == 100
+    assert spot['vendor_value_copper'] == 27
+    assert spot['vendor_disagreements'] == [{'item_id': 2589, 'scan_copper': 9, 'loot_copper': 7}]
+
+
+def test_coin_only_window_in_other_map_does_not_value_the_spot():
+    events = sum((mob_loot(t, 10) for t in (0, 150, 300)), [])
+    events += [record('LOOT_OPENED', 100, zone={'map_id': 2}, loot_slots=[{'slot_type': 2}]),
+               record('PLAYER_MONEY', 101, before_copper=10, after_copper=110)]
+    assert farming.history(events)['spots'][0]['coin_copper'] is None

@@ -17,6 +17,13 @@ def markdown(report: dict) -> str:
              f"{totals['pass']} pass, {totals['warn']} warn, {totals['fail']} fail", ""]
     lines += _checks(report["checks"])
     lines += _coverage(report.get("coverage", []))
+    if 'farming_capture' in report:
+        capture = report['farming_capture']
+        lines += ['', '## Farming capture', '',
+                  f"Loot windows: {capture['loot_windows']}; with positions: {capture['windows_with_positions']}; "
+                  f"with coin slots: {capture['windows_with_coin_slots']}; "
+                  f"with vendor prices: {capture['windows_with_vendor_prices']}. "
+                  f"Coin slots: {capture['coin_slots']}; vendor prices: {capture['vendor_prices']}."]
     lines += _vendor_prices(report.get("vendor_prices", {}))
     lines += ["", "## Gold display", ""]
     for character in report.get("characters", []):

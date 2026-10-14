@@ -209,3 +209,32 @@ async def test_farming_spots_table_npc_links_values_and_coin_caveat(user, tmp_pa
     assert row['Minutes'] == '5.0' and row['Stretches'] == 1 and row['No price'] == '1 item / 1 unit'
     user.find('Spot item values').elements.pop().open()
     await user.should_see('Item 999')
+
+
+async def test_farming_cell_centre_coin_share_and_vendor_disagreement(user, tmp_path, monkeypatch):
+    from test_farming import positioned, record
+
+    from brownstone import farming
+    from views.nicegui_today import session_farming_spots, spot_coin_share, spot_position
+
+    events = sum((positioned(t, .47, .72) for t in (0, 150, 300)), [])
+    for r, _ in events:
+        if r['event'] == 'LOOT_OPENED':
+            r['loot_slots'][0]['vendor_sell_copper'] = 7
+    events[0][0]['loot_slots'].append({'slot_type': 2, 'quantity': 0})
+    events.append(record('PLAYER_MONEY', 1, before_copper=100, after_copper=200))
+    result = farming.valued(farming.history(events), {}, [], .05, {2589: 9})
+    assert spot_position({'cell': None}) == '—'
+    assert spot_coin_share({'coin_copper': 0, 'value_copper': 0}) == 'Coin unknown'
+
+    @ui.page('/farming-capture')
+    def page():
+        session_farming_spots(result)
+
+    await user.open('/farming-capture')
+    row = user.find(marker='farming-spots').elements.pop().rows[0]
+    assert row['Position'] == 'around 47.5, 72.5'
+    assert 'Coin 78%' in row['Value shares']
+    user.find('Spot item values').elements.pop().open()
+    await user.should_see('vendor price disagreement')
+    await user.should_see('using scan')

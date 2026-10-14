@@ -166,7 +166,8 @@ def build_options(db, config, arguments, plan, *, window=25):
         characters.append({'character': identity, 'level': level if type(level) is int else None,
                            'crafts': _crafts(plan, by_id, data[identity]),
                            'farming': farming.history(data[identity].get('observations', []),
-                                                      config.get('farming_idle_minutes', 10)),
+                                                      config.get('farming_idle_minutes', 10),
+                                                      config.get('farming_cell_percent', 5)),
                            'professions': [_profession(g, by_id, prices, graph) for g in result['professions']],
                            'unlisted': result['unlisted']})
     signals = arguments.get('flood_evidence')

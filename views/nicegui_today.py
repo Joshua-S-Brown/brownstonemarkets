@@ -876,7 +876,8 @@ def session_farming_spots(history):
                      'Per hour': format_money(spot['value_per_hour_copper'])
                      if spot['value_per_hour_copper'] is not None else 'no price',
                      'Minutes': f"{spot['seconds'] / 60:.1f}", 'Stretches': spot['stretches'],
-                     'Value shares': ' · '.join(shares) + ' · Coin unavailable',
+                     'Position': spot_position(spot),
+                     'Value shares': ' · '.join(shares) + ' · ' + spot_coin_share(spot),
                      'No price': f"{spot['no_price_items']} item{'s' * (spot['no_price_items'] != 1)} / "
                                  f"{spot['no_price_units']} unit{'s' * (spot['no_price_units'] != 1)}",
                      'Also looted': ', '.join(f'NPC {npc}' for npc in spot['also_looted']) or '—'})
@@ -888,10 +889,28 @@ def session_farming_spots(history):
                     ':href="\'https://www.wowhead.com/classic/npc=\' + props.row.npc_id" '
                     'target="_blank" rel="noopener noreferrer">{{props.value}}</a>'
                     '<span v-else>{{props.value}}</span></q-td>')
-    ui.label('Coin unavailable: beta money changes can arrive after loot closes; '
-             'capture evidence is deferred to STORY-075.').classes('bs-note')
+    ui.label('Coin unavailable where no matching coin amount was captured.').classes('bs-note')
     with ui.expansion('Spot item values'):
         for spot in history['spots']:
+            for mismatch in spot.get('vendor_disagreements', []):
+                ui.label(f"Item {mismatch['item_id']} vendor price disagreement: scan "
+                         f"{format_money(mismatch['scan_copper'])}, loot "
+                         f"{format_money(mismatch['loot_copper'])}; using scan.").classes('bs-note')
             for item in spot['items']:
                 ui.label(f"Map {spot['map_id']} · NPC {spot['npc_id'] or 'none'} · Item {item['item_id']} · "
                          f"{item['units']} units · {item['basis']} · {session_money(item['value_copper'])}")
+
+
+def spot_position(spot):
+    cell = spot.get('cell')
+    if cell is None:
+        return '—'
+    half = spot['cell_percent'] / 2
+    return f'around {cell[0] + half:g}, {cell[1] + half:g}'
+
+
+def spot_coin_share(spot):
+    coin, total = spot['coin_copper'], spot['value_copper']
+    if coin is None:
+        return 'Coin unavailable'
+    return f'Coin {coin * 100 // total}%' if total else 'Coin unknown'

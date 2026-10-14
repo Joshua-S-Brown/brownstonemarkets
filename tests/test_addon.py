@@ -202,7 +202,7 @@ def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
                                             lua.table_from({"scan_id": "old-2"})])
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert python_value(g.BrownstoneScanDB) == button_result
-    assert g.BrownstoneScanDB.addon_version == "0.12.3" and g.BrownstoneScanDB.schema_version == 6
+    assert g.BrownstoneScanDB.addon_version == "0.12.4" and g.BrownstoneScanDB.schema_version == 6
 
 
 @pytest.mark.parametrize("ending", [
@@ -671,3 +671,61 @@ def test_panel_start_tracks_auction_events_before_client_frame_visibility():
     assert not g.BrownstonePanelStart.enabled
     g.BrownstonePanelStatus.Click(g.BrownstonePanelStatus)
     assert not g.BrownstonePanelStart.enabled
+
+
+@pytest.mark.parametrize('position', ['nil', '{GetXY = function() return 0.47, 0.72 end}'])
+def test_farming_capture_position_coin_vendor_and_slot_cap(position):
+    from test_journal import entries, fire, journal_client
+
+    lua, g, _ = journal_client()
+    lua.execute('''
+        C_Map = {GetBestMapForUnit = function() return 1429 end,
+                 GetPlayerMapPosition = function(map, unit)
+                     assert(map == 1429 and unit == "player")
+                     return POSITION end}
+        function GetNumLootItems() return 60 end
+        lootReads = 0
+        function GetLootSlotType(slot) lootReads = lootReads + 1; return slot == 1 and 2 or 1 end
+        function GetLootSlotInfo(slot) return "icon", "raw", slot == 1 and 0 or 3 end
+        function GetLootSlotLink(slot) if slot > 1 then return "|Hitem:" .. slot .. "|h" end end
+        function GetItemInfo(link)
+            if link == "|Hitem:2|h" then return nil end
+            return "name", link, 0, nil, nil, nil, nil, nil, nil, nil, 7
+        end
+    '''.replace('POSITION', position))
+    fire(g, 'LOOT_OPENED')
+    row = entries(g)[-1]
+    assert row['loot_slot_count'] == 60 and len(row['loot_slots']) == g.lootReads == 50
+    coin, uncached, cached = row['loot_slots'][:3]
+    assert coin['slot_type'] == 2 and coin['quantity'] == 0 and 'link' not in coin
+    assert 'vendor_sell_copper' not in coin and 'vendor_sell_copper' not in uncached
+    assert cached['vendor_sell_copper'] == 7 and cached['quantity'] == 3
+    assert ('x' in row['zone']) == (position != 'nil')
+    if position != 'nil':
+        assert row['zone']['x'] == .47 and row['zone']['y'] == .72
+    lua.execute('GetItemInfo = function() return nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,0 end')
+    fire(g, 'LOOT_OPENED')
+    assert all('vendor_sell_copper' not in s for s in entries(g)[-1]['loot_slots'])
+    assert g.actionCalls == 0
+
+
+@pytest.mark.parametrize('reader', ['nil', 'function() error("no map") end',
+                                   'function() return {GetXY=function() error("no coordinates") end} end'])
+def test_farming_position_failure_keeps_merchant_and_trainer_reads(reader):
+    from test_journal import entries, fire, journal_client
+
+    lua, g, _ = journal_client()
+    lua.execute('''
+        C_Map = {GetBestMapForUnit=function() return 1429 end, GetPlayerMapPosition=READER}
+        function GetMerchantNumItems() return 1 end
+        function GetMerchantItemInfo() return "raw", nil, 20, 2, -1, true, true, false end
+        function GetNumTrainerServices() return 1 end
+        function GetTrainerServiceInfo() return "raw", "available" end
+    '''.replace('READER', reader))
+    fire(g, 'MERCHANT_SHOW')
+    row = entries(g)[-1]
+    assert row['zone']['map_id'] == 1429 and 'x' not in row['zone'] and 'y' not in row['zone']
+    assert row['merchant_items'][0]['quantity'] == 2
+    fire(g, 'TRAINER_SHOW')
+    assert entries(g)[-1]['trainer_service_count'] == 1
+    assert g.actionCalls == 0

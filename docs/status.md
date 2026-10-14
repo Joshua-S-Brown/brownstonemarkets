@@ -15,7 +15,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   on crafts/Sell/posts; shown-output UI-10 history adds Low confidence for no early removals
   in at least three qualifying gaps (Classic time-left assumptions pending Forever confirmation). This session
   composes reserved crafts and Team-window unlock costs with flood labels (UI-12)
-  and measured journal farming rates and zone/NPC farming spots (UI-13).
+  and measured journal farming rates and zone/NPC/position-cell farming spots (UI-13).
 - **Team:** captured roster/history, recipe evidence, reach estimates and hiring comparison
   (CRAFT-11/13). One board shared across characters/hiring; detail loads on demand.
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
@@ -35,7 +35,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   evidence and training costs. Generation is offline from manually saved pages (CRAFT-08).
 - **Sources:** local overrides enable `forever-us-normal-alliance-addon` beta; tracked config
   keeps it disabled. Mankrik Alliance is development data; Retail is regression-only.
-- **Addon:** 0.12.2, account format 6/scan format 4. Usage, capture fields and remaining game
+- **Addon:** 0.12.4, account format 6/scan format 4. Usage, capture fields and remaining game
   checks live in [addon README](../addon/README.md). App retirement does not alter addon/data.
 
 ## Limitations
@@ -49,8 +49,11 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   starter learning evidence or put Smelt Copper at skill 25; gaps remain unknown.
 - Farming requires loot-source context (addon 0.11.3+); older unmatched messages supply no rate.
   Short stretches remain excluded evidence; measured beta rates do not promise launch respawns.
-  Valuation uses Today's loaded price arguments, with newest-scan vendor sell fallback for spots.
-  Coin is unavailable pending STORY-075: beta money increases often arrive after loot closes.
+  Valuation uses Today's loaded prices, preferring newest-scan vendor sell values over loot-time fallback
+  and reporting disagreements. Addon 0.12.4 captures raw positions, slot types/quantities and cached
+  vendor values; UI-13 adds median position cells and explicit-slot coin valuation. Older captures
+  keep zone/NPC-only spots and unavailable coin. New fields still need the README's two-camp game check;
+  coin without a nearby matching money delta stays unavailable.
   Other unpriced gathered items are counted and excluded; spot evidence includes all item values.
 - Listings are not sales/demand/forecasts. Removed-listing time-left bounds are Classic assumptions,
   pending Forever confirmation. Tier levels 10/20/35 and yellow skill-up chances are unconfirmed.

@@ -555,3 +555,30 @@ def test_vendor_section_is_added_to_created_report_without_catalog_mutation(tmp_
     assert "## Vendor prices" in text and "cost evidence only" in text
     assert "No vendor price lists captured." in "\n".join(_vendor_prices({}))
     assert not config["data_dir"].exists()
+
+
+def test_farming_capture_counts_positions_coin_slots_and_vendor_prices():
+    from brownstone.beta_report import farming_capture
+
+    rows = [{'event': 'LOOT_OPENED', 'zone': {'x': .47, 'y': .72},
+             'loot_slots': [{'slot_type': 2, 'quantity': 0}, {'slot_type': 1, 'vendor_sell_copper': 7}]},
+            {'event': 'LOOT_OPENED', 'loot_slots': [{'slot_type': 3, 'vendor_sell_copper': 0}]},
+            {'event': 'CHAT_MSG_LOOT', 'zone': {'x': .2, 'y': .4}}]
+    assert farming_capture(rows) == {'loot_windows': 2, 'windows_with_positions': 1,
+                                     'windows_with_coin_slots': 1, 'windows_with_vendor_prices': 1,
+                                     'coin_slots': 1, 'vendor_prices': 1}
+
+
+def test_report_includes_farming_capture_in_json_and_markdown(tmp_path):
+    db = database()
+    row = entry('loot-position')
+    row.update(event='LOOT_OPENED', family='loot', sequence=6, zone={'map_id': 1429, 'x': .47, 'y': .72},
+               loot_slots=[{'slot_type': 2, 'quantity': 0}, {'link': '|Hitem:2589|h', 'vendor_sell_copper': 7}])
+    db['journal'].append(row)
+    source = addon_source(tmp_path / 'data', write(tmp_path, db))
+    folder, report, _ = beta_report.create_report(source['scan_path'], source, tmp_path / 'reports', now=NOW)
+    assert report['farming_capture']['windows_with_positions'] == 1
+    assert report['farming_capture']['windows_with_coin_slots'] == 1
+    assert report['farming_capture']['windows_with_vendor_prices'] == 1
+    assert 'with positions: 1; with coin slots: 1; with vendor prices: 1' in (folder / 'report.md').read_text()
+    assert json.loads((folder / 'report.json').read_text())['farming_capture'] == report['farming_capture']

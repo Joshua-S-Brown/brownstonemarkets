@@ -432,7 +432,7 @@ provenance; the view turns steps into lines (`step_text`). The input plan/argume
 when **This session** opens, reads Team's per-tab/source
 reach window, uses the shared theme and links to Market items and the selected Team character.
 
-### Farming (STORY-065, STORY-074)
+### Farming (STORY-065, STORY-074, STORY-075)
 
 Rules live in `requirements.md` → UI-13. `farming.gathered` reads scoped `(record, machine)`
 observations, orders by capture/sequence and deduplicates entry IDs. The addon captures only the player's loot messages; matching windows are isolated by machine/login,
@@ -445,9 +445,18 @@ stay unknown. `session_options` adds farming copies to character cards without c
 window identity. `stretches` assigns the dominant NPC by distinct windows and `history` adds spot
 aggregates alongside the unchanged item rows. `valued` accepts the newest scan vendor prices as data
 from `session_options`, values all spot quantities before dividing by summed seconds, and retains
-per-item auction/vendor/no-price evidence. Coin remains unavailable (UI-13). `session_farming`
-adds the spot table with the shared theme and Classic NPC links.
-No storage or addon contract changes, new query or network work.
+per-item auction/vendor/no-price evidence. Matched loot carries the slot's optional positive
+`vendor_sell_copper`; spot aggregation retains the latest loot value per item plus every distinct observed value;
+valuation prefers positive scan values and exposes every disagreement. `position_cell` uses distinct matched window positions
+and median raw fractions to derive the optional lower-edge `(x, y)` percent cell. `history` accepts
+`cell_percent` from the source config and groups spots by map/NPC/cell, preserving item rows.
+`coin_windows` matches explicit type-2 slots to guarded same-machine/login money deltas under UI-13;
+spot aggregation counts each matched window once. Missing coin remains nullable.
+`session_farming` adds position-centre and coin-share columns and vendor disagreement evidence to the
+spot table with the shared theme and Classic NPC links. The addon 0.12.4 shared `journal.zone()`
+adds nullable raw x/y (including shared vendor context); `journal.lootSources()` adds type, quantity
+and cached positive vendor copper. `beta_report.farming_capture` counts capture coverage in JSON
+and Markdown. No storage migration, new price query or network work.
 
 ## Team contracts
 

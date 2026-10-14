@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.3"
+local ADDON_VERSION = "0.12.4"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -882,15 +882,28 @@ end
 
 -- STORY-065 discovery: where the player stood. Raw values; Brownstone interprets them after the beta check.
 function journal.zone()
+    local map = C_Map and safe(C_Map.GetBestMapForUnit, "player")
+    local position = map and C_Map and safe(C_Map.GetPlayerMapPosition, map, "player")
+    local x, y
+    if position then
+        local xy = readAll(function() return position:GetXY() end)
+        x, y = xy and xy[1], xy and xy[2]
+    end
     return { zone = safe(GetRealZoneText), subzone = safe(GetSubZoneText),
-        map_id = C_Map and safe(C_Map.GetBestMapForUnit, "player") }
+        map_id = map, x = x, y = y }
 end
 
--- What each loot slot came from: GetLootSourceInfo's GUIDs say node (GameObject), mob (Creature) or container.
+-- Preserve raw type/quantity; vendor value is copper per item.
 function journal.lootSources()
     local slots = {}
     for slot = 1, boundedCount(GetNumLootItems, 50) or 0 do
-        slots[#slots + 1] = { slot = slot, link = safe(GetLootSlotLink, slot),
+        local link = safe(GetLootSlotLink, slot)
+        local info = readAll(GetLootSlotInfo, slot)
+        local item = link and readAll(GetItemInfo, link)
+        local sell = item and item[11]
+        slots[#slots + 1] = { slot = slot, link = link,
+            slot_type = safe(GetLootSlotType, slot), quantity = info and info[3],
+            vendor_sell_copper = type(sell) == "number" and sell > 0 and sell or nil,
             sources = readAll(GetLootSourceInfo, slot) }
     end
     return { loot_slot_count = boundedCount(GetNumLootItems, 1000), loot_slots = slots, zone = journal.zone() }

@@ -32,6 +32,7 @@ def analyze(raw: bytes, now: datetime) -> tuple[dict, tuple]:
     valid_scans, records = evidence.validate(report, lists, now)
     report["scans"] = [_scan_facts(r) for r in valid_scans]
     report["characters"] = _characters(records)
+    report["farming_capture"] = farming_capture(records)
     moments = [r["captured_at"] for r in records] + [r[k] for r in valid_scans for k in ("started_at", "finished_at")]
     report["file"]["time_span_utc"] = [_utc(min(moments)), _utc(max(moments))] if moments else None
     sessions = evidence.load_sessions(records)
@@ -247,3 +248,20 @@ def create_report(path: Path, config: Source, output_root: Path, previous: Path 
     (folder / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     (folder / "report.md").write_text(markdown(report), encoding="utf-8")
     return folder, report, code
+
+
+def farming_capture(records):
+    from .farming import _position
+
+    windows = [r for r in records if r.get('event') == 'LOOT_OPENED']
+    slots = [s for r in windows for s in r.get('loot_slots', [])]
+    return {'loot_windows': len(windows),
+            'windows_with_positions': sum(_position(r.get('zone', {})) for r in windows),
+            'windows_with_coin_slots': sum(any(s.get('slot_type') == 2 for s in r.get('loot_slots', []))
+                                           for r in windows),
+            'windows_with_vendor_prices': sum(any(type(s.get('vendor_sell_copper')) is int
+                                                  and s['vendor_sell_copper'] > 0
+                                                  for s in r.get('loot_slots', [])) for r in windows),
+            'coin_slots': sum(s.get('slot_type') == 2 for s in slots),
+            'vendor_prices': sum(type(s.get('vendor_sell_copper')) is int and s['vendor_sell_copper'] > 0
+                                 for s in slots)}

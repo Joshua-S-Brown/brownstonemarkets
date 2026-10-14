@@ -59,7 +59,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 12. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
 13. STORY-006 replay
 
-**Pending an in-game beta check:** STORY-071 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
+**Pending an in-game beta check:** STORY-075 and STORY-071 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
 **Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 072, 074 and SPIKE-009/009b.
 
@@ -144,7 +144,7 @@ Proposed acceptance (to confirm when refined):
 
 ### STORY-075 — Farming spot capture: coin, position and vendor value (addon, read-only)
 
-Added 2026-10-14. Follows STORY-074, and STORY-071's addon change, to avoid two version bumps at once. It can be checked on Classic Era as well as the beta, since nothing here is Forever-specific.
+Implemented; pending the in-game check below. Added 2026-10-14. Follows STORY-074, and STORY-071's addon change, to avoid two version bumps at once. It can be checked on Classic Era as well as the beta, since nothing here is Forever-specific.
 
 As the owner, I want each loot window to record where I stood, which slots were coin and what each item sells to a vendor for, so that farming spots separate two camps of the same mob and value grey items and coin properly.
 

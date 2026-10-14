@@ -2,6 +2,7 @@
 import re
 from collections import Counter, defaultdict
 from fractions import Fraction
+from statistics import median
 
 ITEM = re.compile(r'\|Hitem:(\d+)')
 QUANTITY = re.compile(r'\|h(?:\|r)?\s*x(\d+)\s*[.!]?\s*$')
@@ -33,6 +34,7 @@ def _match(record, windows):
                         'source_kind': kind, 'object_id': identity if kind == 'object' else None,
                         'npc_id': identity if kind == 'mob' else None,
                         'window_id': (window.get('captured_at'), window.get('sequence'), window.get('entry_id')),
+                        'vendor_sell_copper': slot.get('vendor_sell_copper'),
                         'entry_id': record.get('entry_id')}
     return None
 
@@ -66,7 +68,7 @@ def gathered(observations):
     return result
 
 
-def stretches(loots, idle_minutes=10):
+def stretches(loots, idle_minutes=10, cell_percent=5):
     result = []
     for loot in loots:
         key = (loot['zone'].get('map_id'), loot['machine'], loot['login_at'])
@@ -76,11 +78,13 @@ def stretches(loots, idle_minutes=10):
         result[-1]['loots'].append(loot)
     return [s | {'seconds': s['last'] - s['first'],
                  'qualifies': s['last'] - s['first'] >= 300 and len(s['loots']) >= 3,
-                 **_spot(s['loots'])} for s in result]
+                 **_spot(s['loots']), 'cell': position_cell(s['loots'], cell_percent)} for s in result]
 
 
-def history(observations, idle_minutes=10):
-    evidence = stretches(gathered(observations), idle_minutes)
+def history(observations, idle_minutes=10, cell_percent=5):
+    observations = list(observations)
+    evidence = stretches(gathered(observations), idle_minutes, cell_percent)
+    coins = coin_windows(observations)
     # A rate rests on all qualifying time in its zone, including stretches where the item never dropped.
     time: dict = defaultdict(lambda: [0, 0])
     totals: dict[tuple, dict] = {}
@@ -97,7 +101,7 @@ def history(observations, idle_minutes=10):
     rows = [r | {'seconds': time[r['map_id']][0], 'stretches': time[r['map_id']][1],
                  'units_per_hour': r['units'] * 3600 // time[r['map_id']][0], 'object_ids': sorted(r['object_ids'])}
             for r in totals.values()]
-    return {'rows': rows, 'spots': _spots(evidence), 'stretches': evidence,
+    return {'rows': rows, 'spots': _spots(evidence, coins, cell_percent), 'stretches': evidence,
             'recorded_seconds': sum(s['seconds'] for s in evidence),
             'excluded_stretches': sum(not s['qualifies'] for s in evidence)}
 
@@ -133,21 +137,26 @@ def _spot(loots):
     return {'npc_id': dominant, 'also_looted': sorted(npc for npc in counts if npc != dominant)}
 
 
-def _spots(evidence):
+def _spots(evidence, coins, cell_percent):
     spots: dict[tuple, dict] = {}
     for stretch in evidence:
         if not stretch['qualifies']:
             continue
-        key = stretch['key'][0], stretch['npc_id']
+        key = stretch['key'][0], stretch['npc_id'], stretch['cell']
         row = spots.setdefault(key, {'map_id': key[0], 'npc_id': key[1],
                                     'zone': stretch['loots'][0]['zone'].get('zone'),
-                                    'seconds': 0, 'stretches': 0, 'items': {}, 'also_looted': set()})
+                                    'cell': key[2], 'cell_percent': cell_percent, 'coin_copper': None,
+                                    'seconds': 0, 'stretches': 0, 'items': {}, 'also_looted': set(),
+                                    'loot_vendor_prices': {}, 'loot_vendor_observations': {}})
         row['seconds'] += stretch['seconds']
         row['stretches'] += 1
         row['also_looted'].update(stretch['also_looted'])
+        _add_spot_evidence(row, stretch['loots'], coins)
         for loot in stretch['loots']:
             row['items'][loot['item_id']] = row['items'].get(loot['item_id'], 0) + loot['units']
-    return [r | {'also_looted': sorted(r['also_looted'])} for r in spots.values()]
+    return [r | {'also_looted': sorted(r['also_looted']),
+                 'loot_vendor_observations': {i: sorted(v) for i, v in r['loot_vendor_observations'].items()}}
+            for r in spots.values()]
 
 
 def _spot_item(item, units, sell_prices, vendor_prices, cut):
@@ -163,14 +172,95 @@ def _spot_item(item, units, sell_prices, vendor_prices, cut):
 
 
 def _value_spot(spot, sell_prices, vendor_prices, auction_cut):
-    items = [_spot_item(item, units, sell_prices, vendor_prices, Fraction(str(auction_cut)))
+    fallback = spot.get('loot_vendor_prices', {})
+    prices = fallback | {item: price for item, price in vendor_prices.items() if _positive(price)}
+    disagreements = [{'item_id': item, 'scan_copper': vendor_prices[item], 'loot_copper': price}
+                     for item, values in sorted(spot.get('loot_vendor_observations', {}).items()) for price in values
+                     if _positive(vendor_prices.get(item)) and vendor_prices[item] != price]
+    items = [_spot_item(item, units, sell_prices, prices, Fraction(str(auction_cut)))
              for item, units in sorted(spot['items'].items())]
     auction = sum(r['value_copper'] for r in items if r['basis'] == 'auction')
     vendor = sum(r['value_copper'] for r in items if r['basis'] == 'vendor')
-    known = any(r['value_copper'] is not None for r in items)
-    total = auction + vendor if known else None
+    coin = spot.get('coin_copper')
+    known = coin is not None or any(r['value_copper'] is not None for r in items)
+    total = auction + vendor + (coin or 0) if known else None
     return spot | {'items': items, 'auction_value_copper': auction, 'vendor_value_copper': vendor,
-                   'coin_copper': None, 'value_copper': total,
+                   'coin_copper': coin, 'vendor_disagreements': disagreements, 'value_copper': total,
                    'no_price_items': sum(r['basis'] == 'no price' for r in items),
                    'no_price_units': sum(r['units'] for r in items if r['basis'] == 'no price'),
                    'value_per_hour_copper': total * 3600 // spot['seconds'] if total is not None else None}
+
+
+def _positive(value):
+    return type(value) is int and value > 0
+
+
+def position_cell(loots, cell_percent=5):
+    """Median of distinct loot-window positions, rounded down in map percent."""
+    positions = {(r['machine'], r['login_at'], r['window_id']): r['zone']
+                 for r in loots if _position(r['zone'])}
+    if not positions:
+        return None
+    return tuple(int(median(Fraction(str(z[axis])) for z in positions.values()) * 100 // cell_percent)
+                 * cell_percent for axis in ('x', 'y'))
+
+
+def _position(zone):
+    return all(type(zone.get(axis)) in (int, float) and 0 <= zone[axis] <= 1 for axis in ('x', 'y'))
+
+
+def _window_key(record, machine):
+    return (machine, record.get('login_at'),
+            (record.get('captured_at'), record.get('sequence'), record.get('entry_id')),
+            record.get('zone', {}).get('map_id'))
+
+
+def coin_windows(observations):
+    """Explicit money slots establish coin; a nearby money delta supplies the amount.
+
+    Closing loot does not discard evidence. Transactions and subsequent windows do.
+    Slot quantity is preserved as reported, never assumed to be copper.
+    """
+    pending = {}
+    coins = {}
+    seen = set()
+    ordered = sorted((pair for pair in observations if type(pair[0].get('captured_at')) is int),
+                     key=lambda pair: (pair[0].get('captured_at', -1),
+                                                    pair[0].get('sequence', -1)))
+    for record, machine in ordered:
+        entry = record.get('entry_id')
+        if entry is not None and entry in seen:
+            continue
+        seen.add(entry)
+        key = machine, record.get('login_at')
+        event = record.get('event')
+        if event == 'LOOT_OPENED':
+            pending.pop(key, None)
+            if any(slot.get('slot_type') == 2 for slot in record.get('loot_slots', [])):
+                window = _window_key(record, machine)
+                coins[window] = None
+                pending[key] = (window, record['captured_at'])
+        elif record.get('family') in ('craft', 'vendor', 'trade', 'mail', 'auction'):
+            pending.pop(key, None)
+        elif event == 'PLAYER_MONEY' and key in pending:
+            window, opened = pending.pop(key)
+            before, after = record.get('before_copper'), record.get('after_copper')
+            if (type(before) is int and type(after) is int and after > before
+                    and 0 <= record['captured_at'] - opened <= 5):
+                coins[window] = after - before
+    return coins
+
+
+def _add_spot_evidence(row, loots, coins):
+    windows = {(r['machine'], r['login_at'], r['window_id'], r['zone'].get('map_id')) for r in loots}
+    spans = {(r['machine'], r['login_at']) for r in loots}
+    first, last = min(r['window_id'][0] for r in loots), max(r['time'] for r in loots)
+    windows.update(w for w in coins if w[:2] in spans and w[3] == row['map_id'] and first <= w[2][0] <= last)
+    amounts = [coins[w] for w in windows if coins.get(w) is not None]
+    if amounts:
+        row['coin_copper'] = (row['coin_copper'] or 0) + sum(amounts)
+    for loot in loots:
+        price = loot.get('vendor_sell_copper')
+        if _positive(price):
+            row['loot_vendor_prices'][loot['item_id']] = price
+            row['loot_vendor_observations'].setdefault(loot['item_id'], set()).add(price)

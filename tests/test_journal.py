@@ -336,8 +336,9 @@ def test_lua_rejected_events_and_missing_late_hooks_are_recorded():
 
 def test_journal_discovery_context_imports_unchanged(tmp_path):
     loot = entry("loot", loot_slot_count=1,
-                 loot_slots=[{"slot": 1, "link": "|Hitem:2770|h", "sources": {"n": 2, 1: "GameObject-0-1", 2: 2}}],
-                 zone={"zone": "Elwynn Forest", "subzone": "Goldshire", "map_id": 1429})
+                 loot_slots=[{"slot": 1, "link": "|Hitem:2770|h", "slot_type": 1, "quantity": 2,
+                              "vendor_sell_copper": 5, "sources": {"n": 2, 1: "GameObject-0-1", 2: 2}}],
+                 zone={"zone": "Elwynn Forest", "subzone": "Goldshire", "map_id": 1429, "x": .47, "y": .72})
     trainer = entry("trainer", trainer_service_count=1,
                     trainer_services=[{"index": 1, "level_required": {"n": 1, 1: 10}}],
                     trainer_filters={"available": True, "used": False})
@@ -348,6 +349,9 @@ def test_journal_discovery_context_imports_unchanged(tmp_path):
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb")) as db:
         rows = db.execute("SELECT entry_id, record_json FROM character_journal").fetchall()
     saved = {entry_id: json.loads(record) for entry_id, record in rows}
+    assert saved["loot"]["zone"]["x"] == .47 and saved["loot"]["zone"]["y"] == .72
+    assert saved["loot"]["loot_slots"][0]["vendor_sell_copper"] == 5
+    assert saved["loot"]["loot_slots"][0]["quantity"] == 2
     assert saved["loot"]["zone"]["map_id"] == 1429 and saved["loot"]["loot_slots"][0]["link"] == "|Hitem:2770|h"
     assert saved["trainer"]["trainer_services"][0]["index"] == 1
     assert saved["trainer"]["trainer_filters"]["used"] is False

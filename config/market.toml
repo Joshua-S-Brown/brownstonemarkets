@@ -6,6 +6,7 @@ min_discount = 0.20
 top_n = 20
 # UI-13 Farming rates; shared setting, overridable per source.
 farming_idle_minutes = 10
+farming_cell_percent = 5
 # UI-11 Flood signals; shared settings, overridable per source.
 flood_contested_listings = 10
 flood_thin_listings = 2

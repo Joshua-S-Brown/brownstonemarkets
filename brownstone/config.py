@@ -59,6 +59,7 @@ class Source(TypedDict):
     auction_cut: float
     min_discount: float
     top_n: int
+    farming_cell_percent: int
     farming_idle_minutes: int
     flood_contested_listings: int
     flood_thin_listings: int
@@ -108,6 +109,7 @@ def build_source(shared: dict, entry: dict) -> Source:
     idle = source.setdefault('farming_idle_minutes', 10)
     if type(idle) is not int or idle <= 0:
         raise ValueError('farming_idle_minutes must be a positive integer')
+    _validate_farming_cell(source)
     if source["max_age_hours"] <= 0 or source["top_n"] <= 0:
         raise ValueError("max_age_hours and top_n must be positive")
     if not 0 <= source["auction_cut"] < 1 or not 0 <= source["min_discount"] < 1:
@@ -191,3 +193,9 @@ def read_sources(path: Path, local: Path | None = None) -> list[Source]:
     if len({source["source_id"] for source in sources}) != len(sources):
         raise ValueError("Source IDs must be unique")
     return sources
+
+
+def _validate_farming_cell(source: dict) -> None:
+    cell = source.setdefault('farming_cell_percent', 5)
+    if type(cell) is not int or not 1 <= cell <= 100:
+        raise ValueError('farming_cell_percent must be an integer in [1, 100]')
