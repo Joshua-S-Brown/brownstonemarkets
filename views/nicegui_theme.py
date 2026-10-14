@@ -135,3 +135,8 @@ def banner(text, action_label, on_click):
         ui.icon('warning')
         ui.label(text).classes('flex-1')
         ui.button(action_label, on_click=on_click).props('flat')
+
+
+def farming_table(widget):
+    """Use the shared table treatment for the per-character farming comparison."""
+    widget.props('dense flat bordered').mark('farming-spots')

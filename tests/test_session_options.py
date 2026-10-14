@@ -237,3 +237,15 @@ def test_farming_plan_ranking_version_invariance_and_union(monkeypatch):
     assert row['units_per_hour'] == 36 and row['value_per_hour_copper'] == 376
     assert 2770 in read.call_args.args[2]
     assert result['freshness'] == plan['freshness']
+
+
+def test_farming_vendor_data_passed_without_changing_plan_or_item_rows(monkeypatch):
+    from test_farming import mob_loot
+    args = arguments(vendor_prices={999: 7})
+    args['character_data'][CHARACTER]['observations'] = sum((mob_loot(t, 10, item=999) for t in (0, 150, 300)), [])
+    result, plan, read = compose(monkeypatch, args)
+    history = result['characters'][0]['farming']
+    assert history['rows'][0]['value_per_hour_copper'] is None
+    assert history['spots'][0]['value_per_hour_copper'] == 252
+    assert history['spots'][0]['items'][0]['basis'] == 'vendor'
+    assert 999 in read.call_args.args[2]

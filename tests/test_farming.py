@@ -151,3 +151,91 @@ def test_stretch_rule_is_map_and_idle_across_logins():
         row['login_at'] = 2
     history = farming.history(events)
     assert len(history['stretches']) == 1 and history['rows'][0]['units_per_hour'] == 36
+
+
+@pytest.mark.parametrize(('guid', 'expected'), [
+    ('Creature-0-1-2-3-299-abc', ('mob', 299)),
+    ('GameObject-0-1-2-3-1731-abc', ('object', 1731)),
+    ('GameObject-0-1-2-3-0-abc', ('object', 0)),
+    ('Creature-broken', ('mob', None)), ('Creature-0-1-2-3-no-abc', ('mob', None)),
+    ('Creature-0-1-2-3-0-abc', ('mob', None)), ('unknown', ('unknown', None)),
+])
+def test_npc_source_identity(guid, expected):
+    assert farming.source({'sources': {'1': guid}}) == expected
+
+
+def mob_loot(time, npc, item=2589, quantity=1, map_id=1):
+    return loot(time, item=item, quantity=quantity, guid=f'Creature-0-1-2-3-{npc}-abc', map_id=map_id)
+
+
+def test_spot_votes_windows_not_items_tie_and_mixed_camps():
+    events = mob_loot(0, 20) + mob_loot(150, 10) + mob_loot(300, 20) + mob_loot(450, 10)
+    # Two item messages in one window must not give that NPC an extra vote.
+    events[0][0]['loot_slots'].append({'link': '|Hitem:2770|h', 'sources': {'1': 'Creature-0-1-2-3-20-abc'}})
+    events.append(record('CHAT_MSG_LOOT', 1, arguments={'1': '|Hitem:2770|h[Name]|h'}))
+    events += mob_loot(2000, 30) + mob_loot(2150, 30) + mob_loot(2300, 30)
+    events += loot(4000, map_id=1) + loot(4150, map_id=1) + loot(4300, map_id=1)
+    history = farming.history(events + events)
+    first, second, gathering = history['spots']
+    assert (first['npc_id'], first['also_looted'], first['seconds'], first['stretches']) == (10, [20], 450, 1)
+    assert first['items'] == {2589: 4, 2770: 1}
+    assert second['npc_id'] == 30 and second['items'] == {2589: 3}
+    assert gathering['npc_id'] is None and gathering['items'] == {2770: 3}
+
+
+def test_spot_aggregate_all_items_seconds_vendor_and_missing_prices():
+    events = mob_loot(0, 10, quantity=2) + mob_loot(150, 10, item=2770) + mob_loot(301, 10, item=999)
+    events += mob_loot(2000, 10) + mob_loot(2150, 10) + mob_loot(2300, 10)
+    events += mob_loot(4000, 30, item=999) + mob_loot(4150, 30, item=999) + mob_loot(4300, 30, item=999)
+    history = farming.history(events)
+    result = farming.valued(history, {2589: 11, 2770: 0}, [], .05, {2589: 1000, 2770: 7, 999: 0})
+    priced, missing = result['spots']
+    assert priced['seconds'] == 601 and priced['stretches'] == 2
+    assert priced['auction_value_copper'] == 52 and priced['vendor_value_copper'] == 7
+    assert priced['value_copper'] == 59 and priced['value_per_hour_copper'] == 353
+    assert type(priced['value_per_hour_copper']) is int
+    assert [r['basis'] for r in priced['items']] == ['no price', 'auction', 'vendor']
+    assert priced['no_price_items'] == priced['no_price_units'] == 1
+    assert missing['value_per_hour_copper'] is None and missing['no_price_units'] == 3
+    assert priced['coin_copper'] is None
+
+
+@pytest.mark.parametrize('family', [None, 'vendor', 'mail', 'trade', 'auction'])
+def test_coin_deferred_even_inside_window_or_across_transactions(family):
+    events = sum((mob_loot(t, 10) for t in (0, 150, 300)), [])
+    if family:
+        events.append(record('transaction', 1, family=family))
+    events += [record('PLAYER_MONEY', 2, before_copper=10, after_copper=100), record('LOOT_CLOSED', 3)]
+    result = farming.valued(farming.history(events), {2589: 10}, [], .05)
+    assert result['spots'][0]['coin_copper'] is None
+    assert result['spots'][0]['value_copper'] == 28
+
+
+def test_existing_ui13_rows_identical_with_spots_and_vendor_data():
+    events = mob_loot(0, 20) + mob_loot(150, 10) + mob_loot(300, 20)
+    events += loot(2000, map_id=1) + loot(2150, map_id=1) + loot(2300, map_id=1)
+    result = farming.valued(farming.history(events), {2589: 11}, [], .05, {2770: 999})
+    assert result['rows'] == [
+        {'item_id': 2589, 'map_id': 1, 'source_kind': 'mob', 'zone': 'Arbitrary zone', 'units': 3,
+         'object_ids': [], 'seconds': 600, 'stretches': 2, 'units_per_hour': 18, 'item_name': None,
+         'sell_price_copper': 11, 'value_per_hour_copper': 188, 'typical_price_copper': None},
+        {'item_id': 2770, 'map_id': 1, 'source_kind': 'object', 'zone': 'Arbitrary zone', 'units': 3,
+         'object_ids': [1731], 'seconds': 600, 'stretches': 2, 'units_per_hour': 18, 'item_name': None,
+         'sell_price_copper': None, 'value_per_hour_copper': None, 'typical_price_copper': None}]
+
+
+def test_spot_scope_map_seconds_and_excluded_stretches():
+    events = sum((mob_loot(t, 10, map_id=1) for t in (0, 150, 300)), [])
+    events += sum((mob_loot(t, 10, map_id=2) for t in (1000, 1150, 1300)), [])
+    events += mob_loot(2000, 20, map_id=2)
+    result = farming.history(events)
+    assert [(r['map_id'], r['npc_id'], r['seconds'], r['stretches']) for r in result['spots']] == [
+        (1, 10, 300, 1), (2, 10, 300, 1)]
+    assert result['excluded_stretches'] == 1
+    # Identical window stamps on different machines or logins are distinct observations.
+    events = mob_loot(0, 10) + mob_loot(150, 10) + mob_loot(300, 20)
+    duplicate = mob_loot(0, 20)
+    for r, _m in duplicate:
+        r['entry_id'] += ':other'
+        r['login_at'] = 2
+    assert farming.history(events + duplicate)['spots'][0]['npc_id'] == 10

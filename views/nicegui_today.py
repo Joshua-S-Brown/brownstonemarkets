@@ -837,6 +837,7 @@ def session_farming(history, config):
                 ui.label(f"{row['zone'] or 'unknown zone'} · {row['source_kind']} · "
                          f"{row['units_per_hour']} units/hour · {value} · typical unit {typical} · "
                          f"{row['seconds'] / 60:.1f} evidence minutes · {row['stretches']} stretches")
+        session_farming_spots(history)
         ui.label(f"{history['excluded_stretches']} stretches excluded from rates").classes('bs-note')
         ui.label('Your own past sessions, not a promise; launch respawn competition differs; '
                  'listings are not sales.').classes('bs-note')
@@ -857,3 +858,40 @@ def session_farming(history, config):
                 origins = sorted({f"{loot['machine']} / login {loot['login_at']}"
                                   for loot in stretch['loots']})
                 ui.label(f"Loot times (UTC) {first}–{last} · {', '.join(origins)}").classes('bs-note')
+
+
+def session_farming_spots(history):
+    ui.label('Farming spots').classes('text-lg font-bold')
+    if not history.get('spots'):
+        ui.label('Not enough farming history for spots').classes('bs-note')
+        return
+    rows = []
+    for index, spot in enumerate(history['spots']):
+        total = spot['value_copper']
+        shares = [f"{label} {spot[key] * 100 // total}%" if total else f'{label} unknown'
+                  for label, key in [('Items', 'auction_value_copper'), ('Vendor', 'vendor_value_copper')]]
+        rows.append({'id': index, 'Zone': spot['zone'] or f"Map {spot['map_id']}",
+                     'Mob': f"NPC {spot['npc_id']}" if spot['npc_id'] else 'Gathering · zone only',
+                     'npc_id': spot['npc_id'],
+                     'Per hour': format_money(spot['value_per_hour_copper'])
+                     if spot['value_per_hour_copper'] is not None else 'no price',
+                     'Minutes': f"{spot['seconds'] / 60:.1f}", 'Stretches': spot['stretches'],
+                     'Value shares': ' · '.join(shares) + ' · Coin unavailable',
+                     'No price': f"{spot['no_price_items']} item{'s' * (spot['no_price_items'] != 1)} / "
+                                 f"{spot['no_price_units']} unit{'s' * (spot['no_price_units'] != 1)}",
+                     'Also looted': ', '.join(f'NPC {npc}' for npc in spot['also_looted']) or '—'})
+    columns = [{'name': key, 'label': key, 'field': key, 'align': 'left'}
+               for key in rows[0] if key not in ('id', 'npc_id')]
+    widget = ui.table(columns=columns, rows=rows, row_key='id', pagination=10).classes('w-full')
+    theme.farming_table(widget)
+    widget.add_slot('body-cell-Mob', '<q-td :props="props"><a v-if="props.row.npc_id" '
+                    ':href="\'https://www.wowhead.com/classic/npc=\' + props.row.npc_id" '
+                    'target="_blank" rel="noopener noreferrer">{{props.value}}</a>'
+                    '<span v-else>{{props.value}}</span></q-td>')
+    ui.label('Coin unavailable: beta money changes can arrive after loot closes; '
+             'capture evidence is deferred to STORY-075.').classes('bs-note')
+    with ui.expansion('Spot item values'):
+        for spot in history['spots']:
+            for item in spot['items']:
+                ui.label(f"Map {spot['map_id']} · NPC {spot['npc_id'] or 'none'} · Item {item['item_id']} · "
+                         f"{item['units']} units · {item['basis']} · {session_money(item['value_copper'])}")

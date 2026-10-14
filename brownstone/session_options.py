@@ -173,6 +173,7 @@ def build_options(db, config, arguments, plan, *, window=25):
     if signals is None:  # Direct callers may still supply evidence without the shared loader.
         signals = flood_signals.signals(db, config, _item_ids(characters, plan), arguments['now'])
     characters = [c | {'farming': farming.valued(c['farming'], sell_prices, signals['rows'],
-                                                arguments['auction_cut'])} for c in characters]
+                                                arguments['auction_cut'], arguments.get('vendor_prices', {}))}
+                  for c in characters]
     return {'characters': [_label_character(c, signals['rows']) for c in characters],
             'snapshot': arguments['snapshot'], 'freshness': plan['freshness'], 'signals': signals, 'window': window}

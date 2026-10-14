@@ -187,3 +187,25 @@ async def test_farming_top_three_prices_evidence_and_caveats(user, tmp_path, mon
     assert sorted(sum(isinstance(e, ui.link) for e in card.descendants()) for card in cards) == [0, 3]
     user.find('Farming evidence').elements.pop().open()
     await user.should_see('object IDs [1731]')
+
+
+async def test_farming_spots_table_npc_links_values_and_coin_caveat(user, tmp_path, monkeypatch):
+    from test_farming import mob_loot
+    source, c, data = team_app(tmp_path, monkeypatch)
+    first = next(iter(data.values()))
+    first['observations'] = mob_loot(0, 20, item=1) + mob_loot(150, 10, item=3) + mob_loot(300, 20, item=999)
+    labels(monkeypatch, source)
+    await user.open('/')
+    await user.should_see('This session')
+    user.find(marker='session-view').elements.pop().set_value('This session')
+    await user.should_see('Farming spots')
+    await user.should_see('Coin unavailable')
+    tables = user.find(marker='farming-spots').elements
+    assert len(tables) == 1
+    widget = tables.pop()
+    row = widget.rows[0]
+    assert 'https://www.wowhead.com/classic/npc=' in widget.slots['body-cell-Mob'].template
+    assert row['Mob'] == 'NPC 20' and row['Also looted'] == 'NPC 10'
+    assert row['Minutes'] == '5.0' and row['Stretches'] == 1 and row['No price'] == '1 item / 1 unit'
+    user.find('Spot item values').elements.pop().open()
+    await user.should_see('Item 999')

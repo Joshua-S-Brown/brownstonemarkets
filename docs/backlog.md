@@ -52,19 +52,18 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 5. STORY-073 your own sale rate (refine first)
 6. STORY-069 Today in player terms
 7. STORY-070 Team's next recipe you can actually learn
-8. STORY-074 farming spots (app only; for the launch farming character)
-9. STORY-075 farming spot capture: coin, position, vendor value (addon; after STORY-071)
-10. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-11. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-12. STORY-036 vendor price ceilings (after STORY-071)
-13. STORY-021 item page and charts (would live in the Market explorer)
-14. STORY-026 scan coverage and rhythm
-15. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-16. STORY-006 replay
+8. STORY-075 farming spot capture: coin, position, vendor value (addon; after STORY-071)
+9. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+10. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+11. STORY-036 vendor price ceilings (after STORY-071)
+12. STORY-021 item page and charts (would live in the Market explorer)
+13. STORY-026 scan coverage and rhythm
+14. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+15. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 074 and SPIKE-009/009b.
 
 ### STORY-068 — Use what the team holds
 
@@ -142,21 +141,6 @@ Proposed acceptance (to confirm when refined):
 - **Matching invoices to items** (proposed 2026-10-14; TSM does the same with its *sale hints*): a seller invoice carries the item's name but no link. Match it to the same character's own post or active auction (STORY-040) with the same name, stack size and buyout, within the auction's longest duration; the post's link supplies the item ID. No match, or more than one item matching, stays *unidentified* and never counts toward any item. The name only narrows candidates; the item ID comes from a link. Check what the beta capture actually holds first.
 - **Stop after repeated expiries** (from TSM's *max expires*): an item that expired or was cancelled N times in a row for you (`max_expiries`, proposed default 3) with no sale in between gets a Today label *expired 3 times running* and a Low confidence reason.
 - This is the first slice of STORY-034's ledger; build it so the ledger can reuse it.
-
-### STORY-074 — Farming spots
-
-Added 2026-10-14. The plan for launch includes a low-attention farming character (likely a hunter) killing mobs for cloth, leather, meat, coin and drops in short bursts between calls. UI-13 already measures gathered loot per zone, but a zone is too coarse to compare camps, and it keeps the object ID for nodes only, not the NPC ID for mobs. App only: no addon or schema change.
-
-As the owner, I want to see which farming spots (zone plus the mob I was killing) earned the most per hour, so that I farm the best camp for my level instead of guessing.
-
-Acceptance:
-- **Mob identity:** `farming.source` keeps the NPC ID from a `Creature` GUID's sixth field, as it already does for `GameObject` object IDs. Names never decide anything.
-- **Spot:** a qualifying UI-13 stretch's spot is its map ID plus the NPC ID with the most loot windows in it. Ties go to the lowest NPC ID. Other NPC IDs in the stretch are listed as *also looted*. A stretch with no creature loot keeps its UI-13 zone-only spot (gathering).
-- **Value per hour** per spot: all loot from that spot's qualifying stretches (every item, including skinning, which already appears as loot from the corpse), divided by the stretches' total seconds. Items are valued at UI-13's cautious price after the cut. An item without an auction price but with a known vendor sell price (`vendor_sell_copper` from the newest scan's item info) is valued at that vendor price, labelled *vendor*, without the auction cut. Items with neither show **no price**, are excluded from the total and are counted. Never zero.
-- **Coin:** the journal already records `PLAYER_MONEY` with `before_copper` and `after_copper`. An increase recorded between a creature `LOOT_OPENED` and that character's next `LOOT_CLOSED` (same session, at most 5 seconds after the opening as UI-13, no `vendor`, `mail`, `trade` or auction family record in between) counts as looted coin for that stretch. **Check the real beta journal first** to see whether these events line up. If they don't, say so in the report and leave coin to STORY-075.
-- **Display:** a *Farming spots* table under the existing *Farming* line in Today's *This session* (UI-12), per character. It shows zone, mob (the scan's item-name sources don't name NPCs, so show *NPC 1234* with a Wowhead Classic NPC link), gold per hour, evidence minutes, stretch count and the share from cloth/items, coin and vendor-priced items. Ordered by gold per hour, unknown last. Same caveat as UI-13: *your own past sessions, not a promise*.
-- **Rules:** record the spot rule as an extension of UI-13 in `requirements.md`. No change to Today's plan, ranking or `today_version`. Integer copper.
-- **Offline tests:** NPC ID parsing (creature, object, malformed GUID); the dominant-mob tie-break; mixed camps; coin attributed inside a loot window and not across a vendor or mail record; vendor-priced and no-price items; and that existing UI-13 rows are unchanged.
 
 ### STORY-075 — Farming spot capture: coin, position and vendor value (addon, read-only)
 

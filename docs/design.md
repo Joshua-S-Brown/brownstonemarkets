@@ -431,7 +431,7 @@ provenance; the view turns steps into lines (`step_text`). The input plan/argume
 when **This session** opens, reads Team's per-tab/source
 reach window, uses the shared theme and links to Market items and the selected Team character.
 
-### Farming (STORY-065)
+### Farming (STORY-065, STORY-074)
 
 Rules live in `requirements.md` → UI-13. `farming.gathered` reads scoped `(record, machine)`
 observations, orders by capture/sequence and deduplicates entry IDs. The addon captures only the player's loot messages; matching windows are isolated by machine/login,
@@ -440,6 +440,12 @@ object IDs, integer units/hour and evidence seconds. `valued` uses Today's cauti
 and the existing union flood read's base/legacy typical unit price and loaded item label; missing prices
 stay unknown. `session_options` adds farming copies to character cards without changing the plan.
 `nicegui_today.session_farming` shows the top three, with all rates and stretch provenance in evidence.
+`source` retains Creature NPC IDs separately from object IDs; gathered evidence retains the matched
+window identity. `stretches` assigns the dominant NPC by distinct windows and `history` adds spot
+aggregates alongside the unchanged item rows. `valued` accepts the newest scan vendor prices as data
+from `session_options`, values all spot quantities before dividing by summed seconds, and retains
+per-item auction/vendor/no-price evidence. Coin remains unavailable (UI-13). `session_farming`
+adds the spot table with the shared theme and Classic NPC links.
 No storage or addon contract changes, new query or network work.
 
 ## Team contracts
