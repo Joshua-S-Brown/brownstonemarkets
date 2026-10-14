@@ -7,8 +7,8 @@ from nicegui import ui
 from test_today import catalog
 
 from brownstone.money import format_money, parse_money
-from brownstone.today import build_today, craft_details
-from brownstone.today_loading import load_today
+from brownstone.today import apply_removals, build_today, craft_details
+from brownstone.today_loading import load_today, load_today_removals
 from brownstone.today_settings import load_settings
 from views.nicegui_today import buy_rows
 from views.today_rows import craft_row, sell_row, vendor_row
@@ -26,8 +26,9 @@ async def test_page_matches_shared_plan_and_row_details(user, tmp_path, monkeypa
     from brownstone.crafting import parse_recipe_catalog
     catalogs = [{**parse_recipe_catalog(catalog()), 'catalog_id': 'fixture'}]
     _, arguments = load_today(source, catalogs, load_settings(
-        source['data_dir'] / f"today-settings.{source['source_id']}.local.json"), {}, datetime.now(UTC))
+        source['data_dir'] / f"today-settings.{source['source_id']}.local.json"), {}, datetime.now(UTC), flood=True)
     result = build_today(**arguments)
+    apply_removals(result, load_today_removals(source, result))
     user.find(kind=ui.toggle, marker='plan-display').elements.pop().set_value('Table')
     widget = user.find('Craft').elements
     craft_table = next(e for e in widget if isinstance(e, ui.table))

@@ -10,12 +10,13 @@ from brownstone.freshness import STALE_WARNING, age_caption
 from brownstone.money import format_money, parse_money
 from brownstone.recipe_graph import step_label
 from brownstone.session_options import build_options
-from brownstone.today import build_today, craft_details, purchase_uses
+from brownstone.today import apply_removals, build_today, craft_details, purchase_uses
 from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_funds import resolve_funds
-from brownstone.today_loading import load_today, load_today_characters
+from brownstone.today_loading import load_today, load_today_characters, load_today_removals
 from brownstone.today_session import digest, plan_context, queue_line, queue_total, stable_queue
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
+from brownstone.today_warnings import REMOVAL_EVIDENCE
 from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
 from views import nicegui_theme as theme
 from views import today_rows as tr
@@ -31,7 +32,7 @@ def table(rows, *, label, row_key='id'):
     decisions = {
         'Craft': ['Item', 'State', 'Can make', 'Who can make it', 'Batch', 'Material cost (g)',
                   'Batch profit (g)', 'Profit per craft (g)', 'Confidence'],
-        'Sell': ['Output', 'State', 'Batch', 'Lowest competing unit (g)', 'Listings', 'Units',
+        'Sell': ['Output', 'State', 'Batch', 'Warnings', 'Lowest competing unit (g)', 'Listings', 'Units',
                  'Undercut unit (g)', 'Profit at undercut for batch (g)', 'Thin', 'Confidence', 'Reasons'],
         'Buy': ['Material', 'State', 'Route', 'For', 'Required units', 'Purchased units', 'Cost (g)',
                 'Highest unit price (g)', 'Cheap now'],
@@ -71,6 +72,7 @@ def details_dialog(row):
     details = craft_details(row)
     with ui.dialog() as dialog, ui.card().classes('w-full'):
         ui.label(f"Materials for {row['output_name']} · {row['batch_size']} crafts")
+        today_warnings(row)
         table([tr.material_row(r) for r in details['materials']], label='Materials')
         ui.label(f"Batch material cost: {format_money(row['batch_cost_copper'])}. "
                  'Whole-stack surplus has no revenue credit. Vendor stock is unknown.')
@@ -233,7 +235,9 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
 
             ui.label(tr.shopping_line(result))
         with ui.tab_panel('Sell'):
-            table([tr.sell_row(r) for r in result['sell']], label='Sell')
+            widget = table([tr.sell_row(r) for r in result['sell']], label='Sell')
+            sell_warning_slot(widget)
+            widget.on('rowClick', lambda e: sell_warning_dialog(result['sell'][e.args[1]['id']]))
 
         with ui.tab_panel('Extras'):
             ui.label(tr.VENDOR_ASIDE)
@@ -269,7 +273,8 @@ def render(config, catalogs, character_data, active_tab='Craft'):
             if not settings.gold_copper:
                 ui.label(tr.ZERO_GOLD_HINT)
             try:
-                manifest, arguments = load_today(config, catalogs, settings, latest_characters, datetime.now(UTC))
+                manifest, arguments = load_today(config, catalogs, settings, latest_characters, datetime.now(UTC),
+                                                 flood=True)
                 if manifest is None:
                     ui.label(tr.NO_SNAPSHOT)
                     return
@@ -403,6 +408,7 @@ def craft_card(row, sell):
                     theme.badge(f"{row['confidence']} confidence", 'good' if row['confidence'] == 'High' else 'warn')
                     if row['stale']:
                         theme.badge('stale — inspect only', 'warn')
+                today_warnings(row)
                 purchases = ', '.join(f"{m['purchased_units']} {m['item_name']}" for m in details['materials'])
                 price = sell['undercut_copper']
                 step = ' (whole silver: unstackable)' if sell.get('price_step') == 'whole silver' else ''
@@ -488,6 +494,8 @@ def queue_panel(result, session):
     for i, text in enumerate(texts):
         ui.checkbox(text, value=session['ticks'].get(str(i), False),
                     on_change=lambda e, index=str(i): session['ticks'].update({index: e.value}))
+        if queue['lines'][i]['stage'] == 'post':
+            today_warnings(queue['lines'][i])
     total = queue_total(queue)
     ui.label(total)
     if result['freshness']['stale']:
@@ -505,6 +513,7 @@ def session_plan(arguments, session, reset_note):
         session.clear()
         session.update(context=context, choices=None, refill=True, rows=[], ticks={})
     result = build_today(**arguments, choices=session['choices'], refill=session['refill'])
+    apply_removals(result, load_today_removals(arguments['market'], result))
     for warning in result.get('catalog_warnings', []):
         ui.label(warning).classes('bs-note')
     # A dropped choice is unticked so it isn't requested again.
@@ -607,6 +616,48 @@ def session_signal(signal):
             lowest = signal['min_buyout'] if signal['min_buyout'] and signal['min_buyout'] > 0 else None
             ui.label(f"Typical {session_money(history['typical_copper'])} · {history['scans']} earlier priced "
                      f"scans · current lowest {session_money(lowest)}")
+            if history.get('ratio'):
+                ratio = history['ratio']
+                ui.label(f"Current lowest is {ratio['numerator'] * 100 // ratio['denominator']}% of typical")
+
+
+def today_warnings(row):
+    """Reuse This session's badges and on-demand counts on every Today output/post."""
+    session_signal(row.get('signal'))
+    if row.get('price_note'):
+        ui.label(row['price_note']).classes('bs-note')
+    removals = row.get('early_removals')
+    if removals and removals['pairs'] >= 3 and removals['units'] == 0:
+        theme.badge(f"no early removals in {removals['pairs']} scan gaps", 'warn')
+    if removals:
+        with ui.expansion('Early-removal evidence').classes('bs-note'):
+            ui.label(f"{removals['units']} removed early units in {removals['pairs']} scan gaps "
+                     'with earlier listings · at most ten newest qualifying gaps, each at most 12 hours')
+            ui.label(REMOVAL_EVIDENCE)
+
+
+def sell_warning_slot(widget):
+    """The same actionable badge words/tone in each Sell table row; click opens shared evidence."""
+    spans = []
+    for field, labels in (('crowding', CROWDING), ('overshoot.label', OVERSHOOT)):
+        for key, (text, tone) in labels.items():
+            spans.append(f'<span v-if="props.value.signal && props.value.signal.{field} === \'{key}\'" '
+                         f'class="bs-badge bs-{tone}">{text}</span> ')
+    widget.add_slot('body-cell-Warnings', '<q-td :props="props"><div class="column gap-2">' + ''.join(spans)
+                    + '<span v-if="props.value.early_removals && props.value.early_removals.pairs >= 3 '
+                    '&& props.value.early_removals.units === 0" class="bs-badge bs-warn">'
+                    'no early removals in {{props.value.early_removals.pairs}} scan gaps</span>'
+                    '<span v-if="props.value.price_note" class="bs-note">{{props.value.price_note}}</span>'
+                    '<span class="bs-note">Click row for evidence</span></div></q-td>')
+
+
+def sell_warning_dialog(row):
+    with ui.dialog() as dialog, ui.card().classes('w-full'):
+        ui.label(row['output_name'])
+        today_warnings(row)
+        ui.button('Close', on_click=dialog.close)
+    dialog.on('hide', dialog.delete)
+    dialog.open()
 
 
 def cheap_share(estimate):

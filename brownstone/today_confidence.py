@@ -29,6 +29,8 @@ def confidence(row, sell, freshness, max_age_hours, metrics, ladders):
         medium.append("depth not available for this source")
     else:
         _depth_reasons(row, sell, metrics, ladders, low, medium)
+    if (row.get('signal') or {}).get('crowding') == 'contested':
+        medium.append('contested')
     for note in row["evidence_notes"]:
         if note.endswith("verified"):
             marker = note.rsplit(": ", 1)[-1].removesuffix(" verified")

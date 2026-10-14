@@ -15,8 +15,9 @@ from .recipe_graph import RecipeGraph, route_catalog
 from .today_characters import filter_candidates, project_recipes, team_makeable
 from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
+from .today_warnings import PRICE_NOTE, base_signals, price_caps, warning_fields
 
-TODAY_VERSION = 7
+TODAY_VERSION = 8
 ROW_LIMIT = 10
 
 
@@ -116,13 +117,15 @@ def _batch(row, settings, ladders, reserved, funds):
             "limiting_factor": limit, "feasible_size": largest, "purchases": quotes[size]}, None
 
 
-def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut, projection, makers):
+def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut, projection, makers, signals):
     selected = compatible_catalogs(catalogs, market)
     if not selected:
         return [], Counter(), []
     graph = RecipeGraph(selected, makers, market) if makers is not None else None
+    caps = price_caps(signals)
     board = rank_catalogs(selected, observations, market, snapshot, now=now,
-                          max_age_hours=max_age_hours, auction_cut=auction_cut, recipe_graph=graph)
+                          max_age_hours=max_age_hours, auction_cut=auction_cut, recipe_graph=graph,
+                          sell_price_caps=caps)
     filtered, hidden = filter_candidates(board["rows"], projection)
     prices, _ = basis_prices(observations, "cautious")
     rows = []
@@ -141,7 +144,9 @@ def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, au
                                         for p in row["shopping_choices"]},
                      "recipe_source": recipe["source_url"], "catalog_version": catalog["catalog_version"],
                      "availability": recipe.get("availability", "available"),
-                     "evidence_notes": route_notes(catalog, recipe, row)})
+                     "evidence_notes": route_notes(catalog, recipe, row),
+                     "signal": signals.get(row["output_item_id"]),
+                     "price_cap_copper": caps.get(row["output_item_id"])})
     return rows, hidden, board.get("catalog_warnings", [])
 
 
@@ -282,6 +287,10 @@ def _sell(row, metrics, auction_cut):
     metric = (metrics or {}).get(row["output_item_id"], {})
     lowest = metric.get("min_buyout")
     undercut = undercut_price(lowest, metric.get("max_stack_size"))
+    cap = row.get('price_cap_copper')
+    if cap is not None and undercut is not None:
+        step = SILVER if metric.get('max_stack_size') == 1 else 1
+        undercut = min(undercut, cap) // step * step or None
     profit = (_net(undercut, row["output_quantity"], auction_cut) * row["batch_size"] - row["batch_cost_copper"]
               if undercut else None)
     thin = (metric["listings"] < 3 or metric["largest_stack_units"] * 2 >= metric["units"]) if metric else None
@@ -290,7 +299,8 @@ def _sell(row, metrics, auction_cut):
             "lowest_copper": lowest, "listings": metric.get("listings"), "units": metric.get("units"),
             "largest_stack_units": metric.get("largest_stack_units"), "thin": thin,
             "undercut_copper": undercut, "undercut_batch_profit_copper": profit,
-            "price_step": "whole silver" if metric.get("max_stack_size") == 1 else "1c"}
+            "price_step": "whole silver" if metric.get("max_stack_size") == 1 else "1c",
+            **warning_fields(row), "price_note": PRICE_NOTE if cap is not None else None}
 
 
 def _vendor(ladders, vendor_prices, minimum):
@@ -313,7 +323,7 @@ def _vendor(ladders, vendor_prices, minimum):
 
 def build_today(catalogs, observations, market, snapshot, settings: TodaySettings, *, now,
                 listings=None, metrics=None, vendor_prices=None, max_age_hours=24, auction_cut=.05,
-                choices=None, refill=True, character_data=None):
+                choices=None, refill=True, character_data=None, flood_evidence=None):
     if any(snapshot.get(key) != market.get(key) for key in MARKET_KEYS):
         raise ValueError("The snapshot belongs to a different market")
     for key in ("source_id", "rules_version"):
@@ -325,7 +335,8 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
                                  settings.character, settings.include_unknown)
     makers = team_makeable(compatible_catalogs(catalogs, market), character_data or {})
     candidates, hidden, warnings = _candidates(catalogs, observations, market, snapshot, now,
-                                              max_age_hours, auction_cut, projection, makers)
+                                              max_age_hours, auction_cut, projection, makers,
+                                              base_signals(flood_evidence))
     dropped, limits = [], {}
     if choices is None:
         crafts, excluded, rest = _select(candidates, settings, ladders)
@@ -358,6 +369,26 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
             "dropped_choices": dropped, "refill": refill or choices is None,
             "choice_limits": [{"catalog_id": k[0], "recipe_id": k[1], "maximum": v} for k, v in limits.items()],
             "source_id": market["source_id"], "queue": session_queue(crafts, shopping, sells)}
+
+
+def apply_removals(plan, removals):
+    """Attach shown-output UI-10 evidence after selection; never change prices or reservations."""
+    if not removals:
+        return plan
+    for craft, sell in zip(plan["craft"], plan["sell"], strict=True):
+        evidence = removals.get(craft["output_item_id"])
+        if evidence is None:
+            continue
+        for row in (craft, sell):
+            row["early_removals"] = evidence
+            if evidence["pairs"] >= 3 and evidence["units"] == 0:
+                reason = f"no early removals in {evidence['pairs']} scan gaps"
+                row["confidence"] = "Low"
+                row["confidence_reasons"] = list(dict.fromkeys([reason, *row["confidence_reasons"]]))
+    # Buy is cut to ROW_LIMIT, so the queue regroups the crafts' complete reserved purchases.
+    # Queue lines copy only quantities and costs, so cheap-now metrics are not needed.
+    plan["queue"] = session_queue(plan["craft"], _shopping(plan["craft"], None), plan["sell"])
+    return plan
 
 
 def purchase_uses(crafts):
@@ -415,7 +446,7 @@ def session_queue(crafts, shopping, sells):
         lines.append({"stage": "post", "name": row["output_name"],
                       "quantity": row["output_quantity"] * row["batch_size"],
                       "unit_copper": sell["undercut_copper"], "profit_copper": sell["undercut_batch_profit_copper"],
-                      **_confidence_fields(row)})
+                      **_confidence_fields(row), **warning_fields(sell)})
     profits = [s["undercut_batch_profit_copper"] for s in sells]
     return {"mail_note": "Mail between characters is not charged; postage is unconfirmed on Forever.",
             "lines": lines, "gold_needed_copper": sum(p["cost_copper"] for p in shopping),

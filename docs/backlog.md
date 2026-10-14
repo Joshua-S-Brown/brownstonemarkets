@@ -45,43 +45,24 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-067 price warnings on Today's plan (with GPT)
-2. STORY-071 vendor price lists (addon; time-critical: needs a beta play session before 21 October, can be built alongside STORY-067)
-3. STORY-072 typical price from one point per day
-4. STORY-068 use what the team holds (refine first)
-5. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
-6. STORY-073 your own sale rate (refine first)
-7. STORY-069 Today in player terms
-8. STORY-070 Team's next recipe you can actually learn
-9. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-10. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-11. STORY-036 vendor price ceilings (after STORY-071)
-12. STORY-021 item page and charts (would live in the Market explorer)
-13. STORY-026 scan coverage and rhythm
-14. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-15. STORY-006 replay
+1. STORY-071 vendor price lists (addon; time-critical: needs a beta play session before 21 October)
+2. STORY-072 typical price from one point per day
+3. STORY-068 use what the team holds (refine first)
+4. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
+5. STORY-073 your own sale rate (refine first)
+6. STORY-069 Today in player terms
+7. STORY-070 Team's next recipe you can actually learn
+8. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+9. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+10. STORY-036 vendor price ceilings (after STORY-071)
+11. STORY-021 item page and charts (would live in the Market explorer)
+12. STORY-026 scan coverage and rhythm
+13. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+14. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066 and SPIKE-009/009b.
-
-### STORY-067 — Price warnings on Today's plan
-
-Added 2026-10-13 from Claude's player walkthrough of the beta data (agreed by the product owner). Today's best craft was 5 White Linen Shirts at 7s, medium confidence. The shirt's Market page showed 85 listings with a frequently changing lowest price (contested), a lowest buyout of 8s against a typical 5s (160%, *high*), and **no early removals** across about ten scan gaps: every listing that left had run out its time. None of that reached Today, because UI-11's labels only show inside *This session*'s details.
-
-As a player, I want Today's plan to price and flag crafts the way the Market page does, so that I don't craft and post something that is overpriced and not selling.
-
-Acceptance:
-- **Priced at typical when high:** when UI-11 labels an output **high** (newest lowest buyout at or above `flood_high_percent` of its typical earlier price), Today's sell-side unit price for that output is the lower of its CRAFT-04 cautious sell price and the typical price. This applies before ranking and batch sizing, so a capped craft can drop or fall in the plan. Buy-side prices never change: the same item bought as a material keeps its listed cost (a test proves it). Cheap, typical, too-few-scans and no-buyout outputs are unchanged.
-- **Post price:** the *Sell* list posts a capped output at the lower of the usual undercut and the typical price, rounding down in the usual price step (whole silver for unstackables). It's labelled *priced at the typical earlier price, not the current lowest*.
-- **Labels:** each Today craft card, Sell row and Queue post shows UI-11's actionable labels (*contested: many sellers*, *thin: few listings*, *pricier than usual*, *cheap right now*) with the counts behind them on demand, as *This session* does (reuse its badges; steady/typical stay in the evidence).
-- **No early removals:** for each shown craft output, count UI-10 *removed early* units across the same newest comparable pairs UI-11 uses (at most ten, gap at most 12 hours) in which the output had listings in the earlier scan. With at least 3 such pairs and zero removed early, label it **no early removals in N scan gaps** and add it as a Low confidence reason. Wording: removed early is an upper bound on purchases, so zero means nobody bought one in those gaps, except a purchase replaced by an identical listing. Fewer than 3 pairs: no label.
-- **Confidence:** *contested* adds a Medium reason. A capped output needs no extra reason: its price already reflects the warning.
-- **One read:** one `flood_signals.signals` call per Today load covers the catalog outputs, made in `today_loading.load_today` and passed into `build_today` as data. `build_today` stays free of database reads and downloads. The early-removal check reads only the shown craft outputs. Report Today's load time on the beta data before and after.
-- **Version:** `TODAY_VERSION` becomes 8 (existing choices reset with the usual note). The Action Board, Market, Team and *This session*'s own calculations are unchanged; *This session* shows the new Today plan as it already shows the current one.
-- **Offline tests:** a high output priced at typical and re-ranked below an uncapped craft; the same item's buy price unchanged; post price whole-silver rounding; too-few-scans unchanged; contested and thin labels; no-early-removals with 3 pairs and zero removals, no label with 2 pairs or one removal; variants never pooled; the version bump.
-- **Real-data check** on the Forever beta source: what happens to White Linen Shirt and the rest of the plan, with each label and its counts.
-- **Docs:** the rule in `requirements.md`'s Today section (it names UI-10 and UI-11 rather than restating them), `design.md`, `status.md`.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067 and SPIKE-009/009b.
 
 ### STORY-068 — Use what the team holds
 

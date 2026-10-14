@@ -19,6 +19,16 @@ def scan_pairs(db, config) -> list[dict]:
             for later, earlier in zip(scans, scans[1:], strict=False)]
 
 
+def qualifying_pairs(db, config, limit=10) -> list[dict]:
+    """The newest adjacent pairs within MAX_GAP: UI-11 churn and Today's removal check share them."""
+    return [pair for pair in scan_pairs(db, config) if not pair['skipped']][:limit]
+
+
+def recent_comparisons(db, config, item_ids, limit=10) -> list[dict]:
+    """Compare qualifying_pairs without re-reading the scan list for every pair."""
+    return [_compare(db, config, pair, item_ids) for pair in qualifying_pairs(db, config, limit)]
+
+
 def unavailable(config, pairs):
     if config['provider'] != 'addon':
         return 'TSM source: no addon scan pairs.'

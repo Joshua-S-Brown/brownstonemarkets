@@ -89,9 +89,9 @@ async def test_empty_team_and_failed_signal_read(user, tmp_path, monkeypatch):
     source, c, data = team_app(tmp_path, monkeypatch)
     def broken(*args, **kwargs):
         raise ValueError('unreadable signals')
-    monkeypatch.setattr('brownstone.flood_signals.signals', broken)
     await user.open('/')
     await user.should_see('This session')
+    monkeypatch.setattr('views.nicegui_today.build_options', broken)
     user.find(marker='session-view').elements.pop().set_value('This session')
     await user.should_see('Unable to build session options: unreadable signals')
 

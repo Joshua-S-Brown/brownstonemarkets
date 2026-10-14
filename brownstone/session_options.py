@@ -169,7 +169,9 @@ def build_options(db, config, arguments, plan, *, window=25):
                                                       config.get('farming_idle_minutes', 10)),
                            'professions': [_profession(g, by_id, prices, graph) for g in result['professions']],
                            'unlisted': result['unlisted']})
-    signals = flood_signals.signals(db, config, _item_ids(characters, plan), arguments['now'])
+    signals = arguments.get('flood_evidence')
+    if signals is None:  # Direct callers may still supply evidence without the shared loader.
+        signals = flood_signals.signals(db, config, _item_ids(characters, plan), arguments['now'])
     characters = [c | {'farming': farming.valued(c['farming'], sell_prices, signals['rows'],
                                                 arguments['auction_cut'])} for c in characters]
     return {'characters': [_label_character(c, signals['rows']) for c in characters],

@@ -219,7 +219,8 @@ of each selected ID. Python compares key multiplicities and assigns the shortest
 first, returning integer counts/units plus matching evidence and excluded no-buyout counts.
 There is no migration, persistence, price path or forecast. `top_removals` reads only the newest
 qualifying pair and catalog-chain IDs; `item_history` retains skipped gaps and at most ten qualifying
-pairs. `market_explorer.load_explorer` adds the small top-list projection. `item_removals` opens a
+pairs. UI-11 and Today share `qualifying_pairs`; `recent_comparisons` reads the scan list once.
+`market_explorer.load_explorer` adds the small top-list projection. `item_removals` opens a
 read-only connection only when `views/nicegui_market.show_item` opens the item page. Shared theme
 cards/badges and expansions show evidence and keep identities separate, including noncatalog items.
 
@@ -227,7 +228,7 @@ cards/badges and expansions show evidence and keep identities separate, includin
 
 Rules and config defaults live in `requirements.md` → UI-11. `flood_signals.signals` reads
 `scan_metrics` under `scope_predicate`, exact scan/snapshot identity and metrics version, reusing
-`scan_changes.eligible_scans`, its loaded-name query and `removed_listings.scan_pairs`. Item-ID
+`scan_changes.eligible_scans`, its loaded-name query and `removed_listings.qualifying_pairs`. Item-ID
 filters retain all variant states to check ADDON-08's pure-base compatibility. The newest eligible
 scan supplies counts and largest-stack numerator/denominator; earlier windowed scans supply the
 median, and at most ten qualifying adjacent pairs supply comparable lowest-buyout churn.
@@ -377,6 +378,11 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
 - **Loading.** `today_loading.load_today` picks the latest scoped snapshot, opens the database
   read-only, resolves funds and returns the `build_today` arguments with the caller's clock;
   `load_today_characters` reads `professions.latest_data` and keeps a failure for the UI to explain.
+  Only Today passes `flood=True` (others get `None`): one `flood_signals.signals` call supplies
+  `flood_evidence` for catalog/extra and gathered IDs, which This session reuses. Each signal
+  keeps its compatible earlier identity per qualifying pair. After selection,
+  `load_today_removals(config, plan)` reads shown output IDs via `removed_listings.recent_comparisons`;
+  `today.apply_removals` attaches confidence and rebuilds the complete Queue.
 - **Evidence.** `today_data.read_today_evidence` returns `(observations, listings, metrics,
   vendor_sell_prices)` for one source and analytical snapshot: base/legacy listings as
   `(quantity, full buyout, unit ceil)` tuples per item, ADDON-10 metrics and effective scan vendor
@@ -390,14 +396,18 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
   projection and returns per-recipe status, team names and catalog checks; `filter_candidates` runs
   before sizing and counts excluded reasons. `PROFESSION_SKILL_IDS` carries the documented map.
 - **Plan.** `build_today(catalogs, observations, market, snapshot, settings, *, now, listings, metrics,
-  vendor_prices, max_age_hours, auction_cut, choices=None, refill=True, character_data)` returns
+  vendor_prices, max_age_hours, auction_cut, choices=None, refill=True, character_data, flood_evidence)` returns
   capped `craft`, `buy`, `sell` and `below_vendor` lists, hidden and remaining counts, shopping total,
   freshness, `choice_limits`, `dropped_choices`, `queue` and `today_version`. `Ladder` holds prefix
   units/costs for whole-stack quotes; binary search finds the affordable bound and only bound/listing
   breakpoints are quoted. Each selection reserves funds and listing offsets; no per-unit expansion or
   per-recipe SQL. Craft rows keep board routes, `purchases`, `intermediate_steps` (chosen craft
   branches only), `plan_order` and `feasible_size`. `today_confidence.confidence` labels the funded
-  plan afterwards. `craft_details(row)` projects materials from `purchases` and scales steps by batch;
+  plan afterwards. Today passes optional sell-price caps through `rank_catalogs`/`rank_recipes`'s
+  cautious sell map; their default calculations and the buy map are unchanged. `today_warnings`
+  selects base/legacy signals and carries caps/evidence into Sell and Queue posts. The NiceGUI view
+  reuses `session_signal`/`CROWDING`/`OVERSHOOT` badges with on-demand removal evidence.
+  `craft_details(row)` projects materials from `purchases` and scales steps by batch;
   `purchase_uses(crafts)` groups purchased units per item/route and output (Shopping list For);
   `session_queue` projects reserved shopping, route steps in postorder and posts without re-quoting.
 - **Session.** `today_session.plan_context` fingerprints catalogs, market, snapshot, settings,
@@ -410,8 +420,9 @@ Rules live in `requirements.md` → UI-12. `session_options.build_options(db, co
 plan, window=25)` composes the displayed reserved plan with `progression.build_progression` and
 its `estimate_cost` results, using only `today_loading.load_today`'s observations, listings and
 metrics. Selected estimate steps reuse `evaluate_recipe`'s team-aware shopping quantities for
-cheap-material attribution; no new price query. One `flood_signals.signals` call covers the union
-of plan, estimate and farming item IDs, retaining full source/market scope and separate variant identities.
+cheap-material attribution; no new price query. Loaded `flood_evidence` covers the union
+of catalog and farming item IDs, retaining full source/market scope and separate variant identities.
+Direct callers without loaded signals retain the standalone signal read.
 It returns character sections, annotated copies, per-character craft totals, character level,
 `next_steps` (kinds `craft`, `level_profession`, `level_character`, `train`, `nothing`, `evidence`),
 per-profession `milestones` and `tier` (`NEXT_TIER`), snapshot/freshness and separate signal

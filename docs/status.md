@@ -10,7 +10,10 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
   authenticated reuse/restart, loopback browser fallback and idle shutdown.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
-  queue, confidence, character eligibility and captured funds; today_version 7. This session
+  queue, confidence, character eligibility and captured funds; today_version 8.
+  UI-11 high outputs use typical-price sell caps before ranking/sizing, with shared signal badges
+  on crafts/Sell/posts; shown-output UI-10 history adds Low confidence for no early removals
+  in at least three qualifying gaps (Classic time-left assumptions pending Forever confirmation). This session
   composes reserved crafts and Team-window unlock costs with flood labels (UI-12)
   and measured journal farming rates (UI-13).
 - **Team:** captured roster/history, recipe evidence, reach estimates and hiring comparison

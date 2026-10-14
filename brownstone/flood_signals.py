@@ -5,7 +5,7 @@ from fractions import Fraction
 from .config import FLOOD_DEFAULTS
 from .freshness import assess
 from .metrics import METRICS_VERSION
-from .removed_listings import scan_pairs
+from .removed_listings import qualifying_pairs
 from .scan_changes import _scan_items_sql, eligible_scans
 from .storage import scope_predicate
 
@@ -121,7 +121,7 @@ def signals(db, config, item_ids, now):
               'note': 'TSM source: no addon flood signals.' if config['provider'] != 'addon' else 'No eligible scans.'}
     if not scans:
         return result
-    pairs = [p for p in scan_pairs(db, config) if not p['skipped']][:10]
+    pairs = qualifying_pairs(db, config)
     cutoff = scans[0]['finished_at'] - timedelta(days=options['flood_window_days'])
     earlier = [s for s in scans[1:] if s['finished_at'] >= cutoff]
     needed = {s['scan_id']: s for s in [scans[0], *earlier]}
@@ -133,10 +133,17 @@ def signals(db, config, item_ids, now):
         {'updated_at': scans[0]['finished_at'].isoformat()}, now, config['max_age_hours']))
     for row in newest:
         churn = _churn(row, history, pairs, newest)
+        earlier_identities = {}
+        for pair in pairs:
+            scan_id = pair['earlier']['scan_id']
+            match = _compatible(row, history[scan_id], newest)
+            if match is not None:
+                earlier_identities[scan_id] = match['variant_state']
         previous = [_compatible(row, history[s['scan_id']], newest) for s in earlier]
         prices = [r['min_buyout'] for r in previous if r is not None]
         result['rows'].append({**row, 'crowding': crowding(row['listings'], churn, options), 'churn': churn,
-                               'overshoot': overshoot(row['min_buyout'], prices, options)})
+                               'overshoot': overshoot(row['min_buyout'], prices, options),
+                               'earlier_identities': earlier_identities})
     return result
 
 

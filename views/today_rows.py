@@ -2,6 +2,7 @@
 from datetime import UTC, datetime
 
 from brownstone.money import format_money, to_gold
+from brownstone.today_warnings import warning_fields
 
 ROW_LIMIT_NOTE = "more rows outside this list's 10-row limit"
 SETTINGS_NOTE = "One funded plan · whole auction stacks are bought; surplus is shown · sales speed is unknown"
@@ -70,7 +71,8 @@ def sell_row(row):
             "Listings": row["listings"], "Units": row["units"], "Largest stack units": row["largest_stack_units"],
             "Undercut unit (g)": to_gold(row["undercut_copper"]), "Price step": row.get("price_step", "1c"),
             "Profit at undercut for batch (g)": to_gold(row["undercut_batch_profit_copper"]),
-            "Thin": row["thin"], **_confidence_columns(row), "State": state(row)}
+            "Thin": row["thin"], "Warnings": warning_fields(row),
+            **_confidence_columns(row), "State": state(row)}
 
 
 def _confidence_columns(row):
