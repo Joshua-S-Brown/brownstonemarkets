@@ -45,8 +45,8 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-076 back to where I was (from play feedback, 2026-10-14)
-2. STORY-077 mob names (addon; best before 21 October so the beta can confirm it)
+1. STORY-077 mob names (addon; ready for handoff; best before 21 October so the beta can confirm it)
+2. STORY-076 back to where I was (from play feedback, 2026-10-14)
 3. STORY-078 an item page you can read (replaces the item-page half of STORY-021)
 4. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
 5. STORY-073 your own sale rate (refine first)
