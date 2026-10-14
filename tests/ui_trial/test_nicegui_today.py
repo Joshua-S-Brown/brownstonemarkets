@@ -16,6 +16,11 @@ from views.today_rows import craft_row, sell_row, vendor_row
 pytestmark = pytest.mark.asyncio
 
 
+def data_rows(widget):
+    """Navigation metadata does not change the shared plan projection."""
+    return [{k: v for k, v in row.items() if k != '_item_url'} for row in widget.rows]
+
+
 @pytest.mark.parametrize('addon', [False, True])
 async def test_page_matches_shared_plan_and_row_details(user, tmp_path, monkeypatch, addon):
     _, source, *_ = (listing_evidence_app(tmp_path, monkeypatch, -1) if addon else app(tmp_path, monkeypatch))
@@ -33,14 +38,15 @@ async def test_page_matches_shared_plan_and_row_details(user, tmp_path, monkeypa
     widget = user.find('Craft').elements
     craft_table = next(e for e in widget if isinstance(e, ui.table))
     sells = {r['output_item_id']: r for r in result['sell']}
-    assert craft_table.rows == [{**craft_row(r, sells[r['output_item_id']]), 'id': i}
-                                for i, r in enumerate(result['craft'])]
+    assert data_rows(craft_table) == [{**craft_row(r, sells[r['output_item_id']]), 'id': i}
+                                     for i, r in enumerate(result['craft'])]
     tables = {next(iter(t._markers)): t for t in all_tables(user)}
     names = {i: item['name'] for c in catalogs for i, item in c['items_by_id'].items()}
-    assert tables['Buy'].rows == [{**r, 'id': i} for i, r in enumerate(buy_rows(result, names))]
-    assert tables['Sell'].rows == [{**sell_row(r), 'id': i} for i, r in enumerate(result['sell'])]
+    assert data_rows(tables['Buy']) == [{**r, 'id': i} for i, r in enumerate(buy_rows(result, names))]
+    assert data_rows(tables['Sell']) == [{**sell_row(r), 'id': i} for i, r in enumerate(result['sell'])]
     vendor = next(t for t in all_tables(user) if 'vendor' in t._markers)
-    assert vendor.rows == [{**r, 'id': i} for i, r in enumerate(vendor_row(r, names) for r in result['below_vendor'])]
+    assert data_rows(vendor) == [
+        {**r, 'id': i} for i, r in enumerate(vendor_row(r, names) for r in result['below_vendor'])]
     await user.should_see('recipes hidden')
     user.find(marker='page-info').click()
     for remaining in result['remaining'].values():
@@ -300,7 +306,7 @@ async def test_adjustments_match_planner_queue_ticks_and_reset(user, tmp_path, m
         assert_card_cost(card)
     buy = next(t for t in all_tables(user) if 'Buy' in t._markers)
     names = {i: item['name'] for c in catalogs for i, item in c['items_by_id'].items()}
-    assert buy.rows == [{**r, 'id': i} for i, r in enumerate(buy_rows(expected, names))]
+    assert data_rows(buy) == [{**r, 'id': i} for i, r in enumerate(buy_rows(expected, names))]
     assert not any(e.value for e in user.find(ui.checkbox).elements if e.text.startswith('Buy at'))
     user.find('Refill freed gold').click()
     user.find(kind=ui.checkbox, content=row['output_name']).click()
@@ -407,7 +413,7 @@ async def test_refill_next_output_cards_and_source_isolation(user, tmp_path, mon
     assert len(user.find(marker='craft-card').elements) == 10
     for card in user.find(marker='craft-card').elements:
         assert_card_cost(card)
-    assert [next(e.text.split(' · ')[0] for e in c.descendants() if isinstance(e, ui.label))
+    assert [next(e.text.split(' · ')[0] for e in c.descendants() if isinstance(e, (ui.label, ui.link)))
             for c in sorted(user.find(marker='craft-card').elements, key=lambda e: e.id)] == [
                 r['Item'] for r in next(t for t in all_tables(user) if 'Craft' in t._markers).rows]
     # Changing source in this browser tab cannot borrow choices or evidence.
@@ -439,7 +445,7 @@ async def test_refill_next_output_cards_and_source_isolation(user, tmp_path, mon
 
 
 def card_text(card):
-    return '\n'.join(e.text for e in card.descendants() if isinstance(e, ui.label))
+    return '\n'.join(e.text for e in card.descendants() if isinstance(e, (ui.label, ui.link)))
 
 
 def assert_card_cost(card):
@@ -516,3 +522,30 @@ async def test_cards_shared_buy_uses_vendor_and_intermediate(user, monkeypatch):
 
 def all_tables(user):
     return [e for e in user.client.elements.values() if isinstance(e, ui.table)]
+
+
+async def test_hidden_low_row_click_opens_shown_craft(user):
+    from test_today import chain_catalog, output_catalog, plan
+
+    from views.nicegui_today import plan_tables
+    second = output_catalog(4, 'second')
+    second['items_by_id'][4]['name'] = 'Second output'
+    result = plan(catalogs=[chain_catalog(), second], listings={1: [(30, 300, 10), (30, 600, 20)]},
+                  observations={1: {'min_buyout': 10}, 3: {'min_buyout': 2000}, 4: {'min_buyout': 2000}},
+                  metrics={3: {'min_buyout': 200, 'listings': 2, 'units': 8, 'largest_stack_units': 3},
+                           4: {'min_buyout': 200, 'listings': 3, 'units': 8, 'largest_stack_units': 3}})
+    result['craft'][0]['confidence'], result['craft'][1]['confidence'] = 'Low', 'High'
+    shown = result['craft'][1]
+
+    @ui.page('/hidden-low')
+    def page():
+        plan_tables(result, {1: 'Shared material', 2: 'Vendor thread'}, 'Plan',
+                    {'game_version': 'classic', 'source_id': 'fixture'},
+                    {'hide_low': True, 'display': 'Table', 'refill': False, 'choices': None,
+                     'rows': result['craft'], 'ticks': {}})
+
+    await user.open('/hidden-low')
+    craft_table = next(t for t in all_tables(user) if 'Craft' in t._markers)
+    assert [r['Item'] for r in craft_table.rows] == [shown['output_name']]
+    user.find(kind=ui.table, marker='Craft').trigger('rowClick', [{}, craft_table.rows[0], 0])
+    await user.should_see(f"Materials for {shown['output_name']}")

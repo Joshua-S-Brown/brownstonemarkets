@@ -9,6 +9,7 @@ from brownstone.freshness import age_caption
 from brownstone.money import format_money
 from brownstone.recipe_graph import made_by_label
 from views import nicegui_theme as theme
+from views.nicegui_navigation import set_href
 
 
 def money(value):
@@ -22,17 +23,22 @@ def change(value, metric):
     return ('+' if value > 0 else '') + shown
 
 
-def item_url(config, item_id):
+def item_url(config, item_id, origin=None):
     return '/?' + urlencode({'place': 'Market', 'game': config['game_version'],
-                             'source': config['source_id'], 'item': item_id})
+                             'source': config['source_id'], 'item': item_id,
+                             **(origin if origin is not None else config.get('_origin', {}))})
 
 
-def item_link(config, item_id, name):
-    return ui.link(name, item_url(config, item_id)).classes(
+def item_link(config, item_id, name, origin=None):
+    link = ui.link(name, item_url(config, item_id, origin)).classes(
         'min-h-[44px] inline-flex items-center underline').style('color:var(--brand)')
 
+    if '_location_updates' in config:
+        config['_location_updates'].append(lambda: set_href(link, item_url(config, item_id, origin)))
+    return link
 
-def render(config, catalogs, item: int | None = None):
+
+def render(config, catalogs, item: int | None = None, origin=None):
     try:
         result = explorer.load_explorer(config, catalogs, datetime.now(UTC))
     except Exception as error:
@@ -54,9 +60,13 @@ def render(config, catalogs, item: int | None = None):
     if not result['catalogs']:
         empty('No compatible catalogs for this source’s game and rules version. '
               'Inspect Recipe catalogs in the old app.')
+    page = explorer.item_page(result, item) if item is not None else None
+    config = {**config, '_origin': origin or ({'origin_place': 'Market', 'origin_item': str(item),
+                                            'origin_name': page['name']} if page else {})}
+    result = {**result, 'config': config}
     search_panel(result)
-    if item is not None:
-        show_item(result, explorer.item_page(result, item))
+    if page is not None:
+        show_item(result, page)
     flood_lists(result)
     removal_list(result)
     movement(result)

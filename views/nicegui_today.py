@@ -20,7 +20,8 @@ from brownstone.today_warnings import REMOVAL_EVIDENCE
 from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
 from views import nicegui_theme as theme
 from views import today_rows as tr
-from views.nicegui_market import item_link
+from views.nicegui_market import item_link, item_url
+from views.nicegui_navigation import VIEWS, set_href, today_config, today_location
 
 TABS = ['Plan', 'Shopping list', 'Sell', 'Queue', 'Extras']
 LEGACY_TABS = {'Craft': 'Plan', 'Buy': 'Shopping list', 'Below vendor': 'Extras'}
@@ -202,14 +203,13 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
     return open_settings
 
 def plan_tables(result, names, active_tab, config, session=None, on_change=None):
+    config = config if '_origin' in config else today_config(config, active_tab, session or {})
     sells = {r['output_item_id']: r for r in result['sell']}
-    crafts = [{**tr.craft_row(r, sells[r['output_item_id']]), 'id': i} for i, r in enumerate(result['craft'])]
     with ui.tabs(value=active_tab).classes('bs-tabs') as tabs:
         for name in TABS:
             ui.tab(name)
     tabs.on_value_change(lambda e: app.storage.tab.update({'today-active-tab': e.value}))
-    tabs.on_value_change(lambda e: ui.navigate.history.replace('/?' + urlencode({
-        'game': config['game_version'], 'source': config['source_id'], 'place': 'Today', 'tab': e.value})))
+    tabs.on_value_change(lambda e: today_location(config, tab=e.value))
     with ui.tab_panels(tabs, value=active_tab).classes('w-full'):
         with ui.tab_panel('Plan'):
             if result['character_note']:
@@ -218,8 +218,7 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
                 with ui.expansion('Plan controls', value=session.get('controls_open', False),
                                   on_value_change=lambda e: session.update(controls_open=e.value)):
                     adjustment_controls(result, session, on_change)
-                if session.get('hide_low'):
-                    crafts = [r for r in crafts if r['Confidence'] != 'Low']
+            shown = [r for r in result['craft'] if not (session or {}).get('hide_low') or r['confidence'] != 'Low']
             with ui.row().classes('w-full justify-end'):
                 display = ui.toggle(['Cards', 'Table'], value=(session or {}).get('display', 'Cards')).mark(
                     'plan-display')
@@ -228,14 +227,14 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
             table_area.bind_visibility_from(display, 'value', backward=lambda v: v == 'Table')
             card_area.bind_visibility_from(display, 'value', backward=lambda v: v == 'Cards')
             with card_area:
-                for row in result['craft']:
-                    if not (session or {}).get('hide_low') or row['confidence'] != 'Low':
-                        craft_card(row, sells[row['output_item_id']])
+                for row in shown:
+                    craft_card(row, sells[row['output_item_id']], config)
             if session is not None:
                 display.on_value_change(lambda e: session.update(display=e.value))
             with table_area:
-                widget = table(crafts, label='Craft')
-            widget.on('rowClick', lambda e: details_dialog(result['craft'][e.args[1]['id']]))
+                widget = table([tr.craft_row(r, sells[r['output_item_id']]) for r in shown], label='Craft')
+            item_table(widget, 'Item', [r['output_item_id'] for r in shown], config)
+            widget.on('rowClick', lambda e: details_dialog(shown[e.args[1]['id']]))  # table() numbers shown rows
 
             with ui.expansion('Catalog checks'):
                 if result['catalog_checks']:
@@ -243,34 +242,60 @@ def plan_tables(result, names, active_tab, config, session=None, on_change=None)
                 else:
                     ui.label('No differences in comparable matched recipe evidence.')
         with ui.tab_panel('Shopping list'):
-            table(buy_rows(result, names), label='Buy')
+            widget = table(buy_rows(result, names), label='Buy')
+            item_table(widget, 'Material', [r['item_id'] for r in result['buy']], config)
 
             ui.label(tr.shopping_line(result))
         with ui.tab_panel('Sell'):
             widget = table([tr.sell_row(r) for r in result['sell']], label='Sell')
+            item_table(widget, 'Output', [r['output_item_id'] for r in result['sell']], config)
             sell_warning_slot(widget)
             widget.on('rowClick', lambda e: sell_warning_dialog(result['sell'][e.args[1]['id']]))
 
         with ui.tab_panel('Extras'):
             ui.label(tr.VENDOR_ASIDE)
-            table([tr.vendor_row(r, names) for r in result['below_vendor']], label='Below vendor')
+            widget = table([tr.vendor_row(r, names) for r in result['below_vendor']], label='Below vendor')
+            item_table(widget, 'Item', [r['item_id'] for r in result['below_vendor']], config)
 
         with ui.tab_panel('Queue'):
             queue_panel(result, session if session is not None else {})
     return tabs
 
 
-def render(config, catalogs, character_data, active_tab='Craft'):
+def item_table(widget, column, item_ids, config):
+    def update():
+        for row, item_id in zip(widget.rows, item_ids, strict=True):
+            row['_item_url'] = item_url(config, item_id)
+        widget.update()
+    update()
+    config['_location_updates'].append(update)
+    widget.add_slot('body-cell-' + column, '<q-td :props="props"><a :href="props.row._item_url" '
+                    'class="min-h-[44px] inline-flex items-center underline" @click.stop>'
+                    '{{props.value}}</a></q-td>')
+
+
+def restore_view(initial, session, config):
+    if initial:
+        requested = initial.pop()
+        if requested in VIEWS:
+            session['view'] = requested
+    config['_origin']['origin_view'] = session.get('view', 'Today plan')
+
+
+def render(config, catalogs, character_data, active_tab='Craft', active_view=''):
     saved, unreadable = read_saved_settings(config)
     active_tab = LEGACY_TABS.get(active_tab, active_tab)
     current_tab = active_tab if active_tab in TABS else 'Plan'
     storage = app.storage.tab
+    storage['today-active-tab'] = current_tab
     key = 'today-plan-' + config['source_id']
     session = storage.setdefault(key, {})
+    link_config = today_config(config, current_tab, session)
     reset_note = ui.label('')
     reset_note.bind_visibility_from(reset_note, 'text', backward=bool)
     plan = ui.column().classes('w-full')
 
+    initial_view = [active_view]
     first = [character_data]  # the page already read evidence; later updates re-read it
 
     def update(settings):
@@ -279,6 +304,7 @@ def render(config, catalogs, character_data, active_tab='Craft'):
         funds = resolve_funds(settings, latest_characters, datetime.now(UTC), config['max_age_hours'])
         settings = funds.settings
         plan.clear()
+        link_config['_location_updates'].clear()
         with plan:
             if warning:
                 ui.label(warning)
@@ -295,6 +321,7 @@ def render(config, catalogs, character_data, active_tab='Craft'):
                 ui.label(f'Unable to build Today: {error}')
                 return
             info[0] = lambda: plan_info(result, config, manifest, arguments, funds, session)
+            restore_view(initial_view, session, link_config)
             display = view_toggle(session)
             with ui.column().classes('w-full') as status:
                 plan_status(result, settings, funds, config, settings_dialog, open_info, latest_characters, session)
@@ -302,9 +329,9 @@ def render(config, catalogs, character_data, active_tab='Craft'):
                 ui.label(tr.NO_LISTINGS)
             watchlist_hits(config, catalogs)
             names = {i: item['name'] for c in catalogs for i, item in c['items_by_id'].items()}
-            with (session_view(display, config, arguments, result, session, status),
+            with (session_view(display, link_config, arguments, result, session, status),
                   ui.expansion('Other plan views') if not result['craft'] else ui.column().classes('w-full gap-3')):
-                tabs = plan_tables(result, names, current_tab, config, session, lambda: update(saved_settings[0]))
+                tabs = plan_tables(result, names, current_tab, link_config, session, lambda: update(saved_settings[0]))
 
             def remember(e):
                 nonlocal current_tab
@@ -408,14 +435,22 @@ def batch_change(value, identity, maximum, change):
     change(identity, size=int(value))
 
 
-def craft_card(row, sell):
+def craft_title(config, row):
+    title = f"{row['output_name']} · {row['batch_size']} crafts"
+    if config is None:
+        ui.label(title).classes('text-xl font-bold')
+    else:
+        item_link(config, row['output_item_id'], title).classes('text-xl font-bold')
+
+
+def craft_card(row, sell, config=None):
     details = craft_details(row)
     character = tr.craft_row(row, sell)
     with ui.card().classes('bs-card').mark('craft-card'):
         with ui.row().classes('w-full justify-between items-start'):
             with ui.column().classes('gap-2 flex-1 min-w-64'):
                 with ui.row().classes('items-center'):
-                    ui.label(f"{row['output_name']} · {row['batch_size']} crafts").classes('text-xl font-bold')
+                    craft_title(config, row)
                     status = character.get('Can make', 'Our team' if row.get('who_can_make_it') else 'Unknown')
                     theme.badge(status, 'good' if status == 'Known' else 'neutral')
                     theme.badge(f"{row['confidence']} confidence", 'good' if row['confidence'] == 'High' else 'warn')
@@ -600,6 +635,7 @@ def session_view(display, config, arguments, result, session, status):
                 loaded = True
             except Exception as error:
                 ui.label(f'Unable to build session options: {error}')
+    display.on_value_change(lambda e: today_location(config, view=e.value))
     display.on_value_change(lambda e: show(e.value))
     show(display.value)
     return plan_area
@@ -725,7 +761,10 @@ def session_summary(character, options, config):
         app.storage.tab.setdefault('team-' + config['source_id'], {}).update(character=list(key))
     with ui.row().classes('items-baseline gap-3'):
         link = ui.link(identity[0], '/?' + urlencode({
-            'place': 'Team', 'game': config['game_version'], 'source': config['source_id']}))
+            'place': 'Team', 'game': config['game_version'], 'source': config['source_id'],
+            **config.get('_origin', {})}))
+        config.get('_location_updates', []).append(lambda: set_href(link, '/?' + urlencode({
+            'place': 'Team', 'game': config['game_version'], 'source': config['source_id'], **config['_origin']})))
         link.classes('text-2xl font-bold min-h-[44px] underline').on('click', select)
         level = character['level']
         ui.label(f"level {level if level is not None else 'unknown'} · {' · '.join(identity[1:])}").classes(

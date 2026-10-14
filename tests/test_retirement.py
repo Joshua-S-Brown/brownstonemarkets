@@ -55,8 +55,8 @@ def test_retired_artifacts_and_dependency_are_absent():
 
 def test_document_size_and_rule_id_inventory():
     requirements = ROOT / 'docs/requirements.md'
-    # Allow STORY-075 captures and STORY-068 held-material rules without rewriting unrelated rules.
-    assert requirements.stat().st_size <= 99_000
+    # Allow STORY-075/068 rules and STORY-076 navigation without rewriting unrelated rules.
+    assert requirements.stat().st_size <= 100_000
     assert (ROOT / 'docs/design.md').stat().st_size <= 50_000
     expected = {f'{prefix}-{i:02}' for prefix, numbers in {
         'DATA': [1, 2, 3, 4, 5, 8], 'ADDON': range(1, 14), 'CRAFT': range(1, 14),

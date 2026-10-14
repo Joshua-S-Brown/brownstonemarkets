@@ -6,6 +6,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 ## Implemented
 
 - **App:** NiceGUI Today, Team, Market, Stock and Data → Import, with shared light theme,
+  URL-only back links for Today item/Team links and Market item chains (STORY-076, UI-07);
+  Today tab/view refresh persistence with This session loaded on URL entry,
   wrapping navigation, page information and Save-only Today settings (UI-07/08).
   `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
   authenticated reuse/restart, loopback browser fallback and idle shutdown.

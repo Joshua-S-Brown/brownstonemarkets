@@ -25,7 +25,7 @@ CLI collection bytes are written before validation, so failures stay inspectable
 
 ## App and modules
 
-`nicegui_app.py` owns loopback entry, URL place/source/Today-tab state and lifecycle;
+`nicegui_app.py` owns loopback entry, URL place/source/Today-tab/view state and lifecycle;
 `launch_nicegui.py` owns native launch, browser fallback and the path/byte fingerprint of
 both entries plus brownstone/views Python sources. Reuse/restart requires authenticated
 launcher state; the fingerprint has no dependency on a removed entry.
@@ -553,7 +553,10 @@ made-from/used-in rows and team statuses. Catalog-only items remain reachable wi
 `scan_movement` calls `eligible_scans`/`compare_scans`, retaining exact identities and comparison facts;
 UI-09 defines ordering, distinct-item limit and handling of missing evidence.
 `views/nicegui_market.py` uses the shared theme and anchor links carrying source, game, Market and
-item ID. Standard URL navigation retains browser history and refresh. Search renders up to 30 item
+item ID, plus the optional validated origin under UI-07. `views/nicegui_navigation.py` validates
+and renders the URL-only return destination; Today updates its page-local link targets and table
+anchors when tab/view changes. Standard URL navigation retains browser history and refresh.
+Search renders up to 30 item
 links after a query; refining the query reaches every observed item. IDs, incompatible catalog versions,
 expanded quantities and comparison evidence remain in disclosures/dialogs. No session price cache or writes.
 
