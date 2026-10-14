@@ -125,6 +125,8 @@ def _unknown_reason(surface: dict, row: dict, recipe: dict) -> str:
         return "learned flag unknown"
     if not recipe.get("learned_from"):
         return "how it's learned is unknown"
+    if recipe.get("required_skill") is None:  # Wowhead's no-skill sentinel is never a rank to compare (CRAFT-08).
+        return "required skill unknown"
     return ""
 
 

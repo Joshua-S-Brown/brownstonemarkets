@@ -24,6 +24,7 @@ from .crafting import (
     AVAILABILITY,
     parse_recipe_catalog,
     valid_learned_from,
+    valid_required_skill,
     valid_skillup_colors,
     valid_training_cost,
 )
@@ -333,9 +334,11 @@ def _catalog_recipe(extract: dict, profession: str, recipe_id: str, defaults: di
     output_id, made_min, made_max = recipe["creates"]
     if made_min != made_max or made_min <= 0:
         raise ValueError(f"Recipe {recipe_id} makes {made_min}-{made_max}; variable yields are not supported")
+    # Wowhead's 9999 sentinel is no skill level: the requirement stays unknown, never a band (CRAFT-08).
+    skill = {"required_skill": recipe["learnedat"]} if valid_required_skill(recipe["learnedat"]) else {}
     entry: dict[str, Any] = {
-        "recipe_id": int(recipe_id), "name": recipe["name"], "profession": profession,
-        "required_skill": recipe["learnedat"], "output_item_id": output_id, "output_quantity": made_min,
+        "recipe_id": int(recipe_id), "name": recipe["name"], "profession": profession, **skill,
+        "output_item_id": output_id, "output_quantity": made_min,
         "source_url": f"https://www.wowhead.com/{extract['game_path']}/spell={recipe_id}",
         "verified_at": extract["saved_at"], "verification_url": extract["source_url"],
         "evidence_sha256": extract["sha256"],

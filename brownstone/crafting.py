@@ -48,6 +48,15 @@ def valid_skillup_colors(value: object) -> bool:
             and value == sorted(value))
 
 
+# Wowhead's learnedat for spells with no skill requirement (rank spells, Smelting, some Forever recipes).
+NO_SKILL_SENTINEL = 9999
+
+
+def valid_required_skill(value: object) -> bool:
+    """A real learned skill; Wowhead's sentinel is no skill level and leaves the requirement unknown."""
+    return type(value) is int and 0 <= value < NO_SKILL_SENTINEL
+
+
 def valid_learned_from(value: object) -> bool:
     """Source codes stay in page order, including codes whose meaning is unverified."""
     return isinstance(value, list) and bool(value) and all(type(v) is int and v > 0 for v in value)
@@ -106,6 +115,8 @@ def _check_recipe(recipe: dict, profession: str, items: dict, output_recipes: di
         raise ValueError("Recipe verification must be an HTTPS URL")
     _check_flags(recipe)
     _check_learning(recipe)
+    if "required_skill" in recipe and not valid_required_skill(recipe["required_skill"]):
+        raise ValueError(f"required_skill must be a skill level below {NO_SKILL_SENTINEL}; omit it when unknown")
     if "skillup_colors" in recipe and not valid_skillup_colors(recipe["skillup_colors"]):
         raise ValueError("skillup_colors must be four positive non-decreasing integers")
     for ingredient in recipe.get("inputs", []):
