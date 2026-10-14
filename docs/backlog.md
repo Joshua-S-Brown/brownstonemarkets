@@ -45,7 +45,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-065 farming rates from play sessions (addon + Brownstone; discovery captured 2026-10-13 with addon 0.11.3: refine from that evidence first)
+1. STORY-065 farming rates from play sessions (Brownstone; medium; refined 2026-10-13 from the beta capture, ready for handoff)
 2. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
 3. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
 4. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
@@ -157,18 +157,22 @@ Acceptance:
 
 ### STORY-065 — Farming rates from play sessions
 
-Added 2026-10-13 (product owner, while refining STORY-063: "we can backlog it but make sure we have a story for capturing farming events"). Addon capture plus Brownstone; read-only, manual play only. Needs a beta discovery first.
+Added 2026-10-13 (product owner, while refining STORY-063: "we can backlog it but make sure we have a story for capturing farming events"). **Refined 2026-10-13** from the 0.11.3 beta capture (Arille's Elwynn Forest session). Brownstone only: no addon change, no schema change, no new price query, and no change to Today's plan, ranking or `today_version`.
 
-As the owner, I want to know how many of a material I actually gather per hour of play, so that STORY-063 can compare farming with crafting and levelling on measured rates instead of guesses.
+As the owner, I want to know how many of a material I actually gather per hour of play, so that *This session* can compare farming with crafting and levelling on measured rates instead of guesses.
 
-To refine:
-- **Capture (beta discovery):** the journal already records `CHAT_MSG_LOOT` for the player (ADDON-07 rules in `requirements.md`), but not whether the loot came from a gathering node, a mob or a container, nor where. Find out on the Forever beta which read-only evidence tells them apart (for example the loot source's GUID type from the loot window, or the gathering spell) and whether the zone can be recorded with each event. Record what fired, like STORY-033's discovery; nothing that buys, posts or plays for you. **Capture added 2026-10-13 in addon 0.11.3** (ADDON-12 → *Discovery context*): loot-slot sources, zone and trainer lists; it was played and captured on 2026-10-13. **Finding 2026-10-13:** items taken from the mailbox also
-  produce the player's `CHAT_MSG_LOOT` (Basilly's 40 Linen Cloth came from Arille by mail), so gathered
-  loot must come from a loot window (`LOOT_OPENED` sources), never from loot messages while the mailbox is open.
-- **Farming stretches:** per character, a stretch of gathering events with its start, end and zone; idle gaps above a limit end a stretch. Units per hour per material per zone, with the number of stretches and minutes it rests on.
-- **Value:** units per hour times the material's current sale value after the auction cut (STORY-064's typical price shown beside it), so a crashed material is visible. Shown in STORY-063's *This session* view once there is enough history; too little says so.
-- **Builds on** STORY-033 (journal) and STORY-034 (ledger's *gathered* reason); no schema change unless the capture needs one (then a numbered migration).
-- **Honest limits:** rates are your own past sessions, not a promise; respawn competition at launch varies.
+Beta evidence (2026-10-13, `windows-pc-20261013T185255Z`): every `LOOT_OPENED` carries per-slot `GetLootSourceInfo` GUIDs whose type says **Creature** (a mob) or **GameObject** (a node, chest or fishing pool; the object's ID is the GUID's sixth field, such as 1731 for a Copper Vein), plus zone, subzone and map ID. All 32 of Arille's gathered drops ("You receive loot") followed a matching loot window within 0–1 seconds. Items taken from mail also produce the player's `CHAT_MSG_LOOT` but follow `TakeInboxItem`; crafted items follow neither. The journal's window flags are not reliable for this (auto-loot closes the window before the message, and the mailbox flag stayed set in the mine).
+
+Acceptance:
+- **Gathered loot:** a player `CHAT_MSG_LOOT` counts as gathered only when a `LOOT_OPENED` of the same character within the previous 5 seconds has a slot with the same item ID. Its source is that slot's first GUID type: *mob* (Creature), *object* (GameObject, with its object ID kept) or *unknown*. Quantity is the message's `xN` (1 when absent); item ID from the message's link. Loot after `TakeInboxItem`/`AutoLootMailItem`, crafts, vendor and trade never count. Item IDs only; names never decide anything.
+- **Stretches:** per character, consecutive gathered loot in the same map ID with gaps of at most a configurable idle limit (`farming_idle_minutes`, default 10, read like the flood settings in `brownstone/config.py`). A stretch's length is last minus first loot time; stretches shorter than 5 minutes or with fewer than 3 loots are kept as evidence but excluded from rates, and the page says how many were excluded.
+- **Rates:** per character, item, zone and source kind: units per hour over the summed qualifying stretch time, with the number of stretches and minutes it rests on. Integer units; the rate rounds down to a whole unit per hour.
+- **Value:** units per hour × the newest scan's cautious sell price × (1 − auction cut), integer copper; a missing price shows *no price*, never zero. STORY-064's typical earlier price sits beside it so a crashed material is visible.
+- **Shown** in Today's *This session* (UI-12) per character: a *Farming* line with the top three materials by value per hour (zone, source kind, rate, value, evidence minutes), or *not enough farming history* with the minutes recorded so far. Labels: your own past sessions, not a promise; launch respawn competition differs; listings are not sales.
+- **Calculation** in a new framework-free `brownstone/farming.py` over the journal observations Today already loads (`professions.latest_data` → each character's `observations`); display in `views/nicegui_today.py`.
+- **Offline tests:** mob, node, chest and fishing loot classified by GUID type with the object ID kept; mail and craft messages excluded; the 5-second match boundary; `xN` quantities; stretches split by idle gap and by map; short stretches excluded and counted; missing price; scoping (another source's or house's journal never joins); Today's plan, ranking and `today_version` unchanged (a test proves it).
+- **Real-data check** on the Forever beta source: Arille's 2026-10-13 Elwynn Forest session, listing each material's rate, source kind and value, and what was excluded.
+- **Docs:** a new *UI-13 Farming rates* rule in `requirements.md` next to UI-12; `design.md`; `status.md`.
 
 ### STORY-028 — Sellers and their supply chains
 
