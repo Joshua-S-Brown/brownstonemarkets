@@ -44,19 +44,78 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - An optional AI narration layer can come later. It may only explain those defined metrics, never invent numbers (*Out of scope*).
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
-**Order:**
-1. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
-2. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-3. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-4. STORY-036 vendor price ceilings
-5. STORY-021 item page and charts (would live in the Market explorer)
-6. STORY-026 scan coverage and rhythm
-7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-8. STORY-006 replay
+**Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data):
+1. STORY-067 price warnings on Today's plan (ready for handoff)
+2. STORY-068 use what the team holds (refine first)
+3. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
+4. STORY-069 Today in player terms
+5. STORY-070 Team's next recipe you can actually learn
+6. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+8. STORY-036 vendor price ceilings
+9. STORY-021 item page and charts (would live in the Market explorer)
+10. STORY-026 scan coverage and rhythm
+11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+12. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
 **Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066 and SPIKE-009/009b.
+
+### STORY-067 — Price warnings on Today's plan
+
+Added 2026-10-13 from Claude's player walkthrough of the beta data (agreed by the product owner). Today's best craft was 5 White Linen Shirts at 7s, medium confidence. The shirt's Market page showed 85 listings with a frequently changing lowest price (contested), a lowest buyout of 8s against a typical 5s (160%, *high*), and **no early removals** across about ten scan gaps: every listing that left had run out its time. None of that reached Today, because UI-11's labels only show inside *This session*'s details.
+
+As a player, I want Today's plan to price and flag crafts the way the Market page does, so that I don't craft and post something that is overpriced and not selling.
+
+Acceptance:
+- **Priced at typical when high:** when UI-11 labels an output **high** (newest lowest buyout at or above `flood_high_percent` of its typical earlier price), Today's sell-side unit price for that output is the lower of its CRAFT-04 cautious sell price and the typical price. This applies before ranking and batch sizing, so a capped craft can drop or fall in the plan. Buy-side prices never change: the same item bought as a material keeps its listed cost (a test proves it). Cheap, typical, too-few-scans and no-buyout outputs are unchanged.
+- **Post price:** the *Sell* list posts a capped output at the lower of the usual undercut and the typical price, rounding down in the usual price step (whole silver for unstackables). It's labelled *priced at the typical earlier price, not the current lowest*.
+- **Labels:** each Today craft card, Sell row and Queue post shows UI-11's actionable labels (*contested: many sellers*, *thin: few listings*, *pricier than usual*, *cheap right now*) with the counts behind them on demand, as *This session* does (reuse its badges; steady/typical stay in the evidence).
+- **No early removals:** for each shown craft output, count UI-10 *removed early* units across the same newest comparable pairs UI-11 uses (at most ten, gap at most 12 hours) in which the output had listings in the earlier scan. With at least 3 such pairs and zero removed early, label it **no early removals in N scan gaps** and add it as a Low confidence reason. Wording: removed early is an upper bound on purchases, so zero means nobody bought one in those gaps, except a purchase replaced by an identical listing. Fewer than 3 pairs: no label.
+- **Confidence:** *contested* adds a Medium reason. A capped output needs no extra reason: its price already reflects the warning.
+- **One read:** one `flood_signals.signals` call per Today load covers the catalog outputs, made in `today_loading.load_today` and passed into `build_today` as data. `build_today` stays free of database reads and downloads. The early-removal check reads only the shown craft outputs. Report Today's load time on the beta data before and after.
+- **Version:** `TODAY_VERSION` becomes 8 (existing choices reset with the usual note). The Action Board, Market, Team and *This session*'s own calculations are unchanged; *This session* shows the new Today plan as it already shows the current one.
+- **Offline tests:** a high output priced at typical and re-ranked below an uncapped craft; the same item's buy price unchanged; post price whole-silver rounding; too-few-scans unchanged; contested and thin labels; no-early-removals with 3 pairs and zero removals, no label with 2 pairs or one removal; variants never pooled; the version bump.
+- **Real-data check** on the Forever beta source: what happens to White Linen Shirt and the rest of the plan, with each label and its counts.
+- **Docs:** the rule in `requirements.md`'s Today section (it names UI-10 and UI-11 rather than restating them), `design.md`, `status.md`.
+
+### STORY-068 — Use what the team holds
+
+Promoted from *Restock* (Later) on 2026-10-13 after the walkthrough: Basilly held 8 Bolts of Linen Cloth, but Today bought 19 Linen Cloth to make 5 more. The bag and bank captures it was waiting for exist now (STORY-032; Stock, STORY-061). **Refine before handoff.**
+
+As a player, I want Today to use what my characters already hold before buying, so that I don't spend gold on materials sitting in my bags.
+
+Proposed acceptance (to confirm when refined):
+- **Holdings** come from Stock's source: the newest readable bags and bank capture per character, scope and ADDON-08 identity rules (base only; variants and unresolved links never count). Unknown banks are unknown, never empty. Captures older than `max_age_hours` are labelled stale but still used.
+- **Held before bought:** a craft's materials, including intermediates such as Bolt of Linen Cloth, come from holdings first, then the cheapest listings. Held units are costed at their cautious sell value after the cut (what selling them would earn), never as free, so profit stays honest while *gold needed* falls. Proposed by Claude; confirm when refined.
+- **Who sends what:** held materials on a character other than the crafter add a Queue step to mail them, with postage still uncharged and unconfirmed.
+- **Held outputs:** catalog outputs already held appear in *Sell* with their held units, labelled as held.
+- Today's ranking may change, so `TODAY_VERSION` increases.
+
+### STORY-069 — Today in player terms
+
+Added 2026-10-13 from the walkthrough. Small presentation fixes; no calculation changes.
+
+As a player, I want Today's numbers and steps to read the same way everywhere, so that I can act on them without decoding them.
+
+Acceptance:
+- **One profit:** a craft shows the same expected profit on the summary tile, its card, *Sell* and *This session* (at the post price; currently the card and *This session* show the profit at the cautious sale price, 32s 89c, and the tile shows it at the undercut, 28s 14c). The other figure stays in the evidence, labelled.
+- **Money and words in tables:** *Sell*, *Shopping list* and *Queue* show copper amounts with `money.py` (no gold decimals such as 0.2814) and yes/no or a label instead of true/false.
+- **Mail step:** when the crafter's own gold doesn't cover their purchases, the Queue names who mails how much gold to whom, from the captured gold per character. Postage is uncharged and unconfirmed, as now.
+- ***This session* duplicates:** one *level X to N to train Journeyman* step per character listing every profession it unlocks; characters without farming history show one short line, with the caveats shown once per page instead of per character; correct singular/plural (*1 stretch*).
+- **Hidden recipes:** the *why?* dialog leads with a plain summary (*1,298 need a profession nobody has · 441 need more skill · …*); scope, versions and snapshot IDs move into an expandable *Details*.
+- **Offline tests** for each; UI tests through the existing NiceGUI harness.
+
+### STORY-070 — Team's next recipe you can actually learn
+
+Added 2026-10-13 from the walkthrough. Arille's best next Cooking recipe was Peace Tea, which needs a recipe drop (Low confidence), while trainer and quest recipes were within reach.
+
+Acceptance:
+- **Best next recipe** prefers recipes the character can learn from a trainer, vendor or quest, then drops and unknown sources; within each, the current CRAFT-11 order. The full list keeps every recipe, with its source.
+- **Gathering professions** (Mining, Herbalism, Skinning, Fishing) with no craftable catalog recipe in reach say *levels by gathering* instead of an empty *No data available* table.
+- **Profession comparison:** when every cost to 300 is incomplete, say so once at the top instead of on every row.
+- Today's plan, ranking and versions unchanged.
 
 ### STORY-034 — Movement ledger and reconciliation
 
@@ -198,7 +257,7 @@ These are grouped by what unblocks them.
 - **Sales speed instead of a fixed cap:** replace *most crafts per item* with how many units of the output disappear between scans. Needs STORY-027 and a few weeks of live scans; label it removed, not sold.
 - **Stockpile:** materials below their own multi-day typical price, worth buying ahead for recipes you craft often, with a holding limit tied to gold available. Needs price history across days (*History chain*), so after launch.
 - **Volatility:** how much an item's typical price swings across scans, shown as a risk note and used to demote unstable crafts. Needs the same history.
-- **Restock:** what you hold in bags and bank, so *Buy* skips it and *Sell* includes it. Needs STORY-032 (and STORY-037 for characters on the Windows PC); pairs with STORY-039's chosen plan.
+- **Restock:** moved to Next on 2026-10-13 as STORY-068.
 - **Whole chains:** ore → bars → armor across professions, with the gain at each stage (sell bars or craft on). Routing exists (CRAFT-12).
 - **Gold per hour:** if the scaled minimum gain feels wrong in play, try a time-based minimum instead. Decide after using version 1.
 
@@ -249,6 +308,10 @@ Acceptance:
 - **Find the scan file:** on a click, offer the SavedVariables files under the usual WoW install folders, one per account, and save the choice as `scan_path` in the untracked `config/market.local.toml`. Your path is already set, so this only helps a new machine or account.
 - **In-game confirmations:** tick off values checked in game (a yield, a vendor and its price, a post-launch decision) with a date, written to the selection file, then Regenerate. For now there are only a few, edited by hand.
 - **Browse filters:** items used or made by any catalog (membership, not names) and a minimum listing count.
+- **Market for our levels** (walkthrough 2026-10-13): Market's front-page lists were dominated by Wool, Silk and Mithril-level items while the team was level 1–8. Filter or order them by the skill bands the team can reach (Team's window), with the full lists one click away.
+- **Plain identity labels** (walkthrough 2026-10-13): *base* and *unresolved* tags, and items listed twice under each, mean nothing to a player. Say *variant* or *unidentified link* only where it matters, keeping identities separate (ADDON-08).
+- **Shorter removal history** (walkthrough 2026-10-13): an item page lists every scan gap, mostly zeros. Summarise (removed early and could-have-expired totals over the comparable gaps), with each gap on demand.
+- **Vendor the junk** (walkthrough 2026-10-13): Stock showed 20 of 43 held items with no price, mostly vendor trash. Suggest vendoring held items with a vendor price and no auction price, using captured vendor prices only.
 - **Best use of a material:** for an item such as Linen or Wool Cloth, compare selling it with each craft it feeds, at current prices.
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
 
