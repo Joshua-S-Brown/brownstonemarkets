@@ -446,7 +446,7 @@ provenance; the view turns steps into lines (`step_text`). The input plan/argume
 when **This session** opens, reads Team's per-tab/source
 reach window, uses the shared theme and links to Market items and the selected Team character.
 
-### Farming (STORY-065, STORY-074, STORY-075)
+### Farming (STORY-065, STORY-074, STORY-075, STORY-077)
 
 Rules live in `requirements.md` → UI-13. `farming.gathered` reads scoped `(record, machine)`
 observations, orders by capture/sequence and deduplicates entry IDs. The addon captures only the player's loot messages; matching windows are isolated by machine/login,
@@ -470,7 +470,13 @@ spot aggregation counts each matched window once. Missing coin remains nullable.
 spot table with the shared theme and Classic NPC links. The addon 0.12.4 shared `journal.zone()`
 adds nullable raw x/y (including shared vendor context); `journal.lootSources()` adds type, quantity
 and cached positive vendor copper. `beta_report.farming_capture` counts capture coverage in JSON
-and Markdown. No storage migration, new price query or network work.
+and Markdown. Addon 0.12.6 `journal.lootTarget` matches the guarded target Creature GUID
+against odd positions in the saved slot sources and attaches the guarded name/GUID once to the window.
+`farming.npc_names` derives a display-only NPC-ID map from the same scoped observations,
+newest capture/sequence winning; `history` returns it beside unchanged rate/spot evidence.
+`nicegui_today.mob_label` uses it for Mob, Also looted and Spot item values with ID fallbacks;
+the Mob column retains its Classic Wowhead link. The beta capture section counts named windows
+and lists observed NPC IDs without any captured name. No storage migration, new price query or network work.
 
 ## Team contracts
 

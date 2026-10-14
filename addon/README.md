@@ -32,7 +32,7 @@ game doesn't offer and carry on.
 `addon/BrownstoneScan` into `_classic_beta_/Interface/AddOns/` as in step 1 of *Windows scans to the
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
-Done on 2026-10-13: everything in the earlier checklists except the items below. Install **0.12.5**
+Done on 2026-10-13: everything in the earlier checklists except the items below. Install **0.12.6**
 first (it reads trainer and vendor lists after they load, and records farming positions and coin), then:
 
 1. **Vendor lists:** open a trade-supplies vendor, a general goods vendor and one other vendor, without buying.
@@ -42,7 +42,8 @@ first (it reads trainer and vendor lists after they load, and records farming po
 4. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
 5. **Panel (STORY-044):** start one scan from the minimap panel, and use its reload and clear buttons once.
 6. **Loot vendor prices** (with 0.12.5): kill and loot a few mobs, including at least one grey item.
-7. `/reload`, log out and run the drop script.
+7. **Mob names** (with 0.12.6): kill and loot a few mobs as usual (you normally have the mob targeted when you loot it).
+8. `/reload`, log out and run the drop script.
 
 ## Run a scan
 

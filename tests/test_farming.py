@@ -354,3 +354,51 @@ def test_trailing_coin_only_window_joins_stretch_within_idle_limit(moment, expec
                record('PLAYER_MONEY', moment + 1, before_copper=10, after_copper=110)]
     spot = farming.history(events)['spots'][0]
     assert (spot['coin_copper'], spot['seconds']) == (expected, 300)
+
+
+def named_window(time, npc=475, name='Kobold Tunneler'):
+    pair = mob_loot(time, npc)[0]
+    pair[0].update(target_guid=f'Creature-0-1-2-3-{npc}-abc', target_name=name)
+    pair[0]['loot_slots'][0]['sources']['1'] = pair[0]['target_guid']
+    return pair
+
+
+def test_newest_npc_name_wins_without_changing_rates_spots_or_values():
+    events = sum((mob_loot(t, 475) for t in (0, 150, 300)), [])
+    baseline = farming.valued(farming.history(events), {2589: 100}, [], .05)
+    named = events + [named_window(400, name='Old name'), named_window(500), named_window(600, name='')]
+    result = farming.valued(farming.history(reversed(named)), {2589: 100}, [], .05)
+    assert result['npc_names'] == {475: 'Kobold Tunneler'}
+    assert result | {'npc_names': {}} == baseline
+    assert farming.history([named_window(1, npc=999)])['npc_names'] == {999: 'Kobold Tunneler'}
+
+
+@pytest.mark.parametrize(('guid', 'name', 'event'), [
+    ('Player-475', 'Player', 'LOOT_OPENED'), ('Creature-0-1-2-3-475-other', 'Wrong target', 'LOOT_OPENED'),
+    ('Creature-0-1-2-3-0-abc', 'Invalid ID', 'LOOT_OPENED'),
+    ('Creature-0-1-2-3-475-abc', None, 'LOOT_OPENED'),
+    ('Creature-0-1-2-3-475-abc', 'Kobold', 'CHAT_MSG_LOOT')])
+def test_npc_names_ignore_invalid_or_unmatched_capture(guid, name, event):
+    row, machine = named_window(100)
+    row.update(target_guid=guid, target_name=name, event=event)
+    assert farming.history([(row, machine)])['npc_names'] == {}
+
+
+def test_npc_names_use_scoped_imported_observations(tmp_path):
+    from test_journal import entry, write
+    from test_scans import NOW, addon_source
+
+    from brownstone import professions
+    from brownstone.config import MARKET_KEYS
+    from brownstone.pipeline import import_scans
+
+    row = entry('named-loot')
+    captured, _ = named_window(row['captured_at'])
+    row.update({k: v for k, v in captured.items() if k not in ('captured_at', 'entry_id', 'sequence')})
+    source = addon_source(tmp_path / 'data', write(tmp_path / 'own.lua', [row]))
+    import_scans(source, now=NOW)
+    data = professions.latest_data(source)
+    assert farming.history(data[('Alice', 'Beta', 'Alliance')]['observations'])['npc_names'] == {475: 'Kobold Tunneler'}
+    for field in ('source_id', *MARKET_KEYS):
+        foreign = professions.latest_data(source | {field: str(source[field]) + '_other'})
+        assert not foreign

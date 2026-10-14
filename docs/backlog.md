@@ -45,22 +45,21 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-077 mob names (addon; ready for handoff; best before 21 October so the beta can confirm it)
-2. STORY-076 back to where I was (from play feedback, 2026-10-14)
-3. STORY-078 an item page you can read (replaces the item-page half of STORY-021)
-4. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
-5. STORY-073 your own sale rate (refine first)
-6. STORY-069 Today in player terms
-7. STORY-070 Team's next recipe you can actually learn
-8. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-9. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-10. STORY-036 vendor price ceilings (after STORY-071)
-11. STORY-021 item charts and listing ladder (inside STORY-078's layout)
-12. STORY-026 scan coverage and rhythm
-13. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-14. STORY-006 replay
+1. STORY-076 back to where I was (from play feedback, 2026-10-14)
+2. STORY-078 an item page you can read (replaces the item-page half of STORY-021)
+3. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
+4. STORY-073 your own sale rate (refine first)
+5. STORY-069 Today in player terms
+6. STORY-070 Team's next recipe you can actually learn
+7. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+8. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+9. STORY-036 vendor price ceilings (after STORY-071)
+10. STORY-021 item charts and listing ladder (inside STORY-078's layout)
+11. STORY-026 scan coverage and rhythm
+12. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+13. STORY-006 replay
 
-**Pending an in-game beta check:** STORY-071 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
+**Pending an in-game beta check:** STORY-071 and STORY-077 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
 **Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 072, 074, 075 and SPIKE-009/009b.
 
@@ -178,6 +177,8 @@ Acceptance:
 - **Docs:** UI-07 in `requirements.md`; `status.md`.
 
 ### STORY-077 — Mob names (addon, read-only)
+
+Implemented in addon 0.12.6; current behavior is in `status.md` and ADDON-12/UI-13 in `requirements.md`. Awaiting the in-game check (`addon/README.md` → *Last beta play session*, step 7).
 
 Added 2026-10-14 from play feedback: farming spots say *NPC 475*; the Wowhead link works, but the app should say *Kobold Tunneler*. Loot only gives the mob's ID (from its GUID). Best done before 21 October so a beta session confirms it; names don't change at launch.
 

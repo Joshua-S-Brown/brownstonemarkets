@@ -566,7 +566,8 @@ def test_farming_capture_counts_positions_coin_slots_and_vendor_prices():
             {'event': 'CHAT_MSG_LOOT', 'zone': {'x': .2, 'y': .4}}]
     assert farming_capture(rows) == {'loot_windows': 2, 'windows_with_positions': 1,
                                      'windows_with_coin_slots': 1, 'windows_with_vendor_prices': 1,
-                                     'coin_slots': 1, 'vendor_prices': 1}
+                                     'coin_slots': 1, 'vendor_prices': 1, 'windows_with_names': 0,
+                                     'unnamed_npc_ids': []}
 
 
 def test_report_includes_farming_capture_in_json_and_markdown(tmp_path):
@@ -577,8 +578,26 @@ def test_report_includes_farming_capture_in_json_and_markdown(tmp_path):
     db['journal'].append(row)
     source = addon_source(tmp_path / 'data', write(tmp_path, db))
     folder, report, _ = beta_report.create_report(source['scan_path'], source, tmp_path / 'reports', now=NOW)
+    assert report['farming_capture']['windows_with_names'] == 0
+    assert 'With captured names: 0.' in (folder / 'report.md').read_text()
+    assert 'NPC IDs still unnamed: none.' in (folder / 'report.md').read_text()
     assert report['farming_capture']['windows_with_positions'] == 1
     assert report['farming_capture']['windows_with_coin_slots'] == 1
     assert report['farming_capture']['windows_with_vendor_prices'] == 1
     assert 'with positions: 1; with coin slots: 1; with vendor prices: 1' in (folder / 'report.md').read_text()
     assert json.loads((folder / 'report.json').read_text())['farming_capture'] == report['farming_capture']
+
+
+def test_farming_capture_names_counts_and_unnamed_all_source_guids():
+    from test_farming import named_window
+
+    from brownstone.beta_report import farming_capture
+
+    named, _ = named_window(100)
+    older, _ = named_window(90)
+    older.pop('target_name')
+    named['loot_slots'][0]['sources'].update({'3': 'Creature-0-1-2-3-999-abc', '4': 1,
+                                             '5': 'GameObject-0-1-2-3-888-abc', '6': 1})
+    result = farming_capture([older, named])
+    assert result['windows_with_names'] == 1
+    assert result['unnamed_npc_ids'] == [999]

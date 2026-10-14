@@ -251,11 +251,19 @@ def create_report(path: Path, config: Source, output_root: Path, previous: Path 
 
 
 def farming_capture(records):
-    from .farming import has_position
+    from .farming import captured_npc, has_position, source
 
     windows = [r for r in records if r.get('event') == 'LOOT_OPENED']
     slots = [s for r in windows for s in r.get('loot_slots', [])]
+    named = [captured_npc(r) for r in windows]
+    named_ids = {pair[0] for pair in named if pair is not None}
+    npc_ids = {source({'sources': {'1': value}})[1]
+               for slot in slots for key, value in slot.get('sources', {}).items()
+               if str(key).isdigit() and int(key) % 2 == 1 and isinstance(value, str)
+               and value.startswith('Creature-')}
     return {'loot_windows': len(windows),
+            'windows_with_names': sum(pair is not None for pair in named),
+            'unnamed_npc_ids': sorted(npc_ids - named_ids - {None}),
             'windows_with_positions': sum(has_position(r.get('zone', {})) for r in windows),
             'windows_with_coin_slots': sum(any(s.get('slot_type') == 2 for s in r.get('loot_slots', []))
                                            for r in windows),

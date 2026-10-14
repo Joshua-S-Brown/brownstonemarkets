@@ -21,6 +21,30 @@ def source(slot):
     return kind, identity if kind == 'object' or (identity and identity > 0) else None
 
 
+def captured_npc(record):
+    """Validate the display-only target pair against this loot window's GUID positions."""
+    guid, name = record.get('target_guid'), record.get('target_name')
+    if record.get('event') != 'LOOT_OPENED' or not isinstance(name, str) or not name.strip():
+        return None
+    kind, npc = source({'sources': {'1': guid}})
+    sources = [slot.get('sources', {}) for slot in record.get('loot_slots', [])]
+    matches = any(value == guid for values in sources for key, value in values.items()
+                  if str(key).isdigit() and int(key) % 2 == 1)
+    return (npc, name) if kind == 'mob' and npc is not None and matches else None
+
+
+def npc_names(observations):
+    """Newest captured name per NPC in the caller's already scoped observations."""
+    names = {}
+    ordered = sorted((r for r, _ in observations if type(r.get('captured_at')) is int),
+                     key=lambda r: (r['captured_at'], r.get('sequence', -1)))
+    for record in ordered:
+        captured = captured_npc(record)
+        if captured is not None:
+            names[captured[0]] = captured[1]
+    return names
+
+
 def _match(record, windows):
     message = record.get('arguments', {}).get('1', record.get('arguments', {}).get(1, ''))
     item = item_id(message)
@@ -102,6 +126,7 @@ def history(observations, idle_minutes=10, cell_percent=5):
                  'units_per_hour': r['units'] * 3600 // time[r['map_id']][0], 'object_ids': sorted(r['object_ids'])}
             for r in totals.values()]
     return {'rows': rows, 'spots': _spots(evidence, coins, cell_percent), 'stretches': evidence,
+            'npc_names': npc_names(observations),
             'recorded_seconds': sum(s['seconds'] for s in evidence),
             'excluded_stretches': sum(not s['qualifies'] for s in evidence)}
 

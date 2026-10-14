@@ -23,7 +23,9 @@ def markdown(report: dict) -> str:
                   f"Loot windows: {capture['loot_windows']}; with positions: {capture['windows_with_positions']}; "
                   f"with coin slots: {capture['windows_with_coin_slots']}; "
                   f"with vendor prices: {capture['windows_with_vendor_prices']}. "
-                  f"Coin slots: {capture['coin_slots']}; vendor prices: {capture['vendor_prices']}."]
+                  f"Coin slots: {capture['coin_slots']}; vendor prices: {capture['vendor_prices']}. "
+                  f"With captured names: {capture['windows_with_names']}.",
+                  'NPC IDs still unnamed: ' + (', '.join(map(str, capture['unnamed_npc_ids'])) or 'none') + '.']
     lines += _vendor_prices(report.get("vendor_prices", {}))
     lines += ["", "## Gold display", ""]
     for character in report.get("characters", []):

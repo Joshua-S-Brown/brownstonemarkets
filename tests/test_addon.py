@@ -202,7 +202,7 @@ def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
                                             lua.table_from({"scan_id": "old-2"})])
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert python_value(g.BrownstoneScanDB) == button_result
-    assert g.BrownstoneScanDB.addon_version == "0.12.5" and g.BrownstoneScanDB.schema_version == 6
+    assert g.BrownstoneScanDB.addon_version == "0.12.6" and g.BrownstoneScanDB.schema_version == 6
 
 
 @pytest.mark.parametrize("ending", [
@@ -730,4 +730,40 @@ def test_farming_position_failure_keeps_merchant_and_trainer_reads(reader):
     assert row['merchant_items'][0]['quantity'] == 2
     fire(g, 'TRAINER_SHOW')
     assert entries(g)[-1]['trainer_service_count'] == 1
+    assert g.actionCalls == 0
+
+
+@pytest.mark.parametrize(('target', 'expected'), [
+    ('"Creature-0-1-2-3-475-match"', True),
+    ('"Creature-0-1-2-3-475-other"', False),
+    ('"Player-475"', False), ('nil', False),
+    ('error("target unavailable")', False)])
+def test_loot_target_name_only_for_matching_creature(target, expected):
+    from test_journal import entries, fire, journal_client
+
+    lua, g, _ = journal_client()
+    lua.execute('''
+        function UnitGUID(unit)
+            if unit == "target" then return TARGET end
+            return "Player-own"
+        end
+        function UnitName(unit) return unit == "target" and "Kobold Tunneler" or "Alice" end
+        function GetNumLootItems() return 2 end
+        function GetLootSourceInfo(slot)
+            if slot == 1 then return "Creature-0-1-2-3-999-first", 1,
+                "Creature-0-1-2-3-475-match", 2 end
+            return "Creature-0-1-2-3-888-other", 1
+        end
+    '''.replace('return TARGET', target if target.startswith('error') else 'return ' + target))
+    fire(g, 'LOOT_OPENED')
+    row = entries(g)[-1]
+    assert ('target_guid' in row) == ('target_name' in row) == expected
+    if expected:
+        assert row['target_guid'] == 'Creature-0-1-2-3-475-match'
+        assert row['target_name'] == 'Kobold Tunneler'
+    assert all('target_name' not in slot and 'target_guid' not in slot for slot in row['loot_slots'])
+    lua.execute('UnitName = function(unit) if unit == "target" then error("name unavailable") end '
+                'return "Alice" end')
+    fire(g, 'LOOT_OPENED')
+    assert 'target_name' not in entries(g)[-1] and 'target_guid' not in entries(g)[-1]
     assert g.actionCalls == 0

@@ -189,11 +189,15 @@ async def test_farming_top_three_prices_evidence_and_caveats(user, tmp_path, mon
     await user.should_see('object IDs [1731]')
 
 
-async def test_farming_spots_table_npc_links_values_and_coin_caveat(user, tmp_path, monkeypatch):
+@pytest.mark.parametrize('named', [False, True])
+async def test_farming_spots_table_npc_links_values_and_coin_caveat(user, tmp_path, monkeypatch, named):
     from test_farming import mob_loot
     source, c, data = team_app(tmp_path, monkeypatch)
     first = next(iter(data.values()))
     first['observations'] = mob_loot(0, 20, item=1) + mob_loot(150, 10, item=3) + mob_loot(300, 20, item=999)
+    if named:
+        from test_farming import named_window
+        first['observations'] += [named_window(400, 20), named_window(500, 10, 'Other mob')]
     labels(monkeypatch, source)
     await user.open('/')
     await user.should_see('This session')
@@ -205,10 +209,13 @@ async def test_farming_spots_table_npc_links_values_and_coin_caveat(user, tmp_pa
     widget = tables.pop()
     row = widget.rows[0]
     assert 'https://www.wowhead.com/classic/npc=' in widget.slots['body-cell-Mob'].template
-    assert row['Mob'] == 'NPC 20' and row['Also looted'] == 'NPC 10'
+    assert row['Mob'] == ('Kobold Tunneler (NPC 20)' if named else 'NPC 20')
+    assert row['Also looted'] == ('Other mob (NPC 10)' if named else 'NPC 10')
     assert row['Minutes'] == '5.0' and row['Stretches'] == 1 and row['No price'] == '1 item / 1 unit'
     user.find('Spot item values').elements.pop().open()
     await user.should_see('Item 999')
+    if named:
+        await user.should_see('Map 1 · Kobold Tunneler (NPC 20) · Item 999')
 
 
 async def test_farming_cell_centre_coin_share_and_vendor_disagreement(user, tmp_path, monkeypatch):

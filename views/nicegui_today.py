@@ -884,13 +884,14 @@ def session_farming_spots(history):
     if not history.get('spots'):
         ui.label('Not enough farming history for spots').classes('bs-note')
         return
+    names = history.get('npc_names', {})
     rows = []
     for index, spot in enumerate(history['spots']):
         total = spot['value_copper']
         shares = [f"{label} {spot[key] * 100 // total}%" if total else f'{label} unknown'
                   for label, key in [('Items', 'auction_value_copper'), ('Vendor', 'vendor_value_copper')]]
         rows.append({'id': index, 'Zone': spot['zone'] or f"Map {spot['map_id']}",
-                     'Mob': f"NPC {spot['npc_id']}" if spot['npc_id'] else 'Gathering · zone only',
+                     'Mob': mob_label(spot['npc_id'], names),
                      'npc_id': spot['npc_id'],
                      'Per hour': format_money(spot['value_per_hour_copper'])
                      if spot['value_per_hour_copper'] is not None else 'no price',
@@ -899,7 +900,7 @@ def session_farming_spots(history):
                      'Value shares': ' · '.join(shares) + ' · ' + spot_coin_share(spot),
                      'No price': f"{spot['no_price_items']} item{'s' * (spot['no_price_items'] != 1)} / "
                                  f"{spot['no_price_units']} unit{'s' * (spot['no_price_units'] != 1)}",
-                     'Also looted': ', '.join(f'NPC {npc}' for npc in spot['also_looted']) or '—'})
+                     'Also looted': ', '.join(mob_label(npc, names) for npc in spot['also_looted']) or '—'})
     columns = [{'name': key, 'label': key, 'field': key, 'align': 'left'}
                for key in rows[0] if key not in ('id', 'npc_id')]
     widget = ui.table(columns=columns, rows=rows, row_key='id', pagination=10).classes('w-full')
@@ -916,8 +917,14 @@ def session_farming_spots(history):
                          f"{format_money(mismatch['scan_copper'])}, loot "
                          f"{format_money(mismatch['loot_copper'])}; using scan.").classes('bs-note')
             for item in spot['items']:
-                ui.label(f"Map {spot['map_id']} · NPC {spot['npc_id'] or 'none'} · Item {item['item_id']} · "
+                ui.label(f"Map {spot['map_id']} · {mob_label(spot['npc_id'], names)} · Item {item['item_id']} · "
                          f"{item['units']} units · {item['basis']} · {session_money(item['value_copper'])}")
+
+
+def mob_label(npc, names):
+    if npc is None:
+        return 'Gathering · zone only'
+    return f'{names[npc]} (NPC {npc})' if npc in names else f'NPC {npc}'
 
 
 def spot_position(spot):

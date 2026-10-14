@@ -38,7 +38,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   evidence and training costs. Generation is offline from manually saved pages (CRAFT-08).
 - **Sources:** local overrides enable `forever-us-normal-alliance-addon` beta; tracked config
   keeps it disabled. Mankrik Alliance is development data; Retail is regression-only.
-- **Addon:** 0.12.5, account format 6/scan format 4. Usage, capture fields and remaining game
+- **Addon:** 0.12.6, account format 6/scan format 4. Usage, capture fields and remaining game
   checks live in [addon README](../addon/README.md). App retirement does not alter addon/data.
 
 ## Limitations
@@ -57,6 +57,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   vendor values (0.12.4 called a `GetItemInfo` global the Forever client lacks, saving none); UI-13 adds median position cells and explicit-slot coin valuation. Older captures
   keep zone/NPC-only spots and unavailable coin. Positions and coin were confirmed on the beta on 2026-10-14
   (all 15 coin loots matched), and 0.12.5 loot-time vendor values on 2026-10-14 (grey items the scans don't price). Coin without a nearby matching money delta stays unavailable.
+  Addon 0.12.6 captures matching targeted mob names; UI-13 displays the newest scoped name beside
+  its NPC ID in spots and evidence, with NPC-only fallback. The beta report counts named windows
+  and lists unnamed NPC IDs. This new capture still needs an in-game check.
   Other unpriced gathered items are counted and excluded; spot evidence includes all item values.
 - Listings are not sales/demand/forecasts. Removed-listing time-left bounds are Classic assumptions,
   pending Forever confirmation. Tier levels 10/20/35 and yellow skill-up chances are unconfirmed.

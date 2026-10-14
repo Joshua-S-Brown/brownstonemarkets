@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.5"
+local ADDON_VERSION = "0.12.6"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -893,6 +893,25 @@ function journal.zone()
         map_id = map, x = x, y = y }
 end
 
+-- Only the targeted Creature that contributed loot can supply a display name.
+function journal.lootTarget(slots)
+    local guid = safe(UnitGUID, "target")
+    if type(guid) ~= "string" or not guid:match("^Creature%-") then return {} end
+    for _, slot in ipairs(slots) do
+        local sources = slot.sources or {}
+        for index = 1, sources.n or 0, 2 do
+            if sources[index] == guid then
+                local name = safe(UnitName, "target")
+                if type(name) == "string" and name:match("%S") then
+                    return { target_guid = guid, target_name = name }
+                end
+                return {}
+            end
+        end
+    end
+    return {}
+end
+
 -- Preserve raw type/quantity; vendor value is copper per item.
 function journal.lootSources()
     local slots = {}
@@ -907,7 +926,9 @@ function journal.lootSources()
             vendor_sell_copper = type(sell) == "number" and sell > 0 and sell or nil,
             sources = readAll(GetLootSourceInfo, slot) }
     end
-    return { loot_slot_count = boundedCount(GetNumLootItems, 1000), loot_slots = slots, zone = journal.zone() }
+    local result = journal.lootTarget(slots)
+    result.loot_slot_count, result.loot_slots, result.zone = boundedCount(GetNumLootItems, 1000), slots, journal.zone()
+    return result
 end
 
 -- Tier evidence (UI-12): what the open trainer lists, with its level and skill requirements and cost.
