@@ -48,7 +48,7 @@ async def test_toggle_team_window_labels_links_and_plan_retained(user, tmp_path,
     await user.should_see('cheap')
     user.find('How these options were made').click()
     await user.should_see('label-scan')
-    await user.should_see('Farming rates come later (STORY-065).')
+    await user.should_see('Not enough farming history')
     assert len(user.find(marker='session-character').elements) == 2
     await user.should_see('Recipe 33')
     await user.should_not_see('Recipe 31')
@@ -151,7 +151,7 @@ async def test_step_text_every_kind():
                         'unlocks Brown Linen Pants at 1s 87c per craft (+5 more on the way)')
     assert lines[2] == 'Before Tailoring reaches 75: level Basilly 6 → 10 to train Journeyman'
     assert lines[3] == 'Tailoring is capped at 75: train Journeyman Tailoring at a trainer'
-    assert 'within 25 points' in lines[4] and 'STORY-065' in lines[4]
+    assert 'within 25 points' in lines[4] and 'Gathering is an option' in lines[4]
     assert 'open each profession window' in lines[5]
     capped = step_text({'kind': 'level_character', 'group': group | {'capped': True}, 'tier': tier},
                        character | {'level': None}, 25)
@@ -162,3 +162,28 @@ async def test_step_text_every_kind():
     none = recipe | {'estimate': {'cost_copper': 989, 'cheap_cost_copper': 0}}
     assert 'no cheap auction materials' in step_text(
         {'kind': 'level_profession', 'group': group, 'recipe': none, 'more': 0}, character, 25)
+
+
+async def test_farming_top_three_prices_evidence_and_caveats(user, tmp_path, monkeypatch):
+    from test_farming import loot
+    source, c, data = team_app(tmp_path, monkeypatch)
+    first = next(iter(data.values()))
+    first['observations'] = sum((sum((loot(t + i, item=i + 1) for i in range(4)), [])
+                                 for t in (0, 150, 300)), []) + loot(1000, item=1)
+    labels(monkeypatch, source)
+    await user.open('/')
+    await user.should_see('This session')
+    user.find(marker='session-view').elements.pop().set_value('This session')
+    await user.should_see('Farming')
+    await user.should_see('units/hour')
+    await user.should_see('no price')
+    await user.should_see('typical unit')
+    await user.should_see('1 stretches excluded')
+    await user.should_see('Your own past sessions, not a promise')
+    await user.should_see('launch respawn competition differs')
+    await user.should_see('listings are not sales')
+    cards = user.find(marker='session-farming').elements
+    assert len(cards) == 2
+    assert sorted(sum(isinstance(e, ui.link) for e in card.descendants()) for card in cards) == [0, 3]
+    user.find('Farming evidence').elements.pop().open()
+    await user.should_see('object IDs [1731]')

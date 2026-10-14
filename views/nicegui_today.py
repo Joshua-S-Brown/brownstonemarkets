@@ -627,7 +627,7 @@ def step_text(step, character, window):
         return f"Craft {rows} · planned profit {format_money(character['craft_profit_copper'])}"
     if kind == 'nothing':
         return (f'Nothing to craft or level within {window} points. '
-                'Gathering is the option here; farming rates come later (STORY-065).')
+                'Gathering is an option here.')
     if kind == 'evidence':
         return 'No professions seen yet: open each profession window next login so Brownstone can read them.'
     group = step['group']
@@ -731,12 +731,12 @@ def session_options(options, config):
     for character in options['characters']:
         with ui.card().classes('bs-card').mark('session-character'):
             session_summary(character, options, config)
+            session_farming(character['farming'], config)
             with ui.expansion(f"Details for {character['character'][0]}").classes('w-full'):
                 session_crafts(character, config)
                 session_professions(character, config)
     if not options['characters']:
         ui.label('No scoped Today characters imported. Use Data → Import.')
-    ui.label('Farming rates come later (STORY-065).')
     with ui.expansion('How these options were made'):
         ui.label(f"Reach window {options['window']} points (set on Team) · cost and unlocks side by side; "
                  'current profit is not a forecast. Listings, never sales. No sales credit in costs. Yellow '
@@ -769,3 +769,40 @@ def session_professions(character, config):
     with ui.expansion('Recipe list coverage'):
         for catalog, count in character['unlisted'].items():
             ui.label(f"{catalog}: {count} not in a recipe list; open that profession's window")
+
+
+def session_farming(history, config):
+    with ui.column().classes('gap-1').mark('session-farming'):
+        ui.label('Farming').classes('text-lg font-bold')
+        if not history['rows']:
+            ui.label(f"Not enough farming history · {history['recorded_seconds'] / 60:.1f} minutes recorded so far")
+        for row in history['rows'][:3]:
+            with ui.row().classes('items-baseline gap-2'):
+                item_link(config, row['item_id'], row['item_name'] or f"Item {row['item_id']}")
+                value = (format_money(row['value_per_hour_copper']) + '/hour'
+                         if row['value_per_hour_copper'] is not None else 'no price')
+                typical = (format_money(row['typical_price_copper'])
+                           if row['typical_price_copper'] is not None else 'unknown')
+                ui.label(f"{row['zone'] or 'unknown zone'} · {row['source_kind']} · "
+                         f"{row['units_per_hour']} units/hour · {value} · typical unit {typical} · "
+                         f"{row['seconds'] / 60:.1f} evidence minutes · {row['stretches']} stretches")
+        ui.label(f"{history['excluded_stretches']} stretches excluded from rates").classes('bs-note')
+        ui.label('Your own past sessions, not a promise; launch respawn competition differs; '
+                 'listings are not sales.').classes('bs-note')
+        with ui.expansion('Farming evidence'):
+            for row in history['rows']:
+                value = (format_money(row['value_per_hour_copper'])
+                         if row['value_per_hour_copper'] is not None else 'no price')
+                ui.label(f"Item {row['item_id']} · map {row['map_id']} · {row['source_kind']} · "
+                         f"object IDs {row['object_ids']} · {row['units']} units · {row['seconds']} seconds · "
+                         f"{row['units_per_hour']} units/hour · "
+                         f"{value}"
+                         f" · typical unit {session_money(row['typical_price_copper'])}")
+            for stretch in history['stretches']:
+                ui.label(f"Map {stretch['key'][0]} · {len(stretch['loots'])} loots · {stretch['seconds']} seconds · "
+                         f"{'included' if stretch['qualifies'] else 'excluded: under 5 minutes or 3 loots'}")
+                first = datetime.fromtimestamp(stretch['first'], UTC).isoformat()
+                last = datetime.fromtimestamp(stretch['last'], UTC).isoformat()
+                origins = sorted({f"{loot['machine']} / login {loot['login_at']}"
+                                  for loot in stretch['loots']})
+                ui.label(f"Loot times (UTC) {first}–{last} · {', '.join(origins)}").classes('bs-note')

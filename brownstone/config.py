@@ -57,6 +57,7 @@ class Source(TypedDict):
     auction_cut: float
     min_discount: float
     top_n: int
+    farming_idle_minutes: int
     flood_contested_listings: int
     flood_thin_listings: int
     flood_churn_percent: int
@@ -102,6 +103,9 @@ def build_source(shared: dict, entry: dict) -> Source:
     source["market_id"] = markets.market_id(source)
     _validate_feed(source)
     _validate_flood(source)
+    idle = source.setdefault('farming_idle_minutes', 10)
+    if type(idle) is not int or idle <= 0:
+        raise ValueError('farming_idle_minutes must be a positive integer')
     if source["max_age_hours"] <= 0 or source["top_n"] <= 0:
         raise ValueError("max_age_hours and top_n must be positive")
     if not 0 <= source["auction_cut"] < 1 or not 0 <= source["min_discount"] < 1:

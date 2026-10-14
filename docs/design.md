@@ -62,7 +62,7 @@ frameworks/views. Calculation modules take supplied data/clock and do not downlo
 | analysis, scan_changes, removed_listings, flood_signals | Browse/CLI screening and scoped market comparisons |
 | crafting, action_board, skillups, recipe_graph | Catalog validation, routes/ranking, bands, team graph |
 | recipe_import, recipe_catalogs | Saved-page CLI generation; selection-based discovery/learning labels |
-| progression, hiring, session_options | Reach costs, hire comparisons, This session composition |
+| progression, hiring, session_options, farming | Reach costs, hire comparisons, This session composition |
 | today*, stock, watchlist | Funded plan/loading/evidence/settings, holdings/targets, retained hit engine |
 | freshness, money, navigation | Freshness, copper display, questions/experience order |
 | beta_report, beta_evidence, beta_markdown | Isolated evidence checks and private report |
@@ -409,7 +409,7 @@ plan, window=25)` composes the displayed reserved plan with `progression.build_p
 its `estimate_cost` results, using only `today_loading.load_today`'s observations, listings and
 metrics. Selected estimate steps reuse `evaluate_recipe`'s team-aware shopping quantities for
 cheap-material attribution; no new price query. One `flood_signals.signals` call covers the union
-of plan and estimate item IDs, retaining full source/market scope and separate variant identities.
+of plan, estimate and farming item IDs, retaining full source/market scope and separate variant identities.
 It returns character sections, annotated copies, per-character craft totals, character level,
 `next_steps` (kinds `craft`, `level_profession`, `level_character`, `train`, `nothing`, `evidence`),
 per-profession `milestones` and `tier` (`NEXT_TIER`), snapshot/freshness and separate signal
@@ -417,6 +417,17 @@ provenance; the view turns steps into lines (`step_text`). The input plan/argume
 `views/nicegui_today.py` places the toggle above the plan status so it stays put, composes lazily
 when **This session** opens, reads Team's per-tab/source
 reach window, uses the shared theme and links to Market items and the selected Team character.
+
+### Farming (STORY-065)
+
+Rules live in `requirements.md` → UI-13. `farming.gathered` reads scoped `(record, machine)`
+observations, orders by capture/sequence and deduplicates entry IDs. The addon captures only the player's loot messages; matching windows are isolated by machine/login,
+and transaction hooks invalidate pending windows. `history` retains qualifying and excluded stretches,
+object IDs, integer units/hour and evidence seconds. `valued` uses Today's cautious sell-side prices
+and the existing union flood read's base/legacy typical unit price and loaded item label; missing prices
+stay unknown. `session_options` adds farming copies to character cards without changing the plan.
+`nicegui_today.session_farming` shows the top three, with all rates and stretch provenance in evidence.
+No storage or addon contract changes, new query or network work.
 
 ## Team contracts
 

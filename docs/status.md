@@ -11,7 +11,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   authenticated reuse/restart, loopback browser fallback and idle shutdown.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
   queue, confidence, character eligibility and captured funds; today_version 7. This session
-  composes reserved crafts and Team-window unlock costs with flood labels (UI-12).
+  composes reserved crafts and Team-window unlock costs with flood labels (UI-12)
+  and measured journal farming rates (UI-13).
 - **Team:** captured roster/history, recipe evidence, reach estimates and hiring comparison
   (CRAFT-11/13). One board shared across characters/hiring; detail loads on demand.
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
@@ -41,6 +42,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   need review; both dyes appear on beta listings.
 - Hiring cost walks complete only for Tailoring, Alchemy and Blacksmithing. Other catalogs lack
   starter learning evidence or put Smelt Copper at skill 25; gaps remain unknown.
+- Farming requires loot-source context (addon 0.11.3+); older unmatched messages supply no rate.
+  Short stretches remain excluded evidence; measured beta rates do not promise launch respawns.
+  Valuation uses only Today's loaded price arguments; other gathered items show no price.
 - Listings are not sales/demand/forecasts. Removed-listing time-left bounds are Classic assumptions,
   pending Forever confirmation. Tier levels 10/20/35 and yellow skill-up chances are unconfirmed.
   Deposits, sale speed, postage, ledger and suggested stock targets remain backlog work.
@@ -80,7 +84,9 @@ For real-data verification, copy data/ under ignored work/ and run:
 ```
 
 Select Forever beta; open Today, Team, Market (Linen Cloth 2589 and Bolt 2996), Stock and Data.
-Inspect stale/unknown labels, holdings and source evidence; preview never writes. A browser check
+On Today → This session, inspect each character's Farming summary and expand Farming evidence
+for all rates, object IDs and excluded stretches. Inspect stale/unknown labels, holdings and source
+evidence; preview never writes. A browser check
 uses `nicegui_app.py --data-dir /path/to/copied-data --port 8081`.
 
 ### Beta report

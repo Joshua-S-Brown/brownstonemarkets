@@ -2,7 +2,7 @@
 from fractions import Fraction
 from math import ceil
 
-from . import action_board, flood_signals, progression, today_characters
+from . import action_board, farming, flood_signals, progression, today_characters
 from .crafting import basis_prices, evaluate_recipe
 from .markets import MARKET_KEYS
 from .recipe_graph import route_catalog
@@ -62,6 +62,7 @@ def _crafts(plan, catalogs, state):
 
 def _item_ids(characters, plan):
     ids = {r['output_item_id'] for r in plan['craft']}
+    ids.update(r['item_id'] for c in characters for r in c['farming']['rows'])
     ids.update(p['item_id'] for r in plan['craft'] for p in r['purchases'])
     for character in characters:
         for row in character['crafts']:
@@ -153,7 +154,7 @@ def build_options(db, config, arguments, plan, *, window=25):
         raise ValueError('Session signals must use the plan source, full market and rules version')
     catalogs = action_board.compatible_catalogs(arguments['catalogs'], arguments['market'])
     by_id = {action_board.catalog_identity(c): c for c in catalogs}
-    prices, _ = basis_prices(arguments['observations'], 'cautious')
+    prices, sell_prices = basis_prices(arguments['observations'], 'cautious')
     data = arguments['character_data']
     graph = progression.team_graph(catalogs, data, arguments['market'])
     characters = []
@@ -164,8 +165,12 @@ def build_options(db, config, arguments, plan, *, window=25):
         level = data[identity].get('bags', {}).get('level')
         characters.append({'character': identity, 'level': level if type(level) is int else None,
                            'crafts': _crafts(plan, by_id, data[identity]),
+                           'farming': farming.history(data[identity].get('observations', []),
+                                                      config.get('farming_idle_minutes', 10)),
                            'professions': [_profession(g, by_id, prices, graph) for g in result['professions']],
                            'unlisted': result['unlisted']})
     signals = flood_signals.signals(db, config, _item_ids(characters, plan), arguments['now'])
+    characters = [c | {'farming': farming.valued(c['farming'], sell_prices, signals['rows'],
+                                                arguments['auction_cut'])} for c in characters]
     return {'characters': [_label_character(c, signals['rows']) for c in characters],
             'snapshot': arguments['snapshot'], 'freshness': plan['freshness'], 'signals': signals, 'window': window}

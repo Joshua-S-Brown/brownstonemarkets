@@ -225,3 +225,15 @@ def test_milestones_share_one_estimate_per_reach():
     result = milestones(recipes)
     assert [m['skill'] for m in result] == [10, 30]
     assert [r['id'] for r in result[1]['recipes']] == [1, 3] and result[1]['estimate'] is estimate
+
+
+def test_farming_plan_ranking_version_invariance_and_union(monkeypatch):
+    from test_farming import loot
+    args = arguments()
+    args['character_data'][CHARACTER]['observations'] = sum((loot(t) for t in (0, 150, 300)), [])
+    args['observations'][2770] = {'min_buyout': 11, 'market_value': 20}
+    result, plan, read = compose(monkeypatch, args)
+    row = result['characters'][0]['farming']['rows'][0]
+    assert row['units_per_hour'] == 36 and row['value_per_hour_copper'] == 376
+    assert 2770 in read.call_args.args[2]
+    assert result['freshness'] == plan['freshness']
