@@ -56,7 +56,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   and reporting disagreements. Addon 0.12.4 captures raw positions and slot types/quantities; 0.12.5 adds cached
   vendor values (0.12.4 called a `GetItemInfo` global the Forever client lacks, saving none); UI-13 adds median position cells and explicit-slot coin valuation. Older captures
   keep zone/NPC-only spots and unavailable coin. Positions and coin were confirmed on the beta on 2026-10-14
-  (all 15 coin loots matched); loot-time vendor values still need a 0.12.5 session. Coin without a nearby matching money delta stays unavailable.
+  (all 15 coin loots matched), and 0.12.5 loot-time vendor values on 2026-10-14 (grey items the scans don't price). Coin without a nearby matching money delta stays unavailable.
   Other unpriced gathered items are counted and excluded; spot evidence includes all item values.
 - Listings are not sales/demand/forecasts. Removed-listing time-left bounds are Classic assumptions,
   pending Forever confirmation. Tier levels 10/20/35 and yellow skill-up chances are unconfirmed.

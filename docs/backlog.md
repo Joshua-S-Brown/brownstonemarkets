@@ -45,22 +45,24 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
-2. STORY-073 your own sale rate (refine first)
-3. STORY-069 Today in player terms
-4. STORY-070 Team's next recipe you can actually learn
-5. STORY-075 farming spot capture: coin, position, vendor value (addon)
-6. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-8. STORY-036 vendor price ceilings (after STORY-071)
-9. STORY-021 item page and charts (would live in the Market explorer)
-10. STORY-026 scan coverage and rhythm
-11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-12. STORY-006 replay
+1. STORY-076 back to where I was (from play feedback, 2026-10-14)
+2. STORY-077 mob names (addon; best before 21 October so the beta can confirm it)
+3. STORY-078 an item page you can read (replaces the item-page half of STORY-021)
+4. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
+5. STORY-073 your own sale rate (refine first)
+6. STORY-069 Today in player terms
+7. STORY-070 Team's next recipe you can actually learn
+8. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+9. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+10. STORY-036 vendor price ceilings (after STORY-071)
+11. STORY-021 item charts and listing ladder (inside STORY-078's layout)
+12. STORY-026 scan coverage and rhythm
+13. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+14. STORY-006 replay
 
-**Pending an in-game beta check:** STORY-075 and STORY-071 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
+**Pending an in-game beta check:** STORY-071 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 072, 074 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 072, 074, 075 and SPIKE-009/009b.
 
 ### STORY-068 — Use what the team holds
 
@@ -149,7 +151,7 @@ Proposed acceptance (to confirm when refined):
 
 ### STORY-075 — Farming spot capture: coin, position and vendor value (addon, read-only)
 
-Implemented; partly confirmed in game on 2026-10-14 (0.12.4, Arille, Fargodeep Mine): all 30 loot windows had positions and all 15 coin loots matched a money change (119c), giving one spot *around 37, 82*. Still open: loot-time vendor prices (0.12.4 saved none because the Forever client has no global `GetItemInfo`; fixed in 0.12.5). The two-camp game check was dropped: positions are confirmed to vary between loot windows, and the split itself is offline-tested calculation. Added 2026-10-14. Follows STORY-074, and STORY-071's addon change, to avoid two version bumps at once. It can be checked on Classic Era as well as the beta, since nothing here is Forever-specific.
+Implemented and confirmed in game on 2026-10-14; outcome in `status.md` and UI-13. Acceptance text retained until the next commit. Positions and coin (0.12.4: 30 of 30 windows positioned, 15 of 15 coin loots matched) and loot-time vendor prices (0.12.5: Broken Fang 6c, Chipped Claw 4c and others, none of which the scans price). The two-camp game check was dropped: positions vary between windows, and the split is offline-tested. Added 2026-10-14. Follows STORY-074, and STORY-071's addon change, to avoid two version bumps at once. It can be checked on Classic Era as well as the beta, since nothing here is Forever-specific.
 
 As the owner, I want each loot window to record where I stood, which slots were coin and what each item sells to a vendor for, so that farming spots separate two camps of the same mob and value grey items and coin properly.
 
@@ -161,6 +163,49 @@ Acceptance:
 - **Offline tests:** Lua tests in `addon/BrownstoneScan/test_addon.py` for a nil position, a coin slot, an uncached sell price and the slot cap. Python tests for the cell rounding, the median, the split of one mob into two spots, and the preference between the scan's vendor price and the loot-time one.
 - **Check in game** (play actions only, in `addon/README.md` → *Last beta play session*): loot mobs with coin and a grey item (positions and coin confirmed 2026-10-14; the vendor price awaits 0.12.5).
 - **Docs:** the capture in `requirements.md` under the ADDON journal rules and UI-13; `design.md`; `status.md`.
+
+### STORY-076 — Back to where I was
+
+Added 2026-10-14 from play feedback: opening Copper Ore from *This session* → *Farming* goes to its Market page, and getting back means clicking Today, then *This session* again. The desktop window has no browser back button.
+
+As a player, I want a back link on any page I reached from another, so that drilling into an item doesn't lose my place.
+
+Acceptance:
+- **Back link:** every in-app link to another place (Today, Team or Stock to a Market item, and Market links between items) carries where it came from in the URL. The destination shows *← Back to Today · This session* (or the place, tab and view it came from) at the top. Clicking it returns to that place, tab and view, with the same source and character. Pages opened directly (place tabs, a typed URL) show no back link.
+- **Chains:** after item-to-item links, the back link returns to the place you started from, not the previous item. Nothing is stored outside the URL.
+- **Unchanged:** the place tabs, URLs that already work, and refresh keeping your place (UI-07).
+- **Offline tests:** the back link from each linking place (Today *This session*, Today tables, Team, Stock), an item-to-item chain, no back link on direct pages, and refresh keeping the link. UI tests through the existing NiceGUI harness.
+- **Docs:** UI-07 in `requirements.md`; `status.md`.
+
+### STORY-077 — Mob names (addon, read-only)
+
+Added 2026-10-14 from play feedback: farming spots say *NPC 475*; the Wowhead link works, but the app should say *Kobold Tunneler*. Loot only gives the mob's ID (from its GUID). Best done before 21 October so a beta session confirms it; names don't change at launch.
+
+As a player, I want farming spots to name the mob, so that I know what to go and kill without opening Wowhead.
+
+Acceptance:
+- **Addon capture (read-only):** on `LOOT_OPENED`, when `UnitGUID("target")` is a Creature GUID that is one of the window's loot sources, save it with `UnitName("target")` on the loot record. Save nothing when the target is missing, a player, or not a source of this window (no guessing from the mouse or the nearest unit). `safe` calls, no clicks. Bump the addon version.
+- **Brownstone:** a name per NPC ID from the newest such record in scope; names are display only and never decide anything (AGENTS.md). Farming spots and *also looted* show *Kobold Tunneler (NPC 475)*, still linking to Wowhead; without a captured name, *NPC 475* as now.
+- **Beta report:** the STORY-042 report counts loot windows with a captured name and lists NPC IDs still unnamed.
+- **Offline tests:** Lua tests in `tests/test_addon.py` for a matching target, a target that isn't a source, a player target and no target; Python tests for the newest name winning, scope, and the fallback.
+- **Check in game** (play actions only, in `addon/README.md` → *Last beta play session*): kill and loot a few mobs as usual (you normally have the mob targeted when you loot it).
+- **Docs:** the capture under the ADDON journal rules and UI-13 in `requirements.md`; `design.md`; `status.md`.
+
+### STORY-078 — An item page you can read
+
+Added 2026-10-14 from play feedback on Linen Cloth: the Market item page is one long column. It opens with the crowding rules and every scan-by-scan removal block (15 for Linen Cloth), puts *Made from* and *Used in* below them, and ends with market-wide flood lists about other items. It's hard to answer *what should I do with this item?* This story replaces the item-page half of STORY-021; that story keeps the charts and listing ladder, built into this layout.
+
+As a player, I want an item's page to answer the useful questions first, so that I can decide whether to buy, sell, craft with or farm it.
+
+Acceptance:
+- **Summary first,** in one card: price now and typical with the UI-11 label (cheap, high, contested, thin), units listed, vendor buy and sell price, what the team holds (Stock's holdings) and the best use in our catalogs (its top *Used in* craft by profit, or its own craft when it's an output). Each figure keeps its evidence on demand.
+- **Where to get it:** your own farming evidence for the item (UI-13 rows and spots: zone, mob, rate per hour and position, newest first), or *not gathered yet*. Always a link to Wowhead's item page for drop sources and places you haven't farmed. Wowhead's drop data isn't imported (no source evidence; CRAFT-08 covers only saved recipe pages).
+- **Sections as tabs or headed panels,** in this order: *Summary* · *Crafting* (made from, used in, team eligibility, skill-up demand) · *Market* (crowding and overshoot, removals) · *Identity and evidence*. Removals show the newest three gaps with *show all*; skipped gaps are counted, not listed.
+- **Off the item page:** the market-wide lists (*Flood signals in our chains*, *Removed early in our chains*, *What moved since the last scan*) stay on the Market home page only.
+- **Rules unchanged:** every label, rule and number stays as now (UI-09, UI-10, UI-11); only the layout and the summary/farming composition are new. The item stays in the URL (STORY-076's back link works).
+- **UI-08 checklist** on screenshots of Linen Cloth, an item with no listings, and a crafted output.
+- **Offline tests:** the summary's figures and fallbacks (no price, no holdings, not in a catalog), farming evidence for an item and *not gathered yet*, the section order, the removals cut to three with the skipped count, and market-wide lists absent from the item page.
+- **Docs:** UI-09 in `requirements.md`; `status.md`.
 
 ### STORY-034 — Movement ledger and reconciliation
 
