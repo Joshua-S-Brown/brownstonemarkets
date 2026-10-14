@@ -45,7 +45,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-076 back to where I was (from play feedback, 2026-10-14)
+1. STORY-076 back to where I was (from play feedback, 2026-10-14; ready for handoff)
 2. STORY-078 an item page you can read (replaces the item-page half of STORY-021)
 3. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
 4. STORY-073 your own sale rate (refine first)
@@ -169,11 +169,15 @@ Added 2026-10-14 from play feedback: opening Copper Ore from *This session* → 
 
 As a player, I want a back link on any page I reached from another, so that drilling into an item doesn't lose my place.
 
+Refined 2026-10-14 against the code: Team and Stock have no links to Market items today, and Today's *Today plan* / *This session* view is kept in tab storage, not the URL.
+
 Acceptance:
-- **Back link:** every in-app link to another place (Today, Team or Stock to a Market item, and Market links between items) carries where it came from in the URL. The destination shows *← Back to Today · This session* (or the place, tab and view it came from) at the top. Clicking it returns to that place, tab and view, with the same source and character. Pages opened directly (place tabs, a typed URL) show no back link.
-- **Chains:** after item-to-item links, the back link returns to the place you started from, not the previous item. Nothing is stored outside the URL.
+- **Linking places (as they exist now):** Today to a Market item (*This session* cards, including Farming, and the *Today plan* craft cards and tables), Today's *This session* character name to Team, and Market item to item. Team and Stock gain no new links in this story.
+- **Back link:** each of those links carries where it came from in the URL: place, Today tab and Today view. The destination shows *← Back to Today · This session* (or *Today · Plan*, *Market · Linen Cloth*: the place, then the tab, view or item it came from) at the top. Clicking it returns there with the same source. The character doesn't travel in the URL: Today's comes from its saved settings and Team's from its selection, and the back link never changes either. Pages opened directly (place tabs, a typed URL) show no back link, and neither does a place tab clicked from a page that had one.
+- **Today's view in the URL:** Today reads its view (*Today plan* or *This session*) from the URL, so a back link and a refresh both reopen *This session*, loaded, not just with its toggle set. Changing the toggle updates the URL without reloading, as the tab already does. Without the parameter Today behaves as now.
+- **Chains:** after item-to-item links, the back link returns to the place you started from, not the previous item. Nothing is stored outside the URL. Unknown or invalid origin values show no back link, never an error.
 - **Unchanged:** the place tabs, URLs that already work, and refresh keeping your place (UI-07).
-- **Offline tests:** the back link from each linking place (Today *This session*, Today tables, Team, Stock), an item-to-item chain, no back link on direct pages, and refresh keeping the link. UI tests through the existing NiceGUI harness.
+- **Offline tests** through the existing NiceGUI harness (`tests/ui_trial/`): back links from Today *This session* (a Farming item and the character link to Team) and from a *Today plan* table, landing on *This session* loaded; an item-to-item chain returning to the start; no back link on direct pages or after a place tab; an invalid origin; refresh keeping both the back link and Today's view.
 - **Docs:** UI-07 in `requirements.md`; `status.md`.
 
 ### STORY-077 — Mob names (addon, read-only)
