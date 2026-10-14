@@ -32,7 +32,8 @@ def table(rows, *, label, row_key='id'):
     decisions = {
         'Craft': ['Item', 'State', 'Can make', 'Who can make it', 'Batch', 'Material cost (g)',
                   'Batch profit (g)', 'Profit per craft (g)', 'Confidence'],
-        'Sell': ['Output', 'State', 'Batch', 'Warnings', 'Lowest competing unit (g)', 'Listings', 'Units',
+        'Sell': ['Output', 'State', 'Batch', 'Held units', 'Held by', 'Held value', 'Warnings',
+                 'Lowest competing unit (g)', 'Listings', 'Units',
                  'Undercut unit (g)', 'Profit at undercut for batch (g)', 'Thin', 'Confidence', 'Reasons'],
         'Buy': ['Material', 'State', 'Route', 'For', 'Required units', 'Purchased units', 'Cost (g)',
                 'Highest unit price (g)', 'Cheap now'],
@@ -82,6 +83,17 @@ def details_dialog(row):
         ui.button('Close', on_click=dialog.close)
     dialog.on('hide', dialog.delete)
     dialog.open()
+
+
+def holdings_caption(result):
+    if result.get('holdings_warning'):
+        ui.label(result['holdings_warning']).classes('bs-note')
+    captures = result.get('holdings_captures', [])
+    if not captures:
+        return
+    with ui.expansion('Held counts · capture ages').classes('w-full'):
+        for capture in captures:
+            ui.label(tr.capture_label(capture))
 
 
 def freshness_caption(freshness, config, *, banner=True):
@@ -274,7 +286,7 @@ def render(config, catalogs, character_data, active_tab='Craft'):
                 ui.label(tr.ZERO_GOLD_HINT)
             try:
                 manifest, arguments = load_today(config, catalogs, settings, latest_characters, datetime.now(UTC),
-                                                 flood=True)
+                                                 flood=True, holdings=True)
                 if manifest is None:
                     ui.label(tr.NO_SNAPSHOT)
                     return
@@ -320,6 +332,7 @@ def plan_status(result, settings, funds, config, settings_dialog, open_info, cha
     with ui.row().classes('items-center gap-3'):
         theme.chip(tr.planning_label(settings.character, character_data))
         freshness_caption(result['freshness'], config, banner=False)
+        holdings_caption(result)
         theme.chip(f'Gold {format_money(settings.gold_copper)} · ' +
                    ('entered' if funds.origin == 'entered amount' else 'recorded'))
         theme.chip(f"{sum(tr.display_hidden(result, session.get('hide_low')).values()):,} recipes hidden · why?",
@@ -409,7 +422,8 @@ def craft_card(row, sell):
                     if row['stale']:
                         theme.badge('stale — inspect only', 'warn')
                 today_warnings(row)
-                purchases = ', '.join(f"{m['purchased_units']} {m['item_name']}" for m in details['materials'])
+                purchases = ', '.join(f"{m['purchased_units']} {m['item_name']}" for m in details['materials']
+                                      if m['method'] != 'held')
                 price = sell['undercut_copper']
                 step = ' (whole silver: unstackable)' if sell.get('price_step') == 'whole silver' else ''
                 ui.label(f"Buy {purchases} · sell at {format_money(price) if price is not None else 'unavailable'}"
@@ -430,11 +444,14 @@ def craft_card(row, sell):
                          row_key='Material').classes('w-full').props('flat hide-bottom').mark('Reserved purchases')
                 with ui.expansion('Material evidence'):
                     for material in details['materials']:
-                        route = 'vendor' if material['method'] == 'vendor' else 'auction house'
+                        route = ('held' if material['method'] == 'held' else
+                                 ('vendor' if material['method'] == 'vendor' else 'auction house'))
                         ui.label(f"{material['item_name']} · {route} · {material['purchased_units']} units "
                                  f"· {format_money(material['cost_copper'])} · "
                                  f"highest unit {format_money(material['highest_unit_copper'])}")
                         ui.label(f"{material['quantity']} needed").classes('bs-note')
+                for capture in row.get('held_allocations', []):
+                    ui.label(f"{capture['character']} · {capture['kind']} · {capture['units']} held")
                 for choice in row['choices']:
                     if choice.get('route_note'):
                         ui.label(f"{choice['item_name']} · {choice['route_note']}").classes('bs-note')
@@ -463,6 +480,8 @@ def plan_info(result, config, manifest, arguments, funds, session):
         ui.label(age_caption(result['freshness'], config['max_age_hours']))
         if result['freshness']['stale']:
             ui.label(STALE_WARNING)
+        for capture in result.get('holdings_captures', []):
+            ui.label(tr.capture_label(capture))
         ui.label(funds.summary)
         if funds.settings.gold_override:
             table(tr.recorded_gold_rows(arguments['character_data'], funds.settings.character), label='Recorded gold')

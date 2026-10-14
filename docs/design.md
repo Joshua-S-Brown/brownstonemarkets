@@ -379,6 +379,10 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
 - **Loading.** `today_loading.load_today` picks the latest scoped snapshot, opens the database
   read-only, resolves funds and returns the `build_today` arguments with the caller's clock;
   `load_today_characters` reads `professions.latest_data` and keeps a failure for the UI to explain.
+  With `holdings=True` (Today only) the loader reads `character_snapshots.latest_data` once and passes
+  `team_holdings.holdings`'s totals, names, captures and location units as `holdings_data`;
+  calculations never load captures. A read failure plans without holdings and returns
+  `holdings_warning`, which Today shows. Stock supplies its already-read holdings instead.
   Only Today passes `flood=True` (others get `None`): one `flood_signals.signals` call supplies
   `flood_evidence` for catalog/extra and gathered IDs, which This session reuses. Each signal
   keeps its compatible earlier identity per qualifying pair. After selection,
@@ -397,22 +401,32 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
   projection and returns per-recipe status, team names and catalog checks; `filter_candidates` runs
   before sizing and counts excluded reasons. `PROFESSION_SKILL_IDS` carries the documented map.
 - **Plan.** `build_today(catalogs, observations, market, snapshot, settings, *, now, listings, metrics,
-  vendor_prices, max_age_hours, auction_cut, choices=None, refill=True, character_data, flood_evidence)` returns
+  vendor_prices, max_age_hours, auction_cut, choices=None, refill=True, character_data, flood_evidence, holdings_data)` returns
   capped `craft`, `buy`, `sell` and `below_vendor` lists, hidden and remaining counts, shopping total,
   freshness, `choice_limits`, `dropped_choices`, `queue` and `today_version`. `Ladder` holds prefix
   units/costs for whole-stack quotes; binary search finds the affordable bound and only bound/listing
-  breakpoints are quoted. Each selection reserves funds and listing offsets; no per-unit expansion or
+  breakpoints are quoted for rows using no held item. A row using a held item compares its bounded
+  (1–1,000) feasible sizes exactly, including all holding-depletion boundaries; this preserves correctness
+  for nested/multi-yield intermediates without expanding units or walking listings.
+  `today_holdings` attaches routed per-unit intermediate leaves, reduces preorder branches top-down,
+  and reserves held counts alongside listing offsets. Batch value includes held opportunity cost;
+  funds reserve only purchased gold. After selection, location allocation consumes materials before
+  assigning leftover held outputs, preventing a post from also using reserved materials.
+  Each selection reserves funds and listing offsets; no per-unit expansion or
   per-recipe SQL. Craft rows keep board routes, `purchases`, `intermediate_steps` (chosen craft
   branches only), `plan_order` and `feasible_size`. `today_confidence.confidence` labels the funded
   plan afterwards. Today passes optional sell-price caps through `rank_catalogs`/`rank_recipes`'s
   cautious sell map; their default calculations and the buy map are unchanged. `today_warnings`
   selects base/legacy signals and carries caps/evidence into Sell and Queue posts. The NiceGUI view
   reuses `session_signal`/`CROWDING`/`OVERSHOOT` badges with on-demand removal evidence.
-  `craft_details(row)` projects materials from `purchases` and scales steps by batch;
+  `craft_details(row)` projects held/purchased materials and the batch's retained `reserved_steps`
+  (or scales original steps when holdings are absent). Sell retains owners and separate held value;
+  Queue take/mail lines and held post annotations survive `apply_removals` rebuilding;
+
   `purchase_uses(crafts)` groups purchased units per item/route and output (Shopping list For);
   `session_queue` projects reserved shopping, route steps in postorder and posts without re-quoting.
 - **Session.** `today_session.plan_context` fingerprints catalogs, market, snapshot, settings,
-  freshness limit, auction cut, Today version and character evidence (not the clock); a changed context resets
+  freshness limit, auction cut, Today version, character evidence and holdings (capture identity/counts, not age); a changed context resets
   choices and ticks. Queue tick identity is the plan without confidence labels (`stable_queue`).
 
 ### This session (STORY-063)

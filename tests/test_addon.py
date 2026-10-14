@@ -202,7 +202,7 @@ def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
                                             lua.table_from({"scan_id": "old-2"})])
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert python_value(g.BrownstoneScanDB) == button_result
-    assert g.BrownstoneScanDB.addon_version == "0.12.4" and g.BrownstoneScanDB.schema_version == 6
+    assert g.BrownstoneScanDB.addon_version == "0.12.5" and g.BrownstoneScanDB.schema_version == 6
 
 
 @pytest.mark.parametrize("ending", [
@@ -688,10 +688,12 @@ def test_farming_capture_position_coin_vendor_and_slot_cap(position):
         function GetLootSlotType(slot) lootReads = lootReads + 1; return slot == 1 and 2 or 1 end
         function GetLootSlotInfo(slot) return "icon", "raw", slot == 1 and 0 or 3 end
         function GetLootSlotLink(slot) if slot > 1 then return "|Hitem:" .. slot .. "|h" end end
-        function GetItemInfo(link)
+        -- Forever has only C_Item.GetItemInfo; the global is gone there.
+        GetItemInfo = nil
+        C_Item = {GetItemInfo = function(link)
             if link == "|Hitem:2|h" then return nil end
             return "name", link, 0, nil, nil, nil, nil, nil, nil, nil, 7
-        end
+        end}
     '''.replace('POSITION', position))
     fire(g, 'LOOT_OPENED')
     row = entries(g)[-1]
@@ -703,7 +705,7 @@ def test_farming_capture_position_coin_vendor_and_slot_cap(position):
     assert ('x' in row['zone']) == (position != 'nil')
     if position != 'nil':
         assert row['zone']['x'] == .47 and row['zone']['y'] == .72
-    lua.execute('GetItemInfo = function() return nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,0 end')
+    lua.execute('C_Item = nil; GetItemInfo = function() return nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,0 end')
     fire(g, 'LOOT_OPENED')
     assert all('vendor_sell_copper' not in s for s in entries(g)[-1]['loot_slots'])
     assert g.actionCalls == 0

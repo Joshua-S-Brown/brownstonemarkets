@@ -10,7 +10,10 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
   authenticated reuse/restart, loopback browser fallback and idle shutdown.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
-  queue, confidence, character eligibility and captured funds; today_version 9.
+  queue, confidence, character eligibility and captured funds; today_version 10.
+  STORY-068 uses scoped Stock bags/bank holdings along the Board route, including intermediates,
+  with held value in profit, purchase gold separate, shared reservation, take/mail lines and held outputs.
+  Capture ages/unknown bank appear on Today; stale held counts add a reason without changing confidence.
   UI-11 high outputs use typical-price sell caps before ranking/sizing, with shared signal badges
   on crafts/Sell/posts; shown-output UI-10 history adds Low confidence for no early removals
   in at least three qualifying gaps (Classic time-left assumptions pending Forever confirmation). This session
@@ -35,7 +38,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   evidence and training costs. Generation is offline from manually saved pages (CRAFT-08).
 - **Sources:** local overrides enable `forever-us-normal-alliance-addon` beta; tracked config
   keeps it disabled. Mankrik Alliance is development data; Retail is regression-only.
-- **Addon:** 0.12.4, account format 6/scan format 4. Usage, capture fields and remaining game
+- **Addon:** 0.12.5, account format 6/scan format 4. Usage, capture fields and remaining game
   checks live in [addon README](../addon/README.md). App retirement does not alter addon/data.
 
 ## Limitations
@@ -50,16 +53,17 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 - Farming requires loot-source context (addon 0.11.3+); older unmatched messages supply no rate.
   Short stretches remain excluded evidence; measured beta rates do not promise launch respawns.
   Valuation uses Today's loaded prices, preferring newest-scan vendor sell values over loot-time fallback
-  and reporting disagreements. Addon 0.12.4 captures raw positions, slot types/quantities and cached
-  vendor values; UI-13 adds median position cells and explicit-slot coin valuation. Older captures
-  keep zone/NPC-only spots and unavailable coin. New fields still need the README's two-camp game check;
-  coin without a nearby matching money delta stays unavailable.
+  and reporting disagreements. Addon 0.12.4 captures raw positions and slot types/quantities; 0.12.5 adds cached
+  vendor values (0.12.4 called a `GetItemInfo` global the Forever client lacks, saving none); UI-13 adds median position cells and explicit-slot coin valuation. Older captures
+  keep zone/NPC-only spots and unavailable coin. Positions and coin were confirmed on the beta on 2026-10-14
+  (all 15 coin loots matched); loot-time vendor values still need a 0.12.5 session. Coin without a nearby matching money delta stays unavailable.
   Other unpriced gathered items are counted and excluded; spot evidence includes all item values.
 - Listings are not sales/demand/forecasts. Removed-listing time-left bounds are Classic assumptions,
   pending Forever confirmation. Tier levels 10/20/35 and yellow skill-up chances are unconfirmed.
   Deposits, sale speed, postage, ledger and suggested stock targets remain backlog work.
 - Today fixes aggregate routes before whole-stack sizing; surplus uncredited/unshared, greedy plan
-  affordable but no global optimum. Cross-profession routes need scoped Known/Train now evidence.
+  affordable but no global optimum. Rows using a held item compare every feasible size up to the 1,000-craft cap;
+  large caps cost those rows more calculation time than the breakpoint search other rows keep. Cross-profession routes need scoped Known/Train now evidence.
 - TSM lacks listing depth; Mankrik lacks upstream time (age is since collection) and historical
   discount prices. Legacy TSM rows have no source hash or retrospective deduplication.
 - Bronze/silver/DB/gold are not jointly atomic; failed post-commit runs need preserved evidence

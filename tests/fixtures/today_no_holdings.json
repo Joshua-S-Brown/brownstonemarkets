@@ -1,0 +1,293 @@
+{
+  "craft": [
+    {
+      "recipe_id": 30,
+      "output_item_id": 3,
+      "output_name": "Fixture 3",
+      "rules_version": "fixture-v1",
+      "status": "fixture",
+      "valid": true,
+      "missing_item_ids": [],
+      "craft_cost_copper": 50,
+      "sale_price_copper": 200,
+      "net_revenue_copper": 190,
+      "profit_copper": 140,
+      "choices": [
+        {
+          "item_id": 1,
+          "quantity": 2,
+          "method": "buy",
+          "unit_cost_copper": 20,
+          "total_cost_copper": 40,
+          "item_name": "Fixture 1"
+        },
+        {
+          "item_id": 2,
+          "quantity": 1,
+          "method": "vendor",
+          "unit_cost_copper": 10,
+          "total_cost_copper": 10,
+          "item_name": "Fixture 2"
+        }
+      ],
+      "intermediate_steps": [],
+      "shopping_list": {
+        "1": 2,
+        "2": 1
+      },
+      "shopping_choices": [
+        {
+          "item_id": 1,
+          "quantity": 2,
+          "method": "buy",
+          "unit_cost_copper": 20,
+          "total_cost_copper": 40
+        },
+        {
+          "item_id": 2,
+          "quantity": 1,
+          "method": "vendor",
+          "unit_cost_copper": 10,
+          "total_cost_copper": 10
+        }
+      ],
+      "expanded_materials": {
+        "1": 2,
+        "2": 1
+      },
+      "margin": 0.7368421052631579,
+      "break_even_copper": 53,
+      "profit_by_basis": {
+        "cautious": 140,
+        "listed": 160
+      },
+      "action": "potential craft",
+      "rank": 1,
+      "catalog_id": "fixture",
+      "profession": "tailoring",
+      "who_can_make_it": [],
+      "team": true,
+      "output_quantity": 1,
+      "material_names": {
+        "1": "Fixture 1",
+        "2": "Fixture 2"
+      },
+      "recipe_source": "https://example.com/recipe",
+      "catalog_version": "1",
+      "availability": "available",
+      "evidence_notes": [],
+      "signal": null,
+      "price_cap_copper": null,
+      "batch_size": 3,
+      "batch_cost_copper": 130,
+      "batch_profit_copper": 440,
+      "profit_per_craft_copper": 146,
+      "limiting_factor": "more crafts lower profit",
+      "feasible_size": 5,
+      "purchases": [
+        {
+          "item_id": 1,
+          "quantity": 6,
+          "method": "buy",
+          "unit_cost_copper": 20,
+          "total_cost_copper": 40,
+          "cost_copper": 100,
+          "end": 2,
+          "purchased_units": 6,
+          "highest_unit_copper": 20
+        },
+        {
+          "item_id": 2,
+          "quantity": 3,
+          "method": "vendor",
+          "unit_cost_copper": 10,
+          "total_cost_copper": 10,
+          "cost_copper": 30,
+          "purchased_units": 3,
+          "highest_unit_copper": 10,
+          "end": 0
+        }
+      ],
+      "plan_order": 0,
+      "confidence": "Medium",
+      "confidence_reasons": [
+        "few listings",
+        "depth not available for this source"
+      ],
+      "stale": false,
+      "actionable": true,
+      "observed_at": "2026-10-06 00:00:00+00:00",
+      "time_basis": "collection",
+      "source_id": "fixture",
+      "market_id": "classic-us-mankrik-alliance",
+      "snapshot_id": "fixture",
+      "scan_id": "scan",
+      "today_version": 9
+    }
+  ],
+  "buy": [
+    {
+      "item_id": 1,
+      "method": "buy",
+      "quantity": 6,
+      "purchased_units": 6,
+      "cost_copper": 100,
+      "highest_unit_copper": 20,
+      "p25_copper": 30,
+      "cheap_now": true,
+      "stale": false,
+      "actionable": true,
+      "observed_at": "2026-10-06 00:00:00+00:00",
+      "time_basis": "collection",
+      "source_id": "fixture",
+      "market_id": "classic-us-mankrik-alliance",
+      "snapshot_id": "fixture",
+      "scan_id": "scan",
+      "today_version": 9
+    },
+    {
+      "item_id": 2,
+      "method": "vendor",
+      "quantity": 3,
+      "purchased_units": 3,
+      "cost_copper": 30,
+      "highest_unit_copper": 10,
+      "p25_copper": null,
+      "cheap_now": false,
+      "stale": false,
+      "actionable": true,
+      "observed_at": "2026-10-06 00:00:00+00:00",
+      "time_basis": "collection",
+      "source_id": "fixture",
+      "market_id": "classic-us-mankrik-alliance",
+      "snapshot_id": "fixture",
+      "scan_id": "scan",
+      "today_version": 9
+    }
+  ],
+  "sell": [
+    {
+      "output_item_id": 3,
+      "output_name": "Fixture 3",
+      "catalog_id": "fixture",
+      "recipe_id": 30,
+      "batch_size": 3,
+      "lowest_copper": 200,
+      "listings": 3,
+      "units": 8,
+      "largest_stack_units": 3,
+      "thin": false,
+      "undercut_copper": 199,
+      "undercut_batch_profit_copper": 437,
+      "price_step": "1c",
+      "signal": null,
+      "price_cap_copper": null,
+      "price_note": null,
+      "confidence": "Medium",
+      "confidence_reasons": [
+        "few listings",
+        "depth not available for this source"
+      ],
+      "stale": false,
+      "actionable": true,
+      "observed_at": "2026-10-06 00:00:00+00:00",
+      "time_basis": "collection",
+      "source_id": "fixture",
+      "market_id": "classic-us-mankrik-alliance",
+      "snapshot_id": "fixture",
+      "scan_id": "scan",
+      "today_version": 9
+    }
+  ],
+  "below_vendor": [],
+  "character": null,
+  "character_note": "No character evidence exists for this source; showing every catalog recipe.",
+  "catalog_checks": [],
+  "catalog_warnings": [],
+  "hidden": {},
+  "remaining": {
+    "craft": 0,
+    "buy": 0,
+    "sell": 0,
+    "below_vendor": 0
+  },
+  "freshness": {
+    "age_hours": 0.0,
+    "stale": false,
+    "basis": "collection",
+    "upstream_known": false,
+    "observed_at": "2026-10-06 00:00:00+00:00"
+  },
+  "listing_evidence_available": true,
+  "minimum_gain_copper": 1,
+  "today_version": 9,
+  "shopping_total_copper": 130,
+  "dropped_choices": [],
+  "refill": true,
+  "choice_limits": [],
+  "source_id": "fixture",
+  "queue": {
+    "mail_note": "Mail between characters is not charged; postage is unconfirmed on Forever.",
+    "lines": [
+      {
+        "item_id": 1,
+        "quantity": 6,
+        "purchased_units": 6,
+        "cost_copper": 100,
+        "highest_unit_copper": 20,
+        "stage": "auction house",
+        "name": "Fixture 1",
+        "confidence": "Medium",
+        "confidence_reasons": [
+          "few listings",
+          "depth not available for this source"
+        ]
+      },
+      {
+        "item_id": 2,
+        "quantity": 3,
+        "purchased_units": 3,
+        "cost_copper": 30,
+        "highest_unit_copper": 10,
+        "stage": "vendor",
+        "name": "Fixture 2",
+        "confidence": "Medium",
+        "confidence_reasons": [
+          "few listings",
+          "depth not available for this source"
+        ]
+      },
+      {
+        "stage": "craft",
+        "name": "Fixture 3",
+        "recipe_id": 30,
+        "catalog_id": "fixture",
+        "batch_size": 3,
+        "profession": "tailoring",
+        "made_by": null,
+        "confidence": "Medium",
+        "confidence_reasons": [
+          "few listings",
+          "depth not available for this source"
+        ]
+      },
+      {
+        "stage": "post",
+        "name": "Fixture 3",
+        "quantity": 3,
+        "unit_copper": 199,
+        "profit_copper": 437,
+        "confidence": "Medium",
+        "confidence_reasons": [
+          "few listings",
+          "depth not available for this source"
+        ],
+        "signal": null,
+        "price_cap_copper": null,
+        "price_note": null
+      }
+    ],
+    "gold_needed_copper": 130,
+    "expected_profit_copper": 437
+  }
+}

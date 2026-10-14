@@ -212,6 +212,11 @@ def _cheapest_route(catalog: dict, prices: dict[int, int], item_id: int, trail: 
     return min(candidates, key=lambda candidate: candidate[:2])  # Cost, then method name.
 
 
+def unit_route(catalog: dict, prices: dict[int, int], item_id: int, trail: tuple[int, ...]) -> Route:
+    """Public form of the per-unit route walk: (unit cost, method, leaf units per unit)."""
+    return _cheapest_route(catalog, prices, item_id, trail)
+
+
 def _craft_route(catalog: dict, prices: dict[int, int], recipe_id: int,
                  trail: tuple[int, ...]) -> tuple[int, str, dict[int, int]] | None:
     """Unit cost of crafting through ``recipe_id``; None when any input has no usable route."""

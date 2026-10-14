@@ -72,7 +72,24 @@ def sell_row(row):
             "Undercut unit (g)": to_gold(row["undercut_copper"]), "Price step": row.get("price_step", "1c"),
             "Profit at undercut for batch (g)": to_gold(row["undercut_batch_profit_copper"]),
             "Thin": row["thin"], "Warnings": warning_fields(row),
-            **_confidence_columns(row), "State": state(row)}
+            **held_output_columns(row), **_confidence_columns(row), "State": state(row)}
+
+
+def capture_label(capture):
+    """One holdings capture with its age; a missing location is never shown as empty."""
+    age = capture['age_hours']
+    state = f"{age:.1f} hours old" if age is not None else f"{capture['kind']} not captured"
+    return f"{capture['character']} · {capture['kind']} · {state}"
+
+
+def held_output_columns(row):
+    held = row.get('held_outputs', [])
+    if not held:
+        return {}
+    value = row.get('held_value_copper')
+    return {'Held units': sum(u['units'] for u in held),
+            'Held by': ', '.join(f"{u['character']} ({u['kind']}): {u['units']}" for u in held),
+            'Held value': format_money(value) if value is not None else 'unavailable'}
 
 
 def _confidence_columns(row):
@@ -107,7 +124,8 @@ def vendor_row(row, names, *, item_id=False):
 def material_row(row, *, item_id=False):
     """One reserved purchase from ``today.craft_details``."""
     return {"Material": row["item_name"], **({"Item ID": row["item_id"]} if item_id else {}),
-            "Route": "vendor" if row["method"] == "vendor" else "auction house",
+            "Route": ("held" if row["method"] == "held" else
+                      ("vendor" if row["method"] == "vendor" else "auction house")),
             "Required units": row["quantity"], "Purchased units": row["purchased_units"],
             "Cost (g)": to_gold(row["cost_copper"]), "Highest unit price (g)": to_gold(row["highest_unit_copper"]),
             "State": state(row)}
@@ -178,10 +196,12 @@ def planning_label(character, data):
 
 def material_card_rows(materials):
     """Reserved purchases in the approved card table, with in-game money and surplus explicit."""
-    return [{'Material': r['item_name'], 'Where': 'Vendor' if r['method'] == 'vendor' else 'Auction house',
+    return [{'Material': r['item_name'],
+             'Where': 'Held' if r['method'] == 'held' else ('Vendor' if r['method'] == 'vendor' else 'Auction house'),
              'Units': str(r['purchased_units']) + (f" ({r['quantity']} needed)"
                        if r['purchased_units'] != r['quantity'] else ''),
-             'Cost': format_money(r['cost_copper']), 'State': state(r)} for r in materials]
+             'Cost': f"worth {format_money(r['cost_copper'])} if sold" if r['method'] == 'held'
+             else format_money(r['cost_copper']), 'State': state(r)} for r in materials]
 
 
 def display_hidden(result, hide_low):

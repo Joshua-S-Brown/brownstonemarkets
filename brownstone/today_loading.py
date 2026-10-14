@@ -3,18 +3,20 @@ from datetime import datetime
 
 import duckdb
 
-from brownstone import farming, flood_signals, professions, removed_listings
+from brownstone import character_snapshots, farming, flood_signals, professions, removed_listings, team_holdings
 from brownstone.storage import latest_snapshot
 from brownstone.today_data import read_today_evidence
 from brownstone.today_funds import resolve_funds
 
 
-def load_today(config, catalogs, settings, character_data, now: datetime, *, item_ids=(), flood=False):
+def load_today(config, catalogs, settings, character_data, now: datetime, *,
+               item_ids=(), flood=False, holdings=False, holdings_data=None):
     """Return the latest manifest and build_today arguments, or None when no snapshot exists.
 
     Reads retain the existing full market/source predicates. The caller owns settings,
     character evidence error presentation, and session choices; this function never writes.
-    Only Today needs UI-11 signals (flood=True); other pages skip that read.
+    Only Today needs UI-11 signals (flood=True) and team holdings (holdings=True); other pages
+    skip those reads. Callers that already hold the evidence pass ``holdings_data`` instead.
     """
     manifest, sid, _ = latest_snapshot(config)
     if manifest is None:
@@ -23,13 +25,25 @@ def load_today(config, catalogs, settings, character_data, now: datetime, *, ite
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb"), read_only=True) as db:
         observations, listings, metrics, vendors = read_today_evidence(db, config, sid, ids)
         flood_evidence = flood_signals.signals(db, config, _signal_ids(ids, character_data), now) if flood else None
+    holdings_warning = None
+    if holdings_data is None and holdings:
+        holdings_data, holdings_warning = _load_holdings(config, now)
     settings = resolve_funds(settings, character_data, now, config["max_age_hours"]).settings
     arguments = dict(catalogs=catalogs, observations=observations, market=config,
                      snapshot={**manifest, "snapshot_id": sid}, settings=settings, now=now,
                      listings=listings, metrics=metrics, vendor_prices=vendors,
                      max_age_hours=config["max_age_hours"], auction_cut=config["auction_cut"],
-                     character_data=character_data, flood_evidence=flood_evidence)
+                     character_data=character_data, flood_evidence=flood_evidence, holdings_data=holdings_data,
+                     holdings_warning=holdings_warning)
     return manifest, arguments
+
+
+def _load_holdings(config, now):
+    """Unreadable captures degrade to planning without holdings, explained, like character evidence."""
+    try:
+        return team_holdings.holdings(character_snapshots.latest_data(config), now), None
+    except Exception as error:
+        return None, f"Unable to read held items: {error}. Planning as if nothing is held."
 
 
 def _signal_ids(ids, character_data):

@@ -45,38 +45,43 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-068 use what the team holds (refine first)
-2. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
-3. STORY-073 your own sale rate (refine first)
-4. STORY-069 Today in player terms
-5. STORY-070 Team's next recipe you can actually learn
-6. STORY-075 farming spot capture: coin, position, vendor value (addon)
-7. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-8. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-9. STORY-036 vendor price ceilings (after STORY-071)
-10. STORY-021 item page and charts (would live in the Market explorer)
-11. STORY-026 scan coverage and rhythm
-12. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-13. STORY-006 replay
+1. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
+2. STORY-073 your own sale rate (refine first)
+3. STORY-069 Today in player terms
+4. STORY-070 Team's next recipe you can actually learn
+5. STORY-075 farming spot capture: coin, position, vendor value (addon)
+6. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+8. STORY-036 vendor price ceilings (after STORY-071)
+9. STORY-021 item page and charts (would live in the Market explorer)
+10. STORY-026 scan coverage and rhythm
+11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+12. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-075 and STORY-071 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 072, 074 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 072, 074 and SPIKE-009/009b.
 
 ### STORY-068 — Use what the team holds
 
-Promoted from *Restock* (Later) on 2026-10-13 after the walkthrough: Basilly held 8 Bolts of Linen Cloth, but Today bought 19 Linen Cloth to make 5 more. The bag and bank captures it was waiting for exist now (STORY-032; Stock, STORY-061). **Refine before handoff.**
+Implemented; current behavior is in `status.md` and Today in `requirements.md`. Acceptance text retained until the next commit.
+
+Promoted from *Restock* (Later) on 2026-10-13 after the walkthrough: Basilly held 8 Bolts of Linen Cloth, but Today bought 19 Linen Cloth to make 5 more. Refined 2026-10-14. Mailbox holdings, CRAFT-11's reach cost and choosing a different route because of holdings are split off to *Today, later versions* (Later).
 
 As a player, I want Today to use what my characters already hold before buying, so that I don't spend gold on materials sitting in my bags.
 
-Proposed acceptance (to confirm when refined):
-- **Holdings** come from Stock's source: the newest readable bags and bank capture per character, scope and ADDON-08 identity rules (base only; variants and unresolved links never count). Unknown banks are unknown, never empty. Captures older than `max_age_hours` are labelled stale but still used.
-- **Mailbox counts:** items waiting in a character's captured mailbox count as held, in the order bags, bank, mailbox, then vendor, then listings (the order TSM's gathering and ProfessionMaster's leveling planner both use). The Queue says *take from the mailbox* where needed.
-- **Held before bought:** a craft's materials, including intermediates such as Bolt of Linen Cloth, come from holdings first, then the cheapest listings. Held units are costed at their cautious sell value after the cut (what selling them would earn), never as free, so profit stays honest while *gold needed* falls. Proposed by Claude; confirm when refined.
-- **Who sends what:** held materials on a character other than the crafter add a Queue step to mail them, with postage still uncharged and unconfirmed.
-- **Held outputs:** catalog outputs already held appear in *Sell* with their held units, labelled as held.
-- **Team's reach cost too** (from ProfessionMaster): CRAFT-11's cost to reach a skill uses holdings first and walks the listing ladder for the whole quantity (80 Linen Cloth costs more than 80 × the cheapest), as Today does. Decide when refining whether this is part of this story or its own.
-- Today's ranking may change, so `TODAY_VERSION` increases.
+Acceptance:
+- **Holdings** are Stock's (`stock.holdings`): the newest readable bags and bank capture per character in the selected source and full market, base ADDON-08 identity only (variants and unresolved links never count). An unknown bank adds nothing and is labelled *bank not captured*, never treated as empty. A capture older than `max_age_hours` is still used, with its age shown and a confidence reason *held count from a stale capture* (the level is unchanged). Holdings are read in `load_today` and passed to `build_today` as data, like `character_data`; nothing loads inside the calculation.
+- **Whose holdings:** with one character selected, only that character's holdings (as with funds); with *Our team*, every scoped character's.
+- **Held before bought, along the chosen route:** the Board's route is unchanged (CRAFT-03). Sizing a batch takes the route's materials from holdings first, then the listing ladder or vendor as now. This applies to purchased materials and to the route's crafted intermediates: a held Bolt of Linen Cloth replaces one Bolt craft and its two Linen Cloth. Go top-down (an intermediate before its own inputs). Use only as many held units of an intermediate as leave a whole number of its crafts (CRAFT-02's fractional rule is unchanged).
+- **Shared across the plan:** holdings are used up in plan order, like reserved listings. A later craft sees only what earlier crafts left, and an adjusted batch (`choices`) re-reserves them the same way.
+- **Never free:** a held unit costs what selling it would earn, the CRAFT-04 cautious sell price after the cut, rounded down. Without a sell price, it costs the route's unit cost for that item. Batch cost and profit include this; **gold needed** and the shopping list don't. Batch sizing therefore checks funds against gold spent only, and the batch sizes it compares include the craft counts where any holding runs out.
+- **Showing it:** a craft's materials list held units as **held** with their value (*worth Xs if sold*). *Buy* leaves them out. The Queue starts with *take* lines, grouped by character and place (*Basilly: take 8 Bolt of Linen Cloth from the bank*). A held unit on a character other than the crafter (the row's `made_by`) adds *Basilly mails 8 Bolt of Linen Cloth to Arille*, with postage uncharged and unconfirmed (the existing mail note). Allocation order: the crafter's bags, then bank, then other characters by name, bags before bank.
+- **Held outputs:** when the team holds units of a planned output, *Sell* and the Queue's post line show them beside the batch (*post 5 crafted + 2 held*, naming who holds them) at the same post price. Their value is shown separately and is not added to the craft's profit.
+- **Unchanged:** routes, prices, funds, Stock targets and This session (STORY-063 stays independent of holdings). Today's results change, so `TODAY_VERSION` increases.
+- **Offline tests:** held leaf material lowers gold needed and keeps profit honest (held value counted); held intermediate replaces its subtree, including the whole-craft limit on an intermediate making more than one; holdings used up in plan order across two crafts and through an adjusted batch; selected character vs *Our team*; variant and unresolved slots ignored; unknown bank; stale capture reason; missing sell price uses route cost (never zero); mail and take lines with allocation order; held outputs in *Sell*; the chosen batch matches a brute-force search over every size from 1 to `max_crafts` on fixtures with holdings; no holdings gives exactly today's plan apart from `today_version`.
+- **Real data:** on a copy of the Forever beta data, the Linen Cloth case: Basilly's bolts appear as held in the craft that uses them and gold needed falls. Report the before and after.
+- **Docs:** the held rule under Today in `requirements.md` (next to *Routes/batches*); remove Stock's *stock changes no Today plan* sentence as it applies to holdings (targets still change nothing); `design.md` for the data flow; `status.md`.
 
 ### STORY-069 — Today in player terms
 
@@ -144,7 +149,7 @@ Proposed acceptance (to confirm when refined):
 
 ### STORY-075 — Farming spot capture: coin, position and vendor value (addon, read-only)
 
-Implemented; pending the in-game check below. Added 2026-10-14. Follows STORY-074, and STORY-071's addon change, to avoid two version bumps at once. It can be checked on Classic Era as well as the beta, since nothing here is Forever-specific.
+Implemented; partly confirmed in game on 2026-10-14 (0.12.4, Arille, Fargodeep Mine): all 30 loot windows had positions and all 15 coin loots matched a money change (119c), giving one spot *around 37, 82*. Still open: loot-time vendor prices (0.12.4 saved none because the Forever client has no global `GetItemInfo`; fixed in 0.12.5). The two-camp game check was dropped: positions are confirmed to vary between loot windows, and the split itself is offline-tested calculation. Added 2026-10-14. Follows STORY-074, and STORY-071's addon change, to avoid two version bumps at once. It can be checked on Classic Era as well as the beta, since nothing here is Forever-specific.
 
 As the owner, I want each loot window to record where I stood, which slots were coin and what each item sells to a vendor for, so that farming spots separate two camps of the same mob and value grey items and coin properly.
 
@@ -154,7 +159,7 @@ Acceptance:
 - **Display:** the spot shows *around 45, 70* (cell centre, map percent). No map artwork. A simple scatter of loot positions on a 0–100 grid can come later.
 - **Beta report:** the STORY-042 report counts loot windows with positions, coin slots and vendor prices.
 - **Offline tests:** Lua tests in `addon/BrownstoneScan/test_addon.py` for a nil position, a coin slot, an uncached sell price and the slot cap. Python tests for the cell rounding, the median, the split of one mob into two spots, and the preference between the scan's vendor price and the loot-time one.
-- **Check in game** (play actions only, added to `addon/README.md` → *Last beta play session*): kill and loot about ten mobs in each of two camps of the same mob type, with a gap of more than 10 minutes between them (the idle limit, so they form separate stretches), skin a few, and loot one grey item and some coin.
+- **Check in game** (play actions only, in `addon/README.md` → *Last beta play session*): loot mobs with coin and a grey item (positions and coin confirmed 2026-10-14; the vendor price awaits 0.12.5).
 - **Docs:** the capture in `requirements.md` under the ADDON journal rules and UI-13; `design.md`; `status.md`.
 
 ### STORY-034 — Movement ledger and reconciliation
@@ -301,6 +306,9 @@ These are grouped by what unblocks them.
 - **Stockpile:** materials below their own multi-day typical price, worth buying ahead for recipes you craft often, with a holding limit tied to gold available. Needs price history across days (*History chain*), so after launch.
 - **Volatility:** how much an item's typical price swings across scans, shown as a risk note and used to demote unstable crafts. Needs the same history.
 - **Restock:** moved to Next on 2026-10-13 as STORY-068.
+- **Mailbox holdings** (split from STORY-068, 2026-10-14): count items in each character's last captured inbox (the journal's `MAIL_SHOW`/`MAIL_INBOX_UPDATE` state) as held after bags and bank, with *take from the mailbox* in the Queue. Needs a rule against counting an item twice when it was taken into bags after the inbox was read.
+- **Reach cost from holdings** (split from STORY-068): CRAFT-11's cost to reach a skill uses holdings first and walks the listing ladder for the whole quantity (80 Linen Cloth costs more than 80 × the cheapest), as Today does.
+- **Routes that use holdings** (split from STORY-068): choose a different route because of what is held (craft bolts from held Linen Cloth when the Board's route buys bolts). STORY-068 only uses holdings along the Board's route.
 - **Whole chains:** ore → bars → armor across professions, with the gain at each stage (sell bars or craft on). Routing exists (CRAFT-12).
 - **Gold per hour:** if the scaled minimum gain feels wrong in play, try a time-based minimum instead. Decide after using version 1.
 

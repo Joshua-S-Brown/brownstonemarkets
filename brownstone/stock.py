@@ -1,15 +1,15 @@
 """Scoped team holdings, local targets and depth-aware restock estimates (STORY-061)."""
 import json
-import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
-from . import character_snapshots, variants
+from . import character_snapshots
 from .action_board import compatible_catalogs
 from .crafting import basis_prices
 from .freshness import assess
-from .scans import _list, _utc
+from .scans import _list
+from .team_holdings import holdings
 from .today import Ladder
 from .today_loading import load_today
 from .today_settings import TodaySettings
@@ -64,52 +64,6 @@ def save_entries(path: Path, entries: list[Entry]) -> None:
     temporary = path.with_name(path.name + '.tmp')
     temporary.write_text(json.dumps([asdict(e) for e in entries], indent=2) + '\n', encoding='utf-8')
     temporary.replace(path)
-
-
-def _usable(slot):
-    return slot.get('item_id') is not None and slot.get('count') is not None
-
-
-def holdings(data, now):
-    """Each location's capture is the shared latest readable one (``character_snapshots.latest_data``).
-
-    Totals are keyed by exact ADDON-08 identity ``(item_id, variant_id, variant_state)``: variants and
-    unresolved links are never pooled with the base item.
-    """
-    totals, names, captures, units = {}, {}, [], []
-    for key, state in sorted(data.items()):
-        for kind in ('bags', 'bank'):
-            record, machine = state.get(kind) or (None, None)
-            slots = _list(record.get('slots'), 'slots') if record else []
-            captured = _utc(record['captured_at'], record.get('captured_at_utc'), 'captured_at') if record else None
-            captures.append({'character': key[0], 'realm': key[1], 'faction': key[2], 'kind': kind,
-                             'captured_at': captured,
-                             'age_hours': (now - captured).total_seconds() / 3600 if captured else None,
-                             'snapshot_id': record['snapshot_id'] if record else None,
-                             'units': sum(s['count'] for s in slots if _usable(s)) if record else None,
-                             'machine': machine, 'unknown': record is None,
-                             # Readable but incomplete (unsized or unreadable containers, unread slots).
-                             'partial': record is not None and (not character_snapshots._complete(record)
-                                                                or not all(map(_usable, slots))),
-                             'excluded': sum(character_snapshots.unreadable_backpack(r)
-                                             for r, _ in state['observations'] if r['kind'] == kind)})
-            _add_slots(slots, key, kind, totals, names, units)
-    return totals, names, captures, units
-
-
-def _add_slots(slots, key, kind, totals, names, units):
-    counts: dict[tuple, int] = {}
-    for slot in filter(_usable, slots):
-        identity = (slot['item_id'], *variants.identity(slot['item_id'], slot.get('item_link')))
-        totals[identity] = totals.get(identity, 0) + slot['count']
-        counts[identity] = counts.get(identity, 0) + slot['count']
-        label = re.search(r'\|h\[([^\]]+)\]\|h', slot.get('item_link') or '')
-        if label:  # the exact identity's own link name; base names also label the item ID
-            names[identity] = label[1]
-            if identity[2] == 'base':
-                names[identity[0]] = label[1]
-    units.extend({'key': identity, 'item_id': identity[0], 'character': key[0], 'realm': key[1],
-                  'faction': key[2], 'kind': kind, 'units': count} for identity, count in counts.items())
 
 
 def fill(entry, held, listings, observations):
@@ -181,7 +135,8 @@ def load_stock(config, catalogs, now: datetime):
     ids = {s['item_id'] for state in data.values() for r, _ in state['observations']
            for s in _list(r.get('slots'), 'slots') if s.get('item_id') is not None}
     ids.update(e.item_id for e in entries)
-    _, arguments = load_today(config, catalogs, TodaySettings(), {}, now, item_ids=ids)
+    _, arguments = load_today(config, catalogs, TodaySettings(), {}, now, item_ids=ids,
+                              holdings_data=holdings(data, now))
     return build_stock(data, entries, arguments, config, catalogs, now)
 
 

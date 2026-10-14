@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.4"
+local ADDON_VERSION = "0.12.5"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -899,7 +899,8 @@ function journal.lootSources()
     for slot = 1, boundedCount(GetNumLootItems, 50) or 0 do
         local link = safe(GetLootSlotLink, slot)
         local info = readAll(GetLootSlotInfo, slot)
-        local item = link and readAll(GetItemInfo, link)
+        -- Modern clients (Forever) have only C_Item.GetItemInfo, as readItemValues already assumes.
+        local item = link and readAll((C_Item and C_Item.GetItemInfo) or GetItemInfo, link)
         local sell = item and item[11]
         slots[#slots + 1] = { slot = slot, link = link,
             slot_type = safe(GetLootSlotType, slot), quantity = info and info[3],

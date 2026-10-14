@@ -47,7 +47,7 @@ def _depth_reasons(row, sell, metrics, ladders, low, medium):
     if (sell["listings"] or 0) < CONFIDENCE_MEDIUM_LISTINGS:
         medium.append("few listings")
     for purchase in row["purchases"]:
-        if purchase["method"] == "vendor" or not purchase["purchased_units"]:
+        if purchase["method"] in ("vendor", "held") or not purchase["purchased_units"]:
             continue
         units = metrics.get(purchase["item_id"], {}).get("units")
         if not units:
