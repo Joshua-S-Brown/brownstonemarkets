@@ -84,7 +84,7 @@ def stretches(loots, idle_minutes=10, cell_percent=5):
 def history(observations, idle_minutes=10, cell_percent=5):
     observations = list(observations)
     evidence = stretches(gathered(observations), idle_minutes, cell_percent)
-    coins = coin_windows(observations)
+    coins = _stretch_coins(evidence, coin_windows(observations), idle_minutes)
     # A rate rests on all qualifying time in its zone, including stretches where the item never dropped.
     time: dict = defaultdict(lambda: [0, 0])
     totals: dict[tuple, dict] = {}
@@ -139,7 +139,7 @@ def _spot(loots):
 
 def _spots(evidence, coins, cell_percent):
     spots: dict[tuple, dict] = {}
-    for stretch in evidence:
+    for stretch, amounts in zip(evidence, coins, strict=True):
         if not stretch['qualifies']:
             continue
         key = stretch['key'][0], stretch['npc_id'], stretch['cell']
@@ -151,7 +151,7 @@ def _spots(evidence, coins, cell_percent):
         row['seconds'] += stretch['seconds']
         row['stretches'] += 1
         row['also_looted'].update(stretch['also_looted'])
-        _add_spot_evidence(row, stretch['loots'], coins)
+        _add_spot_evidence(row, stretch['loots'], amounts)
         for loot in stretch['loots']:
             row['items'][loot['item_id']] = row['items'].get(loot['item_id'], 0) + loot['units']
     return [r | {'also_looted': sorted(r['also_looted']),
@@ -198,14 +198,14 @@ def _positive(value):
 def position_cell(loots, cell_percent=5):
     """Median of distinct loot-window positions, rounded down in map percent."""
     positions = {(r['machine'], r['login_at'], r['window_id']): r['zone']
-                 for r in loots if _position(r['zone'])}
+                 for r in loots if has_position(r['zone'])}
     if not positions:
         return None
     return tuple(int(median(Fraction(str(z[axis])) for z in positions.values()) * 100 // cell_percent)
                  * cell_percent for axis in ('x', 'y'))
 
 
-def _position(zone):
+def has_position(zone):
     return all(type(zone.get(axis)) in (int, float) and 0 <= zone[axis] <= 1 for axis in ('x', 'y'))
 
 
@@ -251,12 +251,19 @@ def coin_windows(observations):
     return coins
 
 
-def _add_spot_evidence(row, loots, coins):
-    windows = {(r['machine'], r['login_at'], r['window_id'], r['zone'].get('map_id')) for r in loots}
-    spans = {(r['machine'], r['login_at']) for r in loots}
-    first, last = min(r['window_id'][0] for r in loots), max(r['time'] for r in loots)
-    windows.update(w for w in coins if w[:2] in spans and w[3] == row['map_id'] and first <= w[2][0] <= last)
-    amounts = [coins[w] for w in windows if coins.get(w) is not None]
+def _stretch_coins(evidence, coins, idle_minutes):
+    """Each coin window joins one stretch on its login and map: the latest that it falls in, or follows
+    within the idle limit (a last kill that dropped only coin). Stretch seconds stay as measured."""
+    result: list[list] = [[] for _ in evidence]
+    for (machine, login, window, map_id), amount in coins.items():
+        owners = [i for i, s in enumerate(evidence) if s['key'] == (map_id, machine, login)
+                  and min(r['window_id'][0] for r in s['loots']) <= window[0] <= s['last'] + idle_minutes * 60]
+        if owners and amount is not None:
+            result[owners[-1]].append(amount)
+    return result
+
+
+def _add_spot_evidence(row, loots, amounts):
     if amounts:
         row['coin_copper'] = (row['coin_copper'] or 0) + sum(amounts)
     for loot in loots:

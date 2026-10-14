@@ -233,7 +233,7 @@ async def test_farming_cell_centre_coin_share_and_vendor_disagreement(user, tmp_
 
     await user.open('/farming-capture')
     row = user.find(marker='farming-spots').elements.pop().rows[0]
-    assert row['Position'] == 'around 47.5, 72.5'
+    assert row['Position'] == 'around 47, 72'
     assert 'Coin 78%' in row['Value shares']
     user.find('Spot item values').elements.pop().open()
     await user.should_see('vendor price disagreement')

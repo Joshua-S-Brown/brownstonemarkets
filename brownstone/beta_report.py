@@ -251,12 +251,12 @@ def create_report(path: Path, config: Source, output_root: Path, previous: Path 
 
 
 def farming_capture(records):
-    from .farming import _position
+    from .farming import has_position
 
     windows = [r for r in records if r.get('event') == 'LOOT_OPENED']
     slots = [s for r in windows for s in r.get('loot_slots', [])]
     return {'loot_windows': len(windows),
-            'windows_with_positions': sum(_position(r.get('zone', {})) for r in windows),
+            'windows_with_positions': sum(has_position(r.get('zone', {})) for r in windows),
             'windows_with_coin_slots': sum(any(s.get('slot_type') == 2 for s in r.get('loot_slots', []))
                                            for r in windows),
             'windows_with_vendor_prices': sum(any(type(s.get('vendor_sell_copper')) is int

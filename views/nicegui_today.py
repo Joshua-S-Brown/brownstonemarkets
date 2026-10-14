@@ -905,8 +905,8 @@ def spot_position(spot):
     cell = spot.get('cell')
     if cell is None:
         return '—'
-    half = spot['cell_percent'] / 2
-    return f'around {cell[0] + half:g}, {cell[1] + half:g}'
+    half = spot['cell_percent'] // 2
+    return f'around {cell[0] + half}, {cell[1] + half}'
 
 
 def spot_coin_share(spot):

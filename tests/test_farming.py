@@ -345,3 +345,12 @@ def test_coin_only_window_in_other_map_does_not_value_the_spot():
     events += [record('LOOT_OPENED', 100, zone={'map_id': 2}, loot_slots=[{'slot_type': 2}]),
                record('PLAYER_MONEY', 101, before_copper=10, after_copper=110)]
     assert farming.history(events)['spots'][0]['coin_copper'] is None
+
+
+@pytest.mark.parametrize(('moment', 'expected'), [(400, 100), (900, 100), (901, None)])
+def test_trailing_coin_only_window_joins_stretch_within_idle_limit(moment, expected):
+    events = sum((mob_loot(t, 10) for t in (0, 150, 300)), [])
+    events += [record('LOOT_OPENED', moment, zone={'map_id': 1}, loot_slots=[{'slot_type': 2, 'quantity': 0}]),
+               record('PLAYER_MONEY', moment + 1, before_copper=10, after_copper=110)]
+    spot = farming.history(events)['spots'][0]
+    assert (spot['coin_copper'], spot['seconds']) == (expected, 300)

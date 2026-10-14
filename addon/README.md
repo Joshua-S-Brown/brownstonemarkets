@@ -33,7 +33,7 @@ game doesn't offer and carry on.
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
 Done on 2026-10-13: everything in the earlier checklists except the items below. Install **0.12.4**
-first (it reads trainer and vendor lists after they load), then:
+first (it reads trainer and vendor lists after they load, and records farming positions and coin), then:
 
 1. **Vendor lists:** open a trade-supplies vendor, a general goods vendor and one other vendor, without buying.
 2. **Trainers (tier levels):** open the trainer for each profession you have once, then close it.
