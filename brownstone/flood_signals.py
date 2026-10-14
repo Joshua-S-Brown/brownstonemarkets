@@ -1,5 +1,5 @@
 """Read-only crowding and relative-price evidence from scoped scan metrics (UI-11)."""
-from datetime import timedelta
+from datetime import UTC, timedelta
 from fractions import Fraction
 
 from .config import FLOOD_DEFAULTS
@@ -95,13 +95,22 @@ def crowding(listings, churn, options):
     return 'steady'
 
 
+def _median(prices):
+    prices = sorted(prices)
+    return (prices[len(prices) // 2] + prices[(len(prices) - 1) // 2]) // 2
+
+
 def overshoot(price, prices, options):
-    prices = sorted(p for p in prices if p is not None and p > 0)
-    result = {'scans': len(prices), 'typical_copper': None, 'ratio': None, 'label': 'too few scans'}
-    if len(prices) < options['flood_min_scans']:
+    """Each (UTC date, positive unit price) contributes to one equal-weight daily point."""
+    daily: dict = {}
+    for day, value in prices:
+        if value is not None and value > 0:
+            daily.setdefault(day, []).append(value)
+    result = {'days': len(daily), 'scans': sum(map(len, daily.values())),
+              'typical_copper': None, 'ratio': None, 'label': 'too few days'}
+    if len(daily) < options['flood_min_days']:
         return result
-    middle = len(prices) // 2
-    typical = (prices[middle] + prices[(len(prices) - 1) // 2]) // 2
+    typical = _median([_median(values) for values in daily.values()])
     result.update(typical_copper=typical, label='no buyout' if not price or price <= 0 else 'typical')
     if not price or price <= 0:
         return result
@@ -113,8 +122,17 @@ def overshoot(price, prices, options):
     return result
 
 
+def _history_prices(row, earlier, history, newest):
+    prices = []
+    for scan in earlier:
+        match = _compatible(row, history[scan['scan_id']], newest)
+        if match is not None:
+            prices.append((scan['finished_at'].astimezone(UTC).date(), match['min_buyout']))
+    return prices
+
+
 def signals(db, config, item_ids, now):
-    """Only selected IDs; earlier scan median never includes the newest eligible scan."""
+    """Only selected IDs; daily median never includes the newest eligible scan."""
     options = settings(config)
     scans = eligible_scans(db, config)
     result = {'rows': [], 'settings': options, 'scan': None, 'freshness': None,
@@ -139,8 +157,7 @@ def signals(db, config, item_ids, now):
             match = _compatible(row, history[scan_id], newest)
             if match is not None:
                 earlier_identities[scan_id] = match['variant_state']
-        previous = [_compatible(row, history[s['scan_id']], newest) for s in earlier]
-        prices = [r['min_buyout'] for r in previous if r is not None]
+        prices = _history_prices(row, earlier, history, newest)
         result['rows'].append({**row, 'crowding': crowding(row['listings'], churn, options), 'churn': churn,
                                'overshoot': overshoot(row['min_buyout'], prices, options),
                                'earlier_identities': earlier_identities})

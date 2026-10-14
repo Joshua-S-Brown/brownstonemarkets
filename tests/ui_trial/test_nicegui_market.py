@@ -8,6 +8,7 @@ pytestmark = pytest.mark.asyncio
 
 def market_app(tmp_path, monkeypatch, count=2):
     config, catalog = explorer_fixture(tmp_path, count)
+    config['flood_min_days'] = 1
     monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [config])
     monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs',
                         lambda *args: [{'name': 'tailoring', 'catalog': catalog}])
@@ -194,7 +195,7 @@ async def test_flood_lists_links_counts_roles_settings_stale_and_lazy_item(user,
     await user.should_see('high')
     await user.should_see('Thin items (≤ 2 listings) are left out here; their item pages still flag them.')
     await user.should_see('material / output')
-    await user.should_see('Typical: earlier 7 days · at least 5 scans · cheap ≤ 60% · high ≥ 150%.')
+    await user.should_see('Typical: earlier 7 days · at least 1 distinct UTC days · cheap ≤ 60% · high ≥ 150%.')
     await user.should_see('Stale')
     linen = next(e for e in user.find(ui.link).elements if e.text == 'Linen Cloth')
     await user.open(linen._props['href'])
@@ -205,7 +206,7 @@ async def test_flood_lists_links_counts_roles_settings_stale_and_lazy_item(user,
     await user.should_see('Lowest buyout changed: 5/5 comparable pairs')
     await user.should_see('50.0% of typical')
     await user.open('/?place=Market&item=99999')
-    await user.should_see('too few scans')
+    await user.should_see('too few days')
     await user.should_see('Outside catalog chains')
     await user.open('/?place=Market&item=123456')
     await user.should_see('Not listed in the newest eligible scan; no flood signal.')
@@ -216,7 +217,7 @@ async def test_flood_failure_preserves_item_and_one_scan_unknown_churn(user, tmp
     market_app(tmp_path, monkeypatch, count=1)
     await user.open('/?place=Market&item=2589')
     await user.should_see('Lowest buyout churn unknown: no comparable pairs')
-    await user.should_see('too few scans')
+    await user.should_see('too few days')
     def broken(*args):
         raise RuntimeError('locked')
     monkeypatch.setattr(me, 'item_floods', broken)

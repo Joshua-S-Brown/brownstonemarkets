@@ -224,14 +224,15 @@ pairs. UI-11 and Today share `qualifying_pairs`; `recent_comparisons` reads the 
 read-only connection only when `views/nicegui_market.show_item` opens the item page. Shared theme
 cards/badges and expansions show evidence and keep identities separate, including noncatalog items.
 
-### Flood signals (STORY-064)
+### Flood signals (STORY-064/072)
 
 Rules and config defaults live in `requirements.md` → UI-11. `flood_signals.signals` reads
 `scan_metrics` under `scope_predicate`, exact scan/snapshot identity and metrics version, reusing
 `scan_changes.eligible_scans`, its loaded-name query and `removed_listings.qualifying_pairs`. Item-ID
 filters retain all variant states to check ADDON-08's pure-base compatibility. The newest eligible
 scan supplies counts and largest-stack numerator/denominator; earlier windowed scans supply the
-median, and at most ten qualifying adjacent pairs supply comparable lowest-buyout churn.
+daily points grouped by the UTC date of `finished_at`, then their median. Each signal retains
+both priced-day and priced-scan counts; at most ten qualifying adjacent pairs supply comparable lowest-buyout churn.
 All monetary arithmetic uses integer copper; ranking ratios use exact fractions. No migration,
 write, price path or seller inference. `market_explorer.load_explorer` reads only catalog-chain
 signals for the two top lists; `item_floods` opens a read-only connection only when an item page

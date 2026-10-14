@@ -18,7 +18,7 @@ def signal(item_id=3, label='high', crowding='contested', typical=100):
     return {'item_id': item_id, 'variant_id': None, 'variant_state': 'base',
             'min_buyout': 200, 'listings': 10, 'units': 10, 'largest_stack_units': 1,
             'crowding': crowding, 'churn': {'changed': 3, 'pairs': 5},
-            'overshoot': {'label': label, 'typical_copper': typical, 'scans': 5,
+            'overshoot': {'label': label, 'typical_copper': typical, 'scans': 5, 'days': 3,
                           'ratio': {'numerator': 200, 'denominator': typical}}}
 
 
@@ -59,7 +59,7 @@ def test_same_output_as_material_keeps_buy_price_and_cautious_lower_price():
     assert cheaper['craft'][0]['sale_price_copper'] == 80
 
 
-@pytest.mark.parametrize('label', ['cheap', 'typical', 'too few scans', 'no buyout'])
+@pytest.mark.parametrize('label', ['cheap', 'typical', 'too few days', 'no buyout'])
 def test_nonhigh_outputs_unchanged(label):
     result = plan(flood_evidence={'rows': [signal(label=label)]})
     assert result['craft'][0]['sale_price_copper'] == 200
@@ -176,7 +176,7 @@ def test_one_flood_read_loader_and_pure_build(tmp_path, monkeypatch):
     assert args['flood_evidence']['rows'][0]['item_id'] == 1
     monkeypatch.setattr(flood_signals, 'signals', Mock(side_effect=AssertionError('pure build must not read')))
     build_today(**args)
-    assert TODAY_VERSION == 8
+    assert TODAY_VERSION == 9
 
 
 def test_cap_changes_batch_peak_and_can_remove_unprofitable_craft():

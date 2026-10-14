@@ -20,7 +20,7 @@ def labels(monkeypatch, source):
     rows = [{'item_id': i, 'variant_state': 'base', 'variant_id': None, 'crowding': crowding,
              'listings': 12, 'units': 20, 'largest_stack_units': 5, 'min_buyout': 10,
              'churn': {'changed': 3, 'pairs': 5},
-             'overshoot': {'label': 'cheap', 'typical_copper': 30, 'scans': 5}}
+             'overshoot': {'label': 'cheap', 'typical_copper': 30, 'scans': 5, 'days': 3}}
             for i, crowding in [(1, 'thin'), (3, 'contested')]]
     monkeypatch.setattr('brownstone.flood_signals.signals', lambda *args: {
         'rows': rows, 'settings': settings({}), 'note': '',
@@ -122,7 +122,7 @@ async def test_no_buyout_churn_unknown_evidence(user):
     def page():
         session_signal({'crowding': 'thin', 'listings': 1, 'units': 2, 'largest_stack_units': 2,
                         'min_buyout': 0, 'churn': {'changed': 0, 'pairs': 0},
-                        'overshoot': {'label': 'no buyout', 'typical_copper': 100, 'scans': 5}})
+                        'overshoot': {'label': 'no buyout', 'typical_copper': 100, 'scans': 5, 'days': 3}})
         session_signal(None)
     await user.open('/signal')
     await user.should_see('thin')

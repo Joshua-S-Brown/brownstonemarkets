@@ -320,7 +320,8 @@ def removal_list(result):
 
 def flood_heading(floods):
     options = floods['settings']
-    ui.label(f"Typical: earlier {options['flood_window_days']} days · at least {options['flood_min_scans']} scans · "
+    ui.label(f"Typical: earlier {options['flood_window_days']} days · "
+             f"at least {options['flood_min_days']} distinct UTC days · "
              f"cheap ≤ {options['flood_cheap_percent']}% · high ≥ {options['flood_high_percent']}%.").classes('bs-note')
     ui.label(f"Contested: ≥ {options['flood_contested_listings']} listings and lowest buyout changes in "
              f"≥ {options['flood_churn_percent']}% of up to 10 comparable consecutive pairs (gap ≤ 12 hours). "
@@ -349,7 +350,7 @@ def flood_row(row):
     theme.badge(overshoot['label'], 'warn' if overshoot['label'] in ('cheap', 'high') else 'neutral')
     ratio = overshoot['ratio']
     ui.label(f"Lowest buyout / unit: {money(row['min_buyout'])} · typical: {money(overshoot['typical_copper'])} · "
-             f"{overshoot['scans']} earlier priced scans" +
+             f"{overshoot['days']} days, {overshoot['scans']} scans" +
              (f" · {100 * ratio['numerator'] / ratio['denominator']:.1f}% of typical" if ratio else ''))
 
 
@@ -406,7 +407,7 @@ def flood_list_row(config, row, group):
             theme.badge(overshoot['label'], 'warn')
             ratio = overshoot['ratio']
             ui.label(f"{100 * ratio['numerator'] / ratio['denominator']:.1f}% of typical · "
-                     f"{overshoot['scans']} earlier scans")
+                     f"{overshoot['days']} days, {overshoot['scans']} scans")
     with ui.expansion('Flood evidence for ' + row['item_name']):
         flood_row(row)
 

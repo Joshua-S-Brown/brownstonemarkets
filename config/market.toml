@@ -11,7 +11,7 @@ flood_contested_listings = 10
 flood_thin_listings = 2
 flood_churn_percent = 50
 flood_window_days = 7
-flood_min_scans = 5
+flood_min_days = 3
 flood_cheap_percent = 60
 flood_high_percent = 150
 

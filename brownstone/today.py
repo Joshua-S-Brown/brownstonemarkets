@@ -17,7 +17,7 @@ from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 from .today_warnings import PRICE_NOTE, base_signals, price_caps, warning_fields
 
-TODAY_VERSION = 8
+TODAY_VERSION = 9
 ROW_LIMIT = 10
 
 

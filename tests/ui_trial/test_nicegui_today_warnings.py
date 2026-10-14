@@ -32,7 +32,7 @@ async def test_warnings_on_each_output_surface(user, tmp_path, monkeypatch):
         await user.should_see('no early removals in 3 scan gaps')
         user.find('Listing evidence').elements.pop().open()
         await user.should_see('Lowest-buyout changes 3 / 5 comparable pairs')
-        await user.should_see('Typical 10s · 5 earlier priced scans · current lowest 20s')
+        await user.should_see('Typical 10s · 3 days, 5 scans · current lowest 20s')
         user.find('Early-removal evidence').elements.pop().open()
         await user.should_see('0 removed early units in 3 scan gaps')
         await user.should_see('Classic assumptions pending a Forever check')

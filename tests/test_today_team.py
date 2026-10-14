@@ -103,7 +103,7 @@ def test_unknown_switch_and_no_character_fallback():
     included = plan(replace(settings, include_unknown=True), character_data=unknown)
     assert included['craft'][0]['craft_status'] == 'Unknown'
     assert _character_columns(included['craft'][0])['Can make'] == 'Unknown'
-    assert included['today_version'] == 8
+    assert included['today_version'] == 9
     excluded = plan(replace(settings, include_unknown=True), character_data={CHARACTER: skills_state()})
     assert not excluded['craft'] and excluded['hidden'] == {'no character has this profession': 1}
     fallback = plan(settings, character_data={})

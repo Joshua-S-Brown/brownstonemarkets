@@ -10,7 +10,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
   authenticated reuse/restart, loopback browser fallback and idle shutdown.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
-  queue, confidence, character eligibility and captured funds; today_version 8.
+  queue, confidence, character eligibility and captured funds; today_version 9.
   UI-11 high outputs use typical-price sell caps before ranking/sizing, with shared signal badges
   on crafts/Sell/posts; shown-output UI-10 history adds Low confidence for no early removals
   in at least three qualifying gaps (Classic time-left assumptions pending Forever confirmation). This session
@@ -20,6 +20,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   (CRAFT-11/13). One board shared across characters/hiring; detail loads on demand.
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
+  UI-11 typical prices use equal-weight UTC daily medians, with days/scans evidence and
+  `flood_min_days` history validation (STORY-072; rules in requirements → UI-11).
 - **Stock:** readable bags/bank holdings, cautious listed value, Save-only source-local team
   targets and whole-stack buy/wait/unlisted estimates (Stock rules). Unknown bank is explicit.
 - **Data/CLI:** TSM ingestion and addon formats 1–4 within account format 6, snapshots/journal,

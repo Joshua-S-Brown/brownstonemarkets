@@ -19,11 +19,13 @@ NEUTRAL_AUCTION_CUT = 0.15
 
 FLOOD_DEFAULTS = {
     'flood_contested_listings': 10, 'flood_thin_listings': 2, 'flood_churn_percent': 50,
-    'flood_window_days': 7, 'flood_min_scans': 5, 'flood_cheap_percent': 60, 'flood_high_percent': 150,
+    'flood_window_days': 7, 'flood_min_days': 3, 'flood_cheap_percent': 60, 'flood_high_percent': 150,
 }
 
 
 def _validate_flood(source):
+    if 'flood_min_scans' in source:
+        raise ValueError('flood_min_scans is replaced by flood_min_days; remove the old setting')
     for key, default in FLOOD_DEFAULTS.items():
         value = source.setdefault(key, default)
         if type(value) is not int or value <= 0:
@@ -62,7 +64,7 @@ class Source(TypedDict):
     flood_thin_listings: int
     flood_churn_percent: int
     flood_window_days: int
-    flood_min_scans: int
+    flood_min_days: int
     flood_cheap_percent: int
     flood_high_percent: int
     label: NotRequired[str]

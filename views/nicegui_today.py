@@ -588,7 +588,7 @@ def session_view(display, config, arguments, result, session, status):
 
 CROWDING = {'thin': ('thin: few listings', 'warn'), 'contested': ('contested: many sellers', 'warn')}
 OVERSHOOT = {'cheap': ('cheap right now', 'good'), 'high': ('pricier than usual', 'warn'),
-             'too few scans': ('price history too short', 'neutral'), 'no buyout': ('no buyout', 'neutral')}
+             'too few days': ('price history too short', 'neutral'), 'no buyout': ('no buyout', 'neutral')}
 
 
 def session_money(value):
@@ -614,8 +614,8 @@ def session_signal(signal):
             ui.label(f"Lowest-buyout changes {churn['changed']} / {churn['pairs']} comparable pairs"
                      if churn['pairs'] else 'Lowest-buyout churn unknown')
             lowest = signal['min_buyout'] if signal['min_buyout'] and signal['min_buyout'] > 0 else None
-            ui.label(f"Typical {session_money(history['typical_copper'])} · {history['scans']} earlier priced "
-                     f"scans · current lowest {session_money(lowest)}")
+            ui.label(f"Typical {session_money(history['typical_copper'])} · {history['days']} days, "
+                     f"{history['scans']} scans · current lowest {session_money(lowest)}")
             if history.get('ratio'):
                 ratio = history['ratio']
                 ui.label(f"Current lowest is {ratio['numerator'] * 100 // ratio['denominator']}% of typical")
