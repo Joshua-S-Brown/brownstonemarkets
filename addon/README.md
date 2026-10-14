@@ -32,15 +32,16 @@ game doesn't offer and carry on.
 `addon/BrownstoneScan` into `_classic_beta_/Interface/AddOns/` as in step 1 of *Windows scans to the
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
-Done on 2026-10-13: everything in the earlier checklists except the items below. Install **0.12.2**
-first (it reads trainer lists after they load), then:
+Done on 2026-10-13: everything in the earlier checklists except the items below. Install **0.12.3**
+first (it reads trainer and vendor lists after they load), then:
 
-1. **Trainers (tier levels):** open the trainer for each profession you have once, then close it.
-2. **Time-left labels (STORY-027):** post three cheap items at 2h, 8h and 24h and scan right away.
+1. **Vendor lists:** open a trade-supplies vendor, a general goods vendor and one other vendor, without buying.
+2. **Trainers (tier levels):** open the trainer for each profession you have once, then close it.
+3. **Time-left labels (STORY-027):** post three cheap items at 2h, 8h and 24h and scan right away.
    Scan again about 35 minutes later, about 2h 10m later, and once more 8 or more hours later.
-3. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
-4. **Panel (STORY-044):** start one scan from the minimap panel, and use its reload and clear buttons once.
-5. `/reload`, log out and run the drop script.
+4. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
+5. **Panel (STORY-044):** start one scan from the minimap panel, and use its reload and clear buttons once.
+6. `/reload`, log out and run the drop script.
 
 ## Run a scan
 

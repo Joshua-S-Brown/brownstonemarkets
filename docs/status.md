@@ -56,7 +56,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   for recovery; replay is pending. Run one writer. Synced drops can change during read: retry.
 - App reads on load: reload after imports elsewhere. Native clipboard/appearance and phone-width
   behavior still need manual checks. Remaining in-game checks (addon README → *Last beta play
-  session*): trainer tier levels (0.12.2 reads the list after it loads; 0.11.3 saved empty lists),
+  session*): vendor lists (0.12.3 captures prices/stock/standing on opening; existing beta data
+  has no lists yet; STORY-071 report section is empty until a vendor is opened), trainer tier levels
+  (0.12.2 reads the list after it loads; 0.11.3 saved empty lists),
   removed-listing time-left bounds, yellow skill-up chances and the panel. Item pass measured
   2026-10-13: 5.9 s listing read, 0.34 s pass, 1,590 of 1,909 requests answered, none timed out.
 

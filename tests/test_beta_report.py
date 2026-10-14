@@ -475,3 +475,83 @@ def test_stale_recipe_list_after_profession_switch_warned_and_skipped():
     stale = [c for c in report["checks"] if c["check"] == "stale recipe list"]
     assert len(stale) == 1 and stale[0]["detail"]["rows_profession"] == "Cooking"
     assert sum(c["check"] == "profession name" for c in report["checks"]) == 3
+
+
+def test_vendor_report_confirm_contradict_new_and_scope(tmp_path):
+    from brownstone.beta_vendor import vendor_prices
+    config = addon_source(tmp_path / "data", tmp_path / "input.lua")
+    catalog = dict(catalog_id="test", catalog_version="v1", game_version=config["game_version"],
+                   rules_version=config.get("rules_version"), items_by_id={2320: {"vendor_price_copper": 10}, 2321: {}})
+    def vendor(eid, price, item_id=2320, **changes):
+        r = entry(eid, merchant_items=[dict(item_id=item_id, price_copper=price, quantity=2,
+                                          stock=-1, extended_cost=False)], vendor_standing=4)
+        r.update(family="vendor", event="MERCHANT_SHOW", **changes)
+        return r
+    records = [vendor("confirm", 20), vendor("contradict", 21), vendor("new", 50, 2321),
+               vendor("uncatalogued", 50, 999), vendor("discount", 18, vendor_standing=5),
+               vendor("unknown", 18, vendor_standing=None), vendor("wrong-house", 20, faction="Horde")]
+    section = vendor_prices(records, [catalog, catalog | {"rules_version": "other"}], config)
+    assert section["scope"]["market_id"] == config["market_id"]
+    rows = section["observations"]
+    assert len(rows) == 6
+    assert [r["comparisons"][0]["result"] for r in rows[:4]] == ["confirms", "contradicts", "new", "new"]
+    assert all(r["comparisons"][0]["result"] == "lower; discounted or unknown standing: evidence only"
+               for r in rows[4:])
+    assert rows[0]["captured_utc"] and rows[0]["entry_id"] == "confirm"
+    report = analyze(database())
+    report.update(totals=dict(pass_=0), generated_utc=NOW.isoformat(), vendor_prices=section)
+    report["totals"] = {"pass": 0, "warn": 0, "fail": 0}
+    from brownstone.beta_markdown import markdown
+    text = markdown(report)
+    assert "## Vendor prices" in text and "unlimited" in text and "test: confirms" in text
+    assert catalog["items_by_id"][2320]["vendor_price_copper"] == 10
+
+
+@pytest.mark.parametrize("changes,result", [
+    ({"extended_cost": True}, "extended or unknown cost: evidence only"),
+    ({"extended_cost": None}, "extended or unknown cost: evidence only"),
+    ({"price_copper": 0}, "missing or zero price/quantity: evidence only"),
+    ({"quantity": None}, "missing or zero price/quantity: evidence only"),
+    ({"price_copper": 21}, "contradicts"),
+])
+def test_vendor_report_never_free_or_gold_extended_cost(changes, result):
+    from brownstone.beta_vendor import _comparison
+    item = dict(price_copper=20, quantity=2, extended_cost=False) | changes
+    assert _comparison(item, 4, 10) == result
+
+
+@pytest.mark.parametrize("price,standing,marked,result", [
+    (20, 5, 10, "confirms"),
+    (21, 6, 10, "contradicts"),
+    (18, 4, 10, "contradicts"),
+    (18, 5, 10, "lower; discounted or unknown standing: evidence only"),
+    (18, None, 10, "lower; discounted or unknown standing: evidence only"),
+    (18, 5, None, "new; discounted or unknown standing: evidence only"),
+])
+def test_vendor_discount_only_lowers_prices(price, standing, marked, result):
+    from brownstone.beta_vendor import _comparison
+    item = dict(price_copper=price, quantity=2, extended_cost=False)
+    assert _comparison(item, standing, marked) == result
+
+
+def test_vendor_section_is_added_to_created_report_without_catalog_mutation(tmp_path, monkeypatch):
+    from brownstone import beta_vendor
+    from brownstone.beta_markdown import _vendor_prices
+    db = database()
+    r = entry("merchant", merchant_items=[dict(item_id=2320, price_copper=20, quantity=2,
+                                              stock=3, extended_cost=True)], vendor_standing=4,
+              vendor_npc_id=1234, zone={"zone": "Elwynn Forest"})
+    r.update(family="vendor", event="MERCHANT_SHOW", sequence=6)
+    db["journal"].append(r)
+    path = write(tmp_path, db)
+    config = addon_source(tmp_path / "untouched", path)
+    monkeypatch.setattr(beta_vendor.recipe_catalogs, "find_catalogs", lambda _: [])
+    folder, report, _ = beta_report.create_report(path, config, tmp_path / "reports", now=NOW)
+    row = report["vendor_prices"]["observations"][0]
+    assert row["vendor_npc_id"] == 1234 and row["zone"] == {"zone": "Elwynn Forest"}
+    assert row["quantity"] == 2 and row["stock"] == 3
+    assert "extended or unknown cost" in row["comparisons"][0]["result"]
+    text = (folder / "report.md").read_text()
+    assert "## Vendor prices" in text and "cost evidence only" in text
+    assert "No vendor price lists captured." in "\n".join(_vendor_prices({}))
+    assert not config["data_dir"].exists()

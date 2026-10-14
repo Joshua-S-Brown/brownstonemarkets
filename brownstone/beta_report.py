@@ -12,6 +12,7 @@ from uuid import uuid4
 from . import beta_evidence as evidence
 from . import pipeline, professions, scans
 from .beta_markdown import markdown
+from .beta_vendor import catalog_evidence
 from .config import Source
 
 
@@ -222,6 +223,11 @@ def create_report(path: Path, config: Source, output_root: Path, previous: Path 
         code = 2
     else:
         report, lists = analyze(raw, now)
+        valid_journal_ids = {c["entry_ids"][0] for c in report["checks"]
+                             if c["check"] == "import validation" and c["status"] == "pass"
+                             and c["detail"] == "journal"}
+        report["vendor_prices"] = catalog_evidence(
+            [r for r in lists[2] if isinstance(r, dict) and r.get("entry_id") in valid_journal_ids], config)
         report["file"]["name"] = path.name
         if not any(c["check"] == "parse" for c in report["checks"]):
             round_trip(report, raw, config, now)

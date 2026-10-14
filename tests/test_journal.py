@@ -636,3 +636,79 @@ def test_lua_trainer_list_loading_after_show_is_read_on_update_or_one_second_lat
     fire(g, "TRAINER_CLOSED")
     lua.execute('services = 3; timers[2]()')
     assert entries(g)[-1]["event"] == "TRAINER_CLOSED"
+
+
+def test_lua_merchant_late_loading_unchanged_closed_and_cost_stock():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        merchantCount, timers = 0, {}
+        C_Timer = { After = function(seconds, callback) timers[#timers + 1] = callback end }
+        function GetMerchantNumItems() return merchantCount end
+        function GetMerchantItemLink(i) return "|Hitem:" .. (2320 + i - 1) .. "|h[Thread]|h" end
+        function GetMerchantItemInfo(i) return "Thread", nil, 20, 2, i == 1 and -1 or 3, true, true, false end
+        function GetMerchantItemCostInfo(i) return i == 2 and 1 or 0 end
+        function UnitGUID(unit) return "Creature-0-1-2-3-1234-0001" end
+        function UnitReaction(player, unit) return 4 end
+        function GetRealZoneText() return "Elwynn Forest" end
+    ''')
+    fire(g, "MERCHANT_UPDATE")
+    count = len(entries(g))
+    fire(g, "MERCHANT_SHOW")
+    assert entries(g)[-1]["merchant_item_count"] == 0
+    lua.execute('merchantCount = 2')
+    fire(g, "MERCHANT_UPDATE")
+    loaded = entries(g)[-1]
+    assert loaded["family"] == "vendor" and loaded["vendor_npc_id"] == 1234
+    assert loaded["vendor_standing"] == 4 and loaded["zone"]["zone"] == "Elwynn Forest"
+    first, second = loaded["merchant_items"]
+    assert (first["item_id"], first["price_copper"], first["quantity"], first["stock"]) == (2320, 20, 2, -1)
+    assert first["extended_cost"] is False and second["extended_cost"] is True and second["stock"] == 3
+    assert first["link"] == "|Hitem:2320|h[Thread]|h"
+    fire(g, "MERCHANT_UPDATE")
+    lua.execute('timers[1]()')
+    assert len(entries(g)) == count + 2
+    fire(g, "MERCHANT_CLOSED")
+    lua.execute('merchantCount = 3; timers[1]()')
+    fire(g, "MERCHANT_UPDATE")
+    assert entries(g)[-1]["event"] == "MERCHANT_CLOSED"
+    lua.execute('merchantCount = 0')
+    fire(g, "MERCHANT_SHOW")
+    lua.execute('merchantCount = 1; timers[2]()')
+    assert entries(g)[-1]["event"] == "MERCHANT_DELAYED_READ"
+    assert g.actionCalls == 0
+
+
+def test_lua_merchant_modern_guarded_and_bounded():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        function GetMerchantNumItems() return 9999 end
+        C_MerchantFrame.GetItemInfo = function(i)
+            return { price = 95, stackCount = 1, numAvailable = 0, hasExtendedCost = true }
+        end
+        function GetMerchantItemLink(i) error("not loaded") end
+        function UnitReaction() error("unavailable") end
+    ''')
+    fire(g, "MERCHANT_SHOW")
+    r = entries(g)[-1]
+    assert r["merchant_item_count"] == 1000 and len(r["merchant_items"]) == 300
+    assert r["merchant_items"][0]["price_copper"] == 95
+    assert r["merchant_items"][0]["stock"] == 0 and r["merchant_items"][0]["extended_cost"] is True
+    assert "vendor_standing" not in r and "link" not in r["merchant_items"][0]
+    assert g.actionCalls == 0
+
+
+def test_merchant_journal_import_scope_deduplication_and_raw(tmp_path):
+    vendor = entry("vendor", merchant_items=[{"item_id": 2320, "price_copper": 20, "quantity": 2,
+                                            "stock": -1, "extended_cost": False}], vendor_standing=4)
+    vendor.update(family="vendor", event="MERCHANT_SHOW")
+    path = write(tmp_path / "vendor.lua", [vendor])
+    config = addon_source(tmp_path / "data", path)
+    assert import_scans(config, now=NOW)["fully_imported"]
+    assert import_scans(config, now=NOW)["non_scan_records"][0]["outcome"] == "duplicate"
+    with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb")) as db:
+        saved = db.execute("SELECT source_id, market_id, record_json FROM character_journal").fetchone()
+    assert saved[:2] == (config["source_id"], config["market_id"])
+    assert json.loads(saved[2])["merchant_items"] == vendor["merchant_items"]
+    vendor.update(faction="Horde", entry_id="other-house")
+    write(path, [vendor])
+    assert preview_scans(config, now=NOW).non_scan_mismatches[0]

@@ -17,6 +17,7 @@ def markdown(report: dict) -> str:
              f"{totals['pass']} pass, {totals['warn']} warn, {totals['fail']} fail", ""]
     lines += _checks(report["checks"])
     lines += _coverage(report.get("coverage", []))
+    lines += _vendor_prices(report.get("vendor_prices", {}))
     lines += ["", "## Gold display", ""]
     for character in report.get("characters", []):
         for snapshot in character["snapshots"]:
@@ -69,3 +70,23 @@ def _facts(report: dict) -> dict:
 def _cell(value) -> str:
     text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
     return text.replace("|", "\\|").replace("\n", "<br>").replace("`", "&#96;")
+
+
+def _vendor_prices(section: dict) -> list[str]:
+    lines = ["", "## Vendor prices", "", "Captured purchase prices; catalog values are unchanged."]
+    rows = section.get("observations", [])
+    if not rows:
+        return lines + ["", "No vendor price lists captured."]
+    lines += ["", "| Item | Vendor NPC | Zone | Gold per purchase | Quantity | Stock | Standing | "
+              "Catalog comparison | Entry |",
+              "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+    for row in rows:
+        stock = "unlimited" if row["stock"] == -1 else row["stock"]
+        price = str(to_gold(row["price_copper"])) if type(row["price_copper"]) is int else "unknown"
+        if row["extended_cost"] is not False:
+            price += " (cost evidence only)"
+        comparison = "; ".join(f"{c['catalog'] or 'uncatalogued'}: {c['result']}" for c in row["comparisons"])
+        lines.append("| " + " | ".join(_cell(v) for v in (
+            row["item_id"], row["vendor_npc_id"], row["zone"], price, row["quantity"], stock,
+            row["standing"], comparison, row["entry_id"])) + " |")
+    return lines

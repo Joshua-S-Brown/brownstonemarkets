@@ -168,28 +168,30 @@ replace it, errors discard it. Best-effort reads and non-atomic bronze/silver/DB
 
 ### Character evidence
 
-Capture rules ADDON-11/12, fields addon README. Account format 6 carries scans (1–4), snapshots,
-sessions/shared sequence and journal/diagnostics/errors. Latest order capture then sequence;
-raw tuples keep nil positions and never supply prices.
+ADDON-11/12; fields: addon README. Format 6: scans (1–4), snapshots, sessions/shared sequence,
+journal/diagnostics/errors. Latest: capture then sequence. Tuples retain nils; no analytical prices.
 
-- scans.read_addon_records parses once; addon_records dispatches per-type validation/hash/house/
-  storage to character_snapshots/journal, sharing reviewed transaction/outcomes.
+- scans.read_addon_records parses once; addon_records dispatches validation/hash/house/storage
+  to character_snapshots/journal; shared reviewed transactions/outcomes.
 - ScanPreview non_scans/summaries/known/mismatches holds non-scan state; new_record_ids controls
-  import. snapshot fields are compatibility projections. Every matching non-scan in selected file
-  imports, --scan limits scans only. scan_inputs expects commits by type/ID; writer rechecks.
-- Snapshot canonical sorted JSON hashes preserve historical values; skills subtree alone uses
-  journal typed-key encoding. Journal uses typed encoding throughout (numeric/string keys distinct).
-- Schema 10 parents: source/ID, full MARKET_KEYS, character/realm/faction/kind/UTC, nullable BIGINT
-  gold/machine, collection/file/content hashes/raw JSON; slots source/ID/container/slot nullable
-  item/count/exact link. Schema 11 journal: source/entry/full market/character/family/time/machine/
-  collection/file/content hash/raw JSON. Collection transaction; no journal silver export.
-- Manifest non_scan_records stores type/ID/hash/outcome/summary; snapshots remains older-reader subset.
+  import. Snapshots are compatibility projections. Matching non-scans import;
+  --scan limits scans only. scan_inputs checks type/ID commits; writer rechecks.
+- Snapshot canonical sorted JSON hashes retain historical values; skills subtree and all journal
+  use typed keys (numeric/string distinct).
+- Schema 10: source/ID/full MARKET_KEYS/character/realm/faction/kind/UTC, nullable BIGINT gold/machine,
+  collection/file/content hashes/raw JSON. Slots: source/ID/container/slot, nullable item/count/link.
+  Schema 11 journal: source/entry/full market/character/family/time/machine, collection/file/content
+  hash/raw JSON. Collection transaction; no journal silver export.
+- Manifest non_scan_records: type/ID/hash/outcome/summary; snapshots is the older-reader subset.
 - character_snapshots.latest_data returns scoped readable bags/bank/history/all observations;
-  professions.latest_data adds journal, trustworthy lists/seen-crafted. Ordered SQL returns small
-  records plus list name/ID-hash/order; stale lists skipped, newest winners fetched by entry_id,
-  newer profession_rank updates rank. Parse only winners; callers pass loaded data onward.
-  characters.build_characters renders Team cards; latest/preview rows and active_auction_rows feed
-  Import. Modern skill display wins name conflicts but never fills holes from legacy.
+  professions.latest_data adds journal, trustworthy lists/seen-crafted. Ordered SQL selects small
+  records/list name/ID-hash/order; skips stale lists, fetches winners by entry_id, applies newer
+  profession_rank/time. Parse/pass winners only. characters.build_characters
+  renders Team; latest/preview/active_auction_rows feed Import. Modern skills win names,
+  never fill legacy holes.
+- Merchant lists: raw vendor journal, no migration; journal.merchantItems/merchantRead mirror
+  trainers. beta_vendor projects source/full market/rules, entry/time and catalog comparisons;
+  beta_markdown renders vendor prices. Confirmation: CRAFT-08.
 
 API shape evidence: [Classic trade skill](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua),
 [Classic craft](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua),

@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.2"
+local ADDON_VERSION = "0.12.3"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -824,8 +824,7 @@ local journalEvents = {
     LOOT_SLOT_CLEARED = "loot", BANKFRAME_OPENED = "bags", BANKFRAME_CLOSED = "bags",
 }
 -- Ordinary refreshes are counted; profession refreshes also save changed lists.
-local journalCountOnly = { MERCHANT_UPDATE = true,
-    AUCTION_ITEM_LIST_UPDATE = true }
+local journalCountOnly = { AUCTION_ITEM_LIST_UPDATE = true }
 local journalHooks = {
     { "TakeInboxMoney", "mail" }, { "TakeInboxItem", "mail" }, { "AutoLootMailItem", "mail" },
     { "SendMail", "mail" }, { "ReturnInboxItem", "mail" }, { "DeleteInboxItem", "mail" },
@@ -911,6 +910,55 @@ function journal.trainerServices()
     end
     return { trainer_service_count = boundedCount(GetNumTrainerServices, 1000), trainer_services = services,
         trainer_filters = filters }
+end
+
+-- Merchant API field mapping adapted from CraftProfit VendorPrices.lua (MIT).
+-- Preserve limited stock and extended costs as evidence; never perform merchant actions.
+function journal.merchantItem(index)
+    local link = safe(GetMerchantItemLink, index)
+    local info = C_MerchantFrame and safe(C_MerchantFrame.GetItemInfo, index)
+    local raw = readAll(GetMerchantItemInfo, index)
+    local row = { index = index, link = link, item_id = type(link) == "string" and
+        tonumber(link:match("item:(%d+)")) or nil, info = raw, modern_info = journal.copy(info) }
+    if type(info) == "table" then
+        row.price_copper, row.quantity = info.price, info.stackCount or info.quantity
+        row.stock, row.extended_cost = info.numAvailable, info.hasExtendedCost
+    else
+        local values = raw or {}
+        row.price_copper, row.quantity, row.stock, row.extended_cost = values[3], values[4], values[5], values[8]
+    end
+    row.cost_info = readAll(GetMerchantItemCostInfo, index)
+    if row.cost_info and type(row.cost_info[1]) == "number" and row.cost_info[1] > 0 then row.extended_cost = true end
+    return row
+end
+
+function journal.merchantItems()
+    local items = {}
+    for index = 1, boundedCount(GetMerchantNumItems, 300) or 0 do
+        items[#items + 1] = journal.merchantItem(index)
+    end
+    local guid = safe(UnitGUID, "npc")
+    local npc = type(guid) == "string" and guid:match("^Creature%-%w+%-%w+%-%w+%-%w+%-(%d+)%-")
+    return { merchant_item_count = boundedCount(GetMerchantNumItems, 1000), merchant_items = items,
+        vendor_guid = guid, vendor_npc_id = tonumber(npc), vendor_standing = safe(UnitReaction, "player", "npc"),
+        zone = journal.zone() }
+end
+
+function journal.merchantRead(event, arguments)
+    if not journal.windows.merchant then return end
+    local context = journal.merchantItems()
+    if (context.merchant_item_count or 0) == 0 or journal.equal(context, journal.lastMerchant) then return end
+    if journal.add(event, "vendor", arguments, context) then journal.lastMerchant = context end
+end
+
+function journal.merchantShow(event, family, arguments)
+    local context = journal.merchantItems()
+    if journal.add(event, family, arguments, context) then journal.lastMerchant = context end
+    if type(C_Timer) == "table" and type(C_Timer.After) == "function" then
+        C_Timer.After(1, function()
+            journal.protect(journal.merchantRead, "MERCHANT_DELAYED_READ", "MERCHANT_DELAYED_READ", { n = 0 })
+        end)
+    end
 end
 
 -- Extra read-only context for a few events; nil leaves the entry as before.
@@ -1498,6 +1546,8 @@ function journal.observe(event, ...)
         journal.add(event, family, arguments, { before_copper = journal.lastMoney, after_copper = current })
         journal.lastMoney = current
     elseif event == "MAIL_SHOW" or event == "MAIL_INBOX_UPDATE" then journal.inbox(event, arguments)
+    elseif event == "MERCHANT_SHOW" then journal.merchantShow(event, family, arguments)
+    elseif event == "MERCHANT_UPDATE" then journal.merchantRead(event, arguments)
     elseif event == "TRAINER_SHOW" then
         local context = journal.trainerServices()
         if journal.add(event, family, arguments, context) then journal.lastTrainer = context end
