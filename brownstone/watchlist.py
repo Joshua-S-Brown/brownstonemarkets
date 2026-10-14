@@ -7,7 +7,7 @@ from .action_board import compatible_catalogs
 from .config import ADDON_PROVIDER
 from .freshness import assess
 from .metrics import units_below_price
-from .money import format_money, parse_money
+from .money import format_money
 from .storage import latest_snapshot, scope_predicate
 from .today_data import read_skillup_market
 
@@ -29,11 +29,6 @@ class Entry:
             raise ValueError('Targets must be positive integer copper')
         if not isinstance(self.note, str):
             raise ValueError('Note must be text')
-
-
-def parse_entry(item_id: int, buy: str, sell: str, note: str = '') -> Entry:
-    return Entry(item_id, parse_money(buy) if buy.strip() else None,
-                 parse_money(sell) if sell.strip() else None, note)
 
 
 def watchlist_path(data_dir: Path, source_id: str) -> Path:
@@ -115,7 +110,7 @@ def _state(target, hit, price, freshness):
 
 
 def hit_text(row: dict, names: dict[int, str]) -> str:
-    """One current-hit line naming only the sides that hit; shared by both apps' panels."""
+    """One current-hit line naming only the sides that hit; used by app hit panels."""
     states = []
     if row['buy_hit']:
         units = (f"{row['buy_units']} units at or below target" if row['buy_units'] is not None

@@ -3,16 +3,14 @@ from copy import deepcopy
 from dataclasses import replace
 
 import pytest
-from streamlit.testing.v1 import AppTest
 from test_character_snapshots import snapshot
 from test_journal import write
 from test_scans import NOW, addon_source
 from test_today import catalog, output_catalog, plan
 from test_today_characters import CHARACTER, recipe, state
-from test_today_view import ROOT, app, widget
 
 from brownstone.config import MARKET_KEYS
-from brownstone.pipeline import import_scans, run
+from brownstone.pipeline import import_scans
 from brownstone.professions import latest_data
 from brownstone.today_characters import NO_CHARACTER_EVIDENCE, PROFESSION_SKILL_IDS, recipe_status
 from brownstone.today_settings import TodaySettings, load_settings, save_settings
@@ -169,41 +167,3 @@ def test_old_settings_team_default_and_unknown_switch_validation(tmp_path):
     assert load_settings(path).include_unknown
     with pytest.raises(ValueError, match='boolean'):
         TodaySettings(include_unknown=1)
-
-
-def test_streamlit_team_switch_counts_mark_and_no_evidence_notice(tmp_path, monkeypatch):
-    data = {CHARACTER: skills_state([197])}
-    monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: data)
-    at, _, path = app(tmp_path, monkeypatch)
-    assert not at.exception
-    assert widget(at.selectbox, 'Character').format_func(None) == 'Our team'
-    assert any('unknown for every character: 1' in c.value for c in at.caption)
-    widget(at.toggle, 'Include unknown recipes').set_value(True)
-    widget(at.button, 'Save Today settings').click().run()
-    assert not at.exception and load_settings(path).include_unknown
-    assert at.tabs[0].dataframe[0].value['Can make'].tolist() == ['Unknown']
-    data.clear()
-    at = AppTest.from_file(str(ROOT / 'app.py')).run()
-    assert not at.exception and any(c.value == NO_CHARACTER_EVIDENCE for c in at.caption)
-
-
-def test_streamlit_mixed_team_keeps_unknown_mark(tmp_path, monkeypatch):
-    data = {CHARACTER: state(learned=True)}
-    first, unknown = catalog(), output_catalog(4, 'unknown')
-    unknown['recipes_by_id'][31] = unknown['recipes_by_id'].pop(30) | {'recipe_id': 31}
-    unknown['recipe_for_output'][4] = 31
-    unknown['recipes'][0]['recipe_id'] = 31
-    monkeypatch.setattr('brownstone.today_loading.professions.latest_data', lambda config: data)
-    at, source, path = app(tmp_path, monkeypatch)
-    csv = tmp_path / 'mixed.csv'
-    csv.write_text('itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n'
-                   '1,Material,20,10,0,0,\n3,Known,2000,2000,0,0,\n4,Unknown,2000,2000,0,0,\n')
-    run(source, csv)
-    monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs', lambda *args: [
-        {'name': c['catalog_id'], 'catalog': c} for c in (first, unknown)])
-    save_settings(path, replace(load_settings(path), include_unknown=True))
-    at.run()
-    assert not at.exception
-    table = at.tabs[0].dataframe[0].value
-    assert set(table['Can make']) == {'', 'Unknown'}
-    assert set(table['Who can make it']) == {'Basilly', 'unknown'}

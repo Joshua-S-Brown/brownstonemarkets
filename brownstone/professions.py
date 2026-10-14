@@ -91,8 +91,10 @@ def _with_rank(record: dict, rank: dict | None) -> dict:
     if rank is None or _order(rank) <= _order(record):
         return record
     update = {k: rank["profession_rank"][k] for k in ("rank", "max_rank") if k in rank["profession_rank"]}
-    return record | {"captured_at": rank["captured_at"], "sequence": rank.get("sequence"),
-                     "known_recipes": record["known_recipes"] | update}
+    # The time and its UTC text move together: validation rejects a record whose two times disagree.
+    moment = {k: rank[k] for k in ("captured_at", "captured_at_utc", "sequence") if k in rank}
+    kept = {k: v for k, v in record.items() if k != "captured_at_utc"}
+    return kept | moment | {"known_recipes": record["known_recipes"] | update}
 
 
 def latest_rows(config) -> list[dict]:

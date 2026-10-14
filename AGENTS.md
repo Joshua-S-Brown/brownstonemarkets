@@ -13,7 +13,7 @@ Explicit user instructions take precedence. When a decision or implementation ch
 - Preserve raw bytes and provenance. Keep data, environments, logs and credentials out of Git.
 - A market (which auction house: `brownstone/markets.py`) is separate from a source (who observed it: `source_id`). Join prices on the full `MARKET_KEYS`, plus `rules_version` for crafting; item ID alone never joins. Never configure `market_id`, which is derived, and never mix sources silently.
 - Calculate in integer copper. Display gold using `brownstone/money.py`.
-- `brownstone/` must not import Streamlit or download inside calculations. Display code goes in `views/`.
+- `brownstone/` must not import NiceGUI or download inside calculations. Display code goes in `views/`.
 - Never infer categories from names or commodity status. Never treat missing or zero prices as free.
 - Tests stay offline. Cover scope, units, freshness, deduplication and recipe quantities. Finish with `pytest --cov` (at or above the coverage floor), `ruff check .` and `mypy` passing. New functions stay within Ruff's complexity limit; never add a `# noqa: C901`.
 - Reusable session prompts (handing off a story, closing a story, full audit, backlog grooming) are in `docs/prompts/`.

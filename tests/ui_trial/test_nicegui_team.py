@@ -2,11 +2,11 @@
 from uuid import uuid4
 
 import pytest
+from app_helpers import app
 from nicegui import app as nicegui_app
 from nicegui import ui
 from test_progression import evidence, progression_catalog
 from test_today_characters import CHARACTER
-from test_today_view import app
 
 from views.nicegui_team import summary_rows, team_results
 

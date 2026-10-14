@@ -13,29 +13,10 @@ from brownstone.watchlist import (
     build_watchlist,
     catalog_names,
     known_names,
-    load_entries,
-    parse_entry,
     read_watchlist,
     save_entries,
     watchlist_path,
 )
-
-
-def test_parsing_storage_roundtrip_and_source_isolation(tmp_path):
-    entry = parse_entry(1, '1G 2s 3c', '2g', 'buy cloth')
-    path = watchlist_path(tmp_path, 'one')
-    save_entries(path, [entry])
-    assert load_entries(path) == [Entry(1, 10203, 20000, 'buy cloth')]
-    assert not path.with_name(path.name + '.tmp').exists()
-    assert load_entries(watchlist_path(tmp_path, 'two')) == []
-    with pytest.raises(ValueError, match='One entry'):
-        save_entries(path, [entry, entry])
-
-
-@pytest.mark.parametrize('buy,sell', [('1', ''), ('0c', ''), ('-1c', ''), ('', ''), ('1g 2g', '')])
-def test_bad_targets(buy, sell):
-    with pytest.raises(ValueError):
-        parse_entry(1, buy, sell)
 
 
 @pytest.mark.parametrize('raw', ['bad json', '{}', '[{"item_id":1}]', '[{"item_id":true,"buy_copper":1}]'])

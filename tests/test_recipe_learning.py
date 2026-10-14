@@ -1,15 +1,13 @@
 """STORY-050: source evidence is optional, lossless, validated and displayed only in catalogs."""
 import json
-from copy import deepcopy
 
 import pytest
-from test_recipe_catalogs import make_workspace
 from test_recipe_import import PAGE, selection
 from test_today import catalog
 
 from brownstone import recipe_catalogs as rc
 from brownstone.crafting import parse_recipe_catalog
-from brownstone.recipe_import import build_catalog, dumps_catalog, extract_page
+from brownstone.recipe_import import build_catalog, extract_page
 
 
 def page(source=None, cost=None):
@@ -65,25 +63,3 @@ def test_older_catalog_loads_and_selection_cannot_override_page_evidence():
     pick = selection(recipe_defaults={'learned_from': [99], 'training_cost_copper': 999})
     result = build_catalog(extract_page(PAGE, 'sha', '2026-10-08'), pick)
     assert all('learned_from' not in r and 'training_cost_copper' not in r for r in result['recipes'])
-
-
-def test_save_and_regeneration_change_only_learning_fields_and_version(tmp_path):
-    config, archive = make_workspace(tmp_path)
-    entry, = rc.find_catalogs(config)
-    raw = page([2, 5], 100).encode()
-    legacy = rc.preview_update(entry, raw, '2026-10-01')['catalog']
-    legacy['catalog_version'] = '0.1'
-    legacy['recipes'][1].pop('learned_from')
-    legacy['recipes'][1].pop('training_cost_copper')
-    entry['catalog_path'].write_text(dumps_catalog(legacy))
-    entry, = rc.find_catalogs(config)
-    before = deepcopy(entry['catalog'])
-    result = rc.regenerate(entry, raw, 'fixture.html', '2026-10-01', archive)
-    after = deepcopy(result['catalog'])
-    assert after['catalog_version'] == '0.2'
-    after['catalog_version'] = before['catalog_version']
-    assert after['recipes'][1].pop('learned_from') == [2, 5]
-    assert after['recipes'][1].pop('training_cost_copper') == 100
-    assert after == before
-    updated, = rc.find_catalogs(config)
-    assert not rc.preview_update(updated, raw, '2026-10-01')['changed']

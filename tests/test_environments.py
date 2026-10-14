@@ -7,12 +7,11 @@ from pathlib import Path
 import duckdb
 import pytest
 from conftest import make_source
-from navigation_helpers import navigate
 from test_scan_changes import import_pair
 from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
 
 from brownstone.action_board import rank_recipes
-from brownstone.analysis import browse, rank, screenable_count
+from brownstone.analysis import browse, rank
 from brownstone.config import build_source
 from brownstone.crafting import load_recipe_catalog
 from brownstone.markets import MARKET_KEYS, legacy_environment, upgrade_legacy
@@ -24,7 +23,6 @@ from brownstone.storage import (
     SCHEMA_VERSION,
     completed_snapshots,
     latest_snapshot,
-    listing_depth,
     price_observations,
     schema_version,
     upgrade_database,
@@ -166,15 +164,12 @@ def test_single_scan_queries_filter_environment_even_with_same_market_and_snapsh
              20000 AS recent_value, 20000 AS historical_value) FROM market_snapshots""")
         sid = "my-scans:new"
         assert browse(db, sid, config, "1")["min_buyout"].to_list() == [120]
-        assert screenable_count(db, sid, config) == 0
         assert rank(db, sid, config).is_empty()
         beta = {**config, "environment": "beta"}  # Same market_id proves both fields are checked.
-        assert screenable_count(db, sid, beta) == 5
         assert rank(db, sid, beta).height == 5
         assert price_observations(db, config, sid, [1])[1]["min_buyout"] == 120
         db.execute("INSERT INTO scan_listings BY NAME SELECT * REPLACE ('beta' AS environment, "
                    "listing_index+100 AS listing_index, 999 AS quantity) FROM scan_listings")
-        assert listing_depth(db, config, sid, [1]) == {1: {"listings": 1, "units": 2}}
 
 
 def test_multi_scan_queries_isolate_same_source_house_item_and_time(tmp_path):
@@ -234,27 +229,6 @@ def test_manifest_adapter_preserves_explicit_environment_after_launch(tmp_path):
     record = {**source, "collected_at": NOW.isoformat()}
     assert upgrade_legacy(record)["environment"] == "beta"
     assert upgrade_legacy(record)["market_id"] == source["market_id"]
-
-
-@pytest.mark.parametrize("selected", ["beta", "classic"])
-def test_app_startup_migrates_v3_for_any_selected_source(tmp_path, monkeypatch, selected):
-    from streamlit.testing.v1 import AppTest
-
-    config, _, database = old_database(tmp_path)
-    classic = make_source(config["data_dir"], game_version="classic", realm="mankrik", faction="alliance",
-                          rules_version="classic-era")
-    source = config if selected == "beta" else classic
-    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [source])
-    at = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py")).run()
-    assert not at.exception and any("upgraded" in t.value for t in at.toast)
-    with duckdb.connect(str(database), read_only=True) as db:
-        assert schema_version(db) == SCHEMA_VERSION
-    assert database.with_name("brownstone.v3.backup.duckdb").exists()
-    if selected == "beta":
-        for view in ("Crafting", "Browse market", "Opportunities", "Scan changes"):
-            navigate(at, view)
-            assert not at.exception and not at.error
-            assert any(config["market_id"] in caption.value for caption in at.caption)
 
 
 def test_cli_migrates_v3_and_reimports_only_duplicates(tmp_path, monkeypatch, capsys):

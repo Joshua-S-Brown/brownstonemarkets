@@ -369,7 +369,7 @@ def adjustment_controls(result, session, on_change):
                               ).classes('min-w-40').props('dense').mark('choose-' + str(identity))
                 box = ui.number(f"Batch for {row['output_name']}", value=selected.get(identity, 1),
                                 min=1, max=max(1, maximum), step=1).classes('w-56').props('dense outlined')
-                if maximum == 0:  # As in Streamlit: nothing affordable, so nothing to choose.
+                if maximum == 0:  # Nothing affordable, so nothing to choose.
                     choose.disable()
                     box.disable()
                 # Commit on blur or Enter: a rebuild per keystroke would replace the box mid-typing.
@@ -498,7 +498,7 @@ def queue_panel(result, session):
 
 def session_plan(arguments, session, reset_note):
     context = plan_context(arguments)
-    reset_note.set_text('')  # As in Streamlit, the note shows only on the rebuild that reset.
+    reset_note.set_text('')  # The note shows only on the rebuild that reset.
     if session.get('context') != context:
         if session:
             reset_note.set_text(tr.PLAN_RESET)
@@ -507,7 +507,7 @@ def session_plan(arguments, session, reset_note):
     result = build_today(**arguments, choices=session['choices'], refill=session['refill'])
     for warning in result.get('catalog_warnings', []):
         ui.label(warning).classes('bs-note')
-    # As in Streamlit, a dropped choice is unticked so it isn't requested again.
+    # A dropped choice is unticked so it isn't requested again.
     dropped = {(d['catalog_id'], d['recipe_id']) for d in result['dropped_choices']}
     for choice in session['choices'] or []:
         if (choice['catalog_id'], choice['recipe_id']) in dropped:

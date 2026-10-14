@@ -198,13 +198,20 @@ def test_browser_idle_stops_after_five_disconnected_minutes(monkeypatch):
     shutdown.assert_called_once()
 
 
-def test_fingerprint_includes_new_entry_and_shared_modules(monkeypatch, tmp_path):
+@pytest.mark.parametrize('name', ['nicegui_app.py', 'launch_nicegui.py',
+                                  'brownstone/cli.py', 'brownstone/nested/module.py', 'views/today_rows.py'])
+def test_fingerprint_covers_surviving_code_without_old_entry(monkeypatch, tmp_path, name):
     monkeypatch.setattr(launch_nicegui, 'ROOT', tmp_path)
-    monkeypatch.setattr(launch_nicegui, 'shared_code_fingerprint', lambda: 'shared')
-    for name in ('nicegui_app.py', 'launch_nicegui.py'):
-        (tmp_path / name).write_text('initial')
+    for filename in ('nicegui_app.py', 'launch_nicegui.py', name):
+        path = tmp_path / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('initial')
     before = launch_nicegui.code_fingerprint()
-    (tmp_path / 'nicegui_app.py').write_text('changed')
+    (tmp_path / name).write_text('changed')
     assert launch_nicegui.code_fingerprint() != before
-    monkeypatch.setattr(launch_nicegui, 'shared_code_fingerprint', lambda: 'changed-shared')
-    assert launch_nicegui.code_fingerprint() != before
+    (tmp_path / name).write_text('initial')
+    assert launch_nicegui.code_fingerprint() == before
+    if name not in ('nicegui_app.py', 'launch_nicegui.py'):
+        moved = tmp_path / (name + '.moved.py')
+        (tmp_path / name).rename(moved)
+        assert launch_nicegui.code_fingerprint() != before

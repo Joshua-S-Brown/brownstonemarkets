@@ -1,12 +1,9 @@
 """Offline character eligibility, exact ID matching and unchanged funded planning."""
 from copy import deepcopy
-from dataclasses import replace
 
 import pytest
-from streamlit.testing.v1 import AppTest
 from test_characters import fixture
 from test_today import catalog, output_catalog, plan
-from test_today_view import ROOT, app, widget
 
 from brownstone.professions import latest_data
 from brownstone.today_characters import (
@@ -17,7 +14,6 @@ from brownstone.today_characters import (
     resolve_character,
 )
 from brownstone.today_settings import TodaySettings, load_settings, save_settings
-from views.today import _filter_confidence
 from views.today_rows import _character_columns
 
 CHARACTER = ("Basilly", "Beta", "Alliance")
@@ -106,9 +102,6 @@ def test_filter_before_plan_reservations_and_queue_unknown_kept():
     assert result["hidden"]["rank below required skill"] == 1
     result = plan(settings, catalogs=[c], character_data={CHARACTER: state(incomplete=True)})
     assert result["craft"][0]["craft_status"] == "Unknown"
-    low = {**result, "craft": [r | {"confidence": "Low"} for r in result["craft"]]}
-    visible, hidden = _filter_confidence(low, True)
-    assert visible == [] and hidden["low confidence"] == 1  # eligibility keeps Unknown; Hide Low still applies
 
 
 def test_rank_ignores_unreadable_newer_bags_and_malformed_profession_id():
@@ -176,39 +169,6 @@ def test_shared_projection_scopes_source_and_market(tmp_path):
     assert not available_characters(latest_data(config | {"realm": "other"}))
 
 
-def test_today_apptest_character_save_status_cost_checks_and_missing(tmp_path, monkeypatch):
-    data = {CHARACTER: state()}
-    c = catalog()
-    c["recipes_by_id"][30].update(learned_from=[6], training_cost_copper=100)
-    monkeypatch.setattr("brownstone.today_loading.professions.latest_data", lambda config: data)
-    at, _, path = app(tmp_path, monkeypatch)
-    monkeypatch.setattr("brownstone.recipe_catalogs.find_catalogs", lambda *args: [{"name": "fixture", "catalog": c}])
-    at.run()
-    assert not at.exception and not at.error, str(at.exception) + str([e.value for e in at.error])
-    assert at.tabs[0].dataframe[0].value["Who can make it"].tolist() == ["Basilly"]
-    widget(at.selectbox, "Character").select(CHARACTER)
-    widget(at.button, "Save Today settings").click().run()
-    assert not at.exception and load_settings(path).character == CHARACTER
-    table = at.tabs[0].dataframe[0].value
-    assert table["Can make"].tolist() == ["Train now"] and table["Learning"].tolist() == ["Training: 1s"]
-    again = AppTest.from_file(str(ROOT / "app.py")).run()
-    assert not again.exception and widget(again.selectbox, "Character").value == CHARACTER
-    save_settings(path, replace(load_settings(path), character=("Gone", "Beta", "Alliance")))
-    again = AppTest.from_file(str(ROOT / "app.py")).run()
-    assert not again.exception and any("no longer present" in v.value for v in again.caption)
-    assert "Who can make it" in again.tabs[0].dataframe[0].value
-
-
-def test_today_apptest_unreadable_character_evidence_still_shows_all_recipes(tmp_path, monkeypatch):
-    def broken(config):
-        raise OSError("journal locked")
-    monkeypatch.setattr("brownstone.today_loading.professions.latest_data", broken)
-    at, _, _ = app(tmp_path, monkeypatch)
-    assert not at.exception and not at.error
-    assert any("journal locked" in w.value for w in at.warning)
-    assert "Who can make it" in at.tabs[0].dataframe[0].value
-
-
 def test_filtered_plan_matches_same_set_including_shared_reservations_and_choices():
     first, second, hidden = catalog(), output_catalog(4, "second"), output_catalog(5, "hidden")
     for c in (first, second):
@@ -239,24 +199,3 @@ def test_filtered_plan_matches_same_set_including_shared_reservations_and_choice
         expected = plan(catalogs=[first, second], choices=choices, refill=refill, **arguments)
         filtered = plan(catalogs=[first, second, hidden], choices=choices, refill=refill, **arguments)
         assert crafts(filtered) == crafts(expected) and filtered["queue"] == expected["queue"]
-
-
-def test_today_apptest_unknown_cost_catalog_differences_and_changed_evidence(tmp_path, monkeypatch):
-    data = {CHARACTER: state()}
-    c = catalog()
-    c["recipes_by_id"][30].update(learned_from=[6])
-    row = data[CHARACTER]["recipes"]["Arbitrary title"]["known_recipes"]["rows"][0]
-    row.update(item_id=4, min_made=2)
-    monkeypatch.setattr("brownstone.today_loading.professions.latest_data", lambda config: data)
-    at, _, path = app(tmp_path, monkeypatch)
-    monkeypatch.setattr("brownstone.recipe_catalogs.find_catalogs", lambda *args: [{"name": "fixture", "catalog": c}])
-    save_settings(path, replace(load_settings(path), character=CHARACTER))
-    at = AppTest.from_file(str(ROOT / "app.py")).run()
-    assert not at.exception and at.tabs[0].dataframe[0].value["Learning"].tolist() == ["Training: cost unknown"]
-    checks = next(e for e in at.expander if e.label == "Catalog checks")
-    assert not checks.proto.expanded
-    assert checks.dataframe[0].value["Check"].tolist() == ["output item differs; yield differs"]
-    row["learned"] = True
-    at.run()
-    assert not at.exception and at.tabs[0].dataframe[0].value["Can make"].tolist() == ["Known"]
-    assert any("session choices and queue ticks reset" in e.value for e in at.info)

@@ -4,7 +4,7 @@ Use this between stories, when the backlog's Next list is thin or the direction 
 
 ```text
 Read AGENTS.md, then docs/requirements.md, docs/backlog.md, docs/status.md and docs/design.md. Also look at
-the app's views (app.py, views/) so suggestions fit what the interface does today. Don't write code.
+the app (nicegui_app.py and views/nicegui_*.py) so suggestions fit what the interface does today. Don't write code.
 
 Context to keep in mind:
 - WoW Forever is the target. The beta closes on 4 November 2026 and the game launches that day. Classic Era

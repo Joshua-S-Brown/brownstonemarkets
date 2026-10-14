@@ -1,4 +1,4 @@
-"""Framework-free Today table projections and wording shared by both apps; copper conversion uses money.py."""
+"""Framework-free Today table projections and wording for the app; copper conversion uses money.py."""
 from datetime import UTC, datetime
 
 from brownstone.money import format_money, to_gold
@@ -82,7 +82,7 @@ def _name(names, item_id):
 
 
 def buy_row(row, names, *, item_id=False, used_for=None):
-    """Streamlit shows the item ID after the name; the new app shows which crafts the units are for."""
+    """Project item identity and the crafts purchased units are for."""
     result = {"Material": _name(names, row["item_id"]), **({"Item ID": row["item_id"]} if item_id else {}),
               "Route": row["method"]}
     if used_for is not None:

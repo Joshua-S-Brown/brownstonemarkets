@@ -4,90 +4,70 @@ Accepted product behavior and decisions. This is the single home for rules; othe
 
 ## Product direction
 
-- **Purpose:** a local WoW market research tool that traces materials through intermediate crafts to finished goods and explains which crafts are worth investigating.
-- **Target game:** WoW Forever (beta since 17 September 2026; last full beta testing day 21 October; launches 4 November 2026). It has no public price feed, so the baseline source is our own read-only scanning addon, imported as described under *Addon scans* below.
-  - **Official dates** (checked 2026-10-04): [Blizzard beta announcement](https://worldofwarcraft.blizzard.com/en-us/news/24304160/) gives 21 October as the last full testing day; [Blizzard Forever page](https://worldofwarcraft.blizzard.com/en-us/forever) lists launch on 4 November 2026.
-- **Known Forever market facts** (checked 2026-10-04, mostly third-party; re-verify at launch):
-  - Forever has no realms. Each region (US, EU and so on) has one auction house per server type (Normal, PvP, RP, later Hardcore) and faction, plus a neutral house with a 15% cut instead of 5%.
-  - Blizzard's API publishes no Forever auction data, and TSM has no Forever data.
-  - Existing Forever price sites are fed by players' addon scans. Forever addons reportedly use the modern `C_AuctionHouse` API, which has Retail-style commodities.
-  - Forever reuses Classic item IDs: 2,323 of the 2,927 items priced in the 2026-10-04 beta scan are also priced on Classic Era Mankrik under the same IDs. Prices differ (see STORY-012), so this allows explicit comparison, never joining (DATA-03).
-  - **Unconfirmed claims** (from outside design notes, 2026-10-06; not evidence, never built on until checked in game, checklist under *Now* in `backlog.md`): a Black Market vendor sells a fixed list of scarce materials at fixed prices (claimed 50g each, Pyrite 5g); a sold auction's gold arrives by mail about 2 minutes after the sale; auction scans are throttled beyond `ReplicateItems`' 15 minutes; the event names for purchases, crafts, posts and mail match Retail's. Added 2026-10-13: postage for mail between characters is unconfirmed (CRAFT-12 does not charge it); profession tiers need character level 10 (Journeyman), 20 (Expert) and 35 (Artisan), as on Classic Era (UI-12 uses this, labelled unconfirmed).
-  - **Measured, contradicting those notes:** the notes assumed Retail-style commodities (per-unit price tiers) and a seller on every listing. The beta reports neither (ADDON-02, ADDON-07).
-  - Sources: [Wikipedia](https://en.wikipedia.org/wiki/World_of_Warcraft:_Forever), [AHledger](https://ahledger.com/wow-forever/auction-house), [WowGuide realms](https://wowguide.net/en/guides/wow-forever-realms-rulesets), [Blizzard API forum: Classic Era auction 404s](https://us.forums.blizzard.com/en/blizzard/t/404-for-all-classic-era-namespace-auction-house-endpoints/54307), [WOW4E_AH_Trader](https://github.com/1nd1v1d/WOW4E_AH_Trader).
-- **Development stand-in:** Mankrik Alliance, Classic Era (TSM public realm CSV). Classic is used to build and prove the product, not as the end market. Switching to Forever must be a configuration and catalog change: add a source whose market fields describe the Forever house and whose `rules_version` matches a Forever catalog. It must not require code changes.
-- **Retail:** not a product requirement (decided 2026-10-04). Retail sources remain configured only as an ingestion regression check, because they exercise regional scope and upstream timestamps that Classic lacks. No feature work targets Retail. They may be removed when they stop earning their keep.
-- **The app (decided 2026-10-12, product owner, after SPIKE-009/009b):** Brownstone moves to NiceGUI, but only for what running the business needs: **Today**, **Team** (roster, skills and where to invest), **Market** (an explorer of materials, crafts and supply chains), **Stock** (holdings and targets) and **Data** (Import). Other Streamlit pages are not rebuilt; the Streamlit app stays available, unchanged, without new features. New features target WoW Forever only; Classic remains development test data. Rule: UI-07.
-- **Launch market (decided 2026-10-04):** Forever, US region, Roleplaying server type, Alliance faction. The neutral auction house is a separate, secondary market. The user has beta access, so SPIKE-008 targets the Forever beta directly.
-- **Dependable data (decided 2026-10-04):** nothing in the architecture may require a source the user doesn't control.
-  - **Baseline source:** the user's own addon scans. Every feature must work with only this.
-  - **Optional sources:** other players' aggregated scans (third-party sites, TSM). They may only enrich or cross-check, never be required.
-  - **Access rules:** a third-party source is used only through an official export or API whose terms allow it, never by scraping.
-  - **Removability:** if an optional source disappears, Brownstone keeps working on the baseline.
-- **Addon (decided 2026-10-04, SPIKE-008): build it.** A read-only addon, `addon/BrownstoneScan/`, scans only after a click or slash command at the auction house and never buys, posts, cancels or scans unattended.
-  - **Your own character's data (decided 2026-10-06, product owner):** the addon may also *read* your own characters' gold, bags, bank, mailbox (including auction invoices and returns), your own auctions, crafts and vendor purchases and sales, and record them locally for Brownstone (STORY-032, STORY-033). It still never acts: every buy, post, craft, mail and cancel stays a manual click by you. Recording happens on game events you trigger by playing (opening the bank or mailbox, logging out), never on a timer. Why: profit, sell-through and cost basis can't be measured from listings alone; only your own sales and holdings show them. **Observing your own actions (decided 2026-10-07, product owner):** the addon may log all of your economy activity silently in the background, on game events and by observing the game functions you call (secure post-hooks that record arguments). It never acts on your behalf (no sending mail, posting, buying, cancelling, crafting, looting or taking mail), because automated actions break the game's terms. Logging prints nothing to chat in normal use; only problems (a rejected event, a full journal) are reported.
-  - **Deferred (2026-10-06):** an in-game plan or to-do list written by Brownstone into the addon folder (`PlanData.lua`). Reading Today on a second screen covers it for now, and it would make Brownstone write into the game folder.
-  - **Evidence:** on the Forever beta (client 1.60.1, build 70205), one scan of the Alliance Normal-server house in Stormwind used `C_AuctionHouse.ReplicateItems` and saved 101,485 listings in about 10.6 s, in a 24 MB SavedVariables file. A second scan three minutes later got no reply, as the documented 15-minute account-wide throttle predicts. The client has no legacy auction event.
-  - **Not measured:** the Roleplaying house (not yet available in the beta), a neutral house (out of reach for now), and whether a slash command alone is accepted without the button click. The button worked.
-  - **Scan format STORY-010 ingests:** `BrownstoneScanDB` with a list of scans, each with its own `schema_version`; fields are documented in `addon/README.md`, with a sample at `tests/fixtures/brownstone_scan_sample.lua`. Schema 1 (addon 0.1.0) writes one keyed table per listing. Schema 2 (addon 0.2.0, decided 2026-10-04 to keep the addon light and the file small) writes one `item_id:quantity:buyout:min_bid:bid:flags:name_index` string per listing and each scan's distinct names once; it drops `link` and `unit_buyout`, which Brownstone never used. Both import to identical listings and prices. Format 3 (addon 0.3.0) adds indexed sellers, level types and full links, richer listings and one item-reference observation per ID per scan (ADDON-09). A file may hold all three formats. Each scan has a `scan_id`, UTC start and finish, `status` (`completed` or `stopped`), `listing_count` against `reported_count`, client build, region, realm, player faction, auctioneer and zone, and a free-text `label`. Import treats these as evidence of which house it is, never as a market (ADDON-01).
-  - **Listing semantics:** Forever's `buyout` is the price of the whole stack (Classic-style), with `quantity` the stack size, and no commodity status is reported. The addon does no pricing: import divides `buyout` by `quantity` itself (ADDON-02). Schema 1's `unit_buyout` was meant to hold that division but was missing on all 28,105 stacked listings of the 2026-10-04 scan; it is only a cross-check, and schema 2 doesn't write it. A listing the client flags as a commodity (per-unit price) rejects the scan, since only stack prices are modeled. A missing `buyout` means no buyout, never free. Listings the client hadn't fully loaded (4,690 in that scan) have an empty `name` and no `link`, but valid item ID, quantity and buyout.
-  - **Known costs:** schema 1 takes about 240 bytes per listing (24.8 MB for the 101,485-listing scan); schema 2 about 28 (2.8 MB, parsed in 0.1 s). The addon keeps every scan until `/bscan clear`, which refuses scans not yet written to the file (they exist only in game memory until `/reload` or logout). Brownstone suggests clearing only after an import saved something new and every scan in the reviewed file is saved; a subset with remaining scans forbids clearing, scans from another auction house get a warning that clearing deletes them, and an import with nothing new warns to `/reload` instead (decided 2026-10-04, after a scan was lost by clearing before it was written). Region and realm are generic on the beta and do not identify the house.
-- **Recipe data (decided 2026-10-04, STORY-004):** catalogs are generated from Wowhead profession pages that the user saves in a web browser, one page per game version and profession (for example `https://www.wowhead.com/forever/spells/professions/tailoring`; Wowhead lists Cooking and First Aid under `.../spells/secondary-skills/` instead). Brownstone never downloads from Wowhead.
-  - **Terms:** Wowhead's terms (`wowhead.com/tos` → ZAM Network EULA, last updated 14 May 2025, checked 2026-10-04) grant a personal, non-commercial licence to use the websites "solely for your own internal use". They forbid downloading content with "spiders, robots, crawlers, data mining tools or the like" other than ordinary web browsers, and they allow ZAM's APIs only as documented (the tooltip API is documented for embedding tooltips on web pages). So scripted fetching, including of `nether.wowhead.com` tooltips, is not allowed. Pages saved by hand in a browser are.
-  - **Why one page:** a saved profession list page holds every recipe of the profession: reagents, quantities, created item and count, and the skill level it's learned at. It also holds every item it mentions, with name, sell price and buy price. Forever pages also mark each spell as new, updated or unchanged relative to Classic, but Runecloth Bag is marked unchanged despite its new dyes, so the marker isn't trusted for reagents.
-  - **Alternatives considered:** reading the in-game Tailoring and trainer windows with the addon would confirm output counts but covers only recipes the character knows. wago.tools has no Forever build. Both stay options for confirmation, not the catalog source.
-- **Out of scope:** automated buying, selling or posting, unattended in-game scanning, cloud deployment and AI-generated recommendations without explainable features.
+- **Purpose:** local market research tracing materials through intermediates to finished crafts with explainable costs.
+- **Target:** WoW Forever, using the user's read-only addon scans as the baseline. Mankrik Alliance Classic Era is development data; Retail is ingestion regression only. New features target Forever. Switching games requires configuration and catalogs, not calculation changes.
+- **Markets:** Forever has one house per region, server type and faction, plus a separate neutral house (15% cut). Launch market is US Roleplaying Alliance; the beta source is US Normal Alliance. Item IDs may match Classic but prices never join across markets (DATA-03).
+- **Sources:** no Blizzard or TSM Forever price feed is available. Optional player aggregates may enrich/cross-check through permitted official exports/APIs only, never scraping or becoming required. Removing an optional source must leave the baseline working.
+- **App:** NiceGUI; behavior and retirement decisions live in UI-07.
+- **Addon:** manual, read-only scans; it never buys, posts, cancels or scans unattended. It may silently observe the user's own economy activity through game events and secure post-hooks, reading gold, bags, bank, mailbox/invoices/returns, auctions, crafts and vendor transactions. It never performs actions or records on a background timer; normal logging prints only problems. An in-game plan written by Brownstone is deferred.
+- **Evidence:** Forever's bulk API uses stack buyouts, reports no commodities and no sellers (ADDON-02/07); `ReplicateItems` has an account-wide 15-minute throttle. Region/realm alone do not identify the beta house. Roleplaying, neutral and slash-only scanning remain unmeasured.
+- **Unconfirmed:** Black Market vendor existence/prices (claimed 50g, Pyrite 5g), sale-mail delay (claimed two minutes), additional scan throttles, event parity with Retail, inter-character postage and Classic tier levels (10/20/35). Do not build on these claims without evidence; UI-12 labels its tier assumption.
+- **Catalog source:** profession pages saved manually in a browser; Brownstone never fetches Wowhead. Its personal/internal-use licence forbids scripted fetching, including tooltip fetching; normal browser saves are permitted. One page supplies recipes, quantities, items and buy/sell prices. New/updated markers do not establish reagent equivalence. In-game windows can confirm values, but cover only observed recipes; wago.tools has no Forever build.
+- **Out of scope:** automated buying/selling/posting, unattended scanning, cloud deployment and AI recommendations without explainable features.
+
+Sources: [Blizzard Forever](https://worldofwarcraft.blizzard.com/en-us/forever), [Blizzard beta](https://worldofwarcraft.blizzard.com/en-us/news/24304160/), [AHledger](https://ahledger.com/wow-forever/auction-house), [Forever realms](https://wowguide.net/en/guides/wow-forever-realms-rulesets), [Classic API 404s](https://us.forums.blizzard.com/en/blizzard/t/404-for-all-classic-era-namespace-auction-house-endpoints/54307), [Wowhead terms](https://www.wowhead.com/tos).
 
 ## Rules
 
 ### Data integrity
-- **DATA-01 Raw preservation:** every download is saved byte-for-byte before validation. Each has a manifest with source, SHA-256, UTC collection time and status, including failures. Raw files are never overwritten. An addon scan file whose bytes (SHA-256) are already in that source's bronze folder is not copied again; the new manifest names the existing file in `bronze_file` (decided 2026-10-04, because scan files are about 24 MB). New addon copies are stored gzip-compressed (`.lua.gz`, decided 2026-10-04 to save disk): the manifest's SHA-256 is of the original bytes, and the copy is checked to decompress to them before it is kept, so preservation stays exact. Earlier `.lua` copies stay as they are. Preview and rejected reviewed imports are read-only exceptions: they create no archive or failure manifest. An explicit CLI import still preserves successfully read bytes before validation; a successful reviewed import archives exactly the reviewed bytes.
+- **DATA-01 Raw preservation:** every download is saved byte-for-byte before validation. Each has a manifest with source, SHA-256, UTC collection time and status, including failures. Raw files are never overwritten. An addon scan file whose bytes (SHA-256) are already in that source's bronze folder is not copied again; the new manifest names the existing file in `bronze_file`. New addon copies are stored gzip-compressed (`.lua.gz`): the manifest's SHA-256 is of the original bytes, and the copy is checked to decompress to them before it is kept, so preservation stays exact. Earlier `.lua` copies stay as they are. Preview and rejected reviewed imports are read-only exceptions: they create no archive or failure manifest. An explicit CLI import still preserves successfully read bytes before validation; a successful reviewed import archives exactly the reviewed bytes.
 - **DATA-02 Validation:** required columns, integer copper prices, unique positive item IDs and timestamps that are either all present or all absent. Zero means unavailable or no listing.
-  - **Item names (decided 2026-10-05, STORY-022):** retain each observation's loaded name. NULL, blank/whitespace and `Item <digits>` placeholders are missing names. At read time, missing names use a derived lookup keyed only by `game_version + item_id`; this shares labels across sources, houses, regions and beta/live within that version. Labels never join prices or supply, cross game versions, or imply categories (DATA-03/DATA-08).
+  - **Item names:** retain each observation's loaded name. NULL, blank/whitespace and `Item <digits>` placeholders are missing names. At read time, missing names use a derived lookup keyed only by `game_version + item_id`; this shares labels across sources, houses, regions and beta/live within that version. Labels never join prices or supply, cross game versions, or imply categories (DATA-03/DATA-08).
   - **Fallback precedence:** observed game-client/TSM names beat catalog (Wowhead) names. Among observations, use the newest loaded name by scan finish time or TSM update time, falling back to collection time when absent. A newer observation without a loaded name never erases one. Equal timestamps choose the alphabetically first name; catalog-only conflicts also choose the alphabetically first name. Identical names/times choose the alphabetically first evidence reference, so import order and migration replay cannot change the result. Legacy observations without either time use the Unix epoch for ordering.
-  - **Preservation and display:** fill the lookup from any imported listing (including partial scans), price row and validated local catalog; backfill existing observations on migration. Bronze, silver, listings and stored price names stay unchanged. Browse/search, Opportunities and Scan changes use resolved labels; crafting and board depth retain their catalog labels. `Item <ID>` remains only when no observation or catalog in that game version has ever named the item. Local catalogs seed on upgrade, import (including duplicates) and app startup; labels do not require catalog rules compatibility.
+  - **Preservation and display:** fill the lookup from any imported listing (including partial scans), price row and validated local catalog; backfill existing observations on migration. Bronze, silver, listings and stored price names stay unchanged. Market/search, CLI screening and scan comparison use resolved labels; crafting and board depth retain their catalog labels. `Item <ID>` remains only when no observation or catalog in that game version has ever named the item. Local catalogs seed on upgrade, import (including duplicates) and app startup; labels do not require catalog rules compatibility.
 - **DATA-03 Market identity:** a market is one auction house: `game_version + region + scope + realm + server_type + faction + environment`. Item IDs never join across any of these.
   - **Fields:**
-    - `environment` is `live` or `beta` (decided 2026-10-05, STORY-017). Forever sources must configure it explicitly; Classic and Retail are always `live` (the default; `beta` is refused, decided 2026-10-05). It comes only from source configuration, never scan contents or client-version inference. A beta and live scan of the same house have identical house evidence; verify the configuration during cutover (STORY-020b).
+    - `environment` is `live` or `beta`. Forever sources must configure it explicitly; Classic and Retail are always `live` (the default; `beta` is refused). It comes only from source configuration, never scan contents or client-version inference. A beta and live scan of the same house have identical house evidence; verify the configuration during cutover.
     - `scope` is `house` (one auction house) or `region` (a region-wide commodity pool).
     - `realm` names the house where realms exist; `server_type` (normal/pvp/roleplaying/hardcore) names it in realmless Forever. A market uses one or the other, never both.
     - `faction` is alliance, horde, neutral, or blank for cross-faction houses.
   - **`market_id` is derived, never configured** (for example `classic-us-mankrik-alliance`, `forever-us-roleplaying-alliance`), so two sources for one house and environment always agree. Beta IDs append `-beta` (for example `forever-us-normal-alliance-beta`); live IDs stay unchanged.
   - **Auction cut:** set per source. Neutral houses default to 15%.
-- **DATA-08 Source independence:** a market's identity says *which auction house*. A source's identity (`source_id`, `provider`) says *who observed it*: your addon, TSM or a third-party site. The same market can have several sources. Every manifest and price observation records its source, deduplication is per source, and each source keeps its own data folder. Combining sources follows an explicit, versioned policy, never silent mixing. Until that policy exists (STORY-011b), each view reads one selected source.
+- **DATA-08 Source independence:** a market's identity says *which auction house*. A source's identity (`source_id`, `provider`) says *who observed it*: your addon, TSM or a third-party site. The same market can have several sources. Every manifest and price observation records its source, deduplication is per source, and each source keeps its own data folder. Combining sources follows an explicit, versioned policy, never silent mixing. Until that policy exists, each view reads one selected source.
 - **DATA-04 Deduplication:** identical market, scan time and content hash reuse one analytical snapshot. Every raw collection is still recorded with its own manifest. Addon scans deduplicate by `scan_id` per source instead (ADDON-04).
 - **DATA-05 Freshness:** age comes from upstream scan time when the source provides it (for addon scans, the scan's finish time). Otherwise it comes from collection time, explicitly labeled as "price age unknown". Stale means older than `max_age_hours` (default 24) or more than 15 minutes in the future. A source may opt out of upstream time only when the entire column is blank (`allow_missing_updated_at`).
 
-### Addon scans (decided 2026-10-04, STORY-010)
+### Addon scans
 - **ADDON-01 House identity:** the configured source defines the market; nothing is derived from a scan. Each scan's player faction must match the market's alliance or horde faction, and must not be from a neutral house. A neutral market needs the client's `neutral = true` or a configured auctioneer. Optional `scan_evidence` (`faction`, `auctioneer`, `zone`, `realm`, `label`) must match exactly. Any mismatch in any selected scan fails the whole import, naming the scan, field, observed and configured values, before anything reaches DuckDB. Beta region and realm are generic and aren't evidence by default.
 - **ADDON-02 Stack pricing:** a listing's unit price is `buyout / quantity` in integer copper. When that isn't exact, `unit_buyout` stays empty and `unit_buyout_ceil` rounds up, so a unit's cost is never understated; derived prices use `unit_buyout_ceil`. On the sale side this can overstate a unit by under 1c; the manifest counts such stacks (`nonexact_stacks`). A reported `unit_buyout` (schema 1) that disagrees with the division rejects the scan. A missing or zero `buyout` has no unit price and is never free.
 - **ADDON-03 Item prices:** each complete scan writes one `market_snapshots` row per item identity, including variant and resolution state (ADDON-08):
   - `min_buyout` and `market_value`: projections of ADDON-10's lowest unit buyout and quantity-weighted 25th percentile, using the shared calculator.
-  - `recent_value` and `historical_value`: 0 (unavailable), so the discount screen explains it can't run.
+  - `recent_value` and `historical_value`: 0 (unavailable), so historical discount screening is unavailable.
   - Items listed only without a buyout get 0/0, so Browse still finds them.
   - Cautious and listed bases (CRAFT-04) use these unchanged.
 - **ADDON-04 Deduplication and partial scans:** a scan is identified by `scan_id` per source. Re-importing it is a no-op; the same `scan_id` with different content fails. A scan is partial when `status` isn't `completed` or `listing_count` differs from `reported_count`. Partial scans are stored and labeled, listings included, but never feed prices, because they can miss the cheapest listing. A file with no complete scan leaves prices unchanged. The newest complete scan in a file becomes its snapshot, and the views use the newest observation across imports, so an older file can't replace newer prices.
 - **ADDON-05 Time:** a scan's finish time is its observation time. Old scans import, and the board labels them stale. A scan finished more than 15 minutes in the future is rejected as a clock error.
-- **ADDON-06 Import is read-only and on demand:** an explicit **Preview addon scans** click reads the selected source's configured `scan_path`, validates every scan's header, times and listings using the shared CLI rules and displays ID, UTC start/finish, status, listing count, import state and partial status in a collapsed **Details** section that opens on problems (STORY-045). A scan whose house evidence doesn't match the source's market (ADDON-01; the SavedVariables file is account-wide, so other characters' scans share it) is listed as from another house with the reasons and can't be selected, instead of failing the preview. New partial scans and imported partial scans are distinguishable. Preview writes nothing: no data directory, database creation/migration, bronze, manifest, silver or source-file edits. Existing databases are queried read-only; a missing database has no imported scans.
-  - Select any subset of new scan IDs (the same selection semantics as CLI `--scan`), then explicitly click **Import addon scan**. Empty selections offer no import. A duplicates-only file explains that nothing is new, reminds the user to `/reload` and offers no import. Partial and empty scans remain importable for preservation under ADDON-04.
-  - Before writing, import recomputes the preview. Changed bytes, source/configuration (including input and data paths, market, rules and house evidence), or duplicate records for scans in the file invalidate it and require another Preview click. Import uses the validated bytes held in memory, never a subsequent unreviewed reread. The database writer transaction rechecks duplicate state before archiving or loading. A known scan ID with a different per-scan content hash is a conflict, not a duplicate.
-  - Reads are bounded to 256 MiB plus one overflow byte and compare descriptor/path identity, size and nanosecond modification/change times before/after reading. This is best-effort change detection, not an atomic read guarantee. Missing, unreadable, truncated, malformed, oversized or detected-changing files fail with a retryable message. These read failures happen before there are bytes to preserve, so they write no manifest (DATA-01 applies from the first complete read). The game's file is never written, watched or polled.
-  - CLI imports remain available from configured `scan_path` or `--input`, with selected-scan validation and failure preservation under DATA-01. Shared app/CLI guidance recommends `/bscan clear` only when something new was saved and no scans in the file remain unimported; subset imports protect the remaining scans. Scans from another auction house don't count as remaining, since this source can never import them; guidance warns that clearing deletes them. Scans an import didn't select are not validated, and an unusable one counts as remaining instead of failing the import. Nothing-new guidance reminds users to `/reload` before retrying.
-- **ADDON-07 Seller names (decided 2026-10-05, STORY-023):** addon 0.3.0 records each listing's seller name. These are other players' character names, kept only on the user's own machines: never exported, published, shared or sent to any external service (including AI narration, unless that decision says otherwise). The explicitly approved private Google Drive drop transport under OPS-03 is the exception for raw addon copies between the user's machines; it does not authorize publishing or other external processing. A seller the client hasn't loaded is missing (null), never guessed. **Beta finding 2026-10-06 (build 70235):** the bulk scan API returned no owner for any listing (0 of 88,119), so format-3 beta scans carry no sellers. Any other way of capturing them needs a new decision (*Seller capture* under Later in `backlog.md`).
-- **ADDON-08 Item variants (decided 2026-10-05, STORY-023):** a variant that changes an item's stats, such as a random suffix (*of the Monkey* versus *of the Bear*), is a separate priced item. Its listings, prices, metrics and depth never pool with other variants or the base item ID, because demand and price differ. Variant identity is part of the item key alongside DATA-03's market identity; items without variants keep a null variant. Scans from formats 1 and 2 carry no variant evidence, so their gear listings stay unresolved, never assigned to a variant. **Identity approved 2026-10-05:** source + full DATA-03 market identity + scan/snapshot + `item_id, variant_id, variant_state`; crafting retains the `rules_version` check. `variant_state` is `base`, `variant` or `unresolved` in format 3. Older observations keep null new fields (shown as `legacy`); their historical aggregates are preserved without reassignment. **Comparison amended 2026-10-05:** a legacy row matches another legacy row of the same item, and matches a format-3 `base` row only when that format-3 scan has nothing but base listings for the item ID; otherwise (variant or unresolved rows present, or the item absent) it stays a separate `legacy` row, since it may pool suffixes. Item-name evidence comes only from base or legacy rows, never a variant's or unresolved row's name. Historical catalog reads still work on their original scans, but format-3 unresolved rows never enter a base-item craft/depth calculation. Explicit variant/depth reads match the requested identity exactly; legacy null-state rows never answer an explicit `base`, `variant` or `unresolved` read.
+- **ADDON-06 Import read-only/on demand:** explicit Check for new scans reads configured scan_path. Shared CLI validation checks all headers/times/listings. Details show ID/UTC start-finish/status/count/state/partial, collapsed unless problems. Other-house scans show reasons and cannot select, rather than failing preview; partial new/imported distinguishable. Preview creates/migrates/writes nothing, queries existing DB read-only; absent DB means no known scans.
+  - Explicit Import addon scan accepts any subset of new IDs (`--scan` semantics). Empty/duplicate-only offers no import; duplicate explains /reload first. Partial/empty scans can preserve.
+  - Recompute before writes; changed bytes/config (paths/source/market/rules/evidence)/known records invalidates review. Use validated in-memory bytes, never later reread. Writer transaction rechecks duplicates before archive/load; same ID/different hash conflicts.
+  - Read <=256 MiB plus overflow byte, compare descriptor/path identity/size/ns mtime/ctime before/after. Best effort, not atomic guarantee. Missing/unreadable/truncated/malformed/oversized/changing inputs give retryable errors and no manifest before complete bytes (DATA-01). Never write/watch/poll game file.
+  - CLI configured path/--input remains, selected-scan validation/failure archive DATA-01. Clear guidance only if new saved and no remaining file scans. Subsets protect remaining; other-house warns clearing deletes them. Unselected invalid scan counts remaining without failing selected import. Nothing new says /reload first.
+
+- **ADDON-07 Seller names:** addon 0.3.0 records each listing's seller name. These are other players' character names, kept only on the user's own machines: never exported, published, shared or sent to any external service (including AI narration, unless that decision says otherwise). The explicitly approved private Google Drive drop transport under OPS-03 is the exception for raw addon copies between the user's machines; it does not authorize publishing or other external processing. A seller the client hasn't loaded is missing (null), never guessed. The beta bulk API returned no sellers (0/88,119 listings); format-3 beta scans therefore carry none. Any other way of capturing them needs a new decision (*Seller capture* under Later in `backlog.md`).
+- **ADDON-08 Item variants:** a variant that changes an item's stats, such as a random suffix (*of the Monkey* versus *of the Bear*), is a separate priced item. Its listings, prices, metrics and depth never pool with other variants or the base item ID, because demand and price differ. Variant identity is part of the item key alongside DATA-03's market identity; items without variants keep a null variant. Scans from formats 1 and 2 carry no variant evidence, so their gear listings stay unresolved, never assigned to a variant. **Identity:** source + full DATA-03 market identity + scan/snapshot + `item_id, variant_id, variant_state`; crafting retains the `rules_version` check. `variant_state` is `base`, `variant` or `unresolved` in format 3. Older observations keep null new fields (shown as `legacy`); their historical aggregates are preserved without reassignment. **Comparison:** a legacy row matches another legacy row of the same item, and matches a format-3 `base` row only when that format-3 scan has nothing but base listings for the item ID; otherwise (variant or unresolved rows present, or the item absent) it stays a separate `legacy` row, since it may pool suffixes. Item-name evidence comes only from base or legacy rows, never a variant's or unresolved row's name. Historical catalog reads still work on their original scans, but format-3 unresolved rows never enter a base-item craft/depth calculation. Explicit variant/depth reads match the requested identity exactly; legacy null-state rows never answer an explicit `base`, `variant` or `unresolved` read.
   - Count item-link payload positions from `itemID = 1`: include enchant (2), four gems (3–6), traditional suffix ID (7), and the bonus list (count at 13; IDs from 14). Canonical key: `v1:e<enchant>:g<four comma-separated gems>:s<suffix>:b<sorted comma-separated bonuses>`. Empty and zero stat fields are equivalent. A supported link without modifications has null `variant_id` and state `base`; missing/unsupported links have null ID and state `unresolved`.
   - Viewer level (9), specialization (10), unique ID (8), display name and color are not price identity. The observed contexts (12: empty/0 or 1) and modifier type 28 carry provenance and are ignored for identity. Nonzero modifier mask (11), other contexts/modifier types, nonzero unknown tails, malformed/count-truncated links, item-ID mismatches and negative suffixes with a nonzero unique seed/factor remain unresolved. All original link bytes remain available, so an expanded parser can be implemented later with evidence. These rules conservatively isolate unsupported observations; they do not infer suffixes from names.
-  - **Actual Forever evidence:** archived scan `20261004T164730Z-c651bd` (build 70205, 2026-10-04) has Willow Robe (6538) Monkey/Bear/Eagle bonus IDs 12721/12722/12718 and Primal Wraps (15010) Whale/Bear IDs 12719/12722. All have an empty traditional suffix field. Full representative links are pinned in offline tests; tooltip equivalence, including context/modifier-28 variants of the same bonus, must be checked in game (checklist in `addon/README.md`).
+  - **Forever evidence:** Willow Robe 6538 Monkey/Bear/Eagle bonus IDs 12721/12722/12718 and Primal Wraps 15010 Whale/Bear 12719/12722 use empty suffix fields; full links are pinned offline, tooltip equivalence/context/modifier-28 still needs game check.
 
 
-- **ADDON-09 Capture contract (approved 2026-10-05, STORY-023):** addon 0.4.0 writes scan format 4 (format 3 listing fields unchanged). Existing client/house/times/counts/status evidence and the read-only manual lifecycle stay intact. The canonical capture list and API sources are below. Optional APIs are guarded; item references get one initial lookup per ID, then the scan-owned bounded pass below. Missing new fields in formats 1 and 2 stay null, never taken from newer scans or catalogs. Format 1's old link stays preserved in bronze, but is not retroactively variant evidence.
+- **ADDON-09 Capture contract:** addon 0.4.0 writes scan format 4 (format 3 listing fields unchanged). Existing client/house/times/counts/status evidence and the read-only manual lifecycle stay intact. The canonical capture list and API sources are below. Optional APIs are guarded; item references get one initial lookup per ID, then the scan-owned bounded pass below. Missing new fields in formats 1 and 2 stay null, never taken from newer scans or catalogs. Format 1's old link stays preserved in bronze, but is not retroactively variant evidence.
 
   | Per listing | API source (modern; legacy fallback) |
   | --- | --- |
   | `item_id`, `name`, `quantity`, `min_bid`, `buyout`, `bid`, `complete_info` | `C_AuctionHouse.GetReplicateItemInfo(index)`; `GetAuctionItemInfo("list", index)`, existing return positions 17, 1, 3, 8, 10, 11, 18 |
   | `seller` | Same tuple, nonblank `ownerFullName` (15), falling back to `owner` (14); missing stays null, ADDON-07 |
   | `quality`, `level`, `level_type` | Same tuple, returns 4, 6, 7. Quality/level zero is a reported value, not a missing sentinel |
-  | `required_level` (import-derived) | `level` only when `level_type` is `REQ_LEVEL` (modern) or `REQ_LEVEL_ABBR` (Classic auction UI header); other/unknown types stay null. The Forever beta reports `REQ_LEVEL_ABBR` (also `SLOT_ABBR`, `SKILL_ABBR`; 2026-10-06) |
+  | `required_level` (import-derived) | `level` only when `level_type` is `REQ_LEVEL` (modern) or `REQ_LEVEL_ABBR` (Classic auction UI header); other/unknown types stay null. The Forever beta reports `REQ_LEVEL_ABBR` (also `SLOT_ABBR`, `SKILL_ABBR`) |
   | `time_left` | `C_AuctionHouse.GetReplicateItemTimeLeft(index)`; `GetAuctionItemTimeLeft("list", index)`. Raw bucket 1–4; no invented expiry timestamp. UI-10 defines the comparison bounds, separately from raw capture. A time left outside 1–4, quality outside 0–8 or negative level is stored as missing and counted (`listing_out_of_range`), never rejecting the scan; the raw value stays in bronze |
   | `item_link` | `C_AuctionHouse.GetReplicateItemLink(index)`; `GetAuctionItemLink("list", index)`. Full original link for every available listing, indexed once per distinct link |
   | Commodity flag | Existing `C_AuctionHouse.GetItemCommodityStatus(itemID)` evidence; legacy never asserts commodity status; per-unit scans still rejected under ADDON-02 |
@@ -98,155 +78,42 @@ Accepted product behavior and decisions. This is the single home for rules; othe
   | `class_id`, `subclass_id` | `C_Item.GetItemInfoInstant(itemID)` or global `GetItemInfoInstant`, returns 6 and 7; official numeric class IDs, never name-derived categories |
   | `item_level`, `max_stack_size`, `vendor_sell_copper` | `C_Item.GetItemInfo(itemID)` or global `GetItemInfo`, returns 4, 8 and 11. Base-item observations, not variant tooltip stats; vendor price is per item in integer copper, including a reported zero |
 
-  - **Amendment approved 2026-10-06 (STORY-031):** the beta loaded vendor price, item level and stack size for only 1,192 of 3,066 items. Addon 0.4.0 saves the scan and counts it as unsaved immediately after listing reading, before its item pass. When the pass reaches an item missing any of these three fields, it first re-reads it with the guarded item-info reader: if every missing field is now present (the item loaded during listing reads, before the pass listened), the values are recorded without a request. Otherwise the item gets at most one guarded `C_Item.RequestLoadItemDataByID(itemID)` request. `ITEM_WAIT_LIMIT = 20` seconds bounds the whole pass, including request dispatch; `ITEM_REQUESTS_PER_FRAME = 200` bounds dispatch per frame. Guarded registration of `GET_ITEM_INFO_RECEIVED(itemID, success)` records rejection; a missing request API or rejected event skips the pass with a reason. Successful answers use the same guarded item-info reader (returns 4, 8, 11); failed answers or request exceptions are counted, never retried. Answers at/after the deadline or after termination are ignored. Completion clears the frame callback; no later timer, repeat or automated scan is permitted.
-  - **Preservation and effective references:** `items` and all listings/links remain first-pass evidence, never re-read or changed. Separate `item_pass.items` records only IDs gaining a reference field, with missing fields omitted. Import resolves each field from first-pass evidence when present, otherwise from this scan's pass; a reported zero wins. Raw pass fields and per-item effective-field provenance remain stored separately; older observations retain null provenance. References keep source + full MARKET_KEYS + scan/snapshot scope. This improves item references only: the 6,060 missing listing links in the baseline remain missing and variant identity is unchanged.
-  - **Lifecycle/UI:** closing the house after listings finish does not stop the pass; closing during listing reading keeps a stopped scan and its bounded reference pass. The scan button shows `Item info answered/total`; Reload and Clear stay disabled, and all clear paths refuse during the pass (the unsaved-session guard still applies afterward). One pass-end chat summary reports requested, received, failed and timed-out counts. `/bscan stop` ends the pass without changing scan completion/partial/pricing status. Manual `/reload` or logout mid-pass preserves gathered data with pass status `running`, never resumes the pass on login, and does not discard or deprice a completed scan. The format and counter definitions are in `addon/README.md`.
-  - **Availability:** format-4 availability includes first-pass, pass-added and effective field counts, plus pass total/requested/received/failed/timed_out counts in the per-scan manifest and database. Availability never changes listing counts, scan status, partial state or pricing eligibility. Beta acceptance of 0.4.0 is pending availability, added duration, bytes-per-listing and reload-lag measurements against 0.3.1; the checklist is in `addon/README.md`.
+  - **Bounded pass:** save/count scan unsaved immediately after listings. For IDs missing vendor/level/stack, re-read guarded item info first; if all missing now present record without request. Otherwise request once through guarded `C_Item.RequestLoadItemDataByID`. `ITEM_WAIT_LIMIT=20` seconds includes dispatch; `ITEM_REQUESTS_PER_FRAME=200`. Guard `GET_ITEM_INFO_RECEIVED(itemID,success)`, recording rejection; missing API/rejected event skips with reason. Reader uses returns 4/8/11. Count failed answers/exceptions, no retry; ignore answers at/after deadline/termination. Clear frame callback on end, never later timer/repeat/automated scan.
+  - **Preservation:** first-pass items/listings/links immutable; separate `item_pass.items` only IDs gaining fields, omit missing fields. Effective values prefer first-pass (zero wins), then same-scan pass. Preserve raw/provenance per field; older null. References scope source/full MARKET_KEYS/scan/snapshot; listing links/variants unchanged.
+  - **Lifecycle:** house close after listings does not stop pass; close during listings saves stopped scan plus bounded pass. Button shows Item info answered/total; Reload/Clear disabled, every clear refuses while active, unsaved guard afterward. End summary requested/received/failed/timed_out. Manual stop ends pass without repricing/reclassifying scan. Reload/logout midpass saves running status and gathered fields, never resumes or deprices completed scan.
+  - **Availability:** manifest/database retain first/pass/effective counts and pass totals; no change to listings/status/partial/pricing. Pending format-4 comparison measures added duration/bytes/reload lag against 0.3.1; details in addon README.
+  - **Measurement limits:** full format-3+ beta scan before beta ends, exact addon versions/provenance recorded. Compare same-house similar-count single scans: duration <=2x 0.2.0, uncompressed bytes/listing <=4x. Record lag/reload and every field numerator/denominator, including base/variant/unresolved/out-of-range; no invented availability threshold or completion effect. Counts/duration stay local manifest/database. Original input bytes, not gzip size. Failed limit leaves acceptance pending; remeasure after changes.
 
-  API contracts: [Blizzard generated auction definitions](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua), [Classic item definitions](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_APIDocumentationGenerated/ItemDocumentation.lua). Forever availability is still subject to beta measurement.
-  - **Measurement limits:** one full format-3 beta scan (addon 0.3.0 or later; record the exact version) must be imported by 21 October. Compare single-scan 0.2.0 and 0.3.0 files from the same house with similar listing counts: duration at most **2×** baseline, uncompressed bytes per listing at most **4×** baseline. Record actual values, lag/reload time, and availability counts/denominators for every new listing/item field; there is no invented availability threshold. Availability affects evidence, not completion status. Import records these counts (including resolved/base/unresolved links and out-of-range optional values) and duration locally in the per-scan manifest and database. File byte counts are the original uncompressed input, not gzip bronze size. A failed limit leaves beta acceptance pending; remeasure after any change.
-
-
-### ADDON-10 Market metrics (metrics_version 1, approved 2026-10-06, STORY-024)
-
-The market metrics layer describes observed listed supply, not executed sales, demand, liquidity,
-realizable profit or a seller's complete activity. These facts support subsequent buying/crafting,
-market timing and competitor models without inventing evidence. Rules below define version 1;
-a changed definition requires a new metrics version and an explicit rebuild policy.
-
-- **Eligibility:** store metrics only for `status='completed'`, `partial=false`, `priced=true` addon
-  scans. `priced` is the existing complete/nonempty flag, not a guarantee of a buyout for every item.
-  Complete scans containing only no-buyout listings still have supply metrics with null prices.
-  Partial/unpriced scans retain their existing observations, but metrics are unavailable. An empty
-  scan has no metric rows. Missing prices are always null in this layer, never zero.
-- **Identity:** `metrics_version + source_id + every MARKET_KEYS field + scan_id + snapshot_id +
-  item_id + variant_id + variant_state`. This includes derived `market_id` and all seven DATA-03
-  fields. Never pool variants, base or unresolved identities. Formats 1/2 retain null variant state
-  (displayed as legacy), including historical scans whose format metadata is null. No retrospective
-  link interpretation or seller backfill. ADDON-08's legacy/base cross-scan comparison policy stays
-  a read-time matching policy; it does not merge facts. Every listing must match its stored parent
-  on source, full market identity, scan and snapshot.
-- **Prices:** use positive `unit_buyout_ceil` from ADDON-02, in integer copper. Lowest unit buyout is
-  the minimum. Median, 10th and 25th percentile are quantity-weighted nearest rank: sort prices,
-  let N be buyout-priced units, and choose the first price whose cumulative quantity reaches
-  `ceil(p*N/100)` for p=50,10,25. Count each unit once, without interpolation. The even-count median
-  is the lower middle unit. The 25th percentile agrees exactly with ADDON-03's market value.
-  No-buyout quantities never enter N. All four prices are null when N=0; priced units is then zero.
-- **Supply:** units listed sums all quantities; listing count counts listing rows, including rows
-  without buyouts. Largest-stack share is `max(quantity) / units listed`, for one listing (ties do
-  not combine). Shares are exact numerator/denominator integer pairs, not rounded stored floats.
-- **Supply below a price:** calculate at read time from stored listings, under identical eligibility
-  and exact identity predicates. Sum quantities with positive `unit_buyout_ceil` strictly less than
-  the caller's positive integer-copper threshold; equality and no-buyout listings do not count.
-  Reject nonpositive/noninteger thresholds. This reuses listings instead of duplicating a threshold
-  distribution. It describes units at quoted unit prices, not an executable whole-stack purchase
-  cost. An absent exact identity in an eligible scan returns zero; an ineligible scan is unavailable.
-  Null variant/state arguments select legacy exactly, unlike catalog depth's compatibility default.
-- **Sellers:** format-3 seller count is distinct observed nonblank strings compared exactly as
-  stored, without guessed character equivalence or case normalization. Sum each observed seller's
-  units, including no-buyout listings. Top seller share is the largest such sum divided by all
-  seller-known units. With incomplete coverage, label it *top observed seller's share of seller-known
-  units*. Always report seller-known listing/total listing and seller-known unit/total unit coverage
-  alongside seller measures. Missing sellers are never an invented seller. Format 3 with no known
-  sellers has null seller count/top share and zero known counts over total supply. Formats 1/2 and
-  historical null-format scans have null seller measures and coverage, not zero. ADDON-07 applies:
-  no seller strings or top-seller identity in metric storage, returned aggregates, logs, reports,
-  exports or external services. Existing local listing evidence remains local.
-- **Storage/rebuild:** migration 7 creates `scan_metrics` using frozen schema DDL only. Version-aware
-  derived initialization, outside migrations, backfills eligible stored listings before analytical
-  reads and records completion only after success. Missing completion at schema 7 retries on startup
-  or explicit import. One transactional rebuild path recalculates version 1 from stored listings;
-  repeated runs give identical rows, including after reordered input. Imports compute new facts in
-  the existing scan transaction. Preserve archives, silver and historical observation rows.
-- **Shared calculations:** addon item prices project this calculator's minimum and 25th percentile
-  into `market_snapshots`. Its existing ADDON-03 zero sentinel remains for compatibility only;
-  metric outputs use null. Historical price rows are not rewritten. TSM's price contract stays
-  unchanged. Board depth reads stored units/listings; Scan changes reads stored minimum, percentile,
-  units and listings, retaining ADDON-08 matching and DATA-02 naming. Name-only listing aggregation
-  remains for labels; threshold supply reads listings because its price is caller-selected.
+API shapes: [Auction definitions](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua), [Classic item definitions](https://github.com/Gethe/wow-ui-source/blob/classic/Interface/AddOns/Blizzard_APIDocumentationGenerated/ItemDocumentation.lua). Forever availability requires beta evidence.
 
 
-### ADDON-11 Character snapshots (STORY-032)
+### ADDON-10 Market metrics (metrics_version 1)
 
-- Introduced in addon **0.5.0** with account-wide `BrownstoneScanDB` format **5** (`SavedVariables`); ADDON-12 extends the current file to format 6;
-  scan records retain format 4 and formats 1–4 remain importable. `snapshots` records bags/gold on
-  guarded `PLAYER_LOGOUT` (including `/reload`), and bank on guarded `BANKFRAME_OPENED` and
-  `BANKFRAME_CLOSED`. These events and container API behavior remain pending Forever beta checks.
-  Only container/money/identity/level/skill reads are added: no requests, timers, buying, posting, moving,
-  sorting or mail. Bank readers run only between bank-open and bank-close events.
-- Snapshot evidence is character name, realm, faction, Unix seconds + UTC text, addon version,
-  kind (`bags`/`bank`), triggering event, login time, container API, rejected events and fired-event
-  counts. Gold is nullable integer copper; reported zero is valid. Occupied slots retain container ID,
-  positive slot, nullable item ID/count and exact item-link text. Empty slots are omitted; missing
-  values never become zero. Container IDs follow the client's own bank offset: bags are the keyring
-  and 0 to `NUM_TOTAL_EQUIPPED_BAG_SLOTS` (a modern reagent bag included; `NUM_BAG_SLOTS` where that
-  isn't defined), and the bank is the main bank, the reagent bank and the `NUM_BANKBAGSLOTS` bags after
-  them. `Enum.BagIndex` is not used for IDs, because a reagent-bag name can share the first bank bag's
-  number on Classic-style clients; each snapshot records the layout values it used (`container_layout`)
-  for the beta check. Container sizes remain nullable when
-  unreadable; failed slot reads mark `slots_readable = false`; a zero-sized main bank is treated as
-  inaccessible. Incomplete container coverage is labeled and latest item/slot totals stay unknown rather than asserting an empty inventory.
-- **Level and skills (STORY-041, addon 0.8.0):** every bags snapshot also reads nullable
-  `UnitLevel("player")` and both available guarded skill surfaces: `GetNumSkillLines`/
-  `GetSkillLineInfo` and `GetProfessions`/`GetProfessionInfo`. Keep API provenance, counted raw
-  tuples (including nil positions), row indexes, names, header state, rank/max and reported IDs.
-  Missing APIs/returns stay absent; an older snapshot or unreadable skills remains *skills unknown*.
-  A collapsed or unreadable legacy skill header hides lines, so `skills.legacy.possibly_incomplete`
-  is set and the import page shows *possibly incomplete*; the addon never expands it.
-  The addon import page and Characters display latest readable bags level and skill ranks/max per character;
-  it never infers a profession or catalog match from a name. Beta must confirm skill API shapes,
-  IDs, gathering/secondary coverage and logout/reload readability.
-  STORY-049 extends recipe evidence in ADDON-12; level/skill capture is unchanged.
-- **Unreadable logout reads (addon 0.10.0, decided 2026-10-08):** the first real Forever logout
-  snapshot (Windows, 08 Oct) read 0 slots in every bag, 0 copper and level 1 while the same
-  login's journal showed items and 52 copper. The client no longer answers at logout. The addon
-  therefore also reads bags/gold/level/skills in memory after login, settled bag changes, money
-  changes, `PLAYER_LEVEL_UP` (using its level argument) and `SKILL_LINES_CHANGED`, keeping only a
-  read whose backpack (container 0) has a positive size. At `PLAYER_LOGOUT` a fresh read is still
-  tried first. If its backpack isn't readable and this character has such a read, that read is saved
-  instead with its own `captured_at` and `read_event`, `event = PLAYER_LOGOUT`, and the logout's
-  gold/level/containers kept under `unreadable_read`. Without one, the logout read is saved as read.
-  Brownstone treats any bags snapshot whose backpack reports 0 slots as unreadable: never complete,
-  never the latest bags/gold/level/skills (*unknown* instead), excluded from beta reconciliation and a
-  `bags readable` failure in the beta report. Its raw record is preserved and imported unchanged.
-- **Clear/session rule:** initial `PLAYER_ENTERING_WORLD(true, false)` records this character's
-  login marker in `sessions`; `(false, true)` retains it across reload. Only the first world entry
-  after the addon loads sets or keeps the marker; later loading screens leave it alone, flags or not.
-  Unknown first signals retain all snapshots, and `/bscan clear` says so instead of claiming a prune. Both `/bscan clear` and
-  `clear all` remove only snapshot records with `captured_at < current login_at` (account-wide),
-  keeping current-session records, including bank records and other characters' records at/after
-  that time. Missing timestamps are retained. Scans keep their existing behavior: written scans
-  clear, unwritten scans refuse unless `clear all`, and active scans/item passes block either clear.
-  The confirmed button uses the same rule. A removed bank record becomes *bank unknown* in game;
-  clearing never deletes Brownstone's latest imported bank evidence or changes its time.
-- IDs contain length-prefixed character/realm, kind, Unix time and a persistent account sequence
-  to distinguish same-second events. Deduplication is per source + snapshot ID; identical canonical
-  content is a no-op, changed content conflicts. Stored parents carry every MARKET_KEYS field,
-  character realm/faction and machine from the configured local input or drop filename (OPS-03),
-  never from SavedVariables. Scope changes refuse ID reuse. Characters are never pooled.
-- Snapshot realm matches configured `scan_evidence.realm`, otherwise a realm-based market's
-  lowercase, hyphenated realm slug; faction matches `scan_evidence.faction`, otherwise the market faction. Auctioneer/zone/label
-  evidence applies to scans only: a character need not stand at an auctioneer to snapshot bags.
-  Forever's generic realm cannot establish server type; verify the source selection manually.
-  **Scope (decided 2026-10-07, product owner):** the addon runs only on characters of the market's
-  own realm and faction, so other-house snapshots are not expected in normal use; if one appears it
-  blocks Fully imported until cleared, like a scan. Neutral-house sources are out of scope for
-  snapshots for now (a character is never neutral, so every snapshot would count as other house).
-- Snapshots use the same bounded read, read-only preview, stale-review checks, per-file transaction,
-  exact-byte bronze collection and drop inventory as scans (ADDON-06, DATA-01, OPS-03). Snapshots-only
-  files are valid; a completely empty file still gets reload guidance. Import guidance counts new
-  snapshots as well as new scans: an import with neither still says *Nothing new*, /reload first. Preview lists each snapshot's
-  character/kind/time/machine and new/duplicate/other-house state. Every matching snapshot in a selected
-  file imports, including with CLI `--scan` (which limits scans only). Other-house snapshots remain
-  unimported. Fully imported requires **every scan and snapshot** to match stored content and house;
-  other-house records or file errors block cleanup. Snapshot evidence never enters auction prices.
-- The addon import page alone shows latest imported bags time/gold and independent latest bank
-  time (or *bank unknown*), distinct item/occupied-slot counts and machine for each character,
-  realm and faction. Missing bank never means empty; unknown slot item IDs keep the distinct-item
-  total missing rather than zero. No holdings use in Today yet.
+Observed listed supply only, never sales/demand/liquidity/realizable profit or complete seller activity. Changed definition requires metrics version/rebuild policy.
 
+- **Eligibility:** completed, partial=false, priced=true scans; priced means complete/nonempty, not every item has buyout. No-buyout-only scans have supply/null prices. Partial/unpriced unavailable; empty no rows. Null missing, never zero.
+- **Identity:** metrics_version + source + all MARKET_KEYS (derived ID and seven fields) + scan/snapshot + item/variant/state. No pooling/backfill/link reinterpretation. Legacy formats 1/2/null metadata stay null state; ADDON-08 compatibility is read-only matching, not merged facts. Listings match parent source/full market/scan/snapshot.
+- **Prices:** positive unit_buyout_ceil copper. Minimum plus quantity-weighted nearest-rank median/p10/p25: sort, N priced units, first cumulative >=ceil(p*N/100), p=50/10/25. Count units once, no interpolation; even median lower middle; p25 equals ADDON-03 market value. Exclude no-buyout units; N=0 means four null prices/zero priced units.
+- **Supply:** sum all units, count all listings including no buyout. Largest share max single quantity/all units, ties never combine; exact integer numerator/denominator.
+- **Threshold supply:** read listings under same eligibility/exact identity, sum units with positive ceil strictly below caller's positive integer-copper threshold. Equality/no buyout excluded; invalid threshold refused. Quoted units, not whole-stack executable cost. Absent eligible identity=0, ineligible unavailable; null identity selects legacy exactly.
+- **Sellers:** count exact distinct nonblank strings (no case/character guessing), sum all their units including no buyout. Largest seller sum/seller-known units; incomplete coverage labelled top observed seller share of seller-known units. Always show known/total listings and units. Format 3 no known sellers: null count/share, zero known counts over totals; older/null-format: all seller measures/coverage null. ADDON-07 excludes seller strings/identity from metric storage/results/logs/reports/exports/services; local listings remain private.
+- **Storage/rebuild:** migration 7 frozen DDL only; derived initialization outside migrations backfills before analytical reads, marks completion only after success. Missing marker retries startup/import. Transactional version-1 rebuild deterministic/idempotent despite reordered input; new facts in scan transaction. Preserve archives/silver/historical observations.
+- **Shared calculation:** ADDON-03 projects min/p25 with its compatibility zero sentinel; metrics null, historical prices untouched, TSM unchanged. Board depth uses units/listings; comparison uses min/p25/units/listings with ADDON-08/DATA-02. Name-only aggregation labels; arbitrary threshold supply reads listings.
 
-### Characters page (STORY-051)
+### ADDON-11 Character snapshots
+
+- Account-wide `BrownstoneScanDB` format 6 (`SavedVariables`) stores snapshots; formats 1–5 and scan formats 1–4 remain readable. Guarded `PLAYER_LOGOUT` (including reload) captures bags/gold; `BANKFRAME_OPENED`/`CLOSED` captures bank only while open. Read container/money/identity/level/skills only: no requests, timers or actions.
+- Evidence: character/realm/faction, Unix/UTC time, addon version, kind (`bags`/`bank`), triggering event, login time, container API, rejected/fired events. Gold is nullable integer copper; reported zero is valid. Occupied slots retain container ID, positive slot, nullable item/count and exact link; omit empty slots, never substitute zero for missing.
+- Bags include keyring and 0 through `NUM_TOTAL_EQUIPPED_BAG_SLOTS` (fallback `NUM_BAG_SLOTS`); bank includes main/reagent bank and the subsequent `NUM_BANKBAGSLOTS` bags. Use client offsets, not `Enum.BagIndex`, whose names can overlap on Classic clients; save `container_layout`. Unreadable sizes stay null; failed slots set `slots_readable=false`; zero-size main bank is inaccessible. Incomplete coverage keeps item/slot totals unknown.
+- Bags also capture nullable `UnitLevel("player")`, guarded legacy `GetNumSkillLines`/`GetSkillLineInfo` and modern `GetProfessions`/`GetProfessionInfo`. Preserve API, counted tuples/nil positions, indexes, names, header state, rank/max and IDs. Missing APIs/values or older captures mean skills unknown. Collapsed/unreadable legacy headers mark `possibly_incomplete`; never expand them. Data and Team display latest readable level/ranks without inferring professions/catalog matches from names. API shapes, IDs and gathering/secondary coverage need beta evidence.
+- **Readable bags:** Forever logout reads can report empty bags and false gold/level. Keep an in-memory read after login, settled bags/money changes, `PLAYER_LEVEL_UP` (its level argument) and `SKILL_LINES_CHANGED` only when backpack size is positive. At logout try a fresh read; if unreadable, save the retained read with its own `captured_at`/`read_event`, logout `event`, and the failed gold/level/containers under `unreadable_read`. Without a retained read, preserve the failed read. Brownstone excludes zero-size-backpack records from latest bags/gold/level/skills, completeness and reconciliation, and reports a bags-readable failure; raw records remain unchanged.
+- **Session/clear:** first `PLAYER_ENTERING_WORLD(true,false)` sets the character's `sessions` login marker; `(false,true)` retains it across reload. Only first world entry per load changes it; later loading screens do not. Unknown first signals retain all records and explain this. Both clear commands/button prune only account-wide snapshots with `captured_at < current login_at`; missing times and records at/after login (including other characters/bank) remain. Scans retain written/unwritten and active-pass protections. Pruned bank becomes unknown in game, never deleting or refreshing imported bank evidence.
+- IDs: length-prefixed character/realm, kind, Unix time and persistent account sequence. Deduplicate source + ID: same canonical content is a no-op; changed content or scope conflicts. Parents retain every MARKET_KEYS field, realm/faction and configured/drop machine, never inferred from file. Characters never pool.
+- House checks: realm matches `scan_evidence.realm`, otherwise realm-market lowercase hyphenated slug; faction matches evidence or market. Auctioneer/zone/label apply only to scans. Forever's generic realm cannot prove server type: verify configuration manually. Normal use is own realm/faction only; other-house snapshots block Fully imported. Neutral snapshot sources are out of scope.
+- Use ADDON-06/DATA-01/OPS-03 bounded read, read-only preview, stale checks, exact archive and per-file transaction. Snapshot-only files are valid; entirely empty files get reload guidance. Preview shows character/kind/time/machine and new/duplicate/other-house. Every matching non-scan record imports in a selected file; CLI `--scan` limits only scans. Fully imported requires all scans/snapshots to match house/content; errors block cleanup. No snapshots enter auction prices.
+- Data shows independent latest bags time/gold and bank time (or bank unknown), distinct items/occupied slots and machine per character/realm/faction. Unknown item IDs keep item totals unknown. Stock uses these holdings, and Today uses the captured gold.
+
+### Team character cards
 
 - A card is **stale** when its latest readable bags snapshot is strictly older than **7 days**.
   Without readable bags evidence, level/gold remain unknown and no age-based stale claim is made.
@@ -257,237 +124,37 @@ a changed definition requires a new metrics version and an explicit rebuild poli
 - Reported rank equal to reported maximum displays *at cap: train the next tier*. Team infers no
   character-level tier requirement. This session (UI-12) uses Classic Era's tier levels, labelled as an
   unconfirmed assumption, until trainer evidence (addon 0.11.3) confirms or corrects them under
-  *Known Forever market facts* (owner decision 2026-10-13).
+  *Known Forever market facts*.
   Existing capture, known-recipe and unreadable-read rules remain in ADDON-11/12.
 
-### ADDON-12 Event journal (STORY-033)
+### ADDON-12 Event journal
 
-- Addon **0.8.0** writes account-wide file format **6** (STORY-040/041 extend 0.6.0 without a format bump): the existing scans, snapshots, sessions
-  and `snapshot_sequence`, plus `journal`, `journal_diagnostics` and problem counters `journal_errors`. Formats 1–5 stay importable;
-  scan records still use format 4. Capture follows Product direction → *Observing your own actions*.
-  Only events and `hooksecurefunc` post-hooks record evidence; no economy actions, requests or timers.
-  Normal journal capture is silent. Unavailable identity and the cap are problems reported in chat.
-  Rejected events and missing/rejected hooks are reported as **one summary line per load** with their
-  counts (the candidate list spans old and new clients, so some are always missing); `/bscan status`
-  lists the names. Explicit status/clear commands retain their manual messages.
-- Each raw entry records `entry_id`, event/hook name, family, positional arguments with explicit
-  `n` (nil holes/trailing nil remain absent), character, realm, faction, Unix seconds + UTC text,
-  nullable `GetTime()` session seconds, addon version, login time, and observed window states.
-  Missing/unsupported values stay missing; an explicitly reported zero remains evidence, never a
-  substitute for an unknown value. Table arguments are copied to depth 8; non-serializable values
-  are omitted while retaining positions/count. No arguments are interpreted as transaction results.
-  ID is length-prefixed character/realm + `:journal:` + Unix seconds + the **same persistent account
-  sequence snapshots increment**. Each observation has its own ID, even within one second.
-- At login/reload, money and carried-bag counts establish transient baselines. **Fresh-login bags (addon 0.10.1,
-  decided 2026-10-09):** at a fresh login (`initial_login` true) the client has not loaded bag contents, so on the
-  beta every login's first bag entry listed the whole bag as gains. The bag baseline is left unset there; the first
-  settled bag update records `baseline_missing` and sets it. A `/reload` or unknown signal keeps the world-entry
-  baseline, which the beta showed correct after a reload. Entries from addon 0.10.0 and earlier keep that first
-  post-login entry as recorded: raw evidence is never rewritten, and any reader treats it as a baseline, not a change.
-  `PLAYER_MONEY`
-  records nullable before/after integer copper. `BAG_UPDATE_DELAYED` records signed per-item carried
-  count differences after settling, with bank/mailbox/merchant/auction house/trade skill/loot context;
-  no unchanged-bag entry. Incomplete reads invalidate the baseline and record `baseline_missing`,
-  never guessed zeros/deltas. A later complete read reestablishes it before differences resume.
-  Window booleans are based on observed open/close events; absent means not observed, not closed.
-- **Discovery context (addon 0.11.3, 2026-10-13; STORY-065 and UI-12 tier evidence):** `LOOT_OPENED`
-  adds `loot_slot_count` and per slot (at most 50) its `GetLootSlotLink` and every `GetLootSourceInfo`
-  return value (GUID/quantity pairs, so a node, mob or container can be told apart later), plus `zone`
-  (`GetRealZoneText`, `GetSubZoneText`, `C_Map.GetBestMapForUnit("player")`). Own `CHAT_MSG_LOOT`
-  entries add `zone`. `TRAINER_SHOW` adds `trainer_service_count` and per service (at most 300)
-  `GetTrainerServiceInfo`, level requirement, skill requirement and cost return values, plus the
-  available/unavailable/used filter states. Raw values only, interpreted after the beta check; a
-  missing or failing API leaves that value out, never a guess. File format stays 6.
-- Mail open/inbox changes read `GetInboxNumItems`, every header and invoice, and available attachment
-  info/links (an attachment is kept when any of its values is reported, so an item the client
-  hasn't loaded yet keeps its ID and count without a name). Header/invoice tuples retain their full positional return values and counts. Capture
-  never opens a message or takes anything. Equal inbox states are suppressed within the loaded
-  session; reload resets this transient comparison. `MAIL_SEND_INFO_UPDATE` reads draft money/COD
-  and attachments. The `SendMail` post-hook records recipient/subject/body arguments plus the
-  **last observed draft**, explicitly marked as such: post-hook APIs may already have cleared it.
-  It is evidence for later reconciliation, not a claim of successful delivery or complete attachments.
-- **Vendor services (addon 0.10.0, decided 2026-10-08):** the merchant's sell-junk button and
-  class trainers are family `vendor`: post-hooks `C_MerchantFrame.SellAllJunkItems` and
-  `BuyTrainerService`, and events `TRAINER_SHOW`/`TRAINER_CLOSED` (window `trainer`). Before this,
-  junk sales and trainer spending appeared only as bag and money changes. File format stays **6**.
-- **Active owned auctions (STORY-040):** guarded `OWNED_AUCTIONS_UPDATED` reads
-  `C_AuctionHouse.GetNumOwnedAuctions` and every 1-based `GetOwnedAuctionInfo` table;
-  guarded `AUCTION_OWNED_LIST_UPDATE` reads `GetNumAuctionItems("owner")` and every 1-based
-  `GetAuctionItemInfo("owner", index)` tuple, link and time-left value. Neither reader requests
-  a list; `QueryOwnedAuctions`, `GetOwnerAuctionItems` and refresh/action APIs are never called.
-  Each changed list adds one family `auction` entry with `owned_auctions`: API, counted raw count
-  returns and indexed auctions with raw info. Modern tables retain all returned fields (including
-  itemKey, ID, link, quantity, status, bid/buyout copper, bidder and time left); legacy tuples
-  retain every position and `n`, plus separate link/time-left. No absent value becomes zero.
-  Modern optional `HasFullOwnedAuctionResults` and `Enum.AuctionStatus.Sold` are saved as reported.
-  Equal states are suppressed against the last successfully recorded list this loaded session;
-  reload resets comparison. Shared ID/sequence/cap/clear rules apply unchanged.
-  An observed zero-count list is evidence of empty; never observed means *active auctions unknown*.
-  The import page alone shows each known character's latest observation UTC, reported count and
-  count marked sold (modern saved enum; Classic legacy saleStatus position 16 equals 1).
-  Legacy display uses the reported total when present, otherwise the reported batch count;
-  every available batch row is read, with both count returns preserved. A partial batch cannot
-  establish an empty full list. Missing statuses/read failures, a batch/total mismatch or explicitly
-  incomplete modern results keep sold count unknown. Passive capture cannot fetch uncached pages.
-  Characters are known from scoped imported snapshots/journal entries. Same-second lists use
-  shared sequence to select the latest. This is raw client status, never an inferred sale or expiry.
-  File format stays **6**, storage stays schema **11**, and shared non-scan import counts these
-  entries under `auction`. Event/API support, completeness and arrival without opening the Auctions
-  tab remain beta checks by 13 October; preserve recordings before 21 October.
-- **Known recipes (STORY-041):** guarded `TRADE_SKILL_SHOW`/`TRADE_SKILL_UPDATE` and
-  `CRAFT_SHOW`/`CRAFT_UPDATE` read the corresponding available `GetTradeSkill*`/`GetCraft*`
-  window APIs. Each changed profession list adds one family `craft` journal entry with
-  `known_recipes`; comparison is per character/profession against its last successfully recorded
-  state this loaded session. It resets on reload and uses the shared identity/sequence/cap/clear.
-  The comparison ignores craftable counts (the row field and its raw `info` position), which change
-  with every craft or bag change; saved lists still carry them (decided 2026-10-07 at review, to keep
-  one craft session from saving a full list per craft). An update is read only while that window
-  (trade skill or craft, tracked separately) has been shown and not closed: a closed window reports
-  a placeholder name (Classic: `UNKNOWN`). Opening a window whose list is unchanged still journals a
-  plain window-open entry, as before 0.8.0.
-  Preserve window profession name/rank/max, reported row count, every indexed header/recipe's raw
-  info, name/type/difficulty, craftable count, expansion state, recipe/output links and reported
-  link IDs, min/max made and every reagent's raw info/link/ID/count. Unavailable values stay missing.
-  Preserve reported subclass/inventory filter states (including index 0, All) and makeable/skill-up
-  filters and available text/level filters. Mark `possibly_incomplete` for active restrictions,
-  collapsed/unknown header expansion,
-  missing row type or unreadable row count. Never open windows, expand headers, change filters,
-  train, learn or craft. Missing filter APIs cannot prove completeness; the flag describes observed
-  restrictions, not a guarantee of a complete learned catalog. Capture is silent in normal play.
-  A window never observed remains *known recipes unknown*. The import page and Characters show the latest
-  list UTC and listed non-header recipe count per profession, with the incompleteness flag;
-  unreadable counts/rows remain unknown. STORY-049 below extends modern learned interpretation;
-  Today/catalog eligibility remains STORY-043.
-  Journal was chosen instead of a new snapshot kind to reuse change-only lists and the bounded
-  existing non-scan lifecycle. Addon is **0.8.0**; format remains **6**, schema remains **11**:
-  existing raw JSON stores the added payloads without a migration. Forever event/API support,
-  default hidden recipes, ID meaning and UI completeness remain beta checks by 13 October.
-- **Forever known recipes (STORY-049, addon 0.11.0; 0.11.1/0.11.2):** on an observed open profession
-  window, prefer a guarded `C_TradeSkillUI` reader; fall back to the STORY-041 legacy reader
-  when the modern reader cannot establish a profession/list surface. The Craft window
-  (`CRAFT_*` events) always uses the legacy `GetCraft*` reader, because `C_TradeSkillUI` would
-  report the trade-skill profession instead. All candidate reads are
-  guarded independently; availability and returned shapes remain beta checks. Preserve every
-  listed recipe ID, raw recipe info and schematic (including reagent slots/options), profession
-  returns, links, output quantities, category and filter evidence with API provenance. Record all
-  rows, but **only `learned == true` counts as known**; false is unlearned and absent is unknown.
-  Modern craftable `numAvailable` is ignored for change detection, retained in saved evidence.
-  Guard `TRADE_SKILL_LIST_UPDATE`, `TRADE_SKILL_DATA_SOURCE_CHANGED` and `NEW_RECIPE_LEARNED`
-  alongside the existing window events. Fired counts stay in diagnostics; read refreshes only
-  while the corresponding window is observed open. **0.11.1 (2026-10-10 beta finding: the Forever
-  client opens a profession without `TRADE_SKILL_SHOW`):** a trade-skill refresh is also read when
-  `C_TradeSkillUI.IsTradeSkillReady()` returns true, and `TRADE_SKILL_CLOSE` attempts one last read;
-  both use the modern reader only, never the legacy reader, whose closed-window names are
-  placeholders. The profession name comes from the first non-empty, non-`UNKNOWN` name of
-  `GetBaseProfessionInfo`, `GetChildProfessionInfo`, `GetTradeSkillLine`, in that order. A read is
-  refused while `IsTradeSkillReady()` returns false or `GetAllRecipeIDs` returns no IDs (0.11.2: the
-  first opening per login reports an empty list before the data arrives). A refused or unnamed read on a
-  show entry carries `trade_skill_read`: the raw profession returns, ready and data-source-changing returns, and
-  the recipe ID count; never a partial list. Report observed active filters/collapsed
-  categories as possibly incomplete, without changing them; unavailable reads prove no completeness.
-  The first profession opening in each load carries `trade_skill_api_inventory`: sorted available
-  `C_TradeSkillUI` function names and accepted candidate profession-event names, even when the list
-  cannot be read. Attach it to the changed list or plain opening entry, avoiding another entry.
-  Existing change detection, legacy capture, cap, clear, silent/read-only rules apply unchanged.
-- **Profession switches and skill-ups (addon 0.12.0, 2026-10-13 beta finding):** switching from one
-  profession window to another (fishing and smelting re-open it on every cast) renames the window
-  before its rows change, so 0.11.3 saved 11 lists naming one profession with the previous one's
-  rows, and re-saved a whole list (about 1 MB for Tailoring) for every skill point; recipe lists were
-  14 MB of a 20.9 MB file. Since 0.12.0 a modern read whose recipe IDs exactly equal the previous
-  read's for a *different* profession (same character, this load) is refused as stale: its show entry
-  carries `trade_skill_read = {stale_rows, listed_profession, rows_profession, recipe_id_count}`.
-  Change detection also ignores rank, max rank and the raw profession returns; a rank-only change adds
-  a small family `craft` entry with `profession_rank = {api, name, rank, max_rank, profession}`
-  instead of the list. **Import** applies the same stale rule to every file (older addon lists
-  included): such a list never becomes that profession's known recipes, though it still counts as
-  activity, and the beta report warns *stale recipe list*. The newest trustworthy list per
-  character/profession is then given the rank and time of any newer `profession_rank` entry. Raw
-  bytes and journal rows are preserved unchanged; only the projection skips stale lists. **Confirmed
-  on the beta 2026-10-13 with 0.12.0:** every stale switch read was refused, each profession's list
-  was saved with its own rows, and two Mining skill-ups were saved as rank records. **0.12.1:** change
-  detection also ignores the display name inside item, recipe and info links, which the client fills
-  in after the first read (`[]`, then `[Molten Foundry]`); 0.12.0 re-saved Cooking's 250 KB list for that
-  alone. Saved lists keep the links exactly as read.
-- **Seen crafted (STORY-049):** the shared profession projection reads existing scoped craft journal
-  entries. A positive recipe ID in `C_TradeSkillUI.CraftRecipe` or the player's successful craft
-  cast establishes known evidence from that observation, labelled *seen crafted*. Deduplicate IDs
-  within character/profession and retain this evidence alongside the latest window list. A cast
-  must have a recipe ID identified by window evidence, a game/rules-compatible catalog or that
-  character's CraftRecipe hook; opening a profession can itself cast a non-recipe spell.
-  Window recipe IDs supply profession provenance; compatible catalog recipe IDs supply profession
-  metadata where the beta saved no list. Ambiguous/unmapped hook IDs retain *Profession unknown*,
-  never a guessed profession. No price/catalog eligibility calculation is introduced.
-  Show latest evidence UTC, known count and source (*window list*, *seen crafted*, or both),
-  and the seen-crafted IDs; no evidence remains *unknown*, never zero. Only learned modern rows
-  count toward the list, and the combined known count avoids IDs already in that list.
-  Format remains **6**, schema **11**: the existing raw JSON journal handles these payloads,
-  so no new storage or migration is needed. Modern API shapes, recipe IDs and completeness still
-  need the Forever beta play check by 15 October.
-- **Spellcasts are crafting evidence only (decided 2026-10-07, product owner):** only
-  `UNIT_SPELLCAST_SUCCEEDED` for unit `player` while a trade skill or craft window is observed open is
-  recorded. Start, failed and interrupted casts, other units' casts and every spell cast without a
-  crafting window open (combat, gathering, travel) are not registered or not recorded: they are not
-  economy evidence and would fill the cap. Gathering shows up through loot events and bag changes.
-  A craft that finishes after its window was closed is not recorded as a spellcast; its hook call and
-  bag change still are. `CHAT_MSG_LOOT` requires argument 12 equal to the
-  player's readable GUID; ambiguous/missing sender identity is omitted. Loot-window events are
-  the player's own window.
-- **Ordinary refresh events are counted, not journalled:** `MERCHANT_UPDATE` and
-  `AUCTION_ITEM_LIST_UPDATE` carry no arguments and fire often (the last also
-  during the addon's own scan), so they only add to `journal_diagnostics.fired_events`.
-  Profession refresh events are also counted
-  and now record changed lists under STORY-041; they do not append unchanged generic refresh entries.
-  Container-use hooks log only while the merchant is observed open (possible selling), without
-  asserting a sale. Other hooks log arguments regardless of success; events/deltas supply context.
-- Every event registration is guarded independently. Hooks install only for existing functions,
-  with guarded `hooksecurefunc`; missing/rejected names and installed names are saved in diagnostics,
-  together with rejected events and fired counts. Unexpected observation errors are guarded,
-  reported in chat and counted by name in `journal_errors`, without interrupting the game call. Later `ADDON_LOADED` retries unavailable hooks
-  for lazily loaded UI modules, without rehooking installed functions. Candidate event/hook lists
-  are discovery evidence, **not a promise of beta support**:
+- Account-wide file format **6** adds `journal`, `journal_diagnostics`, `journal_errors` beside scans/snapshots/sessions/shared sequence; formats 1–5 remain readable, scan format stays 4. Only guarded events and secure post-hooks observe activity: no economy actions, requests or timers. Normal capture is silent; missing identity/cap report problems. Rejected events and missing/rejected hooks produce one count summary per load; `/bscan status` lists names.
+- Entries preserve ID, event/hook, family, positional arguments with `n` (nil holes retained), character/realm/faction, Unix/UTC time, nullable session `GetTime()`, addon version, login time and observed windows. Reported zero is evidence; absent stays absent. Copy table arguments to depth 8; omit nonserializable values but retain positions/counts. Arguments never establish transaction success. ID = length-prefixed character/realm + `:journal:` + Unix seconds + the same persistent account sequence snapshots increment; same-second events remain distinct.
+- **Baselines/deltas:** login/reload establishes transient money/bag baselines. Fresh login (`initial_login=true`) leaves bag baseline unset until the first settled bag update, marked `baseline_missing`; reload/unknown signals use world-entry baseline. Readers treat the first post-login bag entry from addon <=0.10.0 as a baseline, preserving its raw content. `PLAYER_MONEY` saves nullable before/after copper. `BAG_UPDATE_DELAYED` saves signed per-item carried deltas with bank/mailbox/merchant/auction/trade-skill/loot context, omitting unchanged bags. Incomplete reads invalidate baseline and mark missing, never guessed zeros; a complete read reestablishes it before deltas resume. Window booleans reflect observed open/close; absent is not closed.
+- **Discovery context:** `LOOT_OPENED` saves count and at most 50 slots' `GetLootSlotLink`/all `GetLootSourceInfo` GUID/quantity returns, plus real zone, subzone and map ID. Own `CHAT_MSG_LOOT` adds zone. `TRAINER_SHOW` saves count and at most 300 services' info, level/skill requirements/cost and available/unavailable/used filters. The list loads after opening (0.11.3 saved 0 services), so since 0.12.2 `TRAINER_UPDATE`, and one guarded `C_Timer.After(1)` read (`TRAINER_DELAYED_READ`), save the list again while the trainer is open, only when non-empty and changed. Preserve raw values only; missing/failing APIs omit values. Interpret only after evidence checks.
+- **Mail:** open/inbox updates read `GetInboxNumItems`, all headers/invoices and available attachment info/links; any reported field retains an attachment even without loaded name. Preserve full tuple positions/counts. Never open/take messages. Suppress equal inbox states per load; reload resets. `MAIL_SEND_INFO_UPDATE` reads draft money/COD/attachments. `SendMail` post-hook preserves recipient/subject/body and last observed draft, marked as such because post-hook APIs may have cleared it; never claim successful delivery or complete attachments.
+- **Vendor:** `C_MerchantFrame.SellAllJunkItems`, `BuyTrainerService`, `TRAINER_SHOW`/`UPDATE`/`CLOSED` are family vendor; track trainer window. Container-use hooks log only with merchant observed open, without asserting a sale.
+- **Owned auctions:** `OWNED_AUCTIONS_UPDATED` passively reads guarded modern count and every 1-based `GetOwnedAuctionInfo`; `AUCTION_OWNED_LIST_UPDATE` reads legacy owner count/tuples/links/time-left. Never request lists (`QueryOwnedAuctions`, `GetOwnerAuctionItems`) or refresh. Each changed list journals family auction `owned_auctions`: API, counted raw count returns, indexed raw tables/tuples. Modern fields (itemKey/ID/link/quantity/status/bid/buyout/bidder/time-left), optional completeness and `Enum.AuctionStatus.Sold` remain as reported; legacy preserves all positions and `n`. Suppress equal successfully recorded lists per load; reload resets. Observed zero count is empty evidence; never observed is unknown. Data shows scoped known characters' latest UTC, reported total (fallback batch count) and sold count (modern saved enum, legacy saleStatus position 16 = 1). Save both legacy counts/read all batch rows; incomplete batch cannot prove empty. Missing status, read failure, unequal batch/total or incomplete modern results keeps sold unknown. Passive reads cannot fetch uncached pages. Same-second latest uses sequence; client status never implies sale/expiry. Support/completeness and arrival without opening Auctions remain beta checks.
+- **Legacy recipe windows:** shown, not closed `TRADE_SKILL_*`/`CRAFT_*` windows use guarded corresponding APIs. One changed list per character/profession journals family craft `known_recipes`; unchanged opening still saves plain show entry. Reload resets comparison. Ignore craftable count in change detection but retain it in raw info. Preserve name/rank/max/count; every indexed header/recipe info, type/difficulty/craftable/expansion, output/recipe links/IDs, min/max yield and reagent info/links/IDs/counts. Preserve subclass/inventory filters (including All/index 0), makeable/skill-up/text/level filters. Restrictions, collapsed/unknown headers, missing row type or unreadable count mark possibly incomplete. Missing filter APIs prove no completeness. Never open/expand/filter/train/learn/craft. Never observed means recipes unknown. Data/Team show UTC, non-header known count and incompleteness; missing counts/rows stay unknown.
+- **Modern Forever recipes:** prefer guarded `C_TradeSkillUI` when a profession/list surface is available; otherwise legacy fallback. `CRAFT_*` always uses `GetCraft*`, because modern APIs refer to trade skill instead. Read candidates independently guarded. Preserve recipe IDs, raw info/schematics (slots/options), profession returns, links/yields/categories/filters/API. Only `learned == true` is known; false unlearned, absent unknown. Ignore `numAvailable` for comparison only. Guard `TRADE_SKILL_LIST_UPDATE`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED` and window events; count diagnostics. Modern refresh may read without SHOW when `IsTradeSkillReady()` is true; CLOSE attempts one modern read, never legacy closed placeholders. Name is first nonblank/non-UNKNOWN of `GetBaseProfessionInfo`, `GetChildProfessionInfo`, `GetTradeSkillLine`. Refuse false-ready, zero IDs or unnamed reads; show entry retains `trade_skill_read` raw profession/ready/data-source-changing/count diagnostics, never a partial list. Observed filters/collapsed categories mark incomplete without mutation. First profession opening per load attaches sorted available function names and accepted candidate profession events in `trade_skill_api_inventory` to the list/plain opening, even if unreadable, avoiding extra entry.
+- **Switches/ranks:** Forever changes profession names before recipe rows, so refuse a modern list whose IDs exactly match the previous read for a different profession of that character/load. Show diagnostics `trade_skill_read={stale_rows,listed_profession,rows_profession,recipe_id_count}`. Import applies the same rule to older files: stale lists remain raw activity but never known recipes; beta report warns. Ignore rank/max/raw profession returns for list comparison; rank-only changes save small `profession_rank={api,name,rank,max_rank,profession}`. Apply newer rank/time to newest trustworthy list. Ignore late-loaded display names inside item/recipe/info links for comparison only; saved links stay exact.
+- **Seen crafted:** scoped craft journal positive recipe ID from `C_TradeSkillUI.CraftRecipe` or player's successful craft cast establishes labelled seen-crafted evidence alongside latest list. Deduplicate per character/profession. Cast ID must be identified by window, game/rules-compatible catalog or that character's CraftRecipe hook; window opening can cast a nonrecipe spell. Window IDs provide profession provenance; catalog IDs provide metadata only. Ambiguous/unmapped IDs retain Profession unknown. Show latest UTC, combined known count (only learned modern rows, excluding duplicates), window/seen/both source and seen IDs. No evidence means unknown, never zero. No eligibility/pricing rule is added; API shapes/IDs/completeness require beta evidence.
+- **Casts/loot:** register only `UNIT_SPELLCAST_SUCCEEDED`, record only unit player while a crafting window is observed open. Never record start/fail/interrupted/other-unit/noncrafting casts; gathering uses loot/bag evidence. After window closes, hook/bag evidence can remain but no cast. `CHAT_MSG_LOOT` requires argument 12 equal to readable player GUID; omit missing/ambiguous sender. Loot windows are player's own.
+- **Refresh/guards:** no-argument `MERCHANT_UPDATE`/`AUCTION_ITEM_LIST_UPDATE` count only; profession refresh saves changed lists, no generic unchanged refresh. Hooks log arguments regardless of success. Register every event independently guarded; install only existing hooks with guarded `hooksecurefunc`. Save missing/rejected/installed names, rejected/fired events. Guard unexpected errors, count them in `journal_errors` and report without interrupting game call. Later `ADDON_LOADED` retries lazy hooks without rehooking installed names. Candidate support is discovery, not a beta promise.
   - Events: `PLAYER_MONEY`, `BAG_UPDATE_DELAYED`, `MAIL_SHOW`, `MAIL_CLOSED`, `MAIL_INBOX_UPDATE`, `MAIL_SEND_INFO_UPDATE`, `MAIL_SEND_SUCCESS`, `MAIL_FAILED`, `AUCTION_HOUSE_SHOW`, `AUCTION_HOUSE_CLOSED`, `AUCTION_HOUSE_PURCHASE_COMPLETED`, `AUCTION_HOUSE_AUCTION_CREATED`, `AUCTION_HOUSE_AUCTION_CANCELED`, `AUCTION_HOUSE_SHOW_ERROR`, `OWNED_AUCTIONS_UPDATED`, `AUCTION_OWNED_LIST_UPDATE`, `AUCTION_ITEM_LIST_UPDATE`, `AUCTION_MULTISELL_START`, `AUCTION_MULTISELL_UPDATE`, `AUCTION_MULTISELL_FAILURE`, `MERCHANT_SHOW`, `MERCHANT_CLOSED`, `MERCHANT_UPDATE`, `TRADE_SKILL_SHOW`, `TRADE_SKILL_CLOSE`, `TRADE_SKILL_UPDATE`, `CRAFT_SHOW`, `CRAFT_CLOSE`, `CRAFT_UPDATE`, `UNIT_SPELLCAST_SUCCEEDED`, `CHAT_MSG_LOOT`, `LOOT_OPENED`, `LOOT_CLOSED`, `LOOT_SLOT_CLEARED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`.
   - Global hooks: `TakeInboxMoney`, `TakeInboxItem`, `AutoLootMailItem`, `SendMail`, `ReturnInboxItem`, `DeleteInboxItem`, `SetSendMailMoney`, `SetSendMailCOD`, `StartAuction`, `PostAuction`, `PlaceAuctionBid`, `CancelAuction`, `BuyMerchantItem`, `SellCursorItem`, `UseContainerItem`, `RepairAllItems`, `DoTradeSkill`, `DoCraft`.
   - Namespace hooks: `C_AuctionHouse.PostItem`, `C_AuctionHouse.PostCommodity`, `C_AuctionHouse.PlaceBid`, `C_AuctionHouse.CancelAuction`, `C_AuctionHouse.ConfirmCommoditiesPurchase`, `C_Container.UseContainerItem`, `C_TradeSkillUI.CraftRecipe`.
-- **Size cap: 10,000 ordinary journal entries account-wide plus one overflow marker.** Further
-  attempts add to `skipped` and report the cap once per loaded session when first reached. Existing
-  entries are never silently evicted. Updating the single `JOURNAL_OVERFLOW` marker gives it a fresh
-  shared sequence/ID; previously imported markers remain immutable historical evidence and cannot
-  conflict with a later drop. Skipped counts in successive marker versions are cumulative, not additive.
-  This is an entry-count bound, not a byte bound (mailboxes and argument strings vary in size).
-  Normal-session bytes, counts, reload time and observed overflow behavior remain a beta measurement.
-- **Clear:** reuse ADDON-11's account-wide login marker and prune: both clear commands/button keep
-  entries at/after the current login and entries with missing timestamps; unknown login keeps all.
-  Old overflow markers follow the same rule. Removing old entries makes space; current-session
-  entries/overflow survive a clear and confirmed reload. Scan clear protections remain unchanged.
-  OPS-03 latest-drop Fully imported is still required before cleanup.
-- Snapshots and entries share one non-scan lifecycle: validation adapters, preview summaries, known
-  hashes, house checks, stale-review checks, conflicts, transactional load, expected batch commits,
-  Fully imported and guidance. Deduplication is source + record type + ID; same ID/different canonical
-  content or market conflicts. Character realm/faction checks reuse ADDON-11; machine comes from
-  configuration/drop name only. Bronze preserves exact original bytes beside scans. Entries never
-  supply prices or holdings interpretations. CLI `--scan` still limits scans only.
-- Per-file CLI/page preview groups journal counts by character/realm/faction and event family into
-  new/duplicate/other-house counts. The import page alone shows scoped imported counts and latest
-  entry time by character/family. Every record must match house/content for Fully imported; any
-  file error or other-house record blocks cleanup. If no scans, snapshots or entries were newly
-  saved, guidance remains **Nothing new: /reload first**, before any clear suggestion.
+- **Cap:** 10,000 ordinary account-wide entries plus one overflow marker. Further attempts increment `skipped`; report first cap hit once per load. Never evict silently. Updated `JOURNAL_OVERFLOW` gets new sequence/ID; prior imported markers are immutable. Successive skipped counts are cumulative, not additive. Count cap is not byte cap; sizes/reload/overflow need measurement.
+- **Clear/import:** ADDON-11 prune preserves at/after-login and missing-time entries/overflow; unknown login keeps all. Old pruning frees space; scan protections and OPS-03 latest-drop requirement apply. Scans/snapshots/journal share validation, preview, hashes, house/stale checks, conflicts, transactional load, expected commits, Fully imported/guidance. Deduplicate source + type + ID; changed content/market conflicts. House checks reuse ADDON-11; machine only configured/drop. Preserve exact bronze bytes; journal never supplies prices or interpreted holdings. `--scan` limits only scans. Preview groups character/realm/faction/family new/duplicate/other-house counts; Data shows scoped imported counts/latest time. Any file error/other-house blocks cleanup; nothing newly saved means Nothing new: /reload first, never clear guidance.
 
+### ADDON-13 Brownstone panel
 
-### ADDON-13 Brownstone panel (STORY-044)
-
-Addon **0.9.0** adds a minimap button and `/bscan panel` toggle for a movable,
-Escape-closeable convenience view of status and the manual play → Reload → import →
-Clear → Reload routine. It captures nothing new. Reload, confirmed Clear, Start scan
-and chat Status reuse the existing functions; maintenance/scan disabled states share
-`setMaintenanceEnabled` and auction-house visibility. All existing guards and
-ADDON-11/12 capture, cap and clear rules remain authoritative and unchanged.
-The auction-house row and existing slash commands remain available.
-
-Only `BrownstoneScanDB.ui` is new saved state: numeric `minimap_angle`, restored on
-load. File format **6**, scan format **4** and record fields stay unchanged. Brownstone
-preview, import and beta-report ignore UI state as evidence while preserving the
-whole original file's bytes/provenance. No third-party Lua library or automatic action
-is added. Panel usage and the pending play check are in `addon/README.md` → Panel.
+Minimap and /bscan panel open a movable Escape-closeable status/manual routine view.
+Reload/confirmed Clear/Start/Status reuse existing functions, maintenance/house visibility and
+ADDON-11/12 guards. Slash commands/house row remain. Only ui.minimap_angle is new numeric saved
+state; account format 6/scan format 4 unchanged. Preview/import/report ignores UI state as evidence,
+preserves original bytes. No third-party Lua/action automation; usage/check in addon README.
 
 ### Money
 - **MONEY-01:** store and calculate integer copper only. 1g = 100s = 10,000c.
@@ -502,7 +169,7 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - **Listed** uses minimum buyout only.
   - Every board row shows profit under both bases.
 - **CRAFT-05 Action Board:** ranks finished outputs of every catalog compatible with the selected source (same game version and `rules_version`) on one board. Routes follow CRAFT-12 when scoped team evidence is supplied; without it each recipe keeps its catalog-local costs.
-  - Profession is shown and can be filtered without renumbering the combined ranks. Catalog identity plus recipe ID selects a row and its own recipe details; catalogs making the same item retain separate rows.
+  - Each ranked row retains profession and catalog-qualified recipe identity; catalogs making the same item retain separate rows.
   - Shows craft cost, sale price, net revenue after the auction cut, profit and margin, where margin = profit / net revenue.
   - Labels, in precedence order:
     1. **unsupported recipe:** calculation error; the message is shown.
@@ -519,138 +186,55 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - break-even sale price
   - assumptions, provenance and freshness
 - **CRAFT-07 Rounding:** net revenue rounds down to the copper; break-even rounds up. Quantities are per recipe execution.
-- **CRAFT-08 Generated catalogs (STORY-004):** a catalog is generated by `python -m brownstone recipes`, or the app's **Recipe catalogs** page through the same code, from one saved page plus a tracked selection file (`config/recipe-selections/<catalog>.toml`), never edited by hand.
-  - **One per game version and profession:** named `<prefix>-<profession>`, with prefix `classic-era` or `forever` (for example `forever-leatherworking`). A catalog exists when its selection file does; nothing finds catalogs by file name pattern.
-  - **Same version only:** the page's game version and profession must match the selection's. Values never come from another version's page.
-  - **No seasonal spells:** Wowhead's Classic pages also list seasonal realms' spells (`seasonId`, 2 = Season of Discovery): 57 of 287 Tailoring and 48 of 204 Enchanting on the 2026-10-04 pages. They are never offered, never added as intermediates, and a selection naming one is refused.
-  - **Selection:** lists finished recipes. A reagent made by exactly one usable recipe on the page is added as an intermediate.
-  - **One rule for every profession:** a recipe is usable only if it makes a fixed, known quantity (Wowhead lists some transmutes and oils as making 0, meaning unknown) and isn't seasonal. An item that several usable recipes make is always bought, never crafted, and those recipes can't be selected. So a catalog never chooses between recipes, and the app never asks. It changes nothing on the saved Tailoring and Enchanting pages; it exists for Alchemy's transmutes.
-  - **Evidence:** every recipe records its Wowhead spell URL, the page URL, the date the page was saved and the page's SHA-256. The saved page is archived byte-for-byte under `data/recipe-sources/` with a manifest.
-  - **Skill-up evidence (STORY-047):** optional recipe `skillup_colors = [orange, yellow, green, grey]` copies the saved page's `colors`: exactly four positive integers in non-decreasing order. Missing, zero, non-integer or decreasing values leave the field absent, never guessed. The loader validates it and still accepts older catalogs. Header `page_coverage = { usable, no_item, unknown_yield }` holds non-negative integer counts of non-seasonal page spells with reagents: fixed known yields, no created item, and unknown/variable yields respectively. Rank spells without reagents are excluded. These fields use the existing page provenance and catalog version policy.
-  - **Learning evidence (STORY-050):** optional recipe `learned_from` copies the saved page's `source` list in its original order (including several or unlisted codes); a non-empty list of positive integers is valid. Optional `training_cost_copper` copies an explicit positive integer `trainingcost`, in copper; a zero is left absent, never read as free. Missing or malformed values stay absent; selection notes never override either field. The loader validates both and accepts older catalogs. These fields use the existing page provenance and catalog version policy. The Recipe catalogs recipe view displays them; Today uses them under its character eligibility rules below. Costs are formatted through `brownstone/money.py`; absent costs show *unknown*. An unverified source-code meaning shows *other (code N)*. Missing source shows *unknown*: `learnedat = 1` alone does not prove a starting recipe.
-    - **Source-code evidence table:** recipe codes below come from saved `listviewspells` entries. Labels 2, 4, 5 and 6 were checked against the corresponding rendered Source cells on the existing Forever First Aid page in Safari on 2026-10-09 ([page](https://www.wowhead.com/forever/spells/secondary-skills/first-aid)); each evidence recipe has exactly one source code. Codes 1, 16 and 21 remain unlisted for labeling because their meanings were not established from that evidence. The HTML's Source **filter** options use different numbers and must not be mistaken for the recipe-code table.
+- **CRAFT-08 Generated catalogs:** `python -m brownstone recipes` generates from a manually saved profession page and tracked `config/recipe-selections/<catalog>.toml`; never hand-edit generated catalogs or download pages.
+  - One game/profession per selection, `<classic-era|forever>-<profession>`; selection existence defines catalog. Page game/profession must match. Seasonal `seasonId` spells never offered/selected/intermediate; named seasonal selections refuse.
+  - Selection names finished recipes; exactly one usable maker adds reagent intermediates. Usable = fixed known quantity, nonseasonal. Zero/variable yield is unknown. Multiple usable makers make an item buy-only, never selected or implicitly chosen.
+  - Every recipe retains spell/page URLs, saved date, page SHA-256; archive exact bytes under data/recipe-sources with manifest. Existing CRAFT-01 evidence/version policy applies.
+  - `skillup_colors=[orange,yellow,green,grey]` copies exactly four positive nondecreasing integer page colors; invalid/missing leaves absent. `page_coverage={usable,no_item,unknown_yield}` counts nonseasonal reagent spells by fixed yield/no output/unknown-variable yield; exclude rank spells without reagents. Loader validates and accepts older catalogs.
+  - `learned_from` copies original ordered nonempty positive integer `source` codes, including unlisted/multiple; `training_cost_copper` copies positive integer `trainingcost`, zero absent, never free. Invalid/missing absent, notes never override. Learning is separate from vendor material/pattern price. Missing source stays unknown; skill 1 never proves starting recipe. Money uses money.py.
+  - **Source-code evidence:** rendered Source cells on the saved Forever First Aid page verify codes 2/4/5/6; HTML filter numbers differ. Codes 1/16/21 are unverified other (code N). Saved evidence under `data/recipe-sources/wowhead/forever/`:
 
-      | Code | Label | Saved page under `data/recipe-sources/wowhead/forever/` | Recipe evidence |
-      | --- | --- | --- | --- |
-      | 1 | other (code 1), unverified | `alchemy/4b2bdfb5cde1b592.html` | Goblin Rocket Fuel, spell 11456, `source = [1]` |
-      | 2 | drop | `first-aid/70f960b96015ba9c.html` | Strong Anti-Venom, spell 7935, `source = [2]`; rendered Source: Drop |
-      | 4 | quest | `first-aid/70f960b96015ba9c.html` | First Aid (Artisan), spell 10846, `source = [4]`; rendered Source: Quest |
-      | 5 | vendor | `first-aid/70f960b96015ba9c.html` | Heavy Silk Bandage, spell 7929, `source = [5]`; rendered Source: Vendor |
-      | 6 | trainer | `first-aid/70f960b96015ba9c.html` | Silk Bandage, spell 7928, `source = [6]`; rendered Source: Trainer |
-      | 16 | other (code 16), unverified | `tailoring/5ac55d42c839793b.html` | Red Linen Robe, spell 2389, `source = [2, 16, 21]` |
-      | 21 | other (code 21), unverified | `tailoring/5ac55d42c839793b.html` | Red Linen Robe, spell 2389, `source = [2, 16, 21]` |
+    | Code | Label | Page hash/profession | Recipe |
+    | --- | --- | --- | --- |
+    | 1 | other, unverified | alchemy/4b2bdfb5cde1b592 | Goblin Rocket Fuel 11456 |
+    | 2 | drop | first-aid/70f960b96015ba9c | Strong Anti-Venom 7935 |
+    | 4 | quest | first-aid/70f960b96015ba9c | Artisan 10846 |
+    | 5 | vendor | first-aid/70f960b96015ba9c | Heavy Silk Bandage 7929 |
+    | 6 | trainer | first-aid/70f960b96015ba9c | Silk Bandage 7928 |
+    | 16/21 | other, unverified | tailoring/5ac55d42c839793b | Red Linen Robe 2389, source [2,16,21] |
 
-    - **Tailoring examples:** `tailoring/5ac55d42c839793b.html` lists Linen Bag (3755): `source = [6]`, `trainingcost = 100`; Red Linen Bag (6686): `source = [2, 5]`, no cost; Runecloth Bag (18405): `source = [5]`, no cost. These are recipe learning methods, not vendor-material prices or pattern purchase prices.
-    - **Starting evidence:** Bolt of Linen Cloth (spell 2963), on that saved Tailoring page, has `learnedat = 1` and no `source` or `trainingcost`. The page entry has no explicit starting-recipe marker; its view therefore shows *unknown*, with no cost inferred. A starting label requires further page evidence rather than generalizing from skill 1.
-  - **Raw materials (STORY-047 review):** a selection may mark an item `raw_material = true` with a required `raw_material_note`, when it is obtained directly although the catalog can craft it (Forever leather tiers: skinned or bought, not converted up from scraps). The recipe stays in the catalog and the board still compares buying with crafting; only skill-up raw totals stop expanding at that item. It is a planning choice recorded in the selection, not a game value.
-  - **Vendor materials need evidence:** Wowhead gives a buy price to items no vendor sells (Felcloth, elemental essences, raid gear), so a buy price never makes an item a vendor material. The selection marks vendor items, with evidence or `vendor_verified = false`. The page's buy price is the vendor price; it replaces the sell price × 4 estimate (they differ for Coarse Thread: 10c, not 8c).
-  - **Unconfirmed values are marked:** `output_quantity_verified = false` and `vendor_verified = false` stay until confirmed in game, and the recipe view shows them. Forever output counts are unconfirmed until counted in game. Wowhead's list data says 1 for every Tailoring recipe; the "(2)" in its spell tooltips is the effect number (effect 1 consumes the reagents, effect 2 creates the item), not a quantity (checked 2026-10-06), so nothing suggests a yield above 1. A Forever catalog added in the app still marks every yield unconfirmed, and any vendor item marked there gets `vendor_verified = false`.
-  - **Availability:** a recipe or item may be marked `availability = "post-launch"` with a note. It is display-only; the board still prices it.
-  - **Staying current:** after a game update, re-save the page and regenerate. The command lists recipe and vendor price changes for review; a changed value bumps `catalog_version`. In the app, **Save catalog** bumps the minor part of the selection's `catalog_version` (0.1 → 0.2) whenever the catalog file would change, unless the selection's version was already changed by hand (then it keeps that version), and does nothing when the page reproduces it exactly.
-  - **Refresh due:** the app flags a catalog when an enabled market of the same game version uses another `rules_version`, or when its page is older than the selection's `refresh_after_days` (default 30).
-  - **Edited, never re-dumped:** the app edits an existing selection file line by line, keeping its comments, and refuses any edit that doesn't read back as chosen. Removing recipes drops notes on items nothing uses any more; the preview lists each one.
-  - **Must load:** a catalog the board's loader would reject (for example two recipes making one item) is refused before anything is written.
-- **CRAFT-09 Market depth (STORY-019):** the board shows auction listing and unit counts for each output and direct input; the recipe input table shows the same counts. Counts include listings without a buyout and describe the exact complete, priced scan used for the prices, scoped by source and full market identity. An absent item is labeled **Not listed** with zero observed listings and units. TSM or a snapshot without a matching priced addon scan shows **Unavailable**, with no counts. Depth is display-only: it changes no cost, action label, ranking or policy version, and is not vendor stock or a claim about demand.
+  - `raw_material=true` requires `raw_material_note`; skill-up raw totals stop there, Board still compares crafting (e.g. directly obtained leather). This is a selection planning choice, not game value.
+  - Vendor status requires selection evidence or `vendor_verified=false`; page buy price alone proves no vendor (Felcloth/essences/gear can have it). Use buy price, not sell*4 (Coarse Thread 10c versus 8c).
+  - `output_quantity_verified=false`/`vendor_verified=false` stay until in-game confirmation and remain visible. Forever yields require counting; Wowhead tooltip (2) is an effect index, not quantity, and list data suggests yield 1. Unconfirmed flags remain until evidence verifies them.
+  - `availability="post-launch"` requires note, display-only; Board still prices it. After game update re-save/regenerate; CLI lists recipe/vendor changes, changed values require catalog_version bump. Loader-invalid catalogs refuse before writing.
+- **CRAFT-09 Market depth:** auction listing and unit counts describe output and input supply for inspection. Counts include listings without a buyout and describe the exact complete, priced scan used for the prices, scoped by source and full market identity. An absent item is labeled **Not listed** with zero observed listings and units. TSM or a snapshot without a matching priced addon scan shows **Unavailable**, with no counts. Depth is display-only: it changes no cost, action label, ranking or policy version, and is not vendor stock or a claim about demand.
 
-- **CRAFT-10 Skill-up map (STORY-047):** compatible catalogs only (CRAFT-05), one profession per catalog; all professions shown by default with a filter. Catalog data and an assumed number of crafts describe expectations, not observed demand or a forecast: levellers make some recipes more and skip others. Never infer roles or uses from names. No source-code acquisition filter.
+- **CRAFT-10 Skill-up map:** compatible catalogs only (CRAFT-05), one profession per catalog. Catalog data and an assumed number of crafts describe expectations, not observed demand or a forecast: levellers make some recipes more and skip others. Never infer roles or uses from names. No source-code acquisition filter.
   - **Placement:** 25-point bands (1–24, 25–49, …). A recipe appears in every band overlapping orange inclusive to green exclusive. Unknown colours use only its learned band and say *skill-up range unknown*. Missing learned skill goes in *skill unknown*, never band 1. Orange equal to green appears in its learned band as *no reliable skill-ups* and adds no units.
-  - **Quantity:** session-only integer N crafts per recipe, default 5, range 1–50, shown in headings. Direct materials sum listed inputs; raw materials expand N crafts together through that catalog's `material_plan` only, so a whole number of intermediate crafts for N isn't an error, and stop at items marked `raw_material` (CRAFT-08). Cycle/fractional expansion errors are displayed and add no raw units for that recipe, never partial counts. All units are integers; names and item IDs come from the catalog. Existing unconfirmed and availability markers stay visible.
-  - **Totals:** per band, per profession and across shown professions, direct and raw. Profession/combined totals count each shown recipe once regardless of how many bands it spans; show using professions and bands, sorted by units descending (item ID breaks ties). Post-launch recipes remain listed but contribute no units by default; a toggle includes them and the excluded count is shown.
+  - **Quantity:** integer N crafts per recipe, default 5, range 1–50. Direct materials sum listed inputs; raw materials expand N crafts together through that catalog's `material_plan` only, so a whole number of intermediate crafts for N isn't an error, and stop at items marked `raw_material` (CRAFT-08). Cycle/fractional expansion errors are displayed and add no raw units for that recipe, never partial counts. All units are integers; names and item IDs come from the catalog. Existing unconfirmed and availability markers stay visible.
+  - **Totals:** per band, per profession and across shown professions, direct and raw. Profession/combined totals count each shown recipe once regardless of how many bands it spans; show using professions and bands, sorted by units descending (item ID breaks ties). Post-launch recipes remain listed but contribute no units by default; an explicit include option counts them; excluded counts remain available.
   - **Coverage:** state “Catalog holds X of Y usable recipes on its saved page (saved <date>); Z recipes on the page create no item and aren't counted”, using catalog recipe count and `page_coverage`. Older catalogs say *coverage unknown; regenerate the catalog*. Incomplete coverage labels totals as only the catalog's recipes.
   - **Market context:** optional, read-only, newest imported snapshot of the selected source and full market. ADDON-10 base/legacy metrics supply units listed and lowest unit buyout; TSM shows its price and units *not available for this source*. No snapshot omits columns with an explanation. Scan time (or labeled collection time) and DATA-05/Today's freshness policy label stale/future evidence without hiding it. Missing/nonpositive prices stay missing. Context changes neither units nor order.
-  - **Presentation:** Totals lead, band sections are collapsed, rule/honesty text is one caption.
 
-- **CRAFT-11 Team progression (STORY-052):** in the new app's Team place, roster cards use the
-  Characters page rules and gain a Next step per profession. Progression defaults to the first scoped
-  Today character and a 25-point reach window (integer slider 5–100), remembered per tab and source.
-  - **Attribution and eligibility:** a catalog recipe belongs only to the latest profession list
-    containing its recipe ID, using Today's matching, status and rank rule. Rank/max come from the
-    same list or newer readable bags row for the same skill ID. Unlisted recipes are counted per
-    catalog with *not in a recipe list: open that profession's window*; skill lines without a list say
-    *recipes unknown*. No name/title matching. Known recipes are excluded from the reach window;
-    required skill must be above rank and at most the window above it. Unknown remains marked;
-    recipes without trainer code 6 remain visible as *needs pattern or other source*.
-  - **Current profit:** newest snapshot of the selected source and full market, using the Action
-    Board's per-craft rows (CRAFT-03/04/05). Unvalued recipes retain the board reason; intermediates
-    say they are not ranked. Missing profit stays unavailable. Show CRAFT-08 learning labels and
-    training cost, or *cost unknown*, and Today's confidence labels.
-  - **Estimated cost to reach:** at each rank below required skill, choose the cheapest catalog craft
-    attributed to that profession that gives a skill-up and is Known, or trainer-learnable through
-    Today's status rule once its required skill is reached. Charge its training cost only on first
-    use. Materials use CRAFT-03/12's cheapest route, including team-made intermediates;
-    no revenue credit. Orange takes one expected craft per point. Yellow assumes the community
-    Classic chance `(grey - rank) / (grey - yellow)`: **unconfirmed on Forever**, an estimate, not
-    established game evidence. Green/grey give no qualifying points. Expected material copper is
-    rounded up per point; training stays integer copper. A gap, missing material price/colour or
-    unknown required training cost makes the estimate incomplete with the reason, never free.
-    Stop at the profession cap; crossing it says *train the next tier first*. At cap, still list
-    recipes in the window beyond it.
-  - **Comparison:** one row per profession, rank/max, highest per-craft profit in the window,
-    points needed, cost estimate and profit. Sort profit descending, then complete estimates before
-    incomplete at ties, then cost ascending; retain incomplete rows. Label once: current-scan profit
-    is not a forecast, sales speed/demand unknown, beta prices and estimated yellow skill-up chances.
+- **CRAFT-11 Team progression:** Team roster uses character-card rules, with Next step per profession. Default first scoped Today character, reach 25, integer slider 5–100 remembered per tab/source.
+  - Attribute recipe by latest containing ID list and Today status/rank only. Rank/max from list or newer readable bags same skill ID. Missing list: recipes unknown; unlisted catalog recipes counted with open-window guidance. No names/titles. Window excludes Known, requires skill >rank and <=rank+window. Unknown marked; no trainer code 6 says needs pattern/other source.
+  - Profit = newest full-market/source Board per-craft CRAFT-03/04/05; unvalued retains reason, intermediates unranked. Learning/training labels or unknown from CRAFT-08, Today confidence.
+  - Reach cost: per rank choose cheapest attributed catalog craft that skills up and is Known or trainer-learnable by Today once skill reached. Charge training once on first use; CRAFT-03/12 team-aware materials, no sales credit. Orange one expected craft/point; yellow `(grey-rank)/(grey-yellow)` is unconfirmed Classic estimate. Green/grey excluded. Round expected material copper up per point; training integer. Gap/missing price/color/required training cost means incomplete with reason, never free. Stop at cap, crossing says train next tier first; still list beyond-cap window recipes.
+  - Compare profession rank/max, highest window per-craft profit, points/cost/profit. Sort profit descending, complete before incomplete ties, cost ascending; retain incomplete. Label current-scan not forecast, speed/demand unknown, beta/estimated yellow.
 
+- **CRAFT-12 Crafting across professions:** combine full-market/game/rules-compatible catalogs in graph. Recipe IDs unique or refuse naming both catalogs; keep catalog/profession/qualified board rows. Local eligibility unchanged; other-catalog materials craft only for scoped Known/Train now maker, otherwise buy with no-one-makes-this label. No character evidence = catalog-local costs.
+  - Multiple valid makers compete on crafted unit cost; equal lower catalog identity, show profession. CRAFT-03 routes/CRAFT-02 cycle/fractional rejection unchanged.
+  - Shared vendor buy/raw/availability fields: omission takes recorded value elsewhere, never disagreement. Different recorded values warn item/both catalogs and make buy-only until fixed; no arbitrary choice/free missing price.
+  - Applies Board/Today/Shopping/Queue/Market/Team/This session. Cross-profession steps name maker/profession; Queue assigns them before consumers. Postage unconfirmed/uncharged, explicit. Intermediate cost never sale value/profit without Board valuation. Copper/listings never sales.
+  - Board policy 0.3; current Today version in Today section. Context/version changes reset old choices/ticks with existing note. Board without team evidence stays local.
 
-- **CRAFT-12 Crafting across professions (STORY-015b, decided 2026-10-13):** combine catalogs
-  compatible with the selected full market, game version and rules version into a recipe graph.
-  Recipe IDs must be unique in that graph; collisions refuse with both catalog identities. Keep each
-  recipe's catalog/profession and each board row's catalog-qualified identity. Local routes retain
-  their existing eligibility; a material from another catalog is craftable only if a scoped team
-  character is **Known** or **Train now** under Today's status rule. Otherwise buy it and label
-  *no one on the team makes this*. Without character evidence, costs remain exactly catalog-local.
-  - Several professions making one item compete on valid crafted unit cost; equal crafted costs
-    choose the lower catalog identity. Show the chosen profession. Buy/craft/vendor routes still use
-    CRAFT-03, and cycles/fractional units remain rejected under CRAFT-02.
-  - Shared items must agree on vendor buy price, raw-material flag and availability. A field one
-    catalog omits takes the value another catalog records (decided 2026-10-13: the generated catalogs
-    record no vendor prices, so omission is missing data, not a disagreement). Two different recorded
-    values warn with item and both catalog identities and make the item buy-only until fixed; never
-    silently choose between them or treat missing/zero prices as free.
-  - Applies to Action Board, Today plan/Shopping list/Queue, Market made-from/used-in, Team reach
-    estimates and This session. Today names the maker and profession on cross-profession steps;
-    Queue assigns those crafts to that maker before the consuming crafts. Mail between characters
-    is not charged and explicitly says postage is unconfirmed (Known Forever market facts).
-    Crafted intermediate cost is not a sale price; no intermediate profit without a Board valuation.
-    Listings remain listings, never sales; all costs use integer copper.
-  - Board **policy version 0.3** and **Today version 6** introduce these changed material costs.
-    Today's existing plan-reset note accompanies discarding pre-change choices and Queue ticks.
-    Streamlit gains no new features; board calls without team evidence retain catalog-local routes.
+- **CRAFT-13 Add a character?:** compare hypothetical rank-one hire with no known recipes for each compatible profession including already held. CRAFT-11 attributed holders/ranks; no-catalog professions once at bottom, gathering income/supply unmodelled.
+  - Trainer code 6 only. Other-source counts need pattern; absent source unknown. Cumulative material+recipe training costs 1→75/150/225/300 through CRAFT-11 expected walk, no revenue credit. Same-progression craft set excludes unverified-source starters; gaps unknown, no assumed free skill 1. New hire's local routes allow trainer and current team Known/Train now recipes; own skill-ups trainer-only, other professions require current-team CRAFT-12. No other-profession hire materials. Tier fees unknown/excluded; UI-12 levels unconfirmed.
+  - Best cap profit = current Board trainer recipes with skill <=cap. What it feeds compares Board CRAFT-12 costs after tier trainer-maker addition against current team, only current Known/Train now consumers. Count cheaper rows/top 3 per-craft savings with material/consumer/copper; none says feeds nothing. Cost reductions only, no gathering/speed/intermediate profit.
+  - Two-primary characters use evidenced IDs and show their professions' best CRAFT-11 window profits; Classic limit unconfirmed. Cooking/First Aid/Fishing take no slot. Comparison only, no drop recommendation. Slot-only evidence [Herbalism 182](https://www.wowhead.com/classic/skill=182/herbalism), [Skinning 393](https://www.wowhead.com/classic/skill=393/skinning), [Fishing 356](https://www.wowhead.com/classic/skill=356/fishing); other IDs reuse Today table, no new catalog/gathering values.
+  - Sort best at 300 descending, complete first ties, cost ascending, name; no profit last. Label scan not forecast/listings not sales/speed-demand unknown/beta/yellow/tier assumptions. Copper/MONEY-02. Tier/feed detail lazy; no changes Today/Board ranking/versions/storage/price queries.
 
-- **CRAFT-13 Add a character? (STORY-059):** Team compares a hypothetical rank-one new hire,
-  knowing no recipes, for each compatible catalog profession, including professions already held.
-  Show existing holders/rank/max using CRAFT-11 attribution. Professions without catalogs appear
-  once at the bottom: *no catalog: gathering income and supply are not modelled*.
-  - Only recipes whose learning evidence includes trainer code 6 count; recipes with other learning
-    evidence are counted as *needs pattern or other source*, and recipes with no learning evidence as
-    *learning source unknown* (never assumed trainer or starter). When the walk stops, its reason adds
-    how many unknown-source recipes sit at or below that rank. For caps 75, 150, 225 and 300, show cumulative cost from
-    rank 1 using CRAFT-11's unchanged cheapest skill-up walk, training charged once and incomplete
-    reasons retained. Own catalog-local material routes contain trainer recipes plus recipes a current
-    team member already makes (Known or Train now); the hire's own skill-ups stay trainer-only; other
-    professions' routes require current-team evidence under CRAFT-03/12. A new hire never makes
-    another profession's materials. Tier fees are absent from catalogs: *tier fees not included
-    (unknown)*. Tier levels reuse UI-12's Classic Era ladder, unconfirmed on Forever.
-  - Best current per-craft profit at each cap comes from current Action Board rows for trainer
-    recipes with required skill at most the cap. *What it feeds* compares CRAFT-12 costs after adding
-    the hire as a maker of that tier's trainer recipes with the current team's board: count cheaper
-    rows that are Known or Train now for a team member, and show the three largest per-craft savings
-    with material, consuming recipe and copper saved. No feeds says *feeds nothing*. Savings are
-    cost reductions; no gathering income, sales speed or intermediate profit is assumed.
-  - Beside the rows, list characters with two evidenced primary professions (Classic Era's limit,
-    unconfirmed on Forever) and their professions' best CRAFT-11 reachable profits at Team's window.
-    Cooking, First Aid and Fishing take no primary slot. Comparison only, no drop recommendation.
-    Slot-only ID evidence checked 2026-10-13 against Wowhead Classic skill-page identities:
-    [Herbalism 182](https://www.wowhead.com/classic/skill=182/herbalism),
-    [Skinning 393](https://www.wowhead.com/classic/skill=393/skinning),
-    [Fishing 356](https://www.wowhead.com/classic/skill=356/fishing). Other IDs reuse Character
-    eligibility's profession table; these mappings add no gathering model or catalog values.
-  - Sort by best profit at 300 descending, then complete before incomplete costs, cost ascending,
-    then name; no profit last. Label once: current-scan prices are not a forecast, listings never
-    sales, sales speed/demand unknown, beta prices, estimated yellow chances and unconfirmed tier
-    levels. Integer copper, MONEY-02 display. Per-profession tier/feed detail loads when opened.
-    No changes to Today, board ranking, policy/Today versions, storage or price queries.
-
-### Watchlist (STORY-048)
+### Watchlist
 
 - **Entries and storage:** one base-item entry per positive item ID, with an optional note and at
   least one positive integer-copper buy-below or sell-above target. Input uses Today's explicit
@@ -666,89 +250,24 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   with the strictly-below unit reader); sell hits at or above the target. Each target has its own state.
   Stale or future evidence retains hits marked **stale**. TSM uses its lowest price and labels units
   **not available for this source**, including buy hits.
-- **Display:** Watchlist supports add, edit and remove; editing
-  keeps the entry's item ID (pick or type an ID only when adding). Its
-  table shows name when known, ID, targets, lowest price, listed units, target units/states and note;
-  snapshot time in UTC appears once above it. A short current-hits panel appears above Today's tabs
-  and after a successful addon import, and is absent when there are no hits. It changes neither
-  Today's numbers/ranking nor the import.
+- **Display:** the standalone add/edit/remove page is retired under UI-07. The engine and existing files remain; short hits appear after successful addon import and on Today when present, changing neither plan/ranking nor import. Targets/edit validation stay in the engine; Stock provides current buy-limit editing.
 
-### Today (today_version 7, STORY-025/039/043/046/057/015b; STORY-039 reviewed 2026-10-08)
 
-- **Opening and settings:** every source opens on Today; subsequent navigation is remembered per
-  source during the session. Each source has its own ignored preferences file,
-  `data_dir/today-settings.<source_id>.local.json`, because the data directory is shared and each
-  source's funds are its own. It is written atomically (through a `.tmp` sibling, also ignored) only on
-  Save; the pattern is also ignored for custom data directories. Invalid or unreadable settings show a
-  warning and defaults, never silently replace the file. A rejected or failed Save shows an error and the
-  tables stay visible, still sized by the last saved settings.
-  **Gold available (STORY-056):** recorded gold is the default, including older settings files with
-  a typed amount. For a chosen character, use `gold_copper` from its newest readable bags snapshot
-  in the selected source and full market, labelled with the character and UTC capture time. With
-  Our team, sum each scoped character's newest captured gold and label *across N characters;
-  gold must be mailed to the crafter*. Characters with missing gold are excluded with a note. A saved
-  character no longer in this source and market plans as Our team, so its funds are the team total.
-  **Enter an amount instead** enables the optional saved override (default off), labelled *entered
-  amount*. A chosen character without captured gold (or no captured gold across the source) falls
-  back to the entered amount with a one-line note; missing/unreadable gold never becomes a known
-  zero or another character's gold. A zero capture is not known funds. Captures older
-  than the scan's stale window remain usable but display their age and stale label. The entered
-  amount starts at **0c**. Funds resolution changes no ranking, sizing or reservation rule, and
-  STORY-056 did not change `today_version`; STORY-057 advances it to 5. Explicit integer `g/s/c`
-  text is required (case-insensitive, optional spaces, each unit at most once; properly grouped thousands
-  commas accepted). Bare numbers get a units hint. The parser round-trips signed money display; settings
-  reject negative amounts. Minimum mode starts **scaled**, **1%** (**100 basis points**) with a **10s**
-  floor. Fixed mode uses only the fixed minimum. Scaled mode is `max(fixed, ceil(gold * basis_points / 10000))`.
-  Percentage is adjustable from **0 to 100%** in hundredths; most crafts per item starts at **5**, adjustable
-  from **1 to 1,000** (bounded to keep interactive calculations predictable). All amounts are integer copper.
-- **Character eligibility (STORY-043/057, v5):** the Save-only settings form offers **Our team**
-  (default) and all characters with snapshot or profession evidence in the selected source and full
-  market. Persist name, realm and faction per source; older settings mean Our team. A missing saved
-  character falls back to Our team with a caption, without rewriting settings.
-  Match catalog `recipe_id` to window rows and seen-crafted IDs **only by recipe ID** (the spell ID
-  confirmed in STORY-049); never match names, profession titles or output items. Use the latest list
-  containing the ID (capture time, then sequence). Rank comes from that list, or a newer readable bags
-  snapshot for the same skill ID. Evidence comes from the shared `professions.latest_data` projection.
-  - **No profession (STORY-057):** a complete readable skill
-    surface in the newest readable bags snapshot that lacks the catalog's profession skill-line ID
-    proves **Not yet: no character has this profession**. Missing/unreadable lists or unmapped
-    catalog professions stay Unknown. Legacy counts must match readable rows, with no collapsed or
-    unreadable headers (`possibly_incomplete`); modern rows must cover every reported non-nil
-    profession index. Non-header rows need reported skill IDs. Names never establish a match.
-  - **Known:** explicit `learned == true` or seen crafted, unless complete skill evidence proves
-    no profession as above and that bags snapshot is newer than the matching window list (a list
-    captured after it, such as a profession learned since, wins). Positive knowledge remains evidence even when a window list is
-    possibly incomplete.
-  - **Unknown:** no matching ID, a possibly incomplete list without positive knowledge, an absent
-    learned flag, or an unlearned recipe with missing learning source. Missing rank also leaves trainer
-    eligibility unknown. Unknown never counts as known. It is excluded by default; the saved
-    **Include unknown recipes** switch (default off, including older settings files) retains it with
-    its mark. Hide Low confidence and price/funds feasibility rules still apply.
-  - **Train now:** explicitly unlearned, complete list evidence, source includes **6** (trainer;
-    CRAFT-08's source-code evidence table), rank at least `required_skill`. Other source codes alongside
-    6 do not prevent training. Show training cost through `money.py`, or **cost unknown**, beside batch
-    profit; never subtract it from profit or reserve it from the craft budget.
-  - **Not yet:** no profession as above, or explicitly unlearned with sufficient learning evidence,
-    rank below required skill (**rank below required skill**) or source codes without 6
-    (**needs pattern or other source**, including unverified codes). Never planned on Today, even
-    with Include unknown recipes; STORY-052's progression is where it belongs.
-  Our team plans the union of Known or Train now recipes and **Who can make it** names those
-  characters. If nobody qualifies, an Unknown status keeps the recipe unknown for the team;
-  otherwise it is Not yet. Count excluded recipes once by reason under Craft: no character has this
-  profession, rank below required skill, needs pattern or other source, or unknown for every character.
-  When characters have different Not yet reasons, use rank, then pattern, then no profession (the
-  closest available learning evidence). With no character evidence at all, retain every catalog recipe
-  and state that no character evidence exists for this source.
-  Ranking, sizing, route choice and reservations within the filtered set remain unchanged; the Queue
-  uses that set. Catalog checks under Craft compare matched output item, yield bounds and required
-  reagent IDs/counts against the catalog. Optional, multi-choice or variable reagent slots are
-  **not compared**. Checks are collapsed and never change catalog values (CRAFT-08).
+### Today (today_version 7)
 
-  **Profession skill-line IDs (STORY-057):** checked 2026-10-11 against the named Wowhead Classic
-  skill pages below (page identity and `skill` ID; used for the shared Classic/Forever profession IDs).
-  This maps catalog metadata to reported IDs; it never matches client names or changes catalog values.
+- **Opening/settings:** Today opens by default; session navigation is per source. Save-only atomic preferences use `data_dir/today-settings.<source_id>.local.json` plus ignored `.tmp` sibling, including custom directories. Invalid/unreadable files warn and use defaults without replacement; failed/rejected Save leaves last saved sizing and visible tables.
+- **Funds:** recorded gold is default even for older typed-budget files. Chosen character uses latest readable scoped bags `gold_copper` with name/UTC capture. Our team sums each character's latest captured gold, excluding missing values with notes; label across N characters, gold must be mailed. Missing saved character falls back to team without rewriting. Enter an amount instead enables saved override (default off), labelled entered amount. No captured gold falls back to entered amount with explanation; missing/unreadable/zero capture is not known funds and never borrows another character's gold. Old captures remain usable with age/stale labels. Entered default is 0c. Resolution changes no ranking/sizing/reservations.
+- **Input/defaults:** explicit integer g/s/c, case-insensitive, optional spaces, each unit once, grouped thousands accepted. Bare numbers get units hint; parser round-trips signed display, settings reject negatives. Minimum defaults scaled 1% (100 basis points), floor 10s. Fixed uses fixed minimum; scaled = `max(fixed,ceil(gold*basis_points/10000))`. Percentage 0–100% in hundredths; craft cap default 5, integer 1–1,000. Copper only.
+- **Character eligibility:** Save-only Our team (default, including old files) or scoped snapshot/profession characters, persisted name/realm/faction per source. Missing saved character falls back with caption. Match catalog spell `recipe_id` only against latest containing list (capture then sequence) or seen-crafted IDs, never names/titles/output IDs. Rank comes from list or newer readable bags for same skill ID; shared `professions.latest_data` supplies evidence.
+  - Complete readable newest bags skill surface lacking catalog skill ID proves Not yet: no character has this profession. Legacy counts/rows must agree, with no collapsed/unreadable headers; modern covers every reported nonnil profession index; nonheaders need IDs. Missing/unreadable/unmapped evidence stays Unknown.
+  - Known = explicit learned true or seen crafted, unless newer complete bags proves no profession; a later list wins. Positive knowledge remains valid in incomplete lists.
+  - Unknown = no ID, incomplete list without knowledge, missing learned flag/source or missing trainer rank. Never known, excluded by default; Include unknown recipes (saved, default off) retains marks subject to confidence/feasibility.
+  - Train now = explicit unlearned complete list, source includes code 6, rank >= required skill. Other codes alongside 6 do not prevent it. Show training cost or cost unknown, without subtracting profit/reserving budget.
+  - Not yet = no profession, or unlearned with sufficient source evidence but rank below required skill or no code 6 (needs pattern or other source, including unverified codes). Never plan, even with Include unknown; Team progression holds future recipes.
+  - Team union plans Known/Train now and names makers. Nobody qualifying but some Unknown means team Unknown, otherwise Not yet. Count exclusions once; differing Not yet reasons prefer rank, pattern, no profession. Without any character evidence retain every recipe with explanation. Queue uses filtered set; ranking/sizing/routes/reservations otherwise unchanged. Collapsed catalog checks compare matched output/yield/reagent IDs/counts; optional/multichoice/variable slots not compared. Never alter catalog values.
+- **Profession IDs:** map catalog metadata to reported IDs, never client names. Evidence is the corresponding Wowhead Classic `skill` pages:
 
-  | Catalog profession | Skill-line ID | Source evidence |
+  | Profession | ID | Evidence |
   | --- | --- | --- |
   | alchemy | 171 | [Alchemy](https://www.wowhead.com/classic/skill=171/alchemy) |
   | blacksmithing | 164 | [Blacksmithing](https://www.wowhead.com/classic/skill=164/blacksmithing) |
@@ -760,220 +279,56 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   | mining | 186 | [Mining](https://www.wowhead.com/classic/skill=186/mining) |
   | tailoring | 197 | [Tailoring](https://www.wowhead.com/classic/skill=197/tailoring) |
 
-- **Routes and batch costs:** reuse compatible Action Board routes under the cautious
-  basis (CRAFT-03/04/05/12). Routes are selected once from aggregate evidence,
-  then held fixed while sizing. Today changes auction purchase costs to the exact listing ladder, ordered
-  by positive unit-buyout-ceiling, then quantity and buyout for deterministic ties. **Whole listings** are
-  bought: include the entire buyout when the final stack exceeds required units. Show required and purchased
-  units; surplus has **no revenue credit**, and is not reused by another batch in v1. Vendor routes use
-  their catalog purchase prices without a supply limit. Unsupported expansion remains isolated and hidden
-  with its reason. Cautious output revenue and auction-cut rounding remain per CRAFT-07, per execution.
-- **One funded plan:** first rank the board and prepare prefix ladders, then quote batches by binary search,
-  without walking listings for each recipe or expanding stacks. For each candidate, batch sizes are
-  bounded by priced input supply, remaining gold and the per-item craft cap; within that bound the size with
-  the greatest batch profit is chosen (the smaller on ties), because deeper listings can make extra crafts
-  lose money. Profit can only peak at the bound or just before an input needs another listing, so only
-  those sizes are quoted. Select the greatest **total batch profit**, reserve its complete input listings and cost, then re-size/rank remaining candidates.
-  Repeat up to **10 craft rows**. Select each output only once, choosing the catalog/recipe with
-  the greatest feasible batch profit; hide other routes as **output already planned**, so the per-item
-  cap cannot be multiplied by duplicate catalogs. Display the selected rows by descending batch
-  profit, then recipe ID, then catalog identity; there is no score. This greedy plan makes the combined shopping list payable and
-  avoids double-use of cheap listings; it does not claim globally optimal portfolio profit. The limiting factor is
-  **more crafts lower profit** when a smaller size beats the bound; otherwise ties prefer cap, then input
-  supply, then gold. Profit per craft displays `floor(batch_profit / batch_size)`;
-  exact batch profit remains authoritative. Each row identifies its recipe/catalog, rules and provenance,
-  quantities, costs, revenue, competition, limits, availability and unconfirmed yield/vendor evidence.
-- **Choose and refill (STORY-039, version 2):** Craft rows start ticked at their recommended size.
-  Chosen sizes must be integers from 1 through the bound from funds, listed supply and the per-item cap.
-  Re-reserve complete listings and funds in plan order for exact chosen sizes; never silently resize an
-  infeasible choice. Drop it with a note that names the craft and why (size no longer feasible, output
-  already planned, 10-row limit reached, recipe no longer a candidate). A kept row at the size the
-  greedy rule would choose shows its real limiting factor; any other size shows *chosen batch*. Buy, Sell and shopping totals use only the resulting plan;
-  smaller batches show their actual lower profit, even below the automatic recommendation threshold.
-  By default, freed gold funds the next-best remaining outputs under the existing greedy rules, up to
-  the same 10-row limit. Refill does not grow explicit batches or re-add unchecked outputs (including
-  alternate routes to those outputs). Turning refill off keeps exactly the ticked choices, including
-  any refill rows already ticked; the Craft tab then counts the feasible crafts left out (never 0
-  when some fit) and keeps the hidden-reason counts. Choices and refill preference live only in the app session (never on disk),
-  separately per source; scan, settings or catalog/evidence changes reset them with a note and a fresh
-  default plan. Previous choices are dropped rather than carried over at resized quantities.
-- **Session queue (STORY-039):** one complete checklist: auction-house materials, vendor materials,
-  crafts in the chosen catalog route's dependency order (intermediates before their consumers), then
-  posts at Sell's undercut prices. Buy lines show purchased units, highest unit price and full cost;
-  craft lines identify recipe and batch; post lines show units, price and profit at that price. Totals
-  show complete shopping gold and summed profit at undercut; missing undercut evidence leaves expected
-  profit unavailable, never zero. Queue projections reuse reserved purchases and retained route steps,
-  without quoting again. Queue ticks stay in session per source, reset with the plan (not when evidence merely turns
-  stale), and never affect quantities or numbers. Copy as text exposes the same complete list and totals as plain text.
-- **Confidence (STORY-046, version 3):** label each selected Craft row and carry its label and short
-  reasons to Sell and its Queue craft/post lines. A merged Queue buy line carries the worst label of
-  its contributing crafts and their distinct reasons. Low wins over Medium; no reasons means High.
-  This display pass runs after reservations and changes no ranking, sizing, refill, queue order or costs.
-  Named thresholds are **CONFIDENCE_LOW_SHARE_PERCENT = 75**, **CONFIDENCE_MEDIUM_SHARE_PERCENT = 40**,
-  **CONFIDENCE_MEDIUM_LISTINGS = 5**, and **CONFIDENCE_AGE_FRACTION = 0.5**.
-  Low reasons: DATA-05 stale/future evidence (inspection only); output *thin* under the existing
-  Sell/CRAFT-09 rule below; no positive competing listing; auction material purchases strictly above
-  CONFIDENCE_LOW_SHARE_PERCENT of that material's scan units. Medium reasons: age strictly above
-  CONFIDENCE_AGE_FRACTION × configured freshness limit; output listings strictly below
-  CONFIDENCE_MEDIUM_LISTINGS; auction material purchases strictly above CONFIDENCE_MEDIUM_SHARE_PERCENT;
-  any false `*_verified` marker on the selected recipe or any recipe/item in its retained route
-  (including output, crafted intermediates and purchased leaves). Yield and vendor price reasons
-  remain explicit; unused alternative routes supply no reasons. Age uses DATA-05's same basis and
-  limit, including labeled collection time when upstream scan time is unknown.
-  Material share uses whole purchased units through that row's reservation prefix (earlier planned
-  purchases count against later rows), divided by all scan-listed units including no-buyout listings.
-  Vendor purchases and materials not purchased supply no share reason. TSM/missing depth replaces
-  depth reasons with *depth not available for this source*, a Medium reason; absent depth never yields High.
-  The Craft-only **Hide Low confidence** toggle defaults off and lives only in session per source.
-  Hidden rows count as *low confidence* alongside existing hidden reasons. Filtering preserves the
-  full plan's reservations, Buy, Sell, Queue and totals.
-- **Hidden and capped:** within the character-filtered set, hide invalid recipes (unsupported recipe before missing prices), no batch with
-  priced supply (**insufficient listed materials**), batches where one craft exceeds remaining funds
-  (**one craft exceeds funds**), and nonpositive profit or profit strictly below the minimum (**below
-  minimum gain**). Reasons are mutually exclusive in that order and describe the remaining plan budget.
-  Count remaining feasible outputs (each output once, whatever its routes) outside the 10-row selection
-  separately from hidden rows. Every list
-  caps at **10 rows**, with a count of the rest; shopping totals include materials beyond its display cap.
-- **Presentation (STORY-060, new NiceGUI app only):** Today answers its business question once,
-  with chips for character/profession rank or Our team, scan age (Stale badge when applicable),
-  available gold and its origin, and a hidden-recipes button. Stale or future-dated prices show
-  one plain-language preview banner with **How to scan**. Summary tiles show selected outputs,
-  shopping cost, expected profit at Sell's undercut and the best valued craft at that price;
-  unavailable undercut evidence is never zero. Tabs are **Plan, Shopping list, Sell, Queue, Extras**;
-  the URL retains the selected tab (older Craft/Buy/Below vendor URLs resolve to the new labels).
-  Plan opens as cards in the existing displayed plan order, with the same 10-row limit; Table
-  is one toggle away. Cards lead with output, batch, large batch profit, per-craft profit and cost,
-  status/confidence badges and a purchase/sell line. **What to buy and where to sell** opens all
-  reserved materials (purchased and needed units, route, cost, highest paid unit), intermediate
-  steps and undercut price, competing listings/units, profit and confidence reasons. Stale cards
-  remain *stale — inspect only*; Unknown remains explicit. Shopping list's **For** retains each
-  contributing output's purchased units, including whole-stack surplus. Queue retains ticks,
-  totals and Copy as text. Session adjustments, refill and Hide Low confidence remain available.
-  **ⓘ How this plan was made** contains scan/snapshot identity and time, source and full market,
-  auction cut, rules version, cautious price basis, gold origin/capture notes (including recorded
-  balances beside an entered budget), all hidden-reason
-  counts and row-limit counts. The gear opens **Today settings**, with the existing validated
-  fields and Save-only persistence. Fixed/scaled mode is retained; the percentage and explanation
-  appear only in scaled mode (the greater of the fixed minimum and that percentage of gold).
-  Cancel/Close discard the draft; successful Save closes the dialog and reports success.
-  An empty plan leads with one explanatory card naming the largest hidden reasons, available
-  gold and minimum gain, with buttons for settings and all reasons; other plan views remain
-  reachable on demand. Cards and summaries never re-quote listings or change calculations,
-  reservations, queue, settings format or today_version. The Streamlit Today page remains unchanged.
-- **Buy:** merge the selected batches' purchases by base item and buy/vendor route, summing required units,
-  purchased units and full buyouts, and taking the highest paid unit-buyout-ceiling. Sort by cost descending,
-  item ID, route. *Cheap now* is informational only: for auction purchases, full cost divided by purchased
-  units is **strictly below** that exact scan identity's quantity-weighted **25th percentile** (ADDON-10).
-  Vendor routes and missing percentile evidence never receive the flag.
-- **Below vendor price:** a separate, independent aside, not an addition to the craft budget. Only base
-  or legacy identities supported by the v1 catalog evidence reads are considered; variants/unresolved
-  identities are excluded rather than pooled. Use the selected scan's positive **vendor sell** reference,
-  never a catalog vendor purchase price. Include complete listings with unit-buyout-ceiling **strictly
-  below** that reference. Gain is vendor price × purchased units minus actual buyouts, positive and **at
-  least the minimum gain**. Sort gain descending then item ID. Nothing implies a completed sale.
-- **Sell:** one row per selected output, with its chosen catalog/recipe identity.
-  Show lowest positive competing unit price, all listings/units (including no-buyout listings), largest
-  stack, and **1c** below the lowest as undercut price. An item whose scan reference says it doesn't stack
-  (`max_stack_size` 1) can only be posted in **whole silver** on Forever (beta evidence 2026-10-13: a
-  299c post was refused and 300c accepted; all 29,366 unstackable listings in that scan were whole
-  silver, while stackable goods carried copper prices), so its undercut is the highest whole-silver price
-  below the lowest; an unknown stack size keeps 1c, and Sell shows the price step. **Today version 7**
-  introduces this. A lowest price of **1c** (or under 1s for an unstackable item) has no valid positive
-  undercut and no undercut-profit estimate. Profit at undercut uses the selected batch costs and auction
-  cut; it can be negative. **Thin** means **fewer than 3 listings**, or the largest stack holds **at least
-  half** of listed units. No claim about demand, sales speed, deposits, or actual sales is made.
-- **Evidence and honesty:** source, market, snapshot/scan, evidence time and time basis appear once
-  on the page rather than on every row. A single rules/provenance caption names Today version, cautious
-  output price, auction cut and that evidence; the page context and DATA-05 freshness captions remain.
-  Every table keeps a visible State column, including **stale — inspect only** for stale/future evidence.
-  DATA-05's configured freshness limit applies unchanged: stale/future rows
-  remain inspectable but are **never actionable**, and the page shows a banner. No missing/zero price
-  becomes a recommendation. TSM has **not available for this source** for individual listings, thin,
-  undercuts, cheap-now and below-vendor evidence; so does an addon snapshot without eligible scan
-  metrics (STORY-030 keeps this notice tied to missing listing evidence, not to the provider). TSM batches use cautious aggregate purchase estimates,
-  gold and cap only. Base/null-legacy compatibility follows ADDON-08; all storage reads retain full
-  source/market/snapshot identity and catalog compatibility retains `rules_version`.
-
+- **Routes/batches:** compatible cautious Board routes (CRAFT-03/04/05/12) chosen once from aggregates and held while sizing. Exact ladders sort positive unit-buyout-ceiling, quantity, buyout. Buy whole listings/full buyouts, showing required/purchased units; surplus has no revenue credit or reuse across batches. Vendor routes use catalog prices without supply cap. Unsupported expansions hide with reason. Cautious revenue/cut rounding stays per execution (CRAFT-07).
+- **Funded plan:** prepare prefix ladders, binary-search affordable bounds (priced supply, remaining gold, cap), never expand units or walk listings per recipe. Quote bound and points just before new listing needs; choose greatest batch profit, smaller batch on ties. Choose greatest total batch profit, reserve full listings/funds and resize remaining candidates, up to 10 craft rows. One output once across catalogs/routes; others hidden as output already planned. Display descending batch profit, recipe ID, catalog identity; no score/global-optimum claim. Limiter is more crafts lower profit when smaller beats bound; otherwise ties prefer cap, supply, gold. Per-craft profit floors batch profit/batch size; exact batch profit is authoritative. Keep recipe/catalog/rules/provenance, quantities/costs/revenue/competition/limits/availability/unconfirmed evidence.
+- **Choices/refill:** start recommended rows ticked; integer choices 1 through bound. Re-reserve in plan order, never silently resize infeasible choices. Drop with named reason: infeasible size, output already planned, 10-row limit, no longer candidate. Greedy size keeps real limiter; other size says chosen batch. Buy/Sell/totals use resulting plan, even smaller below-threshold batches. Default refill spends freed gold on next-best outputs to same limit, never growing explicit batches/readding unchecked output routes. Off keeps exactly ticked choices (including ticked refill rows); count feasible omitted outputs and hidden reasons. Choices/refill are session-only per source. Scan/settings/catalog/evidence context changes reset choices/ticks with note and defaults, never resize old choices.
+- **Queue:** complete auction materials, vendor materials, dependency-ordered crafts (intermediates first), Sell undercut posts. Buy lines show purchased units/highest unit/full cost; craft recipe/batch; posts units/price/profit. Totals include full shopping and summed undercut profit; unknown undercut means unknown total, never zero. Reuse reservations/steps without requoting. Session/source ticks reset with plan, not merely stale confidence; no effect on quantities/numbers. Copy as text includes same complete list/totals.
+- **Confidence:** display-only after reservations; each craft carries label/reasons to Sell and craft/post Queue. Merged buys use worst contributing confidence/distinct reasons. Low beats Medium, otherwise High. Thresholds: `CONFIDENCE_LOW_SHARE_PERCENT=75`, `CONFIDENCE_MEDIUM_SHARE_PERCENT=40`, `CONFIDENCE_MEDIUM_LISTINGS=5`, `CONFIDENCE_AGE_FRACTION=0.5`.
+  - Low: DATA-05 stale/future (inspect only), output thin by Sell, no positive competition, material purchases >75% scan units.
+  - Medium: age >half freshness limit, output listings <5, material share >40%, false yield/vendor verification anywhere in retained route (output/intermediates/leaves). Unused alternatives excluded. DATA-05 time basis applies, including unknown upstream/collection labels.
+  - Share = whole purchased units through reservation prefix (earlier purchases count for later rows)/all listed units including no buyout. Vendor/nonpurchased inputs excluded. Missing depth (including TSM) supplies Medium depth-not-available, never High. Hide Low confidence is default-off Craft/session/source only; count hidden Low, preserving full reservations/Buy/Sell/Queue/totals.
+- **Hidden/caps:** within character-filtered set, mutually exclusive precedence: unsupported, missing prices, insufficient listed materials, one craft exceeds funds, nonpositive/below-minimum gain. Reasons use remaining budget. Count feasible outputs beyond selection once regardless of routes, separately. Each list <=10 rows with rest count; shopping totals include hidden-by-display materials.
+- **Presentation:** one question, character/rank/team/age/gold-origin chips, stale badge and hidden-recipe button. Stale/future banner offers How to scan. Tiles: outputs, shopping, undercut profit and best valued craft, unknown never zero. Plan/Shopping list/Sell/Queue/Extras tabs; URL preserves tab with old Craft/Buy/Below vendor aliases. Plan cards in unchanged order/limit; Table toggle. Cards show output/batch/batch and per-craft profit/cost/status/confidence, purchase/sell line; details show every reserved material/purchased-required units/routes/cost/highest unit, intermediates, undercut/competition/profit/reasons. Stale inspect only and Unknown explicit. Shopping For keeps contributing outputs/purchased surplus. Queue ticks/totals/copy and adjustments/refill/Hide Low retained.
+  - Page information holds scan/time/source/full market/cut/rules/cautious basis/gold origin and capture notes (including recorded balances beside entered budget)/hidden and limit counts. Gear opens validated Save-only settings; scaled percentage/explanation visible only in scaled mode. Cancel/Close discard draft, successful Save closes/reports. Empty plan explains largest hidden reasons/funds/minimum and offers settings/all reasons; other views reachable. Presentation never requotes or alters calculations/reservations/queue/settings/version.
+- **Buy:** merge chosen purchases by base item and buy/vendor route, sum required/purchased units/full costs, highest unit ceil. Sort cost descending, item ID, route. Cheap now is informational: auction full cost/purchased units strictly below same identity's quantity-weighted 25th percentile; never vendor/missing-percentile.
+- **Below vendor:** independent aside outside craft budget. Base/legacy only, no pooled variants/unresolved. Use scan's positive vendor sell, never catalog buy price. Whole listings with unit ceil strictly below reference; gain = vendor price*units - actual buyouts, positive and >= minimum. Sort gain descending, item ID; never completed sale.
+- **Sell:** one chosen catalog/recipe output row, lowest positive competing unit, all listings/units including no buyouts, largest stack. Undercut 1c; Forever `max_stack_size=1` uses highest positive whole-silver price below lowest, unknown stack size stays 1c; show step. Beta refused 299c and accepted 300c for an unstackable item, and every unstackable listing was whole silver. No positive undercut at lowest 1c (or <=1s for whole-silver), no undercut profit. Profit uses batch costs/cut and may be negative. Thin = <3 listings or largest stack >=half units. No demand/speed/deposit/sale claim.
+- **Honesty:** source/market/snapshot/scan/time/basis once per page; version/cautious output/cut/provenance and DATA-05 captions retained. Tables retain State; stale/future always inspect only, never actionable, with banner. Missing/zero never recommended. TSM or absent eligible listing metrics explicitly lacks listings/thin/undercut/cheap/below-vendor evidence. TSM batches use cautious aggregate purchase estimates, funds/cap. ADDON-08 base/legacy and full source/market/snapshot/rules scope unchanged.
 
 ### Interface
-- **UI-01:** browsing saved data never triggers a download or import. Only **Refresh from TSM** (TSM sources) or **Import addon scan** after the read-only preview (addon sources; ADDON-06) collects, and only for the selected source. Disabled sources (`enabled = false`) are hidden. The sidebar lists experiences WoW Forever first, then Classic Era, then Retail, whatever order `market.toml` uses, so Forever opens by default. The shared sidebar experience choice resolves its source and market together when there is one enabled source for that experience. If there are several, an explicit sidebar source choice is required; sources are never merged. Every view follows the selection, including Recipe catalogs. Each page names the selected experience, source and market under its title. Collection actions live in Data; the sidebar contains place navigation; source ID, label, market ID, feed type and the `market.toml` hint stay in a collapsed **Source details** expander (STORY-030).
-  - **Navigation (STORY-053):** four sidebar places in order: **Today**, **Team**, **Market**,
-    then visually separate **Data**. Sections use tabs or a segmented control inside the place:
-    Today → Today plan, All recipes (Action Board); Team → Characters (progression when built);
-    Market → Browse market, Skill-up demand, Watchlist, Below usual price (formerly Opportunities);
-    Data → addon import or Refresh from TSM, Recipe catalogs, Scan changes. Every place and section
-    has one plain business question under its title. Unsupported sections explain why up front;
-    addon Below usual price has no historical values and points to Market's other sections.
-    Opening and remembered per-source place follow *Today → Opening and settings*; existing widget
-    keys are preserved where possible. Values, calculations, settings and import behavior are unchanged.
-  - **Today layout (STORY-030):** one visible settings summary (gold available, minimum batch gain,
-    most crafts per item) and the existing Save-only form in a **Today settings** expander, automatically
-    expanded when gold is 0c or the settings file is unreadable. An expander keeps the existing form in
-    ordinary page flow with fewer controls than a popover. **Craft**, **Buy**, **Sell** and **Below vendor**
-    are tabs, each keeping its remaining-row count; Craft keeps hidden reasons and Buy the whole-list
-    total. Decision columns come first, followed by the always-visible State. A default-off **Show evidence
-    columns** toggle per tab reveals the remaining columns in the same table, avoiding duplicate tables.
-    Shared provenance stays on the page; missing values stay blank and freshness warnings stay visible.
-  - **Crafting layout (STORY-030):** compatible catalog captions stay in collapsed **Catalogs on this
-    board (N)**; coverage, depth meaning, margin and label explanations in collapsed **How to read this
-    board**. Unsupported rows keep their board labels and collect into one collapsed **N recipes could
-    not be evaluated** table (output, profession, catalog, reason). One board provenance caption remains
-    visible, as do DATA-05 freshness captions and warnings. Recipe details retain their existing behavior.
-- **UI-02:** Browse market finds items regardless of price or discount. Categories are not inferred from names or commodity status.
-- **UI-03:** the discount screen (Below usual price, formerly Opportunities) explains when a source cannot support it, for example Classic historical values being zero. Its spread is integer copper: the reference price after the auction cut rounds down, as in CRAFT-07. Search filters the ranked list without renumbering it.
-- **UI-04:** Crafting has no catalog selector. Incompatible catalogs for the selected game version remain inspectable without pricing; their catalog and source `rules_version` mismatch is explained. If none is compatible, the view explains this and offers navigation to Recipe catalogs. Recipe catalogs shows the sidebar experience's catalogs and has no game-version switch of its own (decided 2026-10-04); an experience without catalogs (Retail) says so.
-- **UI-06 Scan changes:** compare two distinct complete, non-partial, priced addon scans within the sidebar's selected source and full market identity (DATA-03/DATA-08). Choices come from scan IDs, never import manifests, newest finish first; the newest two are the default. Display both finish times in UTC, their gap and freshness (DATA-05); only the later scan carries the stale warning, since the earlier one is deliberately historical. Show per-unit minimum buyout and market value, listing counts and units for each scan, and later-minus-earlier changes. An item is listed if any listing exists, including one without a buyout. Absent items show **not listed**, with blank changes; listed items without usable prices show **no buyout** or **no market value**, never free. New and vanished items have separate lists. Shared items are changed if any price or supply metric differs. The catalog filter uses only item IDs from catalogs compatible with the selected source (UI-04). A non-addon source or fewer than two eligible scans explains why no comparison is available.
+- **UI-01:** saved browsing never collects. Explicit Data import after ADDON-06 preview collects only selected source; TSM refresh is CLI-only. Hide disabled sources. Experience order Forever, Classic, Retail independent of config order; one enabled source resolves source/market, several require explicit choice, never merged. All pages follow selection; source/market/experience and config provenance remain on demand under UI-07/08.
+- **UI-02:** Market finds items regardless of price/discount; no name/commodity-derived categories.
+- **UI-03 (retired screen):** Below usual price is removed. The retained CLI discount calculation rounds after-cut reference down in copper (CRAFT-07); unavailable historical values cannot support screening. The screen-specific search/rank presentation is retired.
+- **UI-04:** price only same-game/rules-compatible catalogs; explain mismatches/no compatible catalogs. Catalog discovery remains per selection, without a catalog selector. The standalone All recipes/catalog-inspection/navigation rules are retired with those pages; regeneration uses CRAFT-08's CLI.
+
+- **UI-06 Scan changes:** compare two distinct complete, non-partial, priced addon scans within the selected source and full market identity (DATA-03/DATA-08). Use scan IDs, never manifests, newest finish first; Market uses the newest two. Display both finish times in UTC, their gap and freshness (DATA-05); only the later scan carries the stale warning, since the earlier one is deliberately historical. Show per-unit minimum buyout and market value, listing counts and units for each scan, and later-minus-earlier changes. An item is listed if any listing exists, including one without a buyout. Absent items show **not listed**, with blank changes; listed items without usable prices show **no buyout** or **no market value**, never free. New and vanished items have separate lists. Shared items are changed if any price or supply metric differs. The catalog filter uses only item IDs from catalogs compatible with the selected source (UI-04). A non-addon source or fewer than two eligible scans explains why no comparison is available.
 - **UI-05:** the launcher reuses a running server only if its code is current. It restarts its own outdated server and never stops a server it did not start.
-- **UI-10 Removed listings (STORY-027, owner decisions 2026-10-13):** compare only consecutive UI-06 eligible scans of the same source and full market, finish-to-finish gap at most 12 hours. Never bridge an eligible scan; longer gaps are shown as skipped with no removals. Match `item_id, variant_id, variant_state` under ADDON-08's legacy/base rule, then stack quantity and whole-stack buyout in integer copper. Each key removes the positive earlier-count minus later-count; new quantities/prices never offset it. Missing/nonpositive buyouts are excluded, with earlier/later listing counts reported separately. Report listings and units for each identity, never pool variants.
+- **UI-10 Removed listings:** compare only consecutive UI-06 eligible scans of the same source and full market, finish-to-finish gap at most 12 hours. Never bridge an eligible scan; longer gaps are shown as skipped with no removals. Match `item_id, variant_id, variant_state` under ADDON-08's legacy/base rule, then stack quantity and whole-stack buyout in integer copper. Each key removes the positive earlier-count minus later-count; new quantities/prices never offset it. Missing/nonpositive buyouts are excluded, with earlier/later listing counts reported separately. Report listings and units for each identity, never pool variants.
   - Attribute missing listings to the earlier scan's shortest known time-left buckets first, then unknown. A gap reaching the bucket lower bound means **could have expired**; otherwise **removed early** (bought or cancelled). Missing time left is **time left unknown**, never early. Bucket bounds in seconds: **1: [0, 1800)** (short), **2: [1800, 7200)** (medium), **3: [7200, 43200)** (long), **4: [43200, unbounded)** (very long). Boundary comparison uses `gap >= lower`; no exact expiry time is inferred.
   - Source: [GetAuctionItemTimeLeft API documentation](https://warcraft.wiki.gg/wiki/API:GetAuctionItemTimeLeft), with [Classic Era auction UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_AuctionUI/Classic/Blizzard_AuctionUI.lua) using that API and its bucket tooltip labels. These are **Classic Era/legacy API bounds, not verified Forever durations**. Forever confirmation is pending in `addon/README.md` → *Removed listings time-left beta check*.
   - Always **removed**, never **sold**. Sales, cancellations, reprices and expiries can look alike; removed early is an upper bound on sales, with no forecast. The Market item page shows at most ten newest qualifying adjacent pairs plus intervening skipped gaps, their UTC times/gap, all three removal counts and units, excluded no-buyout counts and matching evidence on demand. Compute history only when that item opens. The Market list uses the newest qualifying adjacent pair's top ten distinct catalog-chain items by units removed early; for multiple identities show the largest identity, labelled, without pooling, with deterministic item/state/variant ties. Links open item pages. With no qualifying pair, explain fewer than two eligible scans, excessive gaps or a TSM source.
 
-- **UI-07 The new app (decided 2026-10-12; built from STORY-058):** Brownstone's main app is the NiceGUI app (`nicegui_app.py`), bound to `127.0.0.1` only and opened in its own desktop window by `Open Brownstone App`, or in the browser with a one-line explanation if the window can't open. Its places are **Today**, **Team**, **Market**, **Stock** and **Data** (Import), in that order, Data visually separate. The browser fallback stops after five minutes with no connected tabs; native mode stops when its window closes. `launch_nicegui.py` fingerprints the Python code and restarts only its own authenticated app on a code change. Place, selected source and Today tab survive browser refresh through the URL. Navigation uses wrapping place tabs in the top header, with Data separated, the selected source's short label/source menu and a page-specific ⓘ dialog at the right; Today's gear opens its settings dialog. Each place has one business-question subtitle. All new-app pages use the shared always-light theme, selectable text and controls at least 44 px; the native window enables text_select. Evidence, provenance, rules versions, IDs and hidden-reason counts are retained on demand. Team uses selectable roster cards, a look-ahead slider that commits on release, summary tiles, reachable recipes and cost steps/assumptions on demand. Data leads with saved-evidence chips, Check for new scans, reviewed results and explicit Import; files, problems and imported character evidence remain on demand. UI-01's source resolution (Forever first, never merged), collection-only-on-click and provenance rules, and UI-05's launcher rule, apply to it as well. The Streamlit app (`Open Old Streamlit App`) keeps every existing page under UI-01 to UI-06 and gets no new features; All recipes, Watchlist, Below usual price, Scan changes and Recipe catalogs are not rebuilt in the new app. New features are built for WoW Forever; Classic and Retail sources stay selectable for development and regression but get no features of their own.
+- **UI-07 The app:** Brownstone's main app is the NiceGUI app (`nicegui_app.py`), bound to `127.0.0.1` only and opened in its own desktop window by `Open Brownstone App`, or in the browser with a one-line explanation if the window can't open. Its places are **Today**, **Team**, **Market**, **Stock** and **Data** (Import), in that order, Data visually separate. The browser fallback stops after five minutes with no connected tabs; native mode stops when its window closes. `launch_nicegui.py` fingerprints the Python code and restarts only its own authenticated app on a code change. Place, selected source and Today tab survive browser refresh through the URL. Navigation uses wrapping place tabs in the top header, with Data separated, the selected source's short label/source menu and a page-specific ⓘ dialog at the right; Today's gear opens its settings dialog. Each place has one business-question subtitle. All app pages use the shared always-light theme, selectable text and controls at least 44 px; the native window enables text_select. Evidence, provenance, rules versions, IDs and hidden-reason counts are retained on demand. Team uses selectable roster cards, a look-ahead slider that commits on release, summary tiles, reachable recipes and cost steps/assumptions on demand. Data leads with saved-evidence chips, Check for new scans, reviewed results and explicit Import; files, problems and imported character evidence remain on demand. UI-01's source resolution (Forever first, never merged), collection-only-on-click and provenance rules, and UI-05's launcher rule, apply to it as well. Only this app remains. All recipes and Recipe catalogs pages are dropped; Watchlist editor is dropped but its engine, local files and Import hits remain. TSM and recipe refresh stay in the CLI. New features are built for WoW Forever; Classic and Retail sources stay selectable for development and regression but get no features of their own.
 
-- **UI-09 Market explorer (STORY-055):** read-only browsing of the selected source and full market's newest snapshot, searchable by name or ID regardless of price. Item URLs carry `item=<id>`. Compatible catalogs supply made-from routes/quantities, used-in recipes ordered by cautious Action Board profit per craft, team eligibility and catalog skill-up bands. Costs reuse CRAFT-03/12; intermediate outputs without Board rows explicitly have no Board profit. Items outside catalogs retain price/supply evidence only. Variant identities remain separate; they never feed base-item routes. The trial movement section uses UI-06's newest two eligible scans, limited to catalog-chain IDs: at most ten distinct items, ordered by absolute lowest-buyout copper change then absolute units change, with deterministic identity ties. For multiple identities of an item, show its largest changing identity, labelled, without pooling. New/vanished listings remain separate with blank changes. Snapshot UTC time/freshness and chain count are chips; provenance/catalogs and comparison details are on demand. Listings and catalog skill-up needs are not sales, observed demand or a forecast. Missing/nonpositive prices are unknown, never free.
+- **UI-09 Market explorer:** read-only browsing of the selected source and full market's newest snapshot, searchable by name or ID regardless of price. Item URLs carry `item=<id>`. Compatible catalogs supply made-from routes/quantities, used-in recipes ordered by cautious Action Board profit per craft, team eligibility and catalog skill-up bands. Costs reuse CRAFT-03/12; intermediate outputs without Board rows explicitly have no Board profit. Items outside catalogs retain price/supply evidence only. Variant identities remain separate; they never feed base-item routes. The trial movement section uses UI-06's newest two eligible scans, limited to catalog-chain IDs: at most ten distinct items, ordered by absolute lowest-buyout copper change then absolute units change, with deterministic identity ties. For multiple identities of an item, show its largest changing identity, labelled, without pooling. New/vanished listings remain separate with blank changes. Snapshot UTC time/freshness and chain count are chips; provenance/catalogs and comparison details are on demand. Listings and catalog skill-up needs are not sales, observed demand or a forecast. Missing/nonpositive prices are unknown, never free.
 
-- **UI-11 Flood signals (STORY-064, owner thresholds 2026-10-13):** read-only metrics from the newest UI-06 eligible scan of one source and full market, with ADDON-08 identities and legacy/base compatibility; variants never pool. Show listing count, units listed and largest-stack units/all units (display only). Lowest-buyout churn counts changes among comparable positive-priced identities in at most ten newest qualifying UI-10 consecutive pairs (gap at most 12 hours); absent identities and missing/nonpositive prices cannot supply a comparison, and eligible scans are never bridged. **Contested** means at least `flood_contested_listings` (default **10**) listings and changes in at least `flood_churn_percent` (default **50%**) of comparable pairs; **thin** means at most `flood_thin_listings` (default **2**); otherwise **steady**. Without comparable pairs, use listings only and label churn unknown. Show the counts behind labels; never infer sellers.
+- **UI-11 Flood signals:** read-only metrics from the newest UI-06 eligible scan of one source and full market, with ADDON-08 identities and legacy/base compatibility; variants never pool. Show listing count, units listed and largest-stack units/all units (display only). Lowest-buyout churn counts changes among comparable positive-priced identities in at most ten newest qualifying UI-10 consecutive pairs (gap at most 12 hours); absent identities and missing/nonpositive prices cannot supply a comparison, and eligible scans are never bridged. **Contested** means at least `flood_contested_listings` (default **10**) listings and changes in at least `flood_churn_percent` (default **50%**) of comparable pairs; **thin** means at most `flood_thin_listings` (default **2**); otherwise **steady**. Without comparable pairs, use listings only and label churn unknown. Show the counts behind labels; never infer sellers.
   - Compare the newest lowest unit buyout (not market value, so like is compared with like) with its own median positive per-unit lowest buyout from earlier eligible scans within `flood_window_days` (default **7 days**, inclusive, measured back from the newest scan). Require `flood_min_scans` (default **5**) matching priced scans; the newest never enters its median. Median uses the middle price, or the mean of the two middle prices rounded down to integer copper. **Cheap** is at most `flood_cheap_percent` (default **60%**) of typical; **high** is at least `flood_high_percent` (default **150%**). Integer cross-products decide boundaries. Show ratio, typical price and scan count; too few scans or missing prices never flag. All seven settings inherit shared config and allow source overrides; positive integers, thin below contested, churn at most 100%, price cut-offs straddling 100%.
-  - Market shows two short linked lists: contested catalog-chain identities ordered by listings then churn fraction, and overshoots with up to five cheap and five high identities ordered within each direction by distance from typical, leaving out **thin** identities (owner decision 2026-10-13: their one-off quotes crowded out real swings; item pages still flag them); deterministic item/state/variant ties, no pooling. Material/output roles come only from compatible catalogs, including both roles where applicable. Item pages load their signals lazily, including noncatalog items; show thresholds/window, scan UTC time and DATA-05 freshness, listing evidence and short-history explanations. Names use the scan's own loaded name, then the source game version's `item_names`, then **Item N**. These are listings, never sales, observed demand or a forecast.
+  - Market shows two short linked lists: contested catalog-chain identities ordered by listings then churn fraction, and overshoots with up to five cheap and five high identities ordered within each direction by distance from typical, leaving out **thin** identities; deterministic item/state/variant ties, no pooling. Material/output roles come only from compatible catalogs, including both roles where applicable. Item pages load their signals lazily, including noncatalog items; show thresholds/window, scan UTC time and DATA-05 freshness, listing evidence and short-history explanations. Names use the scan's own loaded name, then the source game version's `item_names`, then **Item N**. These are listings, never sales, observed demand or a forecast.
 
-- **UI-12 This session (STORY-063):** a toggle under Today's title, in the same place in both views,
-  shows every scoped Today character in Today's character order. Each character card answers first
-  with short **next step** lines, then folds the evidence into **Details**. The lines are options in a
-  fixed order, not a verdict: the owner still chooses (owner decision 2026-10-13, replacing "orders
-  options without choosing"). Character links open Team; item links open Market.
-  - Next steps, in order: **craft** the character's reserved Today rows with their planned profit;
-    per profession (in profession order), **level** it to the reach of its best valued unlock when that
-    estimate is complete, with its cost, cheap share and unlock; **level the character** when the
-    character level is below the next tier's requirement (shown as "before X reaches cap", or "X is
-    capped" when it is); **train** the next tier when capped and high enough. With no craft or
-    levelling line: **nothing to craft or level within the window**, gathering is the option. With no
-    profession list: open the profession windows next login.
-  - Next tier levels follow Classic Era's ladder (warcraft.wiki.gg, *Classic proficiency*): cap 75 →
-    Journeyman at character level 10, 150 → Expert at 20, 225 → Artisan at 35. Character level comes
-    from the newest bags snapshot; unknown says so. Unconfirmed on Forever, like CRAFT-11's yellow chances.
-  - Crafting shows the reserved Today rows that character is Known or Train now for (STORY-043),
-    their unchanged planned profit and per-character total. UI-11 labels show in plain words, and only
-    when worth acting on (thin, contested, cheap, high, short history, no buyout); steady and typical
-    stay in the evidence. Labels never change the plan, ranking or today_version.
-  - Profession options reuse CRAFT-11 at Team's remembered reach window, grouped by reach: recipes at
-    one required skill share one cost estimate, shown once, lowest reach first, with each unlock's
-    current Action Board profit per craft or its unvalued reason. Show the portion of each complete
-    estimate spent on UI-11 cheap auction materials, with expected copper rounded up per point as in
-    CRAFT-11; vendor purchases and training are excluded from that portion. Incomplete total and cheap
-    portion stay unknown with reasons. At cap say **capped** instead of displaying estimates beyond the
-    cap. No payback or forecast number.
-  - Snapshot/scan and DATA-05 age accompany figures; labels retain their own UI-11 scan and age.
-    Thin/missing evidence and incomplete recipe lists remain explicit. Catalog routes only receive
-    base/legacy labels under ADDON-08, never pooled variant labels. Missing prices are unknown,
-    never free. Listings, never sales. Farming has only **Farming rates come later (STORY-065)**.
+- **UI-12 This session:** fixed toggle under Today title, every scoped character in Today order. Cards lead with next-step options, evidence in Details; owner chooses. Character/item links open Team/Market.
+  - Order: reserved crafts/profit; per-profession best completely valued unlock's reach/cost/cheap share; character levelling below next tier (before X reaches cap, or X capped); train tier if capped/high enough. With no craft/level, nothing within window and gathering option; without profession list open windows next login.
+  - Classic tier ladder (warcraft.wiki.gg Classic proficiency): cap75→Journeyman level10, 150→Expert20, 225→Artisan35. Newest bags level, unknown explicit; unconfirmed Forever like CRAFT-11 yellow.
+  - Reserved Known/Train now crafts retain profit/character total. Plain actionable thin/contested/cheap/high/short-history/no-buyout labels; steady/typical in evidence. Never change plan/ranking/version.
+  - CRAFT-11 at remembered Team window, grouped equal reach into one cost estimate, lowest reach first; each unlock's Board per-craft profit or reason. Complete estimate's UI-11 cheap auction material portion rounds copper up per point as CRAFT-11; vendor/training excluded. Incomplete total/portion unknown with reasons. At cap say capped, no beyond-cap estimate/payback/forecast.
+  - Capture/scan/time/DATA-05 ages retained, signals own scan/age. Thin/missing/incomplete lists explicit. Catalog routes use ADDON-08 base/legacy only, no pooled variants/free missing prices/sales claims. Farming rates await STORY-065.
 
-- **Stock (STORY-061, decided 2026-10-13):** read-only holdings from the latest readable bags and bank capture per character, selected source and full market (ADDON-11), the same capture Team and Characters use. Holdings key on the exact ADDON-08 identity from each slot's link: variants and unresolved links (such as bound starter items) are separate rows, never pooled with or priced as the base item, and never counted toward a base target. Each location retains its capture time/age; unreadable captures are excluded and disclosed. An unopened or unreadable bank is unknown, never an empty bank. Show all item IDs held, searchable by name/ID with a compatible catalog-chain filter. Value uses CRAFT-04's cautious sale unit price from the newest complete scan in this scope: units × lower positive minimum buyout/market value, or the sole positive price. Label **at listed prices, not what it would sell for**; missing/zero prices are **no price**, excluded from the total with an excluded-item count. Label stale scans under DATA-05.
+- **Stock:** read-only holdings from the latest readable bags and bank capture per character, selected source and full market (ADDON-11), the same capture Team uses. Holdings key on the exact ADDON-08 identity from each slot's link: variants and unresolved links (such as bound starter items) are separate rows, never pooled with or priced as the base item, and never counted toward a base target. Each location retains its capture time/age; unreadable captures are excluded and disclosed. An unopened or unreadable bank is unknown, never an empty bank. Show all item IDs held, searchable by name/ID with a compatible catalog-chain filter. Value uses CRAFT-04's cautious sale unit price from the newest complete scan in this scope: units × lower positive minimum buyout/market value, or the sole positive price. Label **at listed prices, not what it would sell for**; missing/zero prices are **no price**, excluded from the total with an excluded-item count. Label stale scans under DATA-05.
   - Manual whole-team targets are nonnegative integer units per positive item ID, one entry per item; no name-to-ID guessing. Optional buy limits are positive integer copper per unit or positive integer percent of the same scan's ADDON-03 market value (from its price observations), mutually exclusive. Percentage conversion rounds down to integer copper; absent market value makes the limit unknown and leaves listed units waiting. No limit permits all priced listings. Persist per source in `data/stock_targets.<source_id>.local.json` using watchlist-style validated Save-only atomic replacement; rejected saves preserve the last saved targets, including when the existing file is damaged.
   - Short is max(target − readable held, 0), labelled **at most** when any character's bank or bags is unknown or only partly readable. Quote only targeted items with Today's cheapest-first whole-stack ladder. Split the short into units within the buy limit (**buy now**), listed units above it (**wait**) and unlisted units. Include whole-stack purchase quantities/surplus and costs; insufficient supply never gets a full-fill price. Holdings and captures are not live counts, and stock changes no Today plan, ranking or `today_version`.
   - UI-08 presentation: capture/character and scan-age chips, items-held/value/items-short/within-limit-cost tiles, short items first in the table, holdings and target purchase evidence on demand, and an ⓘ dialog for snapshot/captures/price rules. Read snapshots, newest scan and targets once per page; filtering uses cached evidence.
 
-- **UI-08 Design checklist (decided 2026-10-12, product owner):** every new-app page passes these before review, checked on screenshots, not only code. STORY-060 brings the existing pages into line.
+- **UI-08 Design checklist:** every app page passes these before review, checked on screenshots, not only code.
   1. **Answer first:** the top of the page answers its place's question; one subtle business-question subtitle per place.
   2. **One primary action** per view, visually distinct.
   3. **Status as badges and chips,** not sentences: freshness, confidence, eligibility and stale state are coloured, labelled and consistent everywhere.
@@ -989,17 +344,13 @@ is added. Panel usage and the pending play check are in `addon/README.md` → Pa
   - Before migrating, the existing file is copied to `data/brownstone.v<N>.backup.duckdb`.
   - The app upgrades at startup and the pipeline before writing, so read-only views never see an outdated schema.
   - Manifests written before a change are read through an upgrade adapter; they are never edited.
-- **OPS-03 One home machine** (decided 2026-10-05): Brownstone and its `data/` folder run on the Mac. The Windows desktop didn't scan at first, to keep one scan file and one writer; Windows scans were accepted on 2026-10-07 (below). Windows stays a supported, CI-tested platform (OPS-01).
-  - **Revisited 2026-10-06 (product owner):** with character data (STORY-032/033), characters played on Windows produce their own logs. Direction: Brownstone and `data/` stay on the Mac as the only database writer; each machine's addon file is a separate input, tagged by machine, copied write-once into a drop folder the Mac imports from. The contract is STORY-037; the Mac imports its own file and immutable Windows drops through the same source and full market scope.
-  - **Drop folder decided 2026-10-06 (product owner):** Google Drive, through Google Drive for desktop on both machines (free tier; the account already exists). It holds only copies of addon files, never `data/`. Brownstone reads it as an ordinary local folder; files can be cleaned out after import because bronze keeps the exact bytes (DATA-01).
-  - **Windows scans accepted (product owner, 2026-10-07):** auction scans taken on the Windows PC are imported like the Mac's, into the same source and market when the house evidence matches, tagged with their machine. Scan IDs and per-scan hashes still deduplicate (ADDON-04). The Windows PC has the repository cloned, so its drop script lives in the repository and is updated with `git pull`. Brownstone and `data/` stay on the Mac.
-  - **Second-machine input rules (STORY-037):** each addon source requires a configured `machine` for its local `scan_path`; labels contain only lowercase ASCII letters, digits and hyphens. Machine is provenance only, never a market key, and is never inferred from file contents. Historical scans retain missing machine values. Optional `drop_folder` belongs only in untracked `config/market.local.toml`; it must not contain `data_dir`. Without it, the single-file import/review flow is unchanged.
-  - **Drops:** final names are `<machine>-<UTC YYYYMMDDTHHMMSSZ>-BrownstoneScan.lua`, for example `windows-pc-20261007T004900Z-BrownstoneScan.lua`. The shared naming contract and examples live in `brownstone/drop_contract.json`. Partial, conflict and unrelated names are ignored with reasons; unreadable, truncated and conflicting inputs are reported independently. Brownstone only reads this folder, never writes, renames or deletes there. Each imported file has its own collection manifest with exact archived bytes, machine and original name; identical byte blobs may be reused. House checks, scan-ID/hash conflicts, partial pricing and stale reviews remain per file.
-  - **Windows routine:** the manually run PowerShell script and `.cmd` wrapper use an ignored local settings file, refuse while WoW runs or the source is missing, copy through a temporary name, verify SHA-256 and publish without overwriting. Identical bytes to that machine's latest final drop produce “Nothing new”. The SavedVariables file is only read. No installation, scheduler or collection automation is introduced.
-  - **Cleanup:** every file reports whether all its scans and character snapshots are imported; another-house record or an unreadable/conflicting file prevents that claim. Each machine's latest final drop is shown even if unreadable. The user deletes drops by hand after full import. `/bscan clear` on Windows next session is safe only when that machine's latest drop is fully imported and the user has not played there since it was made. Importing an older drop cannot authorize clearing a later session.
-  - Local storage is enough: about 5 MB per beta scan all-in (up to about 10 MB expected for a busier live house), so roughly 5–35 GB a year at 3–10 scans a day. Cloud storage and a home server aren't needed. `data/` must not sit in a live-synced folder such as iCloud Drive, because DuckDB has a single writer.
-  - Backups are deferred (product owner, 2026-10-06): STORY-016 is no longer due by 21 October and has no date. Until it is done, migrations still copy the database first (OPS-02), but nothing else protects the raw archive.
-
+- **OPS-03 One home machine:** Brownstone/data live on the Mac as the only database writer; Windows remains supported/CI-tested and produces addon files. Each input is tagged by machine and imported into the same source/full market when evidence matches. Google Drive for desktop transports private immutable copies only, never data/. Bronze permits manual drop cleanup after import (DATA-01).
+  - Each addon source requires configured `machine` for local `scan_path`, lowercase ASCII letters/digits/hyphens only. Machine is provenance, never market/inferred from contents; historical missing stays missing. Optional `drop_folder` only in untracked `config/market.local.toml`, never containing data_dir. Without it single-file flow stays.
+  - Final name `<machine>-<UTC YYYYMMDDTHHMMSSZ>-BrownstoneScan.lua`; naming/examples in `brownstone/drop_contract.json`. Ignore partial/conflict/unrelated names with reasons; report unreadable/truncated/conflicting files independently. Brownstone only reads drops. Per-file manifest keeps exact archived bytes/machine/original name; identical blobs can reuse. House/hash/partial/stale rules per file.
+  - Manually run PowerShell/.cmd uses ignored local settings, refuses while WoW runs/source missing, temporary copy + SHA-256 + no-overwrite publish. Latest machine drop's identical bytes means Nothing new. Game file only read. Repo script updated by git pull; no install/scheduler/automation.
+  - Fully imported checks all scans/snapshots; other-house/error blocks. Show latest drop per machine even unreadable. Delete drops manually. Windows clear next session only if latest drop fully imported and no play since; old drop cannot authorize later-session clear.
+  - Storage estimate 5–10 MB/scan, roughly 5–35 GB/year at 3–10/day. No cloud/home server needed. No live-synced data folder (DuckDB single writer).
+  - Backups deferred to STORY-016; only migration database copy exists meanwhile, raw archive unprotected.
 
 ## Not modeled (do not imply otherwise)
 
@@ -1008,12 +359,11 @@ Demand, sale likelihood, deposits, vendor stock, reputation discounts, recipe qu
 ## Open decisions
 
 - Classic regional demand integration (Classic demand context, under Later in `backlog.md`).
-- Which third-party Forever aggregates, if any, offer a usable export or API (STORY-011a).
-- Where backups go and how often (STORY-016; the timing is decided under OPS-03), historical retention and scheduling.
-- The movement ledger's contract: which recorded events become which movements, and how lots and cost basis are assigned (STORY-034).
-- Whether to model the Black Market vendor and its prices, once confirmed in game (STORY-036).
+- Which third-party Forever aggregates, if any, offer a usable export or API.
+- Where backups go and how often, historical retention and scheduling.
+- The movement ledger's contract: which recorded events become which movements, and how lots and cost basis are assigned.
+- Whether to model the Black Market vendor and its prices, once confirmed in game.
 - Whether to add AI narration, which model runs it and what data may leave this machine (*AI narration*, Later in `backlog.md`).
-- When to retire the Streamlit app (UI-07), and whether any of its pages not carried over are still needed by then.
 - Whether to remove the Retail regression sources. SPIKE-008 found Forever listings are per-stack, not Retail-style per-unit commodities, so the Retail commodity feed is not a close test of Forever's model.
 
 None is approved by default.

@@ -9,7 +9,7 @@ from typing import Any
 import duckdb
 
 from . import markets, metrics
-from .config import ADDON_PROVIDER, MARKET_KEYS, Source
+from .config import MARKET_KEYS, Source
 from .freshness import observed_at
 from .item_names import remember_local_catalog_names, remember_observed_names
 from .markets import scope_predicate
@@ -412,37 +412,3 @@ def price_observations(db, config: Mapping[str, Any], snapshot_id: str, item_ids
     ).fetchall()
     return {item_id: {"min_buyout": listed, "market_value": market}
             for item_id, listed, market in rows}
-
-
-def listing_depth(db, config: Mapping[str, Any], snapshot_id: str,
-                  item_ids: list[int], variant_id: str | None = None,
-                  variant_state: str | None = None) -> dict[int, dict[str, int]] | None:
-    """Stored metric counts and units in the exact priced scan, including listings without a buyout.
-
-    None means depth is unavailable (TSM, or no matching complete priced addon scan).
-    In a matching scan, an absent item has zero listings and units: it was not listed.
-    No counts from another source, market or snapshot can fill a missing item.
-    """
-    if config["provider"] != ADDON_PROVIDER:
-        return None
-    predicates, scope = scope_predicate(config)
-    parameters = [snapshot_id, *scope]
-    scan = db.execute(
-        f"SELECT scan_id FROM addon_scans WHERE snapshot_id=? AND {predicates} "
-        "AND status='completed' AND NOT partial AND priced", parameters,
-    ).fetchone()
-    if scan is None:
-        return None
-    if not item_ids:
-        return {}
-    placeholders = ", ".join("?" for _ in item_ids)
-    item_predicate, item_scope = _variant_predicate(variant_id, variant_state)
-    rows = db.execute(
-        f"SELECT item_id, listings, units FROM scan_metrics WHERE snapshot_id=? "
-        f"AND {predicates} AND scan_id=? AND item_id IN ({placeholders}) "
-        f"AND {item_predicate} AND metrics_version=?",
-        [*parameters, scan[0], *item_ids, *item_scope, metrics.METRICS_VERSION],
-    ).fetchall()
-    depth = {item_id: {"listings": 0, "units": 0} for item_id in item_ids}
-    depth.update({item_id: {"listings": listings, "units": units} for item_id, listings, units in rows})
-    return depth

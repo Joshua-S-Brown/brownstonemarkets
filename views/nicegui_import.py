@@ -34,7 +34,7 @@ def holdings(config):
 def render(config):
     if config['provider'] != 'addon':
         theme.info_button('Source details', lambda: theme.source_info(config))
-        ui.label("Use the old app's Refresh from TSM for this source.")
+        ui.label(f"Refresh this source with: python -m brownstone --source {config['source_id']}")
         return
     ImportPage(config)
 

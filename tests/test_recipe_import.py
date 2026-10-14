@@ -14,7 +14,6 @@ from brownstone.recipe_import import (
     dumps_catalog,
     extract_page,
     load_selection,
-    spell_list_url,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,8 +67,6 @@ def test_secondary_skill_pages_keep_their_own_address(tmp_path):
     copy_path, manifest = archive_page(saved, tmp_path / "archive", "2026-10-06")
     assert copy_path.parent == tmp_path / "archive/wowhead/forever/cooking"
     assert manifest["source_url"].endswith("/forever/spells/secondary-skills/cooking")
-    assert spell_list_url("forever", "first-aid") == "https://www.wowhead.com/forever/spells/secondary-skills/first-aid"
-    assert spell_list_url("classic", "mining") == "https://www.wowhead.com/classic/spells/professions/mining"
 
 
 def test_rejects_pages_without_profession_data():

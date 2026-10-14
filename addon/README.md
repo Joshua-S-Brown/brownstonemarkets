@@ -1,4 +1,4 @@
-# Brownstone Scan 0.12.1
+# Brownstone Scan 0.12.2
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -32,11 +32,15 @@ game doesn't offer and carry on.
 `addon/BrownstoneScan` into `_classic_beta_/Interface/AddOns/` as in step 1 of *Windows scans to the
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
-**Done on 2026-10-13** (checked with the beta report): farming and loot, trainer lists, crafting in
-Cooking/Mining/Tailoring, fishing, mail both ways, vendor buy/sell, posting (2h and 8h), scans, bank
-in/out, a repair, cancelling an auction, collecting sale money and a returned item, buying a commodity,
-and 0.12.0's profession-switch fix. Nothing from this checklist is left. Install **0.12.1** before the
-next play session (it saves less when item names load late); no special actions are needed for it.
+Done on 2026-10-13: everything in the earlier checklists except the items below. Install **0.12.2**
+first (it reads trainer lists after they load), then:
+
+1. **Trainers (tier levels):** open the trainer for each profession you have once, then close it.
+2. **Time-left labels (STORY-027):** post three cheap items at 2h, 8h and 24h and scan right away.
+   Scan again about 35 minutes later, about 2h 10m later, and once more 8 or more hours later.
+3. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
+4. **Panel (STORY-044):** start one scan from the minimap panel, and use its reload and clear buttons once.
+5. `/reload`, log out and run the drop script.
 
 ## Run a scan
 
@@ -103,7 +107,7 @@ After `/reload` or logout:
 ```
 
 It holds one account-wide table, `BrownstoneScanDB`, with `schema_version`, `scans`, `snapshots`, `sessions`,
-`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.12.1** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
+`snapshot_sequence`, `journal`, `journal_diagnostics` and `ui` (minimap angle only). Addon **0.12.2** writes file format **6** and unchanged scan format **4**; older scans retain formats 1/2/3 and still import in mixed files. Capture rules, APIs, variant identity and beta limits live in `docs/requirements.md` → ADDON-08/09. Each scan has:
 
 | Field | Meaning |
 | --- | --- |
@@ -192,135 +196,6 @@ the final summary before reload/import: importing an interrupted scan and later 
 of the same scan ID remains a content conflict under the existing deduplication rule. Reload/Clear
 buttons and even `/bscan clear all` refuse (with a message) while the pass is active; the unsaved-session guard
 remains afterward. Closing and reopening the house does not restart or cancel the pass.
-
-### Format-4 beta checklist — pending
-
-Use the same house with similar listing counts, record the client build and addon **0.4.0**, and
-compare against **0.3.1** (1,192/3,066 items had all three reference values).
-
-1. Record first-pass, pass-added and effective availability for vendor sell price, item level and
-   max stack size, with item denominators; record cached/requested/received/failed/timed_out and unsent IDs.
-   Listing-link availability should be unchanged by the pass. There is no assumed success threshold.
-2. Record listing duration, pass duration and total elapsed wait; check requests arrive across
-   frames, progress advances, one final summary appears, and no repeat or later callback occurs.
-3. Compare original uncompressed single-scan bytes per listing against 0.3.1; record raw bytes and
-   listing counts, not gzip size. Record client lag and `/reload` lag. ADDON-09's older format-3
-   measurement limits remain documented there; do not claim a new format-4 beta result offline.
-4. Close the house during the pass, reopen it and confirm progress/disabled Reload and Clear,
-   including the existing unsaved-scan clear guard after completion. Stop explicitly in another
-   run and confirm scan completion remains intact. Observe timeout counts if answers do not arrive.
-5. In a separate run type `/reload` mid-pass, and separately log out mid-pass. Inspect/import the
-   file: listings are saved, gathered pass values survive, status may be `running`, and no pass
-   resumes after login. Compare hashes/first-pass arrays before and after; record actual event timing.
-6. Import a normal completed format-4 scan, inspect availability and a pass-supplied vendor reference
-   in Today; import again and confirm duplicate. Preserve local beta evidence; keep seller data local.
-
-No game access was available for implementation. These beta measurements remain explicitly pending.
-
-Import stores the new listing fields, raw link, variant identity/resolution, base-item observations and availability counts. Formats 1/2 keep every new field null. Format 1 links survive in the raw archive but are not retrospectively classified. Browse, Opportunities and Scan changes show variant ID/state (`legacy` for formats 1/2); catalog crafting/depth uses only base rows in formats 3/4. See ADDON-08 for exact grouping and legacy behavior.
-
-**Format 2 listings** are one string each, `item_id:quantity:buyout:min_bid:bid:flags:name_index`, for example `"2589:20:700:0:0:1:3"`. Prices are integer copper as the client reported them, and `0` means none (no buyout or no bid). `flags` adds 1 when the client had loaded the item's details (`complete_info`) and 2 when it reports a commodity (Brownstone rejects those scans, since only stack prices are modeled). `name_index` points into the scan's `names` list (1 is the first name), or is `0` when the client hadn't loaded the name. Names are kept per listing because one item ID can carry several random-suffix names ("of the Monkey", "of the Eagle"). About 28 bytes per listing.
-
-**Format 1 listings** (addon 0.1.0) are tables with `item_id`, `name` (empty until the client has loaded the item), `link` (missing until loaded), `quantity`, `buyout`, `unit_buyout` (copper per unit, or missing), `min_bid`, `bid` (only when someone has bid), `commodity` (only when the client says) and `complete_info`. About 240 bytes per listing.
-
-Prices are integer copper. A missing `buyout` means the listing has no buyout; it is never zero or free. On the Forever beta (first scan, 2026-10-04) `buyout` is the price of the **whole stack**, not per unit, and `commodity` is never reported. Brownstone divides `buyout` by `quantity` itself, rounding up when inexact; format 1's `unit_buyout` is only a cross-check, and format 2 doesn't write it. A listing the client hasn't fully loaded has no name and `complete_info` false; its item ID, quantity and buyout are still valid.
-
-A hand-written example is in `tests/fixtures/brownstone_scan_sample.lua`.
-
-## Measurement checklist
-
-Keep results and SavedVariables files locally. Formats 3/4 can contain seller names and must not be shared, published or sent to external processing (ADDON-07; OPS-03 permits the private Drive drop transport). Availability summaries contain counts only.
-
-| | Roleplaying Alliance | Neutral |
-| --- | --- | --- |
-| Date, character, faction | | |
-| Interface number (`/dump select(4, GetBuildInfo())`) | | |
-| `api` recorded (`modern` / `legacy`) | | |
-| Final `status` and `stop_reason` | | |
-| Full scan time (`duration_seconds`) | | |
-| `listing_count` vs `reported_count` | | |
-| SavedVariables file size | | |
-| Throttling (message, wait before it worked) | | |
-| Errors or Lua error popups (paste text) | | |
-| Needed a hardware click? (did `/bscan start` work, or only the button?) | | |
-| `/reload` freeze time or lag during the scan | | |
-| `neutral` / `neutral_source` values | | |
-| Listings missing `name` or `link`, roughly what share | | |
-| Do `quantity` and `buyout` look per-unit for commodities and per-stack for gear? | | |
-| Anything surprising | | |
-
-If the client prints "No auction API found", run `/dump C_AuctionHouse` and `/dump QueryAuctionItems` and send the output.
-
-## Format-3 beta checklist (STORY-023)
-
-Accepted 2026-10-06 (record below). Repeat it for any later scan-format change. Every baseline and candidate measurement must name the exact addon version used (including 0.3.1 if these controls are installed). The listing capture contract and original format-3 measurement limits remain in ADDON-09; do not label 0.3.1 measurements as 0.3.0. Record versions alongside the local aggregate report; older scans do not carry a per-scan addon version, so use the installed version and retained file provenance rather than guessing.
-
-1. **Baseline:** using 0.2.0, take one complete scan at the same house, `/reload`, retain a local single-scan file, import it, then `/bscan clear` and `/reload`. If an existing 0.2.0 file has exactly one scan, it can be the baseline. Record build, house, listing count, duration and uncompressed file bytes.
-2. **Update and capture:** copy the current addon over the installed addon, `/reload`, confirm it loads and `/bscan status` works. At least 15 minutes after the preceding scan, click the scan button with the house open. Record lag/errors and finished vs reported count. `/reload`, retain the local single-scan file, then Preview/Import in Brownstone. Confirm the installed format version, official reference data and separate variant rows. Try `/bscan start` on another manually initiated scan; closing the house during reading should save only a partial scan and no prices.
-3. **Availability and limits:** run the local summary below against baseline/candidate files. Record each available/total count, including sellers, links, required-level type (the raw `level_types` values), all five item-reference fields, unresolved links and `listing_out_of_range`. Record reload lag. Compare duration and bytes per listing against ADDON-09's limits; missing remains null, and reported zero quality/level/vendor values remain zero.
-4. **Variant tooltips/links:** look for Willow Robe (6538) Monkey/Bear/Eagle and Primal Wraps (15010) Whale/Bear, or equivalent currently listed suffix gear. Compare tooltips for different suffixes and multiple listings of the same suffix. Inspect actual payloads: observed bonus IDs are listed in ADDON-08; the traditional suffix field was empty. Confirm different stats have different stored keys/prices, while identical stat modifications with different viewer/context/modifier-28 provenance retain the same key. Check Linen Cloth as a plain base item. Record any unexpected fields or equal keys with different stats before relying on those prices.
-5. **Preserve:** re-import the same file and confirm duplicates. Retain the files and measurement record locally; only after a successful import, `/bscan clear` and `/reload`. A complete format-3 beta import, accepted timing/size results and tooltip confirmation are required to close STORY-023.
-
-To inspect a full modern listing link after a manual scan, replace `INDEX` with its zero-based replicate index (legacy uses `GetAuctionItemLink("list", INDEX)` with one-based indexing):
-
-```lua
-/run local l=C_AuctionHouse.GetReplicateItemLink(INDEX);print(l and l:match("|H(item:[^|]+)|h"))
-```
-
-This reads the captured list; it does not start a scan. Record item-link payloads/tooltips locally, without seller names in shared reports.
-
-**Local availability/size summary** (run from the repository; replace both file paths). This reads files without writing or migrating a database and prints only aggregate measurements. It requires one scan per file so saved-file size is comparable. Gzip archive inputs are measured after decompression.
-
-```bash
-.venv/bin/python - /path/to/baseline-0.2.0.lua /path/to/candidate-0.3.1.lua <<'PY'
-import gzip
-import json
-import sys
-from pathlib import Path
-from brownstone import scan_details, scans
-
-results = []
-for filename in sys.argv[1:]:
-    raw = Path(filename).read_bytes()
-    if raw.startswith(b"\x1f\x8b"):
-        raw = gzip.decompress(raw)
-    records = scans.read_saved_variables(raw)
-    if len(records) != 1:
-        raise SystemExit("Use a single-scan file for each measurement.")
-    record = records[0]
-    summary = scans.summarize(record)
-    if summary["partial"] or not summary["listing_count"]:
-        raise SystemExit("Both measurements need a complete, nonempty scan.")
-    result = {"format": record["schema_version"], "scan_id": record["scan_id"],
-              "duration_seconds": scan_details.duration(record), "file_bytes": len(raw),
-              "bytes_per_listing": len(raw) / summary["listing_count"],
-              "availability": scan_details.availability(scans.listing_frame(record),
-                                                         scan_details.reference_frame(record),
-                                                         scans.optional_out_of_range(record), record)}
-    result["pass_duration_seconds"] = record.get("item_pass", {}).get("duration_seconds", 0)
-    result["full_duration_seconds"] = (result["duration_seconds"] + result["pass_duration_seconds"]
-                                       if result["duration_seconds"] is not None else None)
-    results.append(result)
-    print(json.dumps(result, indent=2))
-if len(results) == 2:
-    old, new = results
-    if old["duration_seconds"] and new["duration_seconds"] is not None:
-        print("Listing duration ratio:", new["duration_seconds"] / old["duration_seconds"])
-        print("Full duration ratio:", new["full_duration_seconds"] / old["full_duration_seconds"])
-    print("Bytes/listing ratio:", new["bytes_per_listing"] / old["bytes_per_listing"])
-PY
-```
-
-| Acceptance measurement | Result |
-| --- | --- |
-| Beta date/build/house, baseline and candidate addon versions and scan IDs | 2026-10-06, client 1.60.1 build 70235, Normal Alliance house (Stormwind, Trade District); house check passed. Baseline **0.2.0** `20261006T161637Z-2a4d09`; candidate **0.3.1** `20261006T201752Z-f2a29a`. A second 0.3.1 scan, `20261006T203259Z-ea00ed`, gave consistent results. |
-| Complete format-3 scan imported; duplicate verified | Both 0.3.1 scans completed (88,119/88,119 and 88,329/88,329) and imported without errors. Re-import shows *Nothing new*; preview reports both as already imported with identical content. |
-| New-field availability (attach local aggregate report) | Of 88,119 listings: **seller 0**, time left 88,119, level 88,119, quality/level type/link 82,059, required level 73,749; quality out of range 6,060 (stored missing). Of 3,066 items: class/subclass 3,066, item level/stack/vendor price 1,192. Level types seen: `REQ_LEVEL_ABBR`, `SLOT_ABBR`, `SKILL_ABBR`. **Sellers:** `GetReplicateItemInfo` returns no owner (values 14/15 absent in `/dump`), even for the 82,059 fully loaded listings; see ADDON-07. Report kept locally under `work/story-023/beta/`. |
-| Duration ratio and uncompressed bytes/listing ratio vs ADDON-09 | Duration 6.90 s → 8.49 s, **1.23×** (limit 2×). File 2,178,443 B / 77,731 → 4,729,786 B / 88,119; bytes per listing 28.0 → 53.7, **1.92×** (limit 4×). Pass. |
-| Scan/reload lag, errors; button and slash command | No scan errors and no client error reports. Lag was not timed; none was noticed. Scan, Reload and Clear were used through the buttons. `/bscan start` without the button and closing the house mid-scan were not exercised in game (both are covered offline). |
-| Different suffix tooltips separated; same stats/provenance variants equivalent | Willow Robe (6538): 20 suffixes, each its own key; *of Intellect* and *of Magic* at 12,900 copper versus 500 for the rest, matching the in-game listings. Primal Wraps (15010): 14 suffixes, each its own key. No key holds two names of the same item (3,589 item/key pairs). The same name appears under several keys only for different enchants (for example Battering Hammer of Healing with enchant 723) or bonus IDs (*of the Physician*, 12748/12749; not tooltip-compared). Links differing only in modifier 28 share a key. |
-| Plain item base; missing/unsupported links unresolved | Linen Cloth (2589): 601 listings, all base. 72,259 base, 7,920 variant and 7,940 unresolved listings, including the 6,060 without a loaded link. |
-
 
 ## Windows scans to the Mac (STORY-037)
 
@@ -432,85 +307,6 @@ both scans and snapshots, including snapshot-only files. New/duplicate/other-hou
 appear beside scans in page and CLI previews. All matching snapshots in a selected file import;
 `--scan` restricts scans only. Character data does not yet change Today.
 
-### Character snapshots beta checklist — Mac and Windows, pending
-
-Repeat the capture checks on **each machine**, using **0.8.0**, before relying on this evidence.
-Use two characters on the **same account**. Preserve all before/after files privately; do not clear
-unimported evidence. Character data stays private under the same transport rules as scans.
-
-1. **Install and initial login:** with WoW closed, replace the addon folder on the Mac. On Windows,
-   use the repository containing these changes (after they have been committed/pushed and pulled)
-   or copy the same 0.8.0 folder directly. Confirm the AddOns version and `/bscan status`. Log in
-   afresh after installation, rather than installing only via `/reload`, to establish a login marker.
-   Record OS/machine label, addon version, date, character, realm, faction, client version/build and
-   `/dump select(4, GetBuildInfo())`. Record every rejected event from status. Check the `.toc` interface
-   number against the build. Do not assume event names are supported because the addon loaded.
-2. **Bank unknown:** choose a character whose bank has never been recorded, or, after importing all
-   prior evidence, start a new login and clear old snapshots. Before opening the bank, `/bscan status`
-   should say *bank unknown*. Log out; check that a bags snapshot exists and there is no bank snapshot
-   for that character. Record money from the game and expected occupied bags/slots for comparison.
-3. **Logout and reload bags separately:** log in, note gold and a few known stacks/links, then `/reload`.
-   Inspect the SavedVariables file after writing finishes: `event = PLAYER_LOGOUT`, gold in copper,
-   character/realm/faction, UTC time, addon version and complete occupied slots. Repeat with normal
-   logout/exit. Compare expected and stored IDs/counts/links; record which event fired and any missing
-   bags, Lua errors, write/reload lag or unavailable APIs. If logout events cannot still read bags,
-   retain the evidence and report it; event timing is unconfirmed on Forever.
-4. **All containers:** inspect backpack, equipped bags and every supported keyring/reagent bag.
-   Record `Enum.BagIndex`, `NUM_BAG_SLOTS`, `NUM_TOTAL_EQUIPPED_BAG_SLOTS`, `NUM_BANKBAGSLOTS` and
-   available container constants using read-only `/dump` calls, and compare them with each snapshot's
-   `container_layout`. In particular, confirm that the first bank bag (container 5 when four bags are
-   equipped) appears in bank snapshots and never in bag snapshots. Compare stored IDs/sizes/occupied slots with the UI. Empty slots
-   must be absent. For unavailable values, confirm omission/null rather than zero. Record which
-   modern `C_Container` or legacy globals exist and their actual tuple/table behavior; do not infer
-   support from a modern client's documentation.
-5. **Bank open and close separately:** note known bank stacks, open the bank, run `/bscan status`,
-   then close it and run status again; `/reload` to write. Expect two bank IDs, each with its own UTC
-   time and `BANKFRAME_OPENED`/`BANKFRAME_CLOSED`. Compare main bank, bank bags and reagent bank
-   IDs/counts/links. Specifically record whether close still permits reads, returns zero sizes or
-   loses slot data, and whether any bank access happened with the UI closed. An inaccessible main
-   bank is unknown, not empty. Compare snapshot `containers`, `slots` and event counters, keeping
-   both raw observations. Close-event availability is a beta check, not an offline guarantee.
-6. **Login versus reload and clear:** open/close the bank, `/reload`, retain the file and login marker,
-   then `/bscan clear` and `/reload` within the same login. All snapshots captured since that login
-   must remain, with unchanged IDs/content; scans already written should be emptied. Inspect
-   `world_signal` and `sessions`: initial login should be `(true, false)`, reload `(false, true)`,
-   with identical `login_at`. A world transition (any flags) must not reset it. Record actual
-   flags. If either signal is absent/unexpected, clearing must retain all snapshots; report the
-   warning and flags instead of assuming a new login. `clear all` must still retain current-session
-   snapshots. A fresh login after importing prior evidence should prune older snapshots; if its
-   bank record was pruned, in-game status is *bank unknown* while Brownstone retains the imported
-   bank time. Test the confirmed Clear button too. Test unsaved-scan refusal and the existing
-   scan → `/reload` → import → clear routine with snapshots present.
-7. **Two characters:** log out of the first and into the second on the same account. Repeat bags
-   capture and bank open/close. Both characters must appear in the single account file, with
-   distinct IDs and login markers. Retain both before any next-login clear.
-8. **Mac import:** wait for the write to finish, then Preview addon scans in Brownstone. Compare
-   snapshot characters/times/kinds/counts/machine and new/duplicate/other-house states with the
-   file; import it and inspect the latest-character table. Check gold, bags time, separate bank
-   time/counts and *bank unknown* where appropriate. Preview again: duplicate IDs and Fully imported
-   (when every record belongs to this source). A character from another faction/configured realm
-   must be *other house*, block Fully imported and stay out of this source's character table.
-   Do not alter the source's house evidence to bypass the mismatch.
-9. **Windows round trip:** after both characters' captures, log out and **close WoW**, run
-   `tools/windows/drop-scans.cmd`, wait for Drive sync, then preview/import on the Mac. Confirm
-   `windows-pc` provenance, every character's snapshots, exact-byte bronze collection and both
-   file/latest-drop Fully imported status. Repeat another drop that overlaps prior snapshots;
-   unchanged IDs must be duplicates, newly captured IDs new, with earlier stored machine retained.
-   Include a snapshots-only file (no scan needed). CLI check on the Mac:
-
-   ```bash
-   .venv/bin/python -m brownstone --source forever-us-normal-alliance-addon --preview
-   ```
-
-   Follow OPS-03 before next-session clear: latest drop fully imported, nothing played since that
-   drop. Current-login snapshots remain even when clear is allowed. The drop script's *Nothing new*
-   does not authorize clearing. Delete only fully imported drops by hand, preserving local evidence.
-10. **Record results:** retain a private row per OS/character/action with build/addon version, exact
-    initial/reload flags and login times, rejected/fired events, API shape/container IDs/sizes,
-    expected versus stored copper/item/slot/link values, bank open/close availability, snapshot IDs,
-    preview/import outcomes, machine/drop UTC, timing/lag and Lua errors. State failures explicitly;
-    offline stubs cannot confirm these Forever beta behaviors. Keep raw files private for diagnosis.
-
 ## Event journal: format 6 (STORY-033)
 
 Install **0.8.0** on both machines. The account-wide file now also holds `journal` and
@@ -546,115 +342,12 @@ only entries is valid; all matching non-scan records import when the file is sel
 `--scan`. Fully imported includes journal entries. Duplicate-only import still says **Nothing new:
 /reload first**. Follow OPS-03 before clear, then verify current-login entries survived the write.
 
-### Forever known recipes play checklist (STORY-049) — by 15 October
+### Real recordings for replay (STORY-006)
 
-Install **0.11.2**. Lists were confirmed on 2026-10-10 with 0.11.1 (`docs/status.md`); repeat this on any new client build or profession.
-
-1. Open each character's profession windows (Basilly: Tailoring; Keenagen: Mining or Smelting if offered),
-   close them, and open them again. Open them once from the spellbook and once another way
-   (hotbar or keybind).
-2. Learn one recipe at a trainer if one is offered, then reopen that profession window.
-3. Craft one thing.
-4. Log out.
-
-### Professions beta checklist (STORY-041) — by 13 October, Mac and Windows
-
-Capture rules and unknown/completeness behavior live in
-[ADDON-11](../docs/requirements.md#addon-11-character-snapshots-story-032) and
-[ADDON-12](../docs/requirements.md#addon-12-event-journal-story-033); the payload and import projection
-are in [design.md](../docs/design.md#character-snapshots). Claude checks the recorded evidence.
-
-1. Log in to the character with Mining and Engineering.
-2. Open Mining, then Engineering. Close and reopen each without making changes.
-3. Collapse a recipe heading if the window offers one, then reopen it. Try a recipe filter if offered,
-   then return to your usual view.
-4. Learn one new recipe, then open that profession window again.
-5. Gather or craft until you gain a skill point, then open the profession window again.
-6. Type `/reload`, reopen both profession windows, then log out.
-7. Log in to the druid and repeat with Tailoring and Enchanting, including learning a recipe and
-   gaining a skill point. Open Cooking and First Aid too if the character has them. Log out.
-8. Repeat these play actions on the other machine.
-
-### Active auctions beta checklist (STORY-040) — by 13 October, Mac and Windows
-
-Install **0.8.0**; format stays **6**. Capture contract is
-[ADDON-12](../docs/requirements.md#addon-12-event-journal-story-033). Owned lists use the existing
-journal/import. The import page shows latest UTC, auction count and client-marked sold count;
-never observed shows *active auctions unknown*. A missing value remains unknown, even if other
-fields loaded; a client-reported empty list has count zero. No request or refresh is issued.
-
-- Before opening the Auctions tab, note whether an owned-update event/list arrives on its own.
-  Open the tab before posting; record the list/count, including zero if empty.
-- Manually post **two small stacks**, note whether the list arrives without the tab, then open
-  the tab again. Compare IDs/items, quantities, raw bid/buyout copper, status/bidder/time left.
-  Reopen with unchanged results and confirm no extra equal-list entry within that load.
-- Cancel one stack manually, note unsolicited updates, and open the tab again. Do not infer a
-  cancellation or expiry from disappearance; preserve the cancel hook and mailbox evidence.
-- After the other stack sells, open the tab **before taking its mail**, record client-marked sold
-  status (including waiting-for-mail if reported). Take mail manually, then open the tab again.
-- Save via `/reload` or logout after each stage. A reload starts a fresh deduplication session.
-  Import copies through the normal addon page; verify latest UTC/count/sold, unknown on a character
-  whose list was never observed, and duplicate-only import on a second pass.
-- Note OS/machine, build, addon version, fired/rejected owned event, raw API/count/status fields,
-  whether results are complete (legacy batch versus total, modern full-results flag), missing values, chat silence, Lua errors and lag. Keep recordings
-  private and preserve small sanitized fixtures **before 21 October**, using the replay workflow below.
-
-### Event journal beta checklist — Mac and Windows, pending; aim by 13 October
-
-Use a new character with one gathering profession and one crafting profession that uses it, a
-little gold, and a second character on the **same account/realm/faction** for mail. Start a fresh
-login so the login marker is known. Repeat on each machine. Keep recordings private and do not
-clear evidence until the latest drop is fully imported. Enable Lua error reporting through the
-client's settings or `/console scriptErrors 1`; record errors, including errors that interrupt a
-hook or event handler. Do not change the candidate list simply to hide rejected/missing APIs.
-
-For **every row below**, note OS/machine, build/interface/addon version, character/realm/faction,
-action/time, journal IDs and shared sequences, events fired **and rejected**, missing/installed
-hooks and actual hook arguments (including nil positions), before/after copper and bags, open
-windows, mailbox counts/headers/invoices/attachments where relevant, Lua errors and lag.
-Save a file before/after each family using `/reload` or logout; note journal/overflow counts,
-file bytes and reload duration. Record unavailable values explicitly, never as zero.
-
-| Family | Manual actions in game | Evidence to compare in the file |
-| --- | --- | --- |
-| Baselines/money/bags | Login, `/reload`, wait without changes, split a stack, move it, then acquire/remove one item and spend/receive a few copper. Open/close the bank. | PLAYER_MONEY before/after; BAG_UPDATE_DELAYED deltas across carried bags; no entry for a split/move or unchanged totals; windows; missing-baseline evidence if unreadable; snapshots/journal interleaved sequences. |
-| Auction | Buy a cheap item; post two small stacks, cancel one, allow one short auction to expire, and arrange for an actual player to buy another. Bid and get outbid if practical. | Global or C_AuctionHouse hook names/arguments, purchase/post/cancel events, deposits and money changes, bag changes, owned-list events. Identify hook attempts versus actual success; preserve rejected/missing event/function names. Sold/expired/cancelled/outbid evidence arrives by mail, not inferred from a missing auction. |
-| Mail/invoices/returns | Open the mailbox, refresh unchanged inbox, manually open sold/expired/cancelled/outbid mail, take gold and returned items, close/reopen. | One state per changed inbox; every header: sender, subject, money, COD, days, item count, read flag; invoice type/item/other player/bid/buyout/deposit/cut; attachment info/link; take hooks and money/bag deltas. Opening marks read and can legitimately change the state. Nil invoice fields stay missing. |
-| Send/receive mail | Attach a small item and a little gold; send to your other character. Also exercise COD if affordable. Log into recipient; receive/take the mail manually. | MAIL_SEND_INFO_UPDATE draft money/COD/attachments/time, SendMail recipient arguments and last-observed draft, success/failure events, sender gold/bag changes; recipient headers and take hooks/deltas. Check whether draft APIs update before send and whether they clear afterward. Never assume successful delivery from the post-hook. |
-| Craft | Open the crafting window, make one inexpensive recipe (and a short batch), then close it. If possible interrupt/fail one craft, and close the window during a batch. Cast a combat spell afterwards. | DoTradeSkill/DoCraft/C_TradeSkillUI.CraftRecipe arguments, one UNIT_SPELLCAST_SUCCEEDED per successful craft while the window was open (none for the interrupted craft, combat spells or other units), consumed/created item deltas and window context. Note whether batch crafts after closing the window still finish. Check quantities against the actual recipe without interpreting journal transactions yet. |
-| Vendor | Buy one cheap reagent, sell one expendable item, repair damaged gear if available; close merchant. | BuyMerchantItem/SellCursorItem/global or C_Container.UseContainerItem/RepairAllItems arguments, merchant events, money/bag changes. Container use outside a merchant should not log as a sale; post-hook does not assert success. |
-| Gathering/loot | Gather one node/herb, loot one mob, then join a group where someone else loots. Close the loot window. | Own loot-window events, bag gains and CHAT_MSG_LOOT raw arguments (gathering casts are not recorded); argument 12 must match own GUID. Other/ambiguous loot chat is omitted. Record if Forever omits that GUID; bag/window evidence should still capture own gains. |
-| Clear/transport | Open mailbox before clear; `/reload`, import, clear and `/reload` within this login. Then logout/drop/import, fresh login/clear. | Current-login IDs/content survive both clear forms and the button; old records prune only with known login. Confirm no false fully-imported state, exact bronze bytes, machine, overlapping-drop duplicates and entry counts. Unknown login keeps all. Existing scan clear protections still work. |
-| Cap/size | Measure a normal 30–60 minute economy session with the above actions. For cap testing use a separate disposable SavedVariables copy populated with offline stub records, never your only recording. Add a few manual economy actions at the cap, reload/drop twice. | Count and bytes before/after, CPU/lag/reload time; one overflow marker, cumulative skipped increment and changing ID; one problem message; earlier entries untouched. Current-login marker survives clear; old-session prune creates space. Restore the normal file only with WoW closed after preserving/importing the test copy. |
-
-**Measurements pending:** no real 0.6.0 journal recording has been supplied. Fill a private
-measurement row per family and a normal-session row (elapsed minutes, entries by family, file
-bytes, bytes attributable to journal, skipped count, reload seconds, build, machine, errors).
-Record actual API support and failures before 21 October; offline tests do not establish beta support.
-
-### Preserve a real recording as a replay fixture before 21 October
-
-1. `/reload` or log out and **close WoW**; wait for writing to finish. Copy the entire account
-   SavedVariables file, unchanged, to an immutable private path such as
-   `data/inbox/event-journal/mac-20261013T180000Z-BrownstoneScan.lua`. Windows uses the existing drop
-   script; retain the dropped file locally too. Never edit the original game file to make it pass.
-2. Record SHA-256 and bytes (`shasum -a 256 <private-copy>` and `wc -c <private-copy>` on Mac;
-   `Get-FileHash -Algorithm SHA256 <private-copy>` on Windows). Keep the action/measurement log next
-   to this private copy with the build, expected changes, actual hook arguments and error text.
-3. Treat that immutable file as the **real replay fixture**: point an addon source at its copy and
-   an isolated `work/` data directory, preview and import twice with the CLI. Compare family counts,
-   raw JSON, IDs, scope, first-import versus duplicate outcomes and exact decompressed bronze bytes.
-   Repeat with two overlapping recordings to check duplicates; do not import altered same-ID content.
-4. For a committed regression test, select the smallest representative entries per family using
-   `scans.read_addon_records(copy.read_bytes())`, plus related snapshots, and the actual assertions
-   from the action log. Keep a private provenance note mapping them to raw-file hash/entry IDs.
-   Anonymize character/realm/recipient/body/link identifiers in a **derived** fixture only, regenerate
-   its length-prefixed IDs consistently, and label it derived from the measured recording. Retain
-   the unchanged recording privately. Add it under `tests/fixtures/` with a replay test in
-   `tests/test_journal.py`; never commit the full raw account file, private log or personal paths.
-5. Run `.venv/bin/pytest --cov`, `.venv/bin/ruff check .`, `.venv/bin/mypy` and `git diff --check`.
-   Record results and measurements here; real-recording acceptance stays pending until this is done.
-
+Every file the drop script copies (`windows-pc-<UTC time>-BrownstoneScan.lua` in the drop folder) is an
+unchanged, immutable recording of the account file. Keep them: STORY-006 builds its replay fixture from
+them. They can contain other players' names (ADDON-07), so they stay private and are never committed;
+a committed fixture is a small, anonymized extract.
 
 ### Removed listings time-left beta check (STORY-027) — pending
 

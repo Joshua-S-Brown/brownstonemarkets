@@ -13,12 +13,10 @@ from brownstone.item_names import (
     remember_catalog_names,
     remember_local_catalog_names,
     remember_observed_names,
-    seed_catalog_names,
 )
 from brownstone.pipeline import import_scans, run
 from brownstone.scan_changes import compare_scans
-from brownstone.storage import MIGRATIONS, ensure_schema, listing_depth, upgrade_database
-from views.crafting import _board_row
+from brownstone.storage import MIGRATIONS, ensure_schema, upgrade_database
 
 
 def catalog(game, names):
@@ -46,15 +44,6 @@ def test_missing_name_later_loaded_browse_search_changes_and_depth(tmp_path):
         diff = compare_scans(db, config, 'old', 'new')
         assert diff['items'][0]['item_name'] == 'Runecloth'
         assert not any(row['changed'] for row in diff['items'])
-        # Depth's labels already come from the catalog, not nullable price/listing names.
-        depth = listing_depth(db, config, 'my-scans:old', [14047, 90001])
-        row = {'recipe_id': 1, 'output_item_id': 90001, 'rank': 1, 'output_name': 'Bag',
-               'profession': 'tailoring', 'action': 'missing prices', 'craft_cost_copper': None,
-               'sale_price_copper': None, 'net_revenue_copper': None, 'profit_copper': None, 'margin': None,
-               'profit_by_basis': {'listed': None}}
-        recipe_catalog = {'recipes_by_id': {1: {'inputs': [{'item_id': 14047}]}},
-                          'items_by_id': {14047: {'name': 'Runecloth'}}}
-        assert 'Runecloth:' in _board_row(recipe_catalog, row, 'listed', depth)['Direct input depth']
         assert db.execute("SELECT item_name FROM market_snapshots WHERE snapshot_id='my-scans:old' "
                           'AND item_id=14047').fetchone() == ('Item 14047',)
         assert db.execute("SELECT item_name FROM scan_listings WHERE scan_id='old' "
@@ -103,7 +92,6 @@ def test_name_only_shares_between_sources_markets_and_environments(tmp_path):
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb')) as db:
         found = browse(db, 'my-scans:old', config, 'Shared label')
         assert found.select('item_id', 'min_buyout').rows() == [(90001, 50)]
-        assert listing_depth(db, config, 'my-scans:old', [90001])[90001] == {'listings': 1, 'units': 1}
         assert browse(db, 'other:other', config).is_empty()
 
 
@@ -227,22 +215,3 @@ def test_padded_names_are_trimmed_and_compare_equal(tmp_path):
         remember_catalog_names(db, [catalog('forever', {90001: '  Runecloth  '})])
         remember_catalog_names(db, [catalog('forever', {90001: 'Runecloth'})])
         assert db.execute('SELECT item_name FROM item_names').fetchall() == [('Runecloth',)]
-
-
-def test_catalog_missing_ids_skipped_and_existing_database_seeded(tmp_path):
-    selections = tmp_path / 'recipe-selections'
-    selections.mkdir()
-    (selections / 'no-ids.toml').touch()
-    (tmp_path / 'no-ids.toml').write_text(
-        'schema_version = 1\ngame_version = "forever"\nrules_version = "1"\nprofession = "tailoring"\n'
-        'status = "beta-observed"\ncatalog_version = "1"\n[[items]]\nname = "No ID"\n')
-    with duckdb.connect() as db:
-        ensure_schema(db)
-        remember_local_catalog_names(db, tmp_path)
-        assert db.execute('SELECT count(*) FROM item_names').fetchone() == (0,)
-    seed_catalog_names(tmp_path / 'absent', [catalog('forever', {90001: 'Never written'})])
-    assert not (tmp_path / 'absent' / 'brownstone.duckdb').exists()
-    config = imported_names(tmp_path)
-    seed_catalog_names(config['data_dir'], [catalog('forever', {90001: 'Seeded label'})])
-    with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb')) as db:
-        assert browse(db, 'my-scans:old', config, 'Seeded label').height == 1

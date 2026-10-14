@@ -28,7 +28,7 @@ def test_skills_both_apis_level_missing_and_raw_tuples():
     ''')
     fire(g, "PLAYER_LOGOUT")
     record = python_value(g.BrownstoneScanDB.snapshots)[-1]
-    assert record["level"] == 22 and record["addon_version"] == "0.12.1"
+    assert record["level"] == 22 and record["addon_version"] == "0.12.2"
     assert record["skills"]["legacy"]["rows"][1]["rank"] == 55
     assert "skill_id" not in record["skills"]["legacy"]["rows"][1]
     assert record["skills"]["modern"]["indexes"]["n"] == 3
@@ -292,7 +292,6 @@ def test_profession_projection_old_database_and_bank_only(tmp_path):
         "bags": {"skills": {"legacy": {"counts": {"1": 0}}}}, "recipes": {}})[0]["Skills"] == "observed"
 
 
-
 def test_duplicate_skill_api_display_preference_explicit_and_missing_not_filled():
     surfaces = {"modern": {"api": "GetProfessionInfo", "rows": [{"name": "Mining", "skill_id": 186}]},
                 "legacy": {"api": "GetSkillLineInfo", "rows": [{"name": "Mining", "rank": 55, "max_rank": 75}]}}
@@ -510,13 +509,6 @@ def test_seen_crafted_projection_import_scope_union_time_and_unknown(tmp_path, m
     alice = professions.latest_rows(config)[0]
     assert alice["Known recipes"] == 2 and alice["Listed recipes"] == 1
     assert alice["Recipe source"] == "window list + seen crafted"
-    from views import scan_import
-    tables = []
-    monkeypatch.setattr(scan_import.st, "dataframe", lambda rows, **_: tables.append(rows))
-    monkeypatch.setattr(scan_import.st, "caption", lambda *_: None)
-    scan_import._show_holdings(config)
-    table = next(t for t in tables if t and "Known recipes" in t[0])
-    assert table[0]["Seen crafted recipes"] == [2963, 3755] and table[0]["Known recipes"] == 2
     assert professions._crafted_id({"event": "UNIT_SPELLCAST_SUCCEEDED", "arguments": ["target", "cast", 1]}) is None
     assert professions._crafted_id({"event": "C_TradeSkillUI.CraftRecipe", "arguments": [False]}) is None
 
@@ -529,7 +521,6 @@ def test_modern_learned_flag_validation():
 def test_modern_lua_shared_import_and_page_evidence(tmp_path, monkeypatch):
     from datetime import UTC, datetime
 
-    from views import scan_import
 
     _, g = modern_client()
     fire(g, "TRADE_SKILL_SHOW")
@@ -540,11 +531,7 @@ def test_modern_lua_shared_import_and_page_evidence(tmp_path, monkeypatch):
     now = datetime.fromtimestamp(raw[0]["captured_at"], UTC)
     import_scans(config, now=now)
     assert not preview_scans(config, now=now).new_record_ids
-    tables = []
-    monkeypatch.setattr(scan_import.st, "dataframe", lambda rows, **_: tables.append(rows))
-    monkeypatch.setattr(scan_import.st, "caption", lambda *_: None)
-    scan_import._show_holdings(config)
-    table = next(t for t in tables if t and "Known recipes" in t[0])
+    table = professions.latest_rows(config)
     assert table[0]["Recipe source"] == "window list" and table[0]["Known recipes"] == 1
 
 
@@ -759,3 +746,20 @@ def test_link_names_loading_later_save_no_new_list():
     lua.execute('id = 279953')
     fire(g, "TRADE_SKILL_DATA_SOURCE_CHANGED")
     assert len(entries(g)) == 2 and "Molten Foundry" in entries(g)[-1]["known_recipes"]["rows"][0]["item_link"]
+
+
+def test_rank_record_moves_the_list_time_and_its_utc_text_together(tmp_path):
+    from datetime import UTC, datetime
+
+    from brownstone.characters import build_characters
+    listed = recipes("list", sequence=3)
+    listed["known_recipes"].update(api="C_TradeSkillUI", recipe_ids=[1], rows=[{"recipe_id": 1, "learned": True}])
+    rank = entry("rank")
+    rank.update(family="craft", sequence=4, captured_at=listed["captured_at"] + 60,
+                captured_at_utc=datetime.fromtimestamp(listed["captured_at"] + 60, UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                profession_rank={"api": "C_TradeSkillUI", "name": "Engineering", "rank": 9, "max_rank": 75})
+    config = addon_source(tmp_path / "data", write(tmp_path / "own.lua", [listed, rank]))
+    import_scans(config, now=NOW)
+    record = next(iter(professions.latest_data(config).values()))["recipes"]["Engineering"]
+    assert record["captured_at_utc"] == rank["captured_at_utc"] and record["known_recipes"]["rank"] == 9
+    assert build_characters(config)  # 2026-10-13: the old UTC text made card validation reject the projection

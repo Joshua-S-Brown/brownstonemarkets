@@ -83,12 +83,6 @@ def catalog_for_row(catalogs: list[dict], row: dict) -> dict:
     return next(catalog for catalog in catalogs if catalog_identity(catalog) == row["catalog_id"])
 
 
-def filter_profession(board: dict, profession: str | None) -> dict:
-    """Filter without changing the combined ranking or policy."""
-    return {**board, "rows": [row for row in board["rows"]
-                             if profession is None or row["profession"] == profession]}
-
-
 def rank_catalogs(catalogs, observations, market, snapshot, *, now, sort_by="profit",
                   basis="cautious", max_age_hours=24, auction_cut=0.05, team_makeable=None, recipe_graph=None):
     """One board with qualified rows; without team evidence retain exact catalog-local routes."""

@@ -69,25 +69,6 @@ def test_parser_accepts_new_fields_and_old_catalogs():
     assert parse_recipe_catalog(c)['recipes_by_id'][30]['skillup_colors'] == [1, 1, 1, 25]
 
 
-def test_save_catalog_fields_and_version_bump_match_generator(tmp_path):
-    import tomllib
-
-    from test_recipe_catalogs import make_workspace
-
-    from brownstone import recipe_catalogs as rc
-    config, archive = make_workspace(tmp_path)
-    entry, = rc.find_catalogs(config)
-    raw = PAGE.replace('"learnedat":45,', '"learnedat":45,"colors":[45,50,60,75],').encode()
-    result = rc.regenerate(entry, raw, 'fixture.html', '2026-10-08', archive)
-    written = tomllib.loads(entry['catalog_path'].read_text())
-    assert written['page_coverage'] == {'usable': 2, 'no_item': 0, 'unknown_yield': 1}
-    assert written['recipes'][1]['skillup_colors'] == [45, 50, 60, 75]
-    assert written['catalog_version'] == '0.2'
-    assert written == result['catalog']
-    updated, = rc.find_catalogs(config)
-    assert not rc.preview_update(updated, raw, '2026-10-08')['changed']
-
-
 @pytest.mark.parametrize('flag', [{'raw_material': True}, {'raw_material': False, 'raw_material_note': 'n'},
                                   {'raw_material': 'yes', 'raw_material_note': 'n'}])
 def test_parser_rejects_raw_material_without_true_and_note(flag):

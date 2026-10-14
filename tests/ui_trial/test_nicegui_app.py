@@ -2,11 +2,9 @@
 
 import duckdb
 import pytest
-from navigation_helpers import navigate
+from app_helpers import app, preview_addon
 from nicegui import ui
-from test_app import preview_addon
 from test_scans import finished_now, listing, scan, write_scans
-from test_today_view import app
 
 from brownstone.navigation import QUESTIONS
 
@@ -56,13 +54,13 @@ async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, m
     await user.should_see('Save Today settings')
     assert next(iter(user.find(ui.tabs).elements)).value == 'Queue'
     await user.open('/?game=classic&source=other&place=Data&tab=Queue')
-    await user.should_see("old app's Refresh from TSM")
+    await user.should_see("python -m brownstone --source other")
     user.find(marker='page-info').click()
     await user.should_see('source other')
     await user.should_not_see('Check for new scans')
 
 
-async def test_preview_subset_import_matches_streamlit_records(user, tmp_path, monkeypatch):
+async def test_preview_subset_import_matches_cli_records(user, tmp_path, monkeypatch):
     at, source = preview_addon(tmp_path, monkeypatch)
     old = source.copy()
     source['data_dir'] = tmp_path / 'nicegui-data'
@@ -82,14 +80,13 @@ async def test_preview_subset_import_matches_streamlit_records(user, tmp_path, m
     await user.should_see('Imported. Collection prices come from scan one')
     await user.should_not_see(marker='Scan preview')
     assert source['scan_path'].read_bytes() == before
-    # Run the existing Streamlit page on a separate directory, with the same selected bytes.
-    monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [old])
-    at.run()
-    navigate(at, 'Data')
-    next(b for b in at.button if b.label == 'Preview addon scans').click().run()
-    at.multiselect[0].set_value(['one']).run()
-    next(b for b in at.button if b.label == 'Import addon scan').click().run()
-    assert not at.exception
+    # The CLI imports the same selected bytes into an independent directory.
+    import sys
+
+    from brownstone import cli
+    monkeypatch.setattr(cli, '_select_source', lambda args: old)
+    monkeypatch.setattr(sys, 'argv', ['brownstone', '--scan', 'one'])
+    cli.main()
     assert records(source['data_dir']) == records(old['data_dir'])
 
 

@@ -1,11 +1,10 @@
 """Offline native user simulation over synthetic, imported evidence."""
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
+from app_helpers import app, listing_evidence_app
 from nicegui import ui
 from test_today import catalog
-from test_today_view import app, listing_evidence_app
 
 from brownstone.money import format_money, parse_money
 from brownstone.today import build_today, craft_details
@@ -72,10 +71,9 @@ async def test_stale_rows_and_settings_round_trip(user, tmp_path, monkeypatch):
     user.find('Save Today settings').click()
     await user.should_see('Today settings saved locally.')
     assert load_settings(path).gold_copper == 125000
-    from streamlit.testing.v1 import AppTest
-    at = AppTest.from_file(str(Path(__file__).resolve().parents[2] / 'app.py')).run()
-    assert not at.exception
-    assert any('Gold available: 12g 50s' in c.value for c in at.caption)
+    await user.open('/')
+    user.find(marker='page-info').click()
+    await user.should_see('Gold 12g 50s · entered')
 
 
 async def test_source_resolution_tabs_filter_and_corrupt_settings(user, tmp_path, monkeypatch):

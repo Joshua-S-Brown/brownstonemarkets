@@ -8,7 +8,7 @@ How the system is built. Rules and their rationale live in `requirements.md`; th
 TSM CSV ──download──▶ bronze (exact bytes + manifest JSON)
         ──normalize─▶ silver (validated Parquet, one per collection)
         ──load──────▶ DuckDB market_snapshots (deduplicated analytical snapshots)
-        ──rank──────▶ gold (discount-screen CSV/Parquet per collection)
+        ──rank──────▶ gold (CLI screening CSV/Parquet per collection)
 
 SavedVariables .lua ──copy──▶ bronze (gzip of the exact bytes, stored once per SHA-256, + manifest JSON)
         ──parse/check─▶ scans (Lua subset parser, house evidence, stack unit prices)
@@ -23,89 +23,50 @@ catalog TOML ──load──▶ crafting / action_board ◀── price_observa
 
 CLI collection bytes are written before validation, so failures stay inspectable; addon previews and stale reviewed imports write nothing (DATA-01/ADDON-06). DuckDB writes are transactional, but silver, DuckDB and gold together are not one atomic operation (see `status.md` for recovery).
 
-## Apps and page map
+## App and modules
 
-Two apps call the same `brownstone/` functions. Logic one app needs from the other moves into a
-framework-free module both use, never a copy: `brownstone/` for calculations and evidence
-(`today_loading`, `today_session`, `import_review`, `navigation`), `views/today_rows.py` for Today
-table projections and wording.
+`nicegui_app.py` owns loopback entry, URL place/source/Today-tab state and lifecycle;
+`launch_nicegui.py` owns native launch, browser fallback and the path/byte fingerprint of
+both entries plus brownstone/views Python sources. Reuse/restart requires authenticated
+launcher state; the fingerprint has no dependency on a removed entry.
 
-**Main app (NiceGUI, UI-07).** `nicegui_app.py` is the entry; views are `views/nicegui_today.py`,
-`views/nicegui_team.py`, `views/nicegui_market.py`, `views/nicegui_stock.py` and `views/nicegui_import.py`. `views/nicegui_theme.py` owns the approved
-colour/spacing tokens and common chips, badges, banners, tiles, cards, dialogs and empty states;
-it forces light mode and selectable text. The native entry sets `app.native.window_args['text_select']`.
-`nicegui_app.header` renders wrapping place tabs, separated Data and the source menu, with page-specific
-information and Today settings buttons. Pages have one title/question; technical evidence lives in
-dialogs or disclosures. Today uses status chips, reserved-plan summary projections from `today_rows`,
-Plan/Shopping list/Sell/Queue/Extras panels and an explanatory empty card. Its settings dialog preserves
-all fields/validation and Save-only persistence, with the percentage visible only in scaled mode;
-opening resets drafts to the last saved settings. Data's explicit review/import lifecycle is unchanged;
-status chips read saved evidence through `import_review.status_chips`, and files/holdings are disclosures.
-Place, source and Today tab live in the URL;
-the active Today tab survives place changes. Session state is per-tab `app.storage.tab`: Today choices, refill, display
-preferences and queue ticks per source, Team character/window per source, and one import review
-that a source/configuration change discards. ImportPage replaces the review with results; drop imports refresh their file evidence.
-
-| Place | New app | Built by |
+| Place | View | Job |
 | --- | --- | --- |
-| Today | Today plan with cards | STORY-054 |
-| Team | Roster, progression, and *Add a character?* | STORY-052, STORY-059 |
-| Market | Item explorer with supply chains and what moved | STORY-055 |
-| Stock | Team holdings, listed value and manual restock targets | STORY-061 |
-| Data | Import (TSM refresh stays in the old app) | STORY-058 |
+| Today | nicegui_today | Plan cards/table, shopping, sell, queue, extras, This session |
+| Team | nicegui_team | Roster, progression, hiring |
+| Market | nicegui_market | Item search/chains, movement, removals, flood evidence |
+| Stock | nicegui_stock | Captured holdings, listed value, manual targets |
+| Data | nicegui_import | Explicit addon review/import |
 
-**Old app (Streamlit, frozen).** `views/navigation.py` renders one sidebar radio (Data visually
-separated) and a segmented control per place; only the selected section renders. `view-<source_id>`
-stores the place and `section-<source_id>-<place>` the section; reassigning them each run stops
-widget cleanup from discarding another source's choice, and old page names migrate (`LEGACY`).
+`views/nicegui_theme.py` owns light tokens, chips/badges/banners/tiles/cards/dialogs/empty states.
+`views/today_rows.py` projects framework-free rows/wording. The header wraps place tabs,
+separates Data, and offers source/page information and Today settings. Native text selection
+is enabled. Evidence lives in dialogs/disclosures; rules are UI-07/08.
 
-| Place | Sections and view modules |
+Per-tab state (`app.storage.tab`) holds Today choices/refill/preferences/ticks per source,
+Team character/window per source, and one import review invalidated by source/config change.
+Import results replace review; drops refresh file evidence. Place/source/tab are URL-backed.
+Settings drafts reopen from saved values and persist only on Save.
+
+Dependencies point inward: entry → views → brownstone; brownstone never imports display
+frameworks/views. Calculation modules take supplied data/clock and do not download.
+
+| Modules | Responsibility |
 | --- | --- |
-| Today | Today plan (`today`), All recipes (`crafting`) |
-| Team | Characters (`characters`) |
-| Market | Browse market (`market`), Skill-up demand (`skillups`), Watchlist (`watchlist`), Below usual price (`market`) |
-| Data | Import (`scan_import`) or Refresh from TSM (`app.py`), Recipe catalogs (`catalogs`), Scan changes (`scan_changes`) |
-
-## Modules
-
-```text
-app.py / launch.py              Streamlit entry and its launcher (code-fingerprint restart)
-nicegui_app.py / launch_nicegui.py   Main NiceGUI entry (loopback, URL state, lifecycle) and native launcher
-views/                          Display only
-  nicegui_today.py, nicegui_team.py, nicegui_import.py   Today, Team and Data → Import
-  today_rows.py                 framework-free Today rows and wording shared by both apps
-  navigation.py, common.py      Streamlit places/sections; context, freshness and gold columns
-  today.py, crafting.py, characters.py, market.py, skillups.py, watchlist.py,
-  scan_changes.py, scan_import.py, catalogs.py   Streamlit pages (page map above)
-brownstone/                     importable without Streamlit or NiceGUI
-  config.py, markets.py         market.toml (+ local overrides) → typed Source; MARKET_KEYS, market_id,
-                                scope_predicate, legacy upgrade
-  sources.py, normalization.py  TSM download; CSV → validated frame
-  pipeline.py                   TSM run; read-only preview_scans; shared reviewed/CLI import_scans
-  scans.py, scan_details.py, variants.py   SavedVariables parser, validation, house check, unit/item
-                                prices; format-3/4 references and item pass; link identity (ADDON-08)
-  addon_records.py, character_snapshots.py, journal.py, professions.py, characters.py
-                                non-scan records: lifecycle, storage, scoped projections, Characters cards
-  scan_inputs.py, drop_files.py, import_review.py   drop-folder inventory and batch import; naming
-                                contract; Import summaries/messages shared by both apps
-  storage.py, metrics.py, item_names.py   schema/migrations, loads, manifests, scoped price/depth reads;
-                                ADDON-10 calculator and rebuild; version-scoped labels
-  analysis.py, scan_changes.py  Browse/discount queries; scoped scan comparison
-  crafting.py, action_board.py, skillups.py   catalog validation, routes and costs; ranking policy;
-                                skill-up totals
-  recipe_import.py, recipe_catalogs.py, selection_files.py   saved page → catalog TOML; catalog
-                                discovery, status and writes; in-place selection edits
-  progression.py                Team reach windows, current board values and skill-up cost estimates
-  hiring.py                     New-hire cumulative costs, tier profits and team feed savings
-  today*.py                     Today plan, confidence, data, settings, funds, eligibility, loading, session
-  stock.py                      team holdings, local targets and depth-aware fill estimates
-  watchlist.py                  watchlist entries, evidence and hit text
-  beta_report.py, beta_evidence.py, beta_markdown.py   beta evidence report
-  freshness.py, money.py, navigation.py   staleness policy and captions; g/s/c; questions and experiences
-  cli.py                        `python -m brownstone` collect/import, `recipes`, `beta-report`
-```
-
-Dependencies point inward: the app entries → `views/` → `brownstone`, which never imports `views/`. Domain modules (`action_board`, `freshness`, `money`, and `crafting` apart from reading a catalog file) do no other I/O and take the clock as a parameter. The `dashboard` extra (Streamlit) is needed only for `app.py` and `views/`.
+| config, markets | Typed Source, local overrides, MARKET_KEYS/derived ID/scope |
+| sources, normalization, pipeline | TSM download/validate/collect; shared addon preview/import |
+| scans, scan_details, variants | Lua parsing, validation, references, variant identity |
+| addon_records, character_snapshots, journal, professions, characters | Non-scan lifecycle and scoped projections |
+| scan_inputs, drop_files, import_review | Drop inventory, review rows/status, per-file imports |
+| storage, metrics, item_names | Migrations, facts/reads, versioned metrics and labels |
+| analysis, scan_changes, removed_listings, flood_signals | Browse/CLI screening and scoped market comparisons |
+| crafting, action_board, skillups, recipe_graph | Catalog validation, routes/ranking, bands, team graph |
+| recipe_import, recipe_catalogs | Saved-page CLI generation; selection-based discovery/learning labels |
+| progression, hiring, session_options | Reach costs, hire comparisons, This session composition |
+| today*, stock, watchlist | Funded plan/loading/evidence/settings, holdings/targets, retained hit engine |
+| freshness, money, navigation | Freshness, copper display, questions/experience order |
+| beta_report, beta_evidence, beta_markdown | Isolated evidence checks and private report |
+| cli | collect/import, recipes, beta-report (`python -m brownstone`) |
 
 ## Data contracts
 
@@ -127,31 +88,38 @@ Dependencies point inward: the app entries → `views/` → `brownstone`, which 
 
 ### Schema migrations
 
-- **Versioning.** `storage.py` records `schema_version` in a `schema_info` table.
-- **Migrations are frozen.** A fresh database replays every migration, so it is identical to an upgraded one; a test enforces this.
-  - Version 1: explicit table, plus the identity columns.
-  - Version 2: market/source split. Adds `source_id`, `server_type` and `faction`, moves Classic faction out of the realm slug, renames scope `realm` to `house`, and re-derives `market_id`.
-  - Version 3: addon scans. Adds `addon_scans` and `scan_listings`; `market_snapshots` is unchanged.
-  - Version 4: adds `environment` to all three observation tables. Stored Forever rows collected before the frozen 2026-11-04 00:00 UTC boundary become beta; all others become live. Listings lack `collected_at`, so the migration uses the parent `addon_scans` row matched by `source_id, scan_id`; a missing/null timestamp falls into live. Beta IDs are re-derived with the suffix instead of blindly appending, making interruption/replay harmless. Only null environments are classified, so already classified rows stay intact. The frozen date cites the official source under Product direction in `requirements.md`.
-  - Version 5: adds `item_names`, the `loaded_item_name` SQL macro, and `named_market_snapshots` / `named_scan_listings` views. Backfills both stored price rows and all listings; listing timestamps come from their parent scan matched on source, scan ID and every market key. It changes no observation rows. The table, macro, views and backfill are frozen SQL in `storage.py`; table creation, view replacement and the deterministic backfill (existing winners kept) are replayable. Valid local catalogs seed after the upgrade, outside the frozen observation migration; malformed catalogs of any kind are skipped.
-  - Version 6: adds nullable richer listing fields, `variant_id, variant_state` on listings and prices, `format_version, duration_seconds, availability_json` on scans, and `scan_items`. Rebinds named views after column additions (DuckDB binds star projections at creation). Historical rows and hashes are unchanged. Replay is idempotent, with schema-5 backup before the upgrade; fresh and upgraded layouts are tested. Capture and variant rules are ADDON-08/09 in `requirements.md`.
-  - Version 7: adds `scan_metrics` and a canonical structured identity primary key. DDL only; no
-    calculation is frozen in the migration. `ensure_schema` then calls `metrics.initialize_metrics`,
-    also retried by `upgrade_database` when schema 7 exists without the metrics completion marker.
-    Eligibility, measures, nulls and seller policy live in ADDON-10 (`requirements.md`).
-  - Version 8: adds nullable `pass_item_level`, `pass_max_stack_size`, `pass_vendor_sell_copper` (BIGINT) and `pass_fields_json` (VARCHAR) to `scan_items`. Original columns retain first-pass values. `effective_scan_items` uses `coalesce(first, pass)` for each of the three reference fields; zero is present. Provenance JSON is an ordered list of fields supplied by the pass, `[]` for format-4 items needing no pass value, null for all older formats/historical rows. DDL and view replacement are idempotent; schema-7 backup precedes upgrade. No historical rows or hashes are rewritten.
-  - Version 9: adds nullable `machine VARCHAR` to `addon_scans`, with no backfill or change to identities, hashes, prices or listings. `ADD COLUMN IF NOT EXISTS` is replayable. The normal schema-8 backup precedes upgrade; older scans keep null, including after duplicate import. Fresh and upgraded scan layouts agree.
-  - Version 10: adds character snapshot parents and slots; the record/storage contract is in
-    *Character snapshots* below and capture/clear rules in ADDON-11. Existing observations are unchanged.
-  - Version 11: adds raw scoped `character_journal`; contracts are below. Existing tables stay unchanged.
-- **Entry point.** `upgrade_database` copies the file to `brownstone.v<N>.backup.duckdb`, then runs pending migrations statement by statement. DuckDB cannot reliably add a column and update the table in one transaction, so every step is idempotent and the version is recorded only after each migration completes.
-- **Callers.** The app calls it at startup for whichever source is selected (an existing database only; it never creates one) and the pipeline before its write transaction. Preview itself never migrates; a missing database waits for the first import. `load_snapshot` refuses an outdated schema.
-- **Adding one.** Write `_migrate_to_N`, register it in `MIGRATIONS` and bump `SCHEMA_VERSION`.
-- **Nullable columns,** so v0.1 databases match fresh ones; validation happens in normalization.
-- **Manifests are never rewritten.** `markets.upgrade_legacy` reads pre-split and pre-environment manifests in the current shape. Missing environments use the same collection-time boundary as migration 4; explicit environments remain authoritative. `completed_snapshots` filters adapted records by source and every `MARKET_KEYS` field before choosing the latest observation.
-- **Shared identity.** `MARKET_KEYS` includes the derived ID and all seven market fields, including `environment` (DATA-03). Browse, Opportunities, crafting prices, depth, Scan changes and analytical deduplication use the entire scope. `known_scan` retrieves the stable source/scan key, adapts schema-3 records for read-only preview and checks every market key before returning deduplication state; a scope mismatch refuses key reuse. Source IDs and `<source_id>:<scan_id>` snapshot IDs are unchanged.
-- **Name read contract.** Schema 5 defines the missing-name check (`loaded_item_name`, which also trims) and resolution once in the named SQL views, preserving every base column and replacing only `item_name`. Browse/search and Opportunities query `named_market_snapshots`. Scan changes keeps each scan's own loaded name (price row, then its listings with lexical ties) and falls back to the lookup, then `Item <id>`, retaining all existing source/market/snapshot predicates. The app seeds parsed catalog labels once per session and catalog contents, through `item_names.seed_catalog_names`, and only warns on failure. Numeric-only price and depth readers still use base tables; crafting/depth displays already name items from their own catalogs. Lookup joins on game version/item ID carry labels only and are one-to-one by primary key.
-- **Name writes.** `load_snapshot` and `load_scan` update only candidates from the newly inserted snapshot, inside the caller's transaction. TSM imports and addon collection imports also seed validated local catalogs, including duplicate imports; the app seeds its parsed catalogs when an existing database is ready, so regenerated catalogs become available on rerun. No database is created for a catalog or preview alone. Malformed local catalogs are excluded from seeding and keep the existing UI warnings. Evidence references identify the stored source/snapshot/price or source/scan/listing, or the catalog item's source URL. Winner policy is solely DATA-02.
+`storage.SCHEMA_VERSION` and ordered `MIGRATIONS` are authoritative. `upgrade_database`
+backs up the starting file before pending idempotent steps; record each version after its
+steps complete. Newer schemas refuse. DuckDB column-add/update cannot reliably share one
+transaction, so interrupted upgrades must replay. Add numbered `_migrate_to_N`, register
+and bump version; do not edit frozen DDL. Nullable legacy fields preserve original evidence.
+
+| Version | Current schema contribution |
+| --- | --- |
+| 1 | Initial market snapshots |
+| 2 | Source/market identity split |
+| 3 | Addon scans and listings |
+| 4 | Explicit environment and legacy cutover adapter |
+| 5 | Version/item name lookup and named read views |
+| 6 | Variant identity, scan items, capture availability |
+| 7 | scan_metrics frozen DDL; derived initialization outside migrations |
+| 8 | Item-pass/effective-reference fields and view |
+| 9 | Nullable scan machine, no backfill |
+| 10 | Character snapshots/slots |
+| 11 | Raw character journal |
+
+Pipeline upgrades existing databases; explicit import creates one if needed.
+Preview never creates/migrates. `load_snapshot` refuses old schemas. Manifests remain raw:
+`markets.upgrade_legacy` adapts pre-split/environment fields on read, retaining explicit values.
+`completed_snapshots` filters source/all MARKET_KEYS and chooses observation time. Legacy
+environment uses migration 4's frozen 2026-11-04 00:00 UTC collection boundary (Forever before
+that boundary is beta; others live; missing listing times use parent scan, missing parent time live). IDs/hash/history never relabel on reimport.
+
+Named views preserve numeric/base fields, replacing labels only through DATA-02. Compare uses
+scan's loaded price/listing name first, lookup next, Item ID last. Lookup joins only game/item
+(one-to-one), never prices/supply. New imports update name candidates in their transaction;
+validated catalogs seed on upgrade/import (including duplicates)/app startup, without creating
+DB for catalogs alone. Bad catalogs warn/exclude; numeric depth/craft readers retain base tables.
 
 ### Format-4 item pass
 
@@ -175,12 +143,17 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 
 ## Scan import preview
 
-- `pipeline.preview_scans` returns a `ScanPreview` containing exact file bytes, a serialized resolved configuration, parsed records, validated summaries and the relevant existing `known_scan` records. `new_ids` is derived from those records. Missing databases and older schemas without `addon_scans` mean no known scans; preview never upgrades.
-- `_read_scan_bytes` implements the bounded descriptor/path read described by ADDON-06. `_prepare_scans`, `_select_scans`, `_check_scans`, `scans.listing_frame` and `scans.scan_content_hash` are shared with CLI import; there is one parser and one per-scan hash format. Validation also checks item-reference types, uniqueness and membership in this scan, plus finite nonnegative duration; capture availability is local aggregate evidence. CLI validation stays limited to selected scans. UI previews validate every scan's header, times and listings (`_validate_scans`), but record house mismatches per scan in `ScanPreview.mismatches`; `new_ids` excludes them.
-- `import_scans(..., reviewed=preview, scan_ids=...)` recomputes and compares bytes/configuration/known records before any archive write. It rejects unknown, empty or already-imported selections. A final duplicate check under the writer transaction precedes `_save_collection`; the writer consumes the recomputed in-memory bytes. Fresh databases and migrations are created only during explicit import. Preview remains read-only across schema 3 and 4.
-- `_save_collection` preserves raw bytes and manifests, and `_load_collection` shares transactional deduplication and per-scan import with the CLI. `_file_scan_state` classifies every file scan after loading as saved (same ID and hash), `other_house` or remaining, without validating unselected scans; an unusable entry counts as remaining. `import_guidance` uses those counts to protect subsets and warn about other-house scans.
-- Both Import pages show a short summary and the Import button before a collapsed Details section that opens on problems and stays open for the review (ADDON-06, OPS-03). Each keeps one active review and selection, discarded on a source/configuration change; a Preview click clears prior state; the result replaces the reviewed table, and errors discard the review. Wording and rows come from `import_review`.
-- Bronze/silver/database together are still not atomic; normal import-write failures retain a failed manifest for diagnosis. Best-effort file-read detection cannot prevent every concurrent game write (ADDON-06).
+pipeline.preview_scans returns ScanPreview exact bytes/resolved config/parsed records/validated
+summaries/known state; new_ids derived. Missing/old scan tables mean no known scans, never upgrade.
+Bounded _read_scan_bytes and shared prepare/select/check/listing/hash helpers implement ADDON-06.
+Validate references/types/unique membership/duration; aggregate availability. CLI validates selected
+scans only; preview checks all with per-scan house mismatches excluded from new_ids.
+Reviewed import recomputes bytes/config/known state, rejects unknown/empty/imported selection,
+rechecks under writer before archive, then consumes in-memory bytes. Explicit import creates/upgrades.
+_save_collection preserves bytes/manifest; _load_collection is shared transaction. _file_scan_state
+classifies saved exact-hash/other-house/remaining, unselected invalid remains. import_guidance protects
+subsets. Data uses import_review summary/action/details and one source/config-bound review; results
+replace it, errors discard it. Best-effort reads and non-atomic bronze/silver/DB limitations persist.
 
 ### Multiple input files (STORY-037)
 
@@ -193,52 +166,37 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 - `file_rows` and `latest_rows` provide common CLI/page cleanup evidence. `fully_imported` is true only for a readable nonempty file whose every scan and character snapshot has a matching stored hash and no house mismatch. Ignored names, parse errors, conflicts and other-house scans cannot give cleanup permission.
 - CLI `--preview` is read-only. With a drop folder, ordinary addon import lists every file and imports only those with new scans (or, with `--scan`, those holding the requested IDs), so a repeated run never re-archives imported files; `--input` keeps the explicit single-file path and takes its machine from a drop name, otherwise from `machine`. The page keeps file status, per-file scan tables, UTC provenance and each machine's latest-drop state in Details, then refreshes that evidence after import. The fresh review resets selection to its new-file default.
 
-### Character evidence (STORY-032/033 onward)
+### Character evidence
 
-Capture, clear and display rules are ADDON-11/12; saved fields are in `addon/README.md`. Account file
-format 6 holds `scans` (record formats 1–4), `snapshots`, `sessions`, `snapshot_sequence`, `journal`,
-`journal_diagnostics` and `journal_errors`. Event IDs are length-prefixed character/realm + kind +
-Unix seconds + the shared persistent sequence; latest reads order by capture time, then sequence.
-Unknown values are absent in Lua and nullable in Python; raw argument tuples never become prices.
+Capture rules ADDON-11/12, fields addon README. Account format 6 carries scans (1–4), snapshots,
+sessions/shared sequence and journal/diagnostics/errors. Latest order capture then sequence;
+raw tuples keep nil positions and never supply prices.
 
-- **Reading.** `scans.read_addon_records` returns scans and non-scan records from one parse.
-  `addon_records` dispatches validation, content hash, house check and storage by record type
-  (`character_snapshots` or `journal`), sharing preview/review, transaction and outcome logic.
-- **Preview state.** `ScanPreview.non_scans`, `non_scan_summaries`, `non_scan_known` and
-  `non_scan_mismatches` are the one state for snapshots and journal entries (known state is
-  `record_sha256`); `new_record_ids` drives import availability. `snapshots`/`snapshot_*` are
-  read-only projections for the snapshot preview table. Scan selection and `--scan` limit scans only;
-  every matching non-scan record in a selected file imports. `scan_inputs` tracks expected commits by
-  (type, ID) across overlapping drops; the final writer check compares non-scan known state too.
-- **Hashes.** Snapshot SHA-256 is canonical sorted JSON; only the `skills` subtree uses the journal's
-  typed-key encoder (`journal._typed`), so historical snapshot hashes are unchanged and counted tuples
-  never conflate numeric and string keys. Journal hashes use the typed encoder throughout.
-- **Storage.** Migration 10: `character_snapshots` (source/ID key, full MARKET_KEYS, character
-  realm/faction, kind, UTC time, nullable BIGINT gold, machine, collection/file/content hashes, raw
-  JSON) and `character_slots` (source/ID/container/slot key, nullable item/count, exact link).
-  Migration 11: `character_journal` (source/entry key, full MARKET_KEYS, character identity, family,
-  UTC time, machine, collection, file and content hashes, raw JSON). Records load inside the
-  collection transaction; there is no journal silver export. Bronze keeps the exact file bytes.
-- **Manifests.** `non_scan_records` lists every record's type, ID, hash, outcome and summary;
-  `snapshots` is its snapshot subset, kept for older manifests and readers.
-- **Projections.** `character_snapshots.latest_data` returns scoped latest readable bags/bank, bags
-  history and every observation; `professions.latest_data` adds scoped journal observations, the latest
-  known-recipe list per profession and *seen crafted* evidence (catalog recipe IDs supply profession
-  metadata only). Recipe lists are the bulk of the journal, so it parses only the newest trustworthy
-  list per character/profession in Python: one ordered query returns small records whole and lists as
-  name, recipe-ID hash and order; stale lists (ADDON-12 → *Profession switches*) are skipped, winners are
-  fetched by `entry_id`, and a newer `profession_rank` entry updates their rank. Callers that already hold
-  the result pass it on (`build_characters(config, data=...)`, Today's first render) rather than re-reading. `characters.build_characters` builds the Characters cards; `journal.active_auction_rows`
-  and the `latest_rows`/`preview_rows` functions supply the import page tables. If both skill surfaces
-  report a name, display prefers the modern row and never fills one API's holes from the other.
-- **Reference shapes** come from Blizzard's
-  [Classic trade skill UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua),
-  [Classic craft UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua),
-  [modern owned-auction API](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua)
-  (1-based owned indexes, nullable fields) and the
-  [Classic auction UI](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_AuctionUI/Classic/Blizzard_AuctionUI.lua)
-  (saleStatus at tuple position 16; 1 is sold awaiting delivery). They establish API shape, not
-  Forever availability, which needs beta evidence retained raw.
+- scans.read_addon_records parses once; addon_records dispatches per-type validation/hash/house/
+  storage to character_snapshots/journal, sharing reviewed transaction/outcomes.
+- ScanPreview non_scans/summaries/known/mismatches holds non-scan state; new_record_ids controls
+  import. snapshot fields are compatibility projections. Every matching non-scan in selected file
+  imports, --scan limits scans only. scan_inputs expects commits by type/ID; writer rechecks.
+- Snapshot canonical sorted JSON hashes preserve historical values; skills subtree alone uses
+  journal typed-key encoding. Journal uses typed encoding throughout (numeric/string keys distinct).
+- Schema 10 parents: source/ID, full MARKET_KEYS, character/realm/faction/kind/UTC, nullable BIGINT
+  gold/machine, collection/file/content hashes/raw JSON; slots source/ID/container/slot nullable
+  item/count/exact link. Schema 11 journal: source/entry/full market/character/family/time/machine/
+  collection/file/content hash/raw JSON. Collection transaction; no journal silver export.
+- Manifest non_scan_records stores type/ID/hash/outcome/summary; snapshots remains older-reader subset.
+- character_snapshots.latest_data returns scoped readable bags/bank/history/all observations;
+  professions.latest_data adds journal, trustworthy lists/seen-crafted. Ordered SQL returns small
+  records plus list name/ID-hash/order; stale lists skipped, newest winners fetched by entry_id,
+  newer profession_rank updates rank. Parse only winners; callers pass loaded data onward.
+  characters.build_characters renders Team cards; latest/preview rows and active_auction_rows feed
+  Import. Modern skill display wins name conflicts but never fills holes from legacy.
+
+API shape evidence: [Classic trade skill](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua),
+[Classic craft](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua),
+[modern auctions](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AuctionHouseDocumentation.lua),
+[Classic auctions](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_AuctionUI/Classic/Blizzard_AuctionUI.lua).
+These establish shapes, not Forever support (modern indexes 1-based; legacy saleStatus position 16,
+value 1 means sold awaiting delivery); beta raw evidence remains required.
 
 ## Scan comparison
 
@@ -246,7 +204,7 @@ Unknown values are absent in Lua and nullable in Python; raw argument tuples nev
 - `scan_changes.eligible_scans(db, config)` reads the selected source's completed, non-partial, priced `addon_scans` rows, ordered by finish time and scan ID descending. Finish times are normalized to UTC independently of DuckDB's session timezone.
 - `compare_scans(db, config, first_id, second_id, item_ids=None)` validates distinct eligible IDs and orders them chronologically. DuckDB reads `scan_metrics` facts per exact identity, scoped by source, market, scan ID, snapshot ID and metrics version. `market_snapshots` and a name-only `scan_listings` aggregation provide labels, with the same scope; neither supplies numeric metrics. A full outer join returns only item aggregates to Python, never raw listings.
 - The result carries earlier/later scan metadata, their time gap, shared `items`, `new` and `vanished`. Each row has item ID/name, earlier/later metric dictionaries (minimum buyout, market value, listings, units), later-minus-earlier changes and a changed flag. A missing side is `None`; unavailable prices and changes are `None`, with integer copper for all valid prices. Optional item IDs filter every list; an empty list matches nothing.
-- `views/scan_changes.py` renders UI-06, using `compatible_catalogs` for the item-ID filter, shared context/freshness display and money helpers. Data registers it as the **Scan changes** section. Existing calculation pages keep their contracts.
+- Market composes this comparison through `market_explorer.scan_movement`; UI-06 supplies its retained comparison contract.
 
 ### Removed listings (STORY-027)
 
@@ -285,12 +243,11 @@ opens. `views/nicegui_market.py` uses shared theme badges/chips, links and short
   - the all-craft expansion
   - cost, net revenue, profit, margin and break-even
 - `Decimal` handles the auction-cut rounding.
-- `storage.listing_depth` returns listing and unit counts by item for the same analytical snapshot used by `price_observations`. It first checks the scoped `addon_scans` record is complete and priced, then reads `scan_metrics` with the source, full market identity, snapshot ID, scan ID and metrics version. It returns `None` when unavailable, or zero counts for absent requested items. The Crafting view renders these separately from `rank_recipes`; depth never enters calculation or policy inputs (CRAFT-09).
+- `today_data.read_today_evidence` supplies scoped ADDON-10 listing/unit metrics separately
+  from costs/ranking; all reads use source, full market, scan/snapshot and variant identity.
 - Catalog discovery supplies `catalog_id` from the selection-file stem. Standalone catalogs default to a header identity (`game_version:rules_version:profession:catalog_version`); combined inputs must have unique identities. Rows carry `catalog_id`, `recipe_id` and `profession`, and `catalog_for_row` resolves details to the original catalog.
-- The Crafting view groups unsupported-recipe reasons into one collapsed table and separates catalog
-  captions and board explanations into collapsed expanders. Board provenance and freshness remain
-  visible. This changes presentation only; board rows and recipe evaluation still use the same paths.
-- `rank_catalogs` selects compatible catalogs, calls `rank_recipes` for their qualified roots, and applies the same shared ranking helper to all rows. `filter_profession` preserves combined ranks. Prices and depth are read once for the union of compatible catalog item IDs, using the same source, full market scope and analytical snapshot. See CRAFT-05 and UI-01/UI-04 in `requirements.md` for behavior.
+- `rank_catalogs` ranks qualified compatible roots once with the shared policy. Load the union
+  of catalog item IDs in the same scoped analytical snapshot (CRAFT-05).
 - `rank_recipes` checks that the catalog, market and snapshot are compatible, then:
   - evaluates every finished output under both bases
   - labels and sorts the rows (CRAFT-05)
@@ -322,59 +279,48 @@ discards obsolete choices and ticks.
 
 ## Recipe import
 
-- `archive_page` copies the saved page once per SHA-256 and writes a manifest. A rerun from the archived copy reuses the recorded `saved_at`, so catalogs rebuild identically offline.
-- `extract_page` reads the page's `listviewspells` array (recipes) and the `WH.Gatherer.addData(3, …)` object (items). Wowhead leaves a few keys unquoted; everything else is JSON.
-- `build_catalog` applies the selection: it adds intermediates, assigns roles (finished, intermediate, vendor material only with selection evidence, material), stamps evidence and rejects version mismatches, ambiguous creators and variable yields.
-- Recipe learning fields follow the skill-up evidence path: `extract_page` copies valid `source` and `trainingcost` into `learned_from` and `training_cost_copper`; `_catalog_recipe` takes them only from the extract. `crafting` shares the validators and rejects malformed catalog fields. `recipe_catalogs.learning_label` conservatively labels unverified codes; label evidence lives only in CRAFT-08. `views/catalogs._recipe_view` supplies catalog/recipe selectors and reuses the existing recipe heading and materials, adding learning and money captions only here.
-- `dumps_catalog` writes deterministic TOML. `catalog_changes` lists recipe and vendor price differences against the current file for review.
-- `prepare_catalog(raw, selection, saved_at, current)` is the one generation path: extract, build, dump, validate with the board's `parse_recipe_catalog`, and diff, writing nothing. The CLI and the app call it after `archive_bytes` (which `archive_page` wraps for files on disk).
-- `page_build` reads the game patch from the page's "latest patch (…)" description and the newest build Wowhead's "Added in build" filter lists for that patch.
-- `recipe_catalogs` drives the app page. `find_catalogs` reads every selection file and its catalog, if generated. `catalog_status` gives version, recipe count, page date, build (from the archived copy, when it is on this machine), SHA-256, `unconfirmed_values` and `refresh_reasons`. `preview_update`/`regenerate` and `preview_new`/`create` are preview and write pairs: each write recomputes its preview, so it writes exactly what was shown. `CONFIG_DIR` and `ARCHIVE_DIR` are the defaults the CLI and app share.
-- `selection_files` edits a selection file in place: `set_value` replaces one header line, and `edit_recipes` removes and adds `[[recipes]]` blocks, adds or removes vendor marks (keeping an item's other notes), drops notes on items no chosen recipe uses, and reads the result back, refusing if it doesn't match. `preview_update(entry, raw, saved_at, recipe_ids, vendor_ids, rules_version)` runs these edits before generating, so a write is exactly the preview.
-- `single_makers` (in `recipe_import`) maps each item to its one usable recipe; items several usable recipes make are left out, so they are bought. The importer and the app's recipe list both use it. Choices travel as `choices(recipes, vendor)`.
-- The view keys each preview by a hash of the page bytes, date and selection; changing any of them hides the write button until a new preview. After a write it reloads and lists the tracked files written (catalog and selection), never committing.
-- Tests use saved-page extracts in `tests/fixtures/wowhead/` and assert that each tracked catalog equals the importer's output.
+`recipe_import` extracts saved Wowhead `listviewspells`/item data, validates selection/game/
+profession, selects single fixed-yield nonseasonal makers, expands intermediates and generates
+TOML through `prepare_catalog`. `archive_page` preserves exact bytes/provenance; changed values
+are listed by the CLI and require the CRAFT-01/08 version policy. No downloads.
+`recipe_catalogs.find_catalogs` discovers tracked selections, loads generated catalogs;
+`parse_catalogs` isolates malformed entries. `profession_title`, `PROFESSIONS` and
+`learning_label` supply team metadata/verified code labels. CLI shares CONFIG_DIR/ARCHIVE_DIR.
+Tests compare generated tracked catalogs against offline saved-page extracts.
 
 ## Switching to WoW Forever
 
-1. **Market identity (done, STORY-009).** Configure `scope = "house"`, `server_type`, `faction`, an explicit `environment` (DATA-03) and no realm, for example `forever-us-roleplaying-alliance`. Neutral houses default to a 15% cut.
-2. **Price source (done, STORY-010).** There is no TSM or Blizzard feed. A `provider = "addon"` source imports the addon's SavedVariables file: bronze stays byte-for-byte, listings go to `scan_listings`, and item-level prices are derived in the `market_snapshots` shape (rules ADDON-01 to ADDON-06).
-3. **Catalog (done, STORY-004).** `config/forever-tailoring.toml` is generated from the saved Forever Tailoring page (CRAFT-08). To cover another profession or more recipes, use **Add or update a profession** on the Recipe catalogs page.
-4. **Configuration.** Add the `[[sources]]` entry: market fields, `rules_version`, `provider = "addon"`, `scan_path` and `scan_evidence` (see the disabled example in `config/market.toml`). Other non-TSM feeds get their own adapter producing the same `market_snapshots` columns.
-
-No change to crafting, the Action Board or the views should be needed. If one is, treat it as a design defect.
+Configure house/server_type/faction/explicit environment, no realm; DATA-03 derives ID.
+Use addon provider with scan_path/machine/scan_evidence and optional local drop folder.
+Generate compatible profession catalogs through `python -m brownstone recipes` using manually
+saved Forever pages and tracked selections. Other permitted feeds need an adapter to the same
+price contract. No changes to crafting/Board/views should be needed; otherwise a design defect.
 
 ## Quality gates
 
-Ruff (lint, import order and a complexity limit of 10 per function), mypy (on `brownstone/`, both launchers, `nicegui_app.py` and the NiceGUI views and `today_rows`; the Streamlit views are not type-checked) and pytest with a branch-coverage floor run locally and in CI; configuration is in `pyproject.toml`. `Source` is a `TypedDict`, so mypy checks config key names wherever a function is annotated with it.
+Pytest offline branch coverage >=floor, Ruff complexity <=10 and mypy run locally/CI from
+pyproject/lock. Mypy covers brownstone, app/launcher, NiceGUI views and today_rows. Source is
+a TypedDict; other records remain plain dictionaries.
 
 ## Known design debt
 
-- **Complexity debt:** `scans.parse_lua` (13) exceeds Ruff's limit of 10 and carries `# noqa: C901`. It
-  stays one loop because it runs once per token (1.9 s for the 51 MB schema-1 file, 0.16 s for a 4 MB
-  format-4 drop, measured 2026-10-12); splitting it adds a call per token. Revisit only with a measurement.
-- **Repeated parsing:** a reviewed import parses the file twice (preview, then the stale-review recheck):
-  2.8 s for the 51 MB file, 0.5 s for a 4 MB drop. A drop-folder import re-previews every inventory file
-  and each selected file again, and retains their bytes in memory; manual cleanup of imported drops bounds it.
-- **Coverage gaps** (overall in `status.md` → Verify): `views/market.py` (Below usual price with data, which
-  only Retail supplies), `app.py`/`nicegui_app.py` configuration and upgrade errors, `views/catalogs.py`
-  error messages for unreadable selections and failed writes. `sources.py` downloads over the network,
-  which offline tests don't exercise.
-- Records other than `Source` (manifests, catalog entries, evaluation results) are plain dicts.
-- `completed_snapshots` reads every manifest on each page load (5 ms for the beta source's 19 manifests).
-- Each imported scan adds about 4.7 MB to DuckDB (`scan_listings`) and 1 MB of silver; keeping listings
-  only in silver Parquet would remove it if disk becomes a problem.
-- Silver, DuckDB and the manifest are not one atomic write, for TSM and addon collections alike. Rename
-  completion of a drop is local only and cannot guarantee Google Drive's remote state.
+- `scans.parse_lua` retains the existing C901 exemption (complexity 13); splitting its token loop
+  adds per-token overhead. Revisit with measurement, never add new exemptions.
+- Reviewed imports parse twice; drop rechecks retain bytes/inventory in memory. Manual cleanup
+  bounds inventory; no bounded-memory claim.
+- Offline tests mock network downloads; configuration/upgrade errors retain partial coverage.
+- completed_snapshots reads all manifests on page load; scans retain listings in DB and silver.
+- Bronze/silver/DB/gold/manifest writes are not jointly atomic; Drive local rename does not prove
+  remote sync completion. Recovery/replay limitations live in status.
 
 ## Variant-aware scan reads (STORY-023)
 
-`variants.ITEM_KEYS` defines the within-scan grouping (`item_id, variant_id, variant_state`); null-safe joins preserve base/unresolved observations without pooling them with variants. `scans.item_prices` applies the same keys to names, unit-weighted percentile ranks and minimum prices. `compare_scans` groups/joins on these keys with null-safe variant comparison. Legacy null state shows as `legacy`, matching the other scan's `base` row only when that scan saw only base listings for the item ID (ADDON-08). `item_names.remember_observed_names` takes names only from base or legacy rows. `analysis.rank` returns variant identity with each row. Browse and Scan changes expose identity/state alongside names.
+`variants.ITEM_KEYS` defines the within-scan grouping (`item_id, variant_id, variant_state`); null-safe joins preserve base/unresolved observations without pooling them with variants. `scans.item_prices` applies the same keys to names, unit-weighted percentile ranks and minimum prices. `compare_scans` groups/joins on these keys with null-safe variant comparison. Legacy null state shows as `legacy`, matching the other scan's `base` row only when that scan saw only base listings for the item ID (ADDON-08). `item_names.remember_observed_names` takes names only from base or legacy rows. `analysis.rank` returns variant identity with each row. Market and scan comparison expose identity/state alongside names.
 
-`price_observations` and `listing_depth` retain their catalog item-ID return shape. Default reads accept base rows and historical null fields, but exclude format-3 unresolved/variant rows; explicit `variant_id`/`variant_state` arguments select an exact variant or unresolved pool (never legacy null-state rows) within the same full market/source/snapshot scope. Catalogs have no variant selectors today, so a variant-only output stays missing prices instead of inheriting a different suffix's price. No crafting rules-version check is relaxed.
+`price_observations` retains their catalog item-ID return shape. Default reads accept base rows and historical null fields, but exclude format-3 unresolved/variant rows; explicit `variant_id`/`variant_state` arguments select an exact variant or unresolved pool (never legacy null-state rows) within the same full market/source/snapshot scope. Catalogs have no variant selectors today, so a variant-only output stays missing prices instead of inheriting a different suffix's price. No crafting rules-version check is relaxed.
 
-Tests execute the actual addon under Lua 5.1 through the declared, pinned dev dependency Lupa. Offline WoW stubs exercise both API paths, optional missing/erroring fields, chunking, manual start, timeout/close and item-reference caching, then import the emitted scan. Python coverage measures application code; it does not claim Lua branch coverage or substitute for beta API/tooltip measurements.
-
+Offline Lupa/WoW stubs test emitted scans across API paths/optional fields/manual lifecycle.
+Python coverage excludes Lua branches and does not replace beta API/tooltip checks.
 
 ## Market metrics layer (STORY-024)
 
@@ -403,33 +349,28 @@ rows = rebuild_scan_metrics(db)
 `read_scan_metrics(db, config, snapshot_id)` returns every exact item identity and nullable prices,
 counts, exact numerator/denominator shares and coverage; None means an ineligible scan. It emits no
 seller strings. `units_below_price` takes an exact item/variant/state and positive integer threshold.
-`storage.listing_depth` retains its catalog compatibility selector and zero counts for absent items;
 `scan_changes` preserves the existing name and comparison policies. Stored addon prices remain for
-Browse/Opportunities/crafting and TSM compatibility; their numeric calculation is shared, not duplicated.
+Market/CLI screening/crafting and TSM compatibility; their numeric calculation is shared, not duplicated.
 Rebuild preserves these historical observations rather than rewriting them.
 
 The rebuild currently materializes all eligible listings locally in Polars; no streaming/bounded-memory
 claim is made. Derived metrics are not automatically invalidated by unsupported direct SQL edits to
 observations: explicitly rebuild after changing stored evidence. Manual writes bypass the structured
-key calculation; imports/rebuilds are the supported writers. No dependency was added.
+key calculation; imports/rebuilds are the supported writers.
 
 
-## Watchlist contracts (STORY-048)
+## Watchlist contracts
 
-Rules live in `requirements.md` → Watchlist. `brownstone/watchlist.py` validates `Entry` values,
-parses targets with `money.parse_money`, persists source-local JSON atomically, and refuses to
-replace unreadable or invalid files. `build_watchlist` returns plain rows and freshness with a caller
-clock. `read_watchlist` uses `latest_snapshot`, `today_data.read_skillup_market` and
-`metrics.units_below_price` for each base/legacy identity. Name choices read scoped base observations
-and compatible catalogs (newest name per item, aggregated in SQL), without using another source's
-derived name lookup. The hit panels read names only when there is a hit. No schema change.
-`views/watchlist.py` renders the editor/table and shared hit panel; `app.py` registers Watchlist
-inside Market. Today calls the panel above its tabs; scan import calls it when rendering successful
-results. Both panels read evidence without changing their host page's calculations or import path.
+Rules: requirements → Watchlist. `watchlist` validates Entry, explicit money targets and atomic
+source-local JSON; invalid/unreadable existing files refuse replacement. `build_watchlist` is a
+pure clock-supplied projection. `read_watchlist` composes latest_snapshot,
+today_data.read_skillup_market and metrics.units_below_price under base/legacy full scope.
+Hit-name choices use scoped observations/compatible catalogs, not another source's lookup.
+NiceGUI Today/Import render hits without changing host calculations; no standalone editor.
 
 ## Today contracts
 
-Rules live in `requirements.md` → Today. Calculations are framework-free; both apps call them.
+Rules live in `requirements.md` → Today. Calculations are framework-free.
 
 - **Loading.** `today_loading.load_today` picks the latest scoped snapshot, opens the database
   read-only, resolves funds and returns the `build_today` arguments with the caller's clock;
@@ -455,13 +396,11 @@ Rules live in `requirements.md` → Today. Calculations are framework-free; both
   per-recipe SQL. Craft rows keep board routes, `purchases`, `intermediate_steps` (chosen craft
   branches only), `plan_order` and `feasible_size`. `today_confidence.confidence` labels the funded
   plan afterwards. `craft_details(row)` projects materials from `purchases` and scales steps by batch;
-  `purchase_uses(crafts)` groups purchased units per item/route and output (the new app's Buy *For*);
+  `purchase_uses(crafts)` groups purchased units per item/route and output (Shopping list For);
   `session_queue` projects reserved shopping, route steps in postorder and posts without re-quoting.
 - **Session.** `today_session.plan_context` fingerprints catalogs, market, snapshot, settings,
   freshness limit, auction cut, Today version and character evidence (not the clock); a changed context resets
   choices and ticks. Queue tick identity is the plan without confidence labels (`stable_queue`).
-  Streamlit keeps choices and ticks in session state separately from widget keys, which widget cleanup
-  can drop; the Craft table's selection key fingerprints plan contents and provenance.
 
 ### This session (STORY-063)
 
@@ -479,126 +418,65 @@ provenance; the view turns steps into lines (`step_text`). The input plan/argume
 when **This session** opens, reads Team's per-tab/source
 reach window, uses the shared theme and links to Market items and the selected Team character.
 
-## Team contracts (STORY-052)
+## Team contracts
 
-Rules live in CRAFT-11 and Characters page (`requirements.md`). `views/nicegui_team.py` renders
-`characters.build_characters` cards and progression underneath, with character/window in
-`app.storage.tab['team-' + source_id]`. Roster cards select the character; the look-ahead slider
-updates the estimates on release (`change`), with no rebuild on intermediate model updates.
-Profession tiles and the reachable-recipes table lead; per-recipe cost steps, profession comparison,
-roster history, provenance and assumptions remain on demand in disclosures/the ⓘ dialog. It reads `professions.latest_data` through the shared
-`load_today_characters`, then `today_loading.load_today` for the newest full-market/source snapshot
-and read-only evidence; no new price SQL, writes, schema or Streamlit changes.
+Rules: CRAFT-11/13 and Team character cards. nicegui_team reads shared load_today_characters and
+load_today snapshot/evidence, using tab/source character/window state. Cards select; reach slider
+commits on release. Tiles/reachable recipes lead; steps/history/comparison/provenance on demand.
+Without scan, roster remains readable and pricing explains missing evidence.
 
-`progression.team_board` builds the team `RecipeGraph` and Action Board once; Team passes that pair to
-every character's `build_progression` and to `hiring.prepare(shared=...)`, so a page builds one board
-instead of one per character plus one for hiring.
+`progression.team_board` builds team RecipeGraph/Board once, shared across character progression
+and `hiring.prepare(shared=...)`. build_progression returns profession rank/max/note, recipes/best,
+unlisted counts/freshness; recipe rows retain Today status/learning/profit/reason/confidence and
+estimate complete/copper/reasons/per-point steps. Unknown stays unknown.
+Attribution uses Today's exact ID/rank matcher; planned_rank changes rank check only.
+evaluate_recipe supplies team-aware cautious material costs, including unranked intermediates;
+expected_crafts/estimate_cost use exact rational yellow expectations. One skillup_walk/window/cap
+and listing ladders are shared across targets, which stop at prefix. Single-craft confidence reuses
+Today quotes; no funding/reservation/sales credit or changed Board profit.
 
-`progression.build_progression(catalogs, observations, market, snapshot, character_data, character,
-*, now, window=25, max_age_hours=24, auction_cut=.05, listings=None, metrics=None, recipe_graph=None,
-board=None)` returns sorted
-`professions`, per-catalog `unlisted` counts and board `freshness`. Profession rows retain rank/max,
-note, reachable `recipes` and nullable `best`. Recipe rows retain the shared Today status, learning
-fields, board profit/reason, confidence and `estimate` (`complete`, nullable integer `cost_copper`,
-`reasons`, per-point `steps`). Unknowns never become zeros. Empty price evidence cannot prevent the
-roster rendering; without a snapshot the page shows a scan-unavailable explanation.
+Hiring prepare reuses scoped evidence/current board. summaries returns compatible professions,
+holders, rank-300 estimate/best/shared rank-one walk; no-catalog/two-primary comparisons separate.
+Synthetic hire evidence is unlearned trainer recipes. Own routes use trainer/current-team recipes;
+other-profession routes use current team. Summary cost eagerly resolves sort ties; lazy detail reuses
+prefixes/tier maker maps. feeds evaluates current eligible Board roots with existing cost walker;
+unknown/unsupported baseline never claims savings. Top consuming rows retain total savings and
+hire-made material, avoiding nested double count. nicegui_team builds hiring once; first expansion
+loads detail, window change rerenders comparison with shared board. Empty characters still allow
+hire comparison; absent scans explain. No new price SQL/calculation I/O/Today state changes.
 
-Attribution calls Today's exact-ID matcher; `today_characters.profession_rank` shares rank/max
-selection with Today's rank calculation. `recipe_status(..., planned_rank=point)` reuses the same
-status rule at each estimated future rank; only the rank check changes, never unknown evidence or
-profession presence. `action_board.rank_catalogs` supplies current per-craft
-profits. `evaluate_recipe` supplies cautious material costs even for intermediate recipes whose
-sale value is absent; `expected_crafts` uses exact rational yellow expectations, rounded to copper
-in `estimate_cost`. Training is charged once per catalog/recipe in the chosen steps. One `skillup_walk` per profession (current rank to the window or cap) is shared by every target, which stops on its prefix; listing ladders are built once per build. Confidence
-reuses Today's quote/sell projections and `today_confidence` for a single craft, without changing
-board profit or the progression estimate; insufficient quoted supply is Low. No batch funding,
-reservation, output sales credit or new learning/status rule.
+## Beta evidence report
 
-### Hiring comparison (STORY-059)
+`cli.beta_report_main` selects one addon source → `beta_report.create_report`; its configured
+data directory is never opened. Bounded file reader/Lua parser and shared validation/hash helpers
+check records independently so one failure cannot hide evidence. `beta_evidence` owns checks/
+COVERAGE; `beta_markdown` renders money through money.py.
 
-Rules live in CRAFT-13 (`requirements.md`). Framework-free `hiring.prepare` accepts the same
-scoped scan/character evidence as progression and builds the unchanged current-team board once.
-`summaries` returns one compatible profession row, existing holders, a rank-300 `estimate`, nullable
-`best`, and one shared `skillup_walk` from rank 1; no-catalog professions and two-primary comparisons
-are separate lists. `comparisons` reuses `build_progression` at Team's current window. Exact recipe
-IDs and evidenced skill IDs attribute holders and primary slots; display names do not attribute.
+Only permanent writes are unique ignored work/beta-reports timestamp/UUID report.md/json.
+JSON retains every check/ID; Markdown collapses repeated passes and caps ID lists. TemporaryDirectory
+contains exact-byte input and fresh import/preview/duplicate roundtrip; check bronze decompression
+against original. Empty/other-house fails; unreadable/changing exits 2, failed checks 1, pass/warn 0.
 
-New-hire recipe evidence is synthetic, all trainer recipes unlearned. Cost projections retain
-current-team routes elsewhere; the hire's own local routes keep trainer recipes plus any the team
-already makes, while its skill-up entries stay trainer-only. Summary
-rank-300 estimates are eager because costs break sorting ties; `detail` reuses the walk's prefixes
-for all tiers and creates tier-specific `RecipeGraph` maker maps only when opened. `feeds` adds
-trainer makers up to each cap, evaluates eligible current board roots through the existing integer
-cost walker and compares with their current costs. Unknown baseline costs and unsupported routes
-produce no claimed savings. Top entries are consuming board rows with their total per-craft cost
-reduction and the hire-made intermediate material(s), avoiding double counting nested savings.
+Load boundaries are inferred from account sequence, logout, identity/login changes or decreasing
+uptime; GetTime can persist across reload. Missing boundaries can merge loads, missing sequence
+fails. Only latest diagnostics exists; journal_errors is account-wide. Nothing reconstructs absent
+historical diagnostics. Per-character/source/full-market money chains compare prior after to before;
+consecutive readable bags reconcile money/bag deltas using capture/sequence intervals. Missing
+read/baseline warns, residual is evidence gap, never interpreted ledger transaction.
 
-`views/nicegui_team.py` builds *Add a character?* once, below the roster and the selected
-character's next steps, using the shared theme's
-`bs-details` columns and comparison card. Each profession expansion computes detail on its first
-open and keeps it while the page is open; character and window changes re-render only the
-comparison card (passing the prepared board to `build_progression`), and only when the window changes. Empty character evidence still permits the hiring
-comparison; absent scans show guidance. All evidence comes from the existing Team loading path;
-no new SQL, calculation I/O, schema, Streamlit or Today state changes.
+Typed JSON sizes are approximate, not Lua offsets. Scan report keeps IDs/times/counts; owned-list
+report keeps numeric facts only, excluding names. No raw sellers/mail arguments/recipe payloads
+leave report. Previous comparison uses canonical source/type/ID hashes; changed existing content
+fails. Coverage confirms observation only, never action success/invoice meaning/completeness.
 
-## Beta evidence report (STORY-042)
+## Skill-up map contracts
 
-`cli.beta_report_main` selects one configured addon source and routes to `beta_report.create_report`.
-The configured source supplies authoritative market/house identity for the import check; its data
-directory is never opened by the report. `beta_report` uses the pipeline's bounded byte reader and
-`scans.read_addon_database` plus the extracted `addon_record_list` helper shared with import. It
-validates records independently through `pipeline._validate_scans` or the existing snapshot/journal
-summarizers (which also validate professions), so a refused record cannot hide other evidence.
-`beta_evidence` contains pure checks and the small `COVERAGE` table; `beta_markdown` renders
-Markdown and uses `money.to_gold`. No Streamlit dependency, schema change or addon change.
-
-The only persistent writes are a unique UTC timestamp/UUID folder under ignored `work/beta-reports/`,
-containing `report.md` and `report.json`. The JSON keeps every check and entry ID; the Markdown is a
-compact reading copy (repeated passes collapse to counts, ID lists are cut at 10, coverage is one table)
-so a long play session stays small enough to send for review. Preview, import and duplicate re-import use an exact-byte
-input copy and fresh data directory inside `TemporaryDirectory`; bronze is decompressed and checked
-against the original bytes. The complete file must import into the selected house, including all
-records; empty or other-house files fail this check with the importer's explanation. Unreadable or
-changing inputs get exit 2, failed checks exit 1, passes/warnings exit 0.
-
-Loads are **inferred**, not an addon-provided identity. Shared account sequence orders snapshots and
-journal entries; a logout snapshot closes a load, identity/login changes and decreasing session
-uptime start one. `GetTime` can persist across reload, so it is not a unique load marker. Missing
-logout/boundary evidence can merge loads; records with missing sequences fail the sequence check.
-Only the latest `journal_diagnostics` exists in the file; earlier inferred loads have null diagnostics.
-`journal_errors` is persistent account-wide evidence, not a reliable per-load counter. Neither
-missing historical diagnostics nor ambiguous boundaries can be reconstructed without an addon
-contract change, which is outside this story.
-
-Money chains compare each before value with the previous after within an inferred load. Consecutive
-bags snapshots reconcile gold against signed integer-copper money deltas and per-item slot-unit
-changes against signed journal bag deltas, using capture time/shared sequence intervals, separately
-for full character/realm/faction identity. Unknown readings/baselines warn instead of inventing zeros.
-Residuals are evidence gaps, not classified transactions or ledger balances.
-
-Size estimates are compact typed JSON UTF-8 sizes, explicitly approximate rather than Lua byte
-offsets. Scan output is a strict projection of IDs, times and listing counts; owned-list output keeps
-only numeric evidence, excluding bidder/owner names. No raw listings, mail arguments or recipe raw
-payloads leave the report. Previous-file comparison uses importer canonical record hashes and
-source-local type/ID identities, reports additions by full character identity and family (snapshot
-kind for snapshots), and fails changed content for an existing ID. Coverage rows list alternative
-events/hooks, seen/unseen names and installed hooks: observation confirms capture only, not success
-of an economic action, a sale/expiry invoice's meaning, complete containers or full recipe coverage.
-
-## Skill-up map contracts (STORY-047)
-
-Rules live in CRAFT-08/CRAFT-10 (`requirements.md`). `skillups.build_skillups` takes parsed compatible
-catalogs, N and the post-launch toggle; returns profession groups, recipe placements/errors, band
-memberships and sorted direct/raw totals. Groups retain their catalog; `material_plan` expands within
-it for all N crafts at once (`material_plan(catalog, recipe_id, crafts, stop_at)`), stopping at
-items marked `raw_material`; the board calls it without `stop_at`. Recipe rows occur once in profession totals; bands reference those rows, so repeated placement
-does not multiply combined totals. `coverage_line` handles both catalog generations.
-
-`views/skillups.py` filters with the board's `compatible_catalogs`, keeps controls in session state,
-leads with totals and renders collapsed bands. Its optional context uses `latest_snapshot`, read-only
-DuckDB and `today_data.read_skillup_market`: scoped `price_observations` and ADDON-10 `read_scan_metrics`,
-excluding unresolved/variant identities. Context is joined only after quantities/order are computed;
-missing prices remain blank and shared freshness/time captions stay visible. No schema change.
+Rules: CRAFT-08/10. `skillups.build_skillups` takes compatible catalogs, N and post-launch toggle,
+returning profession groups/placements/errors/bands/direct/raw totals. `material_plan` expands
+all N crafts together, with raw_material stop points. Each recipe counts once in profession totals;
+bands reference rows without multiplying totals. `coverage_line` supports both catalog generations.
+Market uses these bands for catalog-chain context; there is no standalone skill-up page.
+`today_data.read_skillup_market` supplies scoped base/legacy observations/metrics for watchlist.
 
 ## Market explorer (STORY-055)
 

@@ -3,13 +3,12 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from streamlit.testing.v1 import AppTest
+from app_helpers import app
 from test_character_snapshots import snapshot
 from test_characters import fixture
 from test_journal import write
 from test_scans import NOW
 from test_today_characters import CHARACTER, state
-from test_today_view import ROOT, app, widget
 
 from brownstone.config import MARKET_KEYS
 from brownstone.pipeline import import_scans
@@ -86,27 +85,6 @@ def test_scoped_latest_readable_gold_and_all_market_keys(tmp_path):
         scoped = latest_data(config | {key: "other-scope"})
         result = resolve_funds(TodaySettings(7, character=alice), scoped, NOW, 24)
         assert result.settings.gold_copper == 7 and result.notes
-
-
-def test_streamlit_recorded_summary_sizing_override_and_fallback(tmp_path, monkeypatch):
-    data = funds_data()
-    monkeypatch.setattr("brownstone.today_loading.professions.latest_data", lambda config: data)
-    _, _, path = app(tmp_path, monkeypatch)
-    save_settings(path, TodaySettings(250000, 1, "fixed", character=CHARACTER))
-    at = AppTest.from_file(str(ROOT / "app.py")).run()
-    assert not at.exception
-    assert any("Gold available: 2s 55c (Basilly, captured" in c.value for c in at.caption)
-    assert load_settings(path).gold_copper == 250000  # Resolved funds are never saved automatically.
-    assert sum(round(v * 10000) for v in at.tabs[1].dataframe[0].value['Cost (g)']) <= 255
-    widget(at.toggle, "Enter an amount instead").set_value(True)
-    widget(at.text_input, "Gold available").set_value("1s")
-    widget(at.button, "Save Today settings").click().run()
-    assert load_settings(path).gold_override
-    assert any("Gold available: 1s (entered amount)" in c.value for c in at.caption)
-    data[CHARACTER]["bags"] = {}
-    widget(at.toggle, "Enter an amount instead").set_value(False)
-    widget(at.button, "Save Today settings").click().run()
-    assert any(c.value == "No captured gold for Basilly; using the entered amount." for c in at.caption)
 
 
 def test_newest_gold_sequence_bank_independence_and_duplicate_import(tmp_path):

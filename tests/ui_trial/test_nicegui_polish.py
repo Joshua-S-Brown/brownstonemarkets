@@ -2,9 +2,9 @@
 from dataclasses import replace
 
 import pytest
+from app_helpers import app
 from nicegui import app as native_app
 from nicegui import ui
-from test_today_view import app
 
 from brownstone.today_settings import load_settings, save_settings
 from views import nicegui_theme as theme
@@ -114,7 +114,7 @@ async def test_shared_light_theme_native_selection_and_scan_help(user, tmp_path,
 
 
 async def test_data_info_dialog_and_status_chips(user, tmp_path, monkeypatch):
-    from test_app import preview_addon
+    from app_helpers import preview_addon
 
     _, source = preview_addon(tmp_path, monkeypatch)
     await user.open('/?place=Data')

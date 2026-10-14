@@ -427,14 +427,9 @@ def test_journal_cli_and_page_aggregate_preview_and_display(tmp_path, monkeypatc
     cli.main()
     assert "'new': 2" in capsys.readouterr().out and not config["data_dir"].exists()
     import_scans(config, now=NOW)
-    from views import scan_import
-    tables = []
-    monkeypatch.setattr(scan_import.st, "dataframe", lambda rows, **_: tables.append(rows))
-    monkeypatch.setattr(scan_import.st, "caption", lambda *_: None)
-    scan_import._show_preview(preview_scans(config, now=NOW), "mac")
-    scan_import._show_holdings(config)
-    assert any(rows and rows[0].get("duplicate") == 2 for rows in tables)
-    assert any(rows and rows[0].get("Entries") == 2 for rows in tables)
+    rows = journal.preview_rows(preview_scans(config, now=NOW), "mac")
+    assert rows[0]["duplicate"] == 2
+    assert journal.latest_rows(config)[0]["Entries"] == 2
 
 
 def test_migration_10_to_11_backup_replay_and_preserves_snapshot_rows(tmp_path):
@@ -609,3 +604,35 @@ def test_lua_unknown_sizes_values_and_disabled_vendor_container_hook():
     # Unsupported values and nil holes remain missing, with count retained.
     g.DoCraft(1, g.GetMoney, None)
     assert entries(g)[-1]["arguments"] == {"n": 3, 1: 1}
+
+
+def test_lua_trainer_list_loading_after_show_is_read_on_update_or_one_second_later():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        services, timers = 0, {}
+        C_Timer = { After = function(seconds, callback) timers[#timers + 1] = callback end }
+        function GetNumTrainerServices() return services end
+        function GetTrainerServiceInfo(i) return "Journeyman Tailoring", "Journeyman", "unavailable" end
+        function GetTrainerServiceLevelReq(i) return 10 end
+        function GetTrainerServiceCost(i) return 500 end
+    ''')
+    fire(g, "TRAINER_SHOW")
+    assert entries(g)[-1]["trainer_service_count"] == 0  # 0.11.3 beta: empty at opening
+    lua.execute('services = 1')
+    fire(g, "TRAINER_UPDATE")
+    loaded = entries(g)[-1]
+    assert loaded["event"] == "TRAINER_UPDATE" and loaded["trainer_services"][0]["level_required"] == {"n": 1, 1: 10}
+    count = len(entries(g))
+    fire(g, "TRAINER_UPDATE")
+    lua.execute('timers[1]()')
+    assert len(entries(g)) == count  # unchanged lists are not saved again
+    fire(g, "TRAINER_CLOSED")
+    # Without TRAINER_UPDATE, the delayed read saves the loaded list; after closing it reads nothing.
+    lua.execute('services = 0')
+    fire(g, "TRAINER_SHOW")
+    lua.execute('services = 2')
+    lua.execute('timers[2]()')
+    assert entries(g)[-1]["event"] == "TRAINER_DELAYED_READ" and entries(g)[-1]["trainer_service_count"] == 2
+    fire(g, "TRAINER_CLOSED")
+    lua.execute('services = 3; timers[2]()')
+    assert entries(g)[-1]["event"] == "TRAINER_CLOSED"

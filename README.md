@@ -38,14 +38,10 @@ focuses the current window or restarts the launcher's own app if the Python code
 If the desktop window cannot open, the launcher explains the browser fallback in one line;
 that server stops after five minutes with no connected tabs. Closing the native window stops it.
 
-Choose an experience (WoW Forever first), then a source when there are several. The sidebar has
-**Today**, **Team**, **Market**, and **Data**. Today keeps the existing plan and settings;
-Team and Market show what is coming. **Data → Import** previews addon inputs without writing,
-then imports only after your explicit selection and **Import addon scan** click.
-
-The complete Streamlit app remains available as **Open Old Streamlit App.command** / **.cmd**,
-or `.venv/bin/python launch.py`, at `http://127.0.0.1:8501`. Use it for **Refresh from TSM** and
-pages that have not moved to the new app. Its pages and launcher behavior are unchanged.
+Choose an experience (WoW Forever first), then a source when several are enabled.
+The header opens **Today** (plan and session), **Team** (roster/progression/hiring),
+**Market** (items and supply chains), **Stock** (holdings/targets), and **Data** (Import).
+Data previews without writing and imports only after explicit review and selection.
 
 For a copied-data browser check:
 
@@ -87,17 +83,28 @@ After each scan and `/reload`, click **Import addon scan** or run:
 ## Markets and catalogs
 
 - `config/market.toml` lists sources. Each one is a feed (`source_id`, `provider`, and a URL or, for `provider = "addon"`, a local `scan_path` plus `scan_evidence`) observing one market: game version, region, and realm or Forever server type, plus faction. The file's comments show a Forever example. Freshness and auction cut can be set per source; neutral houses default to 15%. TSM feed URLs follow `https://public-data.tradeskillmaster.com/{game}/{region}/realm/{realm}/items.csv`; slugs are on [TSM Public Pricing Data](https://tradeskillmaster.com/public-data).
-- `config/*-tailoring.toml` are versioned recipe catalogs.
-- The Action Board appears when a catalog's `game_version` and `rules_version` match the selected source.
+- Catalog discovery follows `config/recipe-selections/*.toml`. Pricing requires compatible game and rules versions (CRAFT-01/05).
+- Refresh recipes from a profession page saved manually in your browser:
+
+```bash
+.venv/bin/python -m brownstone recipes --page /path/to/tailoring.html \
+  --selection config/recipe-selections/forever-tailoring.toml \
+  --output config/forever-tailoring.toml
+```
+
+Review reported changes and update catalog versions under [CRAFT-08](docs/requirements.md#crafting).
+TSM refresh uses the collection commands above. There is one app.
 
 ## Data on disk
 
 ```text
 data/bronze/<source>/   exact downloaded or imported bytes (addon scan files gzip-compressed) + manifest JSON (hash, source, times, status)
 data/silver/<source>/   validated Parquet per collection (addon: per scan, listings and prices)
-data/gold/<source>/     discount-screen output per collection
+data/gold/<source>/     CLI screening output per collection
 data/brownstone.duckdb  market_snapshots, addon_scans and scan_listings tables (schema upgrades keep a brownstone.v<N>.backup.duckdb copy)
 data/inbox/addon-scans/ addon SavedVariables files copied out of the game, waiting to be imported
 ```
 
-Data is excluded from Git, so back up `data/` separately. Each computer (Mac or Windows) keeps its own `data/`; to carry on from another one, copy the whole folder across while Brownstone is closed on both. Run one writer at a time. Validation and freshness rules are in [requirements](docs/requirements.md).
+Data is excluded from Git. Brownstone/data live on the Mac; Windows sends immutable addon
+copies through the drop folder (OPS-03). Run one writer, keep data outside live sync, and back
+it up separately. See [requirements](docs/requirements.md#operations).

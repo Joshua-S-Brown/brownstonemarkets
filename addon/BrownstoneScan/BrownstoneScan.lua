@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.1"
+local ADDON_VERSION = "0.12.2"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -816,7 +816,7 @@ local journalEvents = {
     OWNED_AUCTIONS_UPDATED = "auction", AUCTION_OWNED_LIST_UPDATE = "auction", AUCTION_ITEM_LIST_UPDATE = "auction",
     AUCTION_MULTISELL_START = "auction", AUCTION_MULTISELL_UPDATE = "auction", AUCTION_MULTISELL_FAILURE = "auction",
     MERCHANT_SHOW = "vendor", MERCHANT_CLOSED = "vendor", MERCHANT_UPDATE = "vendor",
-    TRAINER_SHOW = "vendor", TRAINER_CLOSED = "vendor",
+    TRAINER_SHOW = "vendor", TRAINER_CLOSED = "vendor", TRAINER_UPDATE = "vendor",
     TRADE_SKILL_SHOW = "craft", TRADE_SKILL_CLOSE = "craft", TRADE_SKILL_UPDATE = "craft",
     TRADE_SKILL_LIST_UPDATE = "craft", TRADE_SKILL_DATA_SOURCE_CHANGED = "craft", NEW_RECIPE_LEARNED = "craft",
     CRAFT_SHOW = "craft", CRAFT_CLOSE = "craft", CRAFT_UPDATE = "craft",
@@ -917,8 +917,16 @@ end
 function journal.context(event)
     if event == "LOOT_OPENED" then return journal.lootSources() end
     if event == "CHAT_MSG_LOOT" then return { zone = journal.zone() } end
-    if event == "TRAINER_SHOW" then return journal.trainerServices() end
     return nil
+end
+
+-- The list loads after TRAINER_SHOW (0.11.3 beta: 0 services at opening, then a purchase of service 1).
+-- Save a later read only while the trainer is open, non-empty and different from the last saved list.
+function journal.trainerRead(event, arguments)
+    if not journal.windows.trainer then return end
+    local context = journal.trainerServices()
+    if (context.trainer_service_count or 0) == 0 or journal.equal(context, journal.lastTrainer) then return end
+    if journal.add(event, "vendor", arguments, context) then journal.lastTrainer = context end
 end
 
 function journal.entry(event, family, arguments, context)
@@ -1490,6 +1498,16 @@ function journal.observe(event, ...)
         journal.add(event, family, arguments, { before_copper = journal.lastMoney, after_copper = current })
         journal.lastMoney = current
     elseif event == "MAIL_SHOW" or event == "MAIL_INBOX_UPDATE" then journal.inbox(event, arguments)
+    elseif event == "TRAINER_SHOW" then
+        local context = journal.trainerServices()
+        if journal.add(event, family, arguments, context) then journal.lastTrainer = context end
+        -- One guarded read a second later, in case this client loads the list without TRAINER_UPDATE.
+        if type(C_Timer) == "table" and type(C_Timer.After) == "function" then
+            C_Timer.After(1, function()
+                journal.protect(journal.trainerRead, "TRAINER_DELAYED_READ", "TRAINER_DELAYED_READ", { n = 0 })
+            end)
+        end
+    elseif event == "TRAINER_UPDATE" then journal.trainerRead(event, arguments)
     elseif event == "OWNED_AUCTIONS_UPDATED" or event == "AUCTION_OWNED_LIST_UPDATE" then
         journal.owned(event, arguments)
     else

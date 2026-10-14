@@ -9,7 +9,7 @@ This audit's main goal is to cut bloat: less code, fewer tests and shorter docs 
 
 Look for, ranked by impact:
 1. Bugs and data risks: wrong market or source joins, prices treated as free, rounding outside integer copper, freshness mistakes, and migrations or imports that could lose or duplicate data.
-2. Duplication: logic repeated across modules that should share one helper, views doing calculations that belong in brownstone/, and code the NiceGUI and Streamlit apps both carry that should live once in brownstone/ or views/today_rows.py.
+2. Duplication: logic repeated across modules that should share one helper, views doing calculations that belong in brownstone/, and display logic repeated across views/nicegui_*.py that should live once in views/nicegui_theme.py or views/today_rows.py.
 3. Dead code: functions, parameters, config keys, settings fields and branches nothing reaches, code left over from spikes and trials (SPIKE-009/009b), and stale comments. Prove each is unused (grep, coverage) before removing it.
 4. Test bloat: tests that duplicate each other, test the same path through two apps, test framework behaviour rather than ours, or carry large inline fixtures that a shared helper could build. Merge or remove them without losing coverage of scope, units, freshness, deduplication and recipe quantities. Coverage must stay at or above the floor.
 5. Docs bloat: status.md must describe now, so move history out (Git has it); requirements.md holds each rule once; design.md holds structure and contracts, not narrative; backlog.md drops finished stories' full text where the docs already record the outcome. Keep AGENTS.md short (rules and pointers only), and make sure each fact lives in one place. Check that what remains matches the code.
@@ -18,7 +18,7 @@ Look for, ranked by impact:
 
 Rules:
 - Fix only clear, low-risk findings. List everything else for me with file:line, the impact and a suggested fix.
-- No behaviour or scope changes without asking. The Streamlit app is kept unchanged and reachable (docs/backlog.md, Added 2026-10-12): don't delete its pages; list any you think could go as a finding for me to decide.
+- No behaviour or scope changes without asking. There is one app (UI-07 in docs/requirements.md); don't remove or add places, list any you think should change as a finding for me to decide.
 - Run anything touching real data against copies only.
 - At the end: pytest --cov at or above the floor, ruff check . and mypy must pass, and the docs must be updated.
 - Leave everything uncommitted. Give me a summary, the before/after line counts, the list of open findings, a suggested commit message, and the tag to create after I commit: `git tag audit-<YYYY-MM-DD>`.

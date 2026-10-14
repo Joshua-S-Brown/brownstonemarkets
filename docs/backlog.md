@@ -17,12 +17,15 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
+Nothing in progress; the next story is the top of *Order* under Next.
+
+
 Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted on the beta with addon 0.3.1; the measurement record is in `addon/README.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
 **Through the last full beta testing day, 21 October** (manual, in game):
 - **Keep scanning.** Sixteen complete scans of the Normal Alliance house are imported (`status.md` → *Limitations*). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
 - **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. Buy your crafting reagents (thread, dye, flux, vials, spices) from a trade-supplies vendor rather than the auction house when you need them: the addon records each purchase, and Claude confirms the marked vendor prices from it. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
-- **Widen the Forever catalogs** (manual, on the Recipe catalogs page): the rest of Tailoring, then the professions you plan to level at launch. The board and Today's *Craft* list only cover catalog recipes, so this is what gives them something to show.
+- **Widen the Forever catalogs** (manual saved pages and `python -m brownstone recipes`): the rest of Tailoring, then the professions you plan to level at launch. The board and Today's *Craft* list only cover catalog recipes, so this is what gives them something to show.
 - **If any yield is more than 1** (now unlikely: Wowhead's "(2)" is an effect number, not a count; see `requirements.md` → CRAFT-08), *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
 - **Prepare a beta character for the character-data tests** (added 2026-10-06): level one **gathering** profession (Mining or Herbalism) and one **crafting** profession that uses it, far enough to gather, craft, post, sell, let something expire and cancel. Keep a little gold to buy and vendor with. This is what STORY-032 and STORY-033 are tested on.
 - **Test the new addon builds in game** once STORY-031 to STORY-033 and STORY-040 are ready (aim: by 13 October, leaving a week of beta). Each run records what actually happened, so it can be preserved as a test fixture before the beta closes:
@@ -42,105 +45,19 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order:**
-1. STORY-066 retire the old app and slim the docs (Brownstone; medium; decided 2026-10-13; after STORY-061 is committed, since both touch the docs)
-2. STORY-065 farming rates from play sessions (addon + Brownstone; discovery captured 2026-10-13 with addon 0.11.3: refine from that evidence first)
-3. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
-4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-6. STORY-036 vendor price ceilings
-7. STORY-021 item page and charts (would live in the Market explorer)
-8. STORY-026 scan coverage and rhythm
-9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-10. STORY-006 replay
+1. STORY-065 farming rates from play sessions (addon + Brownstone; discovery captured 2026-10-13 with addon 0.11.3: refine from that evidence first)
+2. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
+3. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+4. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+5. STORY-036 vendor price ceilings
+6. STORY-021 item page and charts (would live in the Market explorer)
+7. STORY-026 scan coverage and rhythm
+8. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+9. STORY-006 replay
 
-**Pending an in-game beta check:** STORY-031, STORY-032, STORY-033, STORY-040, STORY-044 and STORY-027 (checklists in `addon/README.md`).
+**Pending an in-game beta check:** STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 059, 030, 037, 038, 039, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 060, 061, 063, 064 and SPIKE-009/009b.
-
-**Added 2026-10-12 (product owner, after SPIKE-009b: "instead of migrating all the pages… what do we really need?"):** NiceGUI becomes the app, but only for what running the business needs. Four places move, each a story: **Today** (STORY-058, then STORY-054's cards), **Team**: the employee roster, their skills and where to invest (STORY-052, then STORY-059), **Market**: an explorer for browsing materials, crafts and supply chains, plus what moved since the last scan, kept for now to judge its use (STORY-055), and **Data**: Import (STORY-058). Everything else (All recipes, Watchlist, Below usual price, Scan changes, Recipe catalogs) stays in the Streamlit app, which is kept, unchanged and reachable, but gets no new features. The new app is built for WoW Forever; Classic stays development test data with no features of its own (`requirements.md` → *Interface*). This supersedes the Streamlit placements in STORY-053 for future work.
-
-**Added 2026-10-11 (product owner, after using the app end to end: "a lot of hopping around… I don't know what materials go to what… Characters doesn't help me know how to progress… no idea what the point of Watchlist or Opportunities is"):** the data and calculations are connected, but each story added its own page around one kind of data, so the owner assembles the answer by hopping between pages. The app is reorganised around the three questions of running the business, decided with the product owner:
-1. **Today: what should our company do today?** One card per craft, with why, what to buy for it and where to sell (STORY-054).
-2. **Team: how do we progress our employees?** Each character with its next step per profession (STORY-052, moved onto the Team page).
-3. **Market: what are the market indicators, and how do they affect our strategy?** One brief that ties what moved to what it means for our plan (STORY-055).
-
-STORY-053 sets up the navigation first, so each later story has a home. New feature stories wait behind these four. Display and wiring only unless a story says otherwise: no change to calculations, ranking or `today_version`.
-
-### STORY-066 — Retire the old app and slim the docs
-
-Added 2026-10-13 (product owner: "I haven't really used them at all because the new app is much nicer and more efficient… let's plan to sunset it and clean up documentation as part of that initiative"). Brownstone and docs only; no change to any calculation, rule meaning, schema, data file or the addon. Start after STORY-061 is committed: both edit the docs.
-
-As the owner, I want one app and short, current docs, so that every change is cheaper to make, test and review.
-
-Acceptance:
-- **Nothing needed is lost:** before deleting, list each old-app page (Today plan, All recipes, Characters, Browse market, Skill-up demand, Watchlist, Below usual price, Import, Recipe catalogs, Scan changes, Refresh from TSM) with where its job lives in the new app, or that it is dropped. Decided with the owner: nothing moves; All recipes and the Recipe catalogs page are dropped; Watchlist's page is dropped (its engine stays: the new Import page shows watchlist hits, and STORY-061's targets cover buy limits; existing watchlist files stay on disk); TSM refresh and recipe refresh stay available through the CLI (`python -m brownstone`, `recipes`), which must keep working. Put the list in the report, not the docs.
-- **Remove the old app:** `app.py`, the Streamlit-only modules in `views/` (keep every module the new app imports, such as `today_rows.py`), their tests, the **Open Old Streamlit App** launchers, `launch.py` (move `code_fingerprint`, which `launch_nicegui.py` imports, into `launch_nicegui.py`), and Streamlit from `pyproject.toml` and `requirements.lock.txt`. Functions in `brownstone/` that only the removed screens called go too, with their tests; anything the CLI or the new app uses stays.
-- **Slim the docs** (`AGENTS.md`: "Describe *now*; history belongs in Git"): `requirements.md` keeps every current rule with its ID and meaning, but drops decision dates, beta-finding narratives, superseded wording and old-app rules; `design.md` describes current modules only; `status.md` describes now; `README.md` and `addon/README.md` drop old-app instructions and finished checklists. Targets: `requirements.md` at most 90 KB (from 141 KB), `design.md` at most 45 KB (from 67 KB). Where a rule's evidence matters (for example ADDON-07's seller finding or the whole-silver finding), keep one sentence of it. No rule ID is lost or renumbered; a removed rule is listed in the report with why.
-- **Gates:** `pytest --cov` at or above the coverage floor, `ruff check .`, `mypy` (update its `files`), with the full-suite time before and after in the report. The new app launches from **Open Brownstone App** and every place opens (real-data check on the Forever beta source).
-- **Out of scope:** `data/`, the database, bronze and the addon stay untouched.
-
-### STORY-031 — Item info pass after a scan
-
-**Implemented and reviewed (2026-10-06); pending beta measurement.** Added 2026-10-06; final rule in `requirements.md` → ADDON-09.
-
-As a gold maker, I want each scan to carry vendor price, item level and stack size for every item listed, so that *Below vendor* and deposits (STORY-035) have item references for more than a third of items. Listing links and variant identity are unchanged by this pass.
-
-Acceptance:
-- **After reading listings,** the addon asks the client to load each item ID still missing reference fields, listens for the client's item-loaded event, and records the answers that arrive. One request per item, a bounded wait (a value recorded in ADDON-09), a progress message, and the scan is saved even if the wait runs out. The listings already read are never re-read or changed; a separate per-item observation records which values came from the second pass.
-- **Read-only and manual,** like every scan; nothing runs on a timer after the scan finishes.
-- **Measured on the beta** against addon 0.3.1 (1,192 of 3,066 items had a vendor price): availability, extra time and file size, recorded in `addon/README.md`.
-- **Import** accepts the new format version, keeps older formats readable, and tests stay offline (Lua stubs with delayed item info).
-
-### STORY-032 — Character snapshots: gold, bags and bank
-
-**Implemented and reviewed (2026-10-07); pending the in-game beta check.** Added 2026-10-06; refined 2026-10-07 for implementation. Must be testable in game by 13 October (*Now*), so the beta can confirm it on both machines before it closes after 21 October.
-
-As a gold maker, I want the addon to record what each of my characters holds, so that Today can count what I already have and the ledger can reconcile what changed between sessions.
-
-Acceptance:
-- **Gold and bags** for the logged-in character are recorded when you log out or `/reload` (the game writes the file right after), with character name, realm, faction, UTC time and addon version. Gold is integer copper. Nothing to remember to do by hand. Which logout event still reads bags correctly is a **beta check**: register guarded (as the scan does) and record what fired.
-- **Bank** contents can be read only while the bank is open, so they're recorded each time you open (and again when you close) the bank, and each bank snapshot carries its own time. A character whose bank was never opened has *bank unknown*, never empty.
-- **Per slot:** container ID, slot, item ID, count and the item link bytes as reported, so ADDON-08 variants can be resolved later; empty slots are not recorded. Reagent bags, keyring or other containers the client reports are recorded as reported, with their container IDs. Missing values stay missing, never zero.
-- **One account-wide file** (added 2026-10-07): snapshots go in the existing account-wide `BrownstoneScanDB` (`## SavedVariables`, never `SavedVariablesPerCharacter`), so the Windows drop script (STORY-037) carries every character on that account without changes. The file's `schema_version` goes up; Brownstone keeps reading every older version.
-- **Read-only:** container and money APIs are only read. No buying, moving, sorting or mail.
-- **Clearing keeps the current session:** `/bscan clear` removes only snapshots recorded before this character's current login; a `/reload` doesn't start a new login (record the login time in the file, with the client's initial-login versus reload signal as a beta check). Scans keep their existing rule (written scans are cleared; unwritten ones refuse unless `clear all`), so the Mac routine *scan → /reload → import → clear* still empties them. Record the rule in `requirements.md` → ADDON rules. A cleared file shows *bank unknown* in game; Brownstone keeps using the latest imported bank snapshot with its own time.
-- **Import:**
-  - A new kind of addon record, imported through the same addon source, preview and drop folder (STORY-037), and preserved in the same bronze collection as the file's scans (DATA-01). A file with snapshots but no scans is valid input; *no scans* is no longer an error when snapshots are present.
-  - Each snapshot has an ID made from character, realm and time; it deduplicates across overlapping drops, and the same ID with different content is a conflict, as for scans (ADDON-04).
-  - Stored with source, machine (from the file, STORY-037), character, realm and faction, never pooled across characters unless a view asks. A character whose realm or faction doesn't match the source's house evidence counts as *other house*, like scans. A new numbered migration.
-  - Preview (page and CLI) lists each file's snapshots per character as new, duplicate or other house, beside its scans. **Fully imported** counts snapshots as well as scans.
-- **Seen in Brownstone:** a read-only table on the addon import page, per character: latest bags time and gold, latest bank time (or *bank unknown*), item and slot counts, machine. No other views; Today using holdings is *Restock* under Later.
-- **Offline tests** with Lua stubs: each container type, unknown bank, two characters, a snapshots-only file, duplicate and conflicting snapshots across overlapping drops, other-house characters, a clear that keeps the current session's snapshots across a `/reload`, older file versions still importing, the migration, CLI and the import page.
-
-### STORY-033 — Event journal: what you bought, posted, sold, crafted and mailed
-
-**Implemented and reviewed (2026-10-07); pending the in-game beta check.** Spellcasts narrowed to successful crafts at review (ADDON-12).
-
-Added 2026-10-06; refined 2026-10-07 for implementation. Captures raw evidence only; meaning is STORY-034. Must be testable in game by 13 October (*Now*).
-
-As a gold maker, I want the addon to note each auction, mail, craft and vendor event as it happens, so that Brownstone can later work out what I bought, sold and made, and at what cost.
-
-Acceptance:
-- **A journal of raw entries** in the addon file. Each entry: event or hook name, its arguments as reported (missing stays missing), Unix seconds with UTC text, session time (`GetTime()`), character, realm, faction and addon version. The entry ID is the length-prefixed character and realm (as in snapshots), time and the **same persistent account sequence snapshots use**, so journal entries and snapshots sort together for STORY-034's reconciliation.
-- **Two generic observations** carry most of the meaning, so per-event parsing isn't needed to capture it:
-  - **Money change:** on `PLAYER_MONEY`, copper before and after (integer copper).
-  - **Bag change:** after bags settle (`BAG_UPDATE_DELAYED`), the per-item count change across carried bags since the last observation (item ID → signed count), with which windows were open (bank, mailbox, merchant, auction house, trade skill, loot). Baseline taken at login and `/reload`; no entry when nothing changed.
-  Crafts, loot, gathering, vendor trades and mail taken show up as these changes next to the event that caused them.
-- **Context read at the moment** (read-only APIs):
-  - **Mailbox:** on opening and on each inbox change, every message header (sender, subject, money, COD, item count, days left, read flag) and, for auction mail, the invoice (type, item, other player, bid, buyout, deposit, cut). Record an inbox state only when it differs from the last one recorded this session, to keep the file small.
-  - **Your own actions:** observe the functions you call (secure post-hooks: taking mail money and items, sending mail with its recipient, money and attached items, posting, bidding or buying out, cancelling, vendor buying, selling and repairing, crafting) and record their arguments. The addon never calls these itself.
-  - **Own events only:** spellcasts and loot from `player` only; other players' loot lines in a group are not recorded.
-- **Covers** auction house purchases, posts and cancels; mailbox invoices (sold, expired, cancelled, outbid), returned items and gold taken; mail sent and received; crafts; vendor buys, sells and repairs; loot and gathering. The event and hook list is a **beta discovery**: register guarded, record which ones the client rejects (as the scan does), and record what fired in each beta test under *Now*.
-- **Bounded size:** a cap on journal entries (a value recorded in the rule). At the cap the addon stops adding entries, keeps one overflow marker with the number it skipped, and says so in chat; it never drops entries silently. A normal session's size is measured on the beta and recorded in `addon/README.md`.
-- **One account-wide file** (added 2026-10-07): the journal goes in the existing account-wide `BrownstoneScanDB`, like scans and snapshots, so the Windows drop script carries it unchanged. The file format goes up; every older format stays importable. Overlapping drops repeat entries, so import deduplicates by entry ID; the same ID with different content is a conflict.
-- **Clearing keeps the current session** (added 2026-10-07): `/bscan clear` removes only journal entries from before the current login, using STORY-032's login marker and the same prune (unknown login keeps everything); scans keep their own rule (ADDON-11). Events recorded since login (for example opening the mailbox before typing the command) are never lost, so the Windows routine *log in → clear → reload → play → log out → drop* is safe in any order within the session. Clearing is still safe only when that machine's latest drop is fully imported (OPS-03).
-- **Never acts, and stays silent:** the addon only listens and reads (`requirements.md` → *Observing your own actions*). No automatic mail opening, taking, looting, buying, posting, cancelling or crafting; hooks only observe calls you made. Logging prints nothing to chat in normal play; only problems (a rejected event, the size cap) are reported.
-- **Import:**
-  - Snapshots and journal entries share **one path for non-scan records** (preview state, stale-review check, conflicts, Fully imported, import guidance counting new records), generalized from STORY-032's snapshot fields rather than a third parallel set.
-  - Preserved byte-for-byte in the same bronze collection (DATA-01); stored raw per character with source, full market identity and machine, through a new numbered migration. Not interpreted yet.
-  - Preview (page and CLI) shows, per file and character, journal entry counts as new, duplicate or other house, by event family; not one row per entry.
-  - **Seen in Brownstone:** on the addon import page, per character, the number of imported entries by family and the latest entry time. No other views.
-- **Offline tests** with Lua stubs for each event family and hook, money and bag changes (including no-change), mailbox state deduplication, the size cap and its overflow marker, a clear after events in the current session (they survive), duplicate and conflicting entries across two drops, older file formats, the migration, CLI and the import page. Real beta recordings are saved as fixtures before 21 October (the in-game checklist in `addon/README.md` says how).
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 066 and SPIKE-009/009b.
 
 ### STORY-034 — Movement ledger and reconciliation
 
@@ -180,26 +97,6 @@ Acceptance:
 - **Buying:** already capped by CRAFT-03's cheapest route; Today's *Buy* never lists an auction purchase above the vendor price.
 - **Selling:** a sale value above the vendor price is capped at it, with a label, and the rule is recorded in `requirements.md`.
 - **Limited stock** (if the vendor has any) is noted, since vendor stock is otherwise *not modeled*.
-
-### STORY-040 — Your active auctions
-
-**Implemented and reviewed (2026-10-07); pending the in-game beta check.**
-
-Added 2026-10-07 (product owner). Must be testable in game by 13 October (*Now*), with STORY-031 to STORY-033. Captures raw evidence only; meaning is STORY-034.
-
-As a gold maker, I want the addon to record my own active auctions whenever the game shows them to me, so that every item can be followed through its whole cycle: crafted or bought, posted, still listed, then sold, expired or cancelled and taken from the mailbox.
-
-Why: the journal (STORY-033) records the post and cancel calls and the mailbox invoices, but not what is actually listed. A post call is an attempt, not proof; the owned list confirms it, shows what is still up between sessions, and shows sold auctions waiting for their mail.
-
-Acceptance:
-- **Read when the client reports the list, never requested.** On the client's owned-auctions update (`OWNED_AUCTIONS_UPDATED` with `C_AuctionHouse` on Forever; `AUCTION_OWNED_LIST_UPDATE` with the legacy API on the Classic stand-in), read the complete list with read-only APIs. The addon never calls `C_AuctionHouse.QueryOwnedAuctions`, `GetOwnerAuctionItems` or any other request: the game's own UI asks for the list when you open the Auctions tab (or post or cancel). Whether it arrives without opening the tab is a **beta check**. Register guarded, like every journal event.
-- **One journal entry per changed list,** family `auction`, in the existing journal (same ID, sequence, cap and clear rules as ADDON-12): the API used, the count the client reported, and per auction every value it returns as reported (auction ID, item ID, item link, quantity, status such as sold and waiting for mail, time left, bid, buyout, bidder). Missing stays missing, never zero; money in integer copper. Record a list only when it differs from the last one recorded this session, as for the mailbox.
-- **Empty is not unknown:** a list the client reported with zero auctions is recorded (you have nothing listed). A character whose list was never observed has *active auctions unknown*, never none.
-- **Never acts, and stays silent:** no posting, cancelling, bidding or requests; nothing in chat in normal play.
-- **Import:** no new storage path or migration; entries go through STORY-033's shared non-scan import and are counted by family in the preview. The addon version goes up; the file format goes up only if import needs it (record which in ADDON-12).
-- **Seen in Brownstone:** on the addon import page, per character, the latest observed active-auction list: time (UTC), number of auctions, and how many the client marked sold, or *active auctions unknown*. No other views; interpretation is STORY-034.
-- **Offline tests** with Lua stubs for the modern and legacy APIs: a list with several auctions including a sold one, an unchanged list (no new entry), a changed list, an empty list, missing values, no request functions ever called, a rejected event, and the import page's latest row and unknown case.
-- **Checklist** in `addon/README.md`: open the Auctions tab before posting, post two small stacks, open it again, cancel one, open it again, and after a sale (before and after taking the mail) open it again. Note whether the list arrived without the tab, and save the recordings as fixtures before 21 October.
 
 ### STORY-044 — Brownstone panel from a minimap button
 
@@ -265,7 +162,7 @@ Added 2026-10-13 (product owner, while refining STORY-063: "we can backlog it bu
 As the owner, I want to know how many of a material I actually gather per hour of play, so that STORY-063 can compare farming with crafting and levelling on measured rates instead of guesses.
 
 To refine:
-- **Capture (beta discovery):** the journal already records `CHAT_MSG_LOOT` for the player (ADDON-07 rules in `requirements.md`), but not whether the loot came from a gathering node, a mob or a container, nor where. Find out on the Forever beta which read-only evidence tells them apart (for example the loot source's GUID type from the loot window, or the gathering spell) and whether the zone can be recorded with each event. Record what fired, like STORY-033's discovery; nothing that buys, posts or plays for you. **Capture added 2026-10-13 in addon 0.11.3** (ADDON-12 → *Discovery context*): loot-slot sources, zone and trainer lists; the play checklist is in `addon/README.md`. **Finding 2026-10-13:** items taken from the mailbox also
+- **Capture (beta discovery):** the journal already records `CHAT_MSG_LOOT` for the player (ADDON-07 rules in `requirements.md`), but not whether the loot came from a gathering node, a mob or a container, nor where. Find out on the Forever beta which read-only evidence tells them apart (for example the loot source's GUID type from the loot window, or the gathering spell) and whether the zone can be recorded with each event. Record what fired, like STORY-033's discovery; nothing that buys, posts or plays for you. **Capture added 2026-10-13 in addon 0.11.3** (ADDON-12 → *Discovery context*): loot-slot sources, zone and trainer lists; it was played and captured on 2026-10-13. **Finding 2026-10-13:** items taken from the mailbox also
   produce the player's `CHAT_MSG_LOOT` (Basilly's 40 Linen Cloth came from Arille by mail), so gathered
   loot must come from a loot window (`LOOT_OPENED` sources), never from loot messages while the mailbox is open.
 - **Farming stretches:** per character, a stretch of gathering events with its start, end and zone; idle gaps above a limit end a stretch. Units per hour per material per zone, with the number of stretches and minutes it rests on.
@@ -311,7 +208,7 @@ These are grouped by what unblocks them.
 
 **Seller capture** (found 2026-10-06; blocks STORY-028): the Forever beta's bulk scan returns no seller names (ADDON-07). Left blocked until after go-live (product owner, 2026-10-06): check whether live scans return seller names. Only if they don't, decide between another read-only way of getting them (such as per-item searches, at the cost of many more auction-house requests and a longer scan) and dropping or reshaping STORY-028.
 
-**Snapshot coverage** (added 2026-10-07; needs a character with more bags and bank slots, possibly after go-live): STORY-032's checks that a new beta character can't reach. Every equipped bag slot full; several bank bags, including the last bank bag slot; the keyring and any reagent containers the client has; a full bank compared item by item; and bank-close reads with many bags open. Use the checklist in `addon/README.md` (*All containers* and *Bank open and close*) and record the client's `container_layout` values. Until then, container coverage is confirmed only for the containers actually tested.
+**Snapshot coverage** (added 2026-10-07; needs a character with more bags and bank slots, possibly after go-live): STORY-032's checks that a new beta character can't reach. Every equipped bag slot full; several bank bags, including the last bank bag slot; the keyring and any reagent containers the client has; a full bank compared item by item; and bank-close reads with many bags open. Play those actions, then Claude checks the client's `container_layout` values in the dropped file. Until then, container coverage is confirmed only for the containers actually tested.
 
 **Today, later versions** (captured 2026-10-06 with the product owner; each extends STORY-025 once its data exists):
 - **Sales speed instead of a fixed cap:** replace *most crafts per item* with how many units of the output disappear between scans. Needs STORY-027 and a few weeks of live scans; label it removed, not sold.
@@ -405,7 +302,7 @@ Acceptance:
 - Check whether `/bscan start` works without the button click.
 
 **Recipe coverage** (unblocked by STORY-004):
-- **More recipes and professions:** added in the app on the Recipe catalogs page and shown together on the board (`status.md`); routing across professions is CRAFT-12.
+- **More recipes and professions:** generated with the recipes CLI and used together by the app (`status.md`); routing across professions is CRAFT-12.
 - **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*). **Moves to the top of Next if the Bolt of Linen Cloth check finds a yield above 1.**
 - **Skill-up demand map:** now STORY-047 in Next (2026-10-08).
 - **In-game recipe reader:** now part of *Known recipes and skill* under *Your own character's data* (reading your own character's data was approved 2026-10-06).

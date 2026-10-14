@@ -5,7 +5,6 @@ import json
 import duckdb
 import polars as pl
 import pytest
-from navigation_helpers import navigate
 from test_scans import FINISHED, NOW, addon_source, listing, packed, scan, write_scans
 
 from brownstone import scan_details, scans, variants
@@ -14,7 +13,7 @@ from brownstone.markets import MARKET_KEYS
 from brownstone.metrics import rebuild_scan_metrics
 from brownstone.pipeline import import_scans, preview_scans
 from brownstone.scan_changes import compare_scans
-from brownstone.storage import MIGRATIONS, ensure_schema, listing_depth, price_observations, upgrade_database
+from brownstone.storage import MIGRATIONS, ensure_schema, price_observations, upgrade_database
 
 # Exact payloads from the 2026-10-04 Forever beta archive; no seller data in fixtures.
 MONKEY = "|cnIQ2:|Hitem:6538::::::::1:1491:::1:12721::::::|h[Willow Robe of the Monkey]|h|r"
@@ -179,9 +178,6 @@ def test_formats_1_2_3_preservation_dedup_and_new_nulls(tmp_path):
             2589: {"min_buyout": 36, "market_value": 36}}
         v = variants.identity(6538, MONKEY)[0]
         assert price_observations(db, config, "my-scans:rich", [6538], v)[6538]["min_buyout"] == 500
-        assert listing_depth(db, config, "my-scans:rich", [6538])[6538] == {"listings": 0, "units": 0}
-        assert listing_depth(db, config, "my-scans:rich", [6538], v)[6538] == {"listings": 1, "units": 1}
-        assert listing_depth(db, config, "my-scans:rich", [6538], variant_state="unresolved")[6538]["units"] == 1
         assert browse(db, "my-scans:rich", config).height == 4
         # Variant names never label the item ID; only base (or legacy) rows supply item_names.
         assert db.execute("SELECT item_name FROM item_names WHERE item_id=6538").fetchall() == [("Old",)]
@@ -224,8 +220,6 @@ def test_variants_compare_separately_and_legacy_matches_only_pure_base(tmp_path)
         assert {(r["item_id"], r["variant_state"]) for r in legacy["items"]} == {(2589, "legacy"),
                                                                                  (6538, "legacy")}
         assert price_observations(db, config, "my-scans:legacy", [6538], variant_state="unresolved") == {}
-        assert listing_depth(db, config, "my-scans:legacy", [6538], variant_state="unresolved") == {
-            6538: {"listings": 0, "units": 0}}
         assert price_observations(db, config, "my-scans:legacy", [6538])[6538]["min_buyout"] == 2
 
 
@@ -277,7 +271,6 @@ def test_variant_prices_depth_and_comparisons_enforce_every_scope_key(tmp_path, 
         assert price_observations(db, config, "my-scans:rich", [6538], v)[6538]["min_buyout"] == 500
         wrong = {**config, key: "another"}
         assert price_observations(db, wrong, "my-scans:rich", [6538], v) == {}
-        assert listing_depth(db, wrong, "my-scans:rich", [6538], v) is None
         assert db.execute(f"SELECT DISTINCT {key} FROM scan_items").fetchall() == [(config[key],)]
         db.execute(f"UPDATE market_snapshots SET {key}='another' WHERE snapshot_id='my-scans:rich'")
         assert price_observations(db, config, "my-scans:rich", [6538], v) == {}
@@ -288,7 +281,6 @@ def test_variant_prices_depth_and_comparisons_enforce_every_scope_key(tmp_path, 
         assert not diff["items"] and len(diff["vanished"]) == 4
         db.execute(f"UPDATE scan_listings SET {key}='another' WHERE scan_id='rich'")
         rebuild_scan_metrics(db)
-        assert listing_depth(db, config, "my-scans:rich", [6538], v) == {6538: {"listings": 0, "units": 0}}
         diff = compare_scans(db, config, "old", "rich")
         assert not diff["items"] and len(diff["vanished"]) == 4
 
@@ -323,18 +315,3 @@ def test_bad_indexed_tables_and_empty_rich_scan(table):
     assert scans.listing_frame(empty).height == 0
     assert scans.item_prices(scans.listing_frame(empty)).height == 0
     assert scan_details.item_frame(empty).height == 0
-
-
-def test_browse_and_scan_changes_show_variant_identity(tmp_path, monkeypatch):
-    from test_scan_changes import app_for
-    config = addon_source(tmp_path / "data")
-    path = write_scans(tmp_path / "pair.lua", rich("old", FINISHED - 60), rich("new"))
-    import_scans(config, path, now=NOW)
-    app = app_for(config, monkeypatch)
-    table = app.dataframe[0].value
-    assert len(table) == 4 and set(table["Variant state"]) == {"variant", "base", "unresolved"}
-    assert table["Variant"].notna().sum() == 2
-    navigate(app, "Browse market")
-    assert not app.exception
-    assert len(app.dataframe[0].value) == 4
-    assert "Variant" in app.dataframe[0].value.columns

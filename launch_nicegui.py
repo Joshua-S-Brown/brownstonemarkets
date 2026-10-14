@@ -1,5 +1,6 @@
 """Detached native main-app launcher with reuse and a browser fallback."""
 import argparse
+import hashlib
 import json
 import os
 import secrets
@@ -12,18 +13,16 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
-from launch import code_fingerprint as shared_code_fingerprint
-
 ROOT = Path(__file__).resolve().parent
 
 
 def code_fingerprint():
-    # Reuse the old launcher's byte/path fingerprint, adding this app's entry and launcher.
-    import hashlib
-    digest = hashlib.sha256(shared_code_fingerprint().encode())
-    for name in ('nicegui_app.py', 'launch_nicegui.py'):
-        digest.update(name.encode())
-        digest.update((ROOT / name).read_bytes())
+    digest = hashlib.sha256()
+    paths = [ROOT / 'nicegui_app.py', ROOT / 'launch_nicegui.py',
+             *ROOT.glob('brownstone/**/*.py'), *ROOT.glob('views/**/*.py')]
+    for path in sorted(paths):
+        digest.update(path.relative_to(ROOT).as_posix().encode())
+        digest.update(path.read_bytes())
     return digest.hexdigest()
 
 

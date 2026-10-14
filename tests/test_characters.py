@@ -1,10 +1,7 @@
 """Offline character cards share the import projections, never local beta data."""
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
-from navigation_helpers import navigate
-from streamlit.testing.v1 import AppTest
 from test_character_snapshots import snapshot
 from test_journal import entry, write
 from test_scans import FINISHED, NOW, addon_source
@@ -111,81 +108,5 @@ def test_relative_time(seconds, expected):
     assert characters.relative_time(NOW - timedelta(seconds=seconds), NOW) == expected
 
 
-def test_apptest_navigation_cards_chart_and_empty(tmp_path, monkeypatch):
-    config = fixture(tmp_path)
-    monkeypatch.setattr("brownstone.config.read_sources", lambda *a: [config])
-    monkeypatch.setattr("brownstone.recipe_catalogs.find_catalogs", lambda *a: [])
-    at = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py")).run()
-    assert next(w for w in at.radio if w.label == "View").options[:2] == ["Today", "Team"]
-    navigate(at, "Characters")
-    assert not at.exception
-    assert [m.value for m in at.metric] == ["9", "1g 23s 45c", "unknown", "1g 23s 45c"]
-    assert any("Known recipes: 2" in c.value for c in at.caption)
-    assert len(at.get("vega_lite_chart")) == 1
-    assert all(not e.proto.expanded for e in at.expander if e.label == "Progress over time")
-    assert at.dataframe[0].value["Value"].tolist() == [8, 75, 9, 76]
-    monkeypatch.setattr("views.characters.build_characters", lambda _: [])
-    at.run()
-    assert any("Use Import addon scan" in i.value for i in at.info)
-    assert not at.metric
-
-
 RENDER = ('from views.characters import render\n'
           'render({"source_id": "s", "market_id": "m", "provider": "addon", "game_version": "forever"})')
-
-
-def test_apptest_unknown_gold_badges_and_error(tmp_path, monkeypatch):
-    config = fixture(tmp_path)
-    cards = characters.build_characters(config, NOW + timedelta(days=8))
-    cards[0].update(gold_copper=None, skills_status="possibly incomplete")
-    cards[0]["professions"][0].update(at_cap=True, progress=None, rank=None)
-    cards[1]["professions"] = [{**cards[0]["professions"][0], "recipe_source": "seen crafted"}]
-    monkeypatch.setattr("views.characters.build_characters", lambda _: cards)
-    at = AppTest.from_string(RENDER).run()
-    assert not at.exception and at.metric[1].value == "unknown"
-    markdown = " ".join(m.value for m in at.markdown)
-    assert "stale" in markdown and "at cap" in markdown and "possibly incomplete" in markdown
-    def fail(_):
-        raise ValueError("fixture error")
-    monkeypatch.setattr("views.characters.build_characters", fail)
-    at.run()
-    assert "fixture error" in at.error[0].value
-
-
-def test_apptest_unreadable_only_and_readable_empty_skill_list(tmp_path, monkeypatch):
-    record = snapshot("unreadable", level=1)
-    record.update(containers=[{"container_id": 0, "size": 0}], gold_copper=0)
-    path = write(tmp_path / "only.lua", [], [record])
-    config = addon_source(tmp_path / "data", path)
-    import_scans(config, now=NOW)
-    cards = characters.build_characters(config, NOW)
-    monkeypatch.setattr("views.characters.build_characters", lambda _: cards)
-    at = AppTest.from_string(RENDER).run()
-    assert not at.exception and [m.value for m in at.metric] == ["unknown", "unknown"]
-    assert any("No readable bags" in c.value for c in at.caption)
-    assert any("No readable level" in c.value for c in at.caption)
-    assert "skills unknown" in " ".join(m.value for m in at.markdown)
-    record.update(snapshot_id="readable", containers=[{"container_id": 0, "size": 2}],
-                  skills={"modern": {"indexes": {"n": 0}, "rows": []}})
-    write(path, [], [record])
-    import_scans(config, now=NOW)
-    cards[:] = characters.build_characters(config, NOW)
-    at.run()
-    assert not at.exception and at.metric[1].value == "0c"
-    assert any("No skill lines reported" in c.value for c in at.caption)
-    record.update(snapshot_id="skill-only", sequence=1, level=4, skills={"modern": {"rows": [
-        {"name": "Tailoring", "skill_id": 197, "rank": 75, "max_rank": 75}]}})
-    write(path, [], [record])
-    import_scans(config, now=NOW)
-    cards[:] = characters.build_characters(config, NOW)
-    at.run()
-    assert not at.exception and cards[0]["professions"][0]["known_count"] is None
-    assert any("Known recipes: unknown" in c.value for c in at.caption)
-    assert "at cap: train the next tier" in " ".join(m.value for m in at.markdown)
-
-
-def test_apptest_non_addon_source_explains_no_character_data(monkeypatch):
-    monkeypatch.setattr("views.characters.build_characters", lambda _: pytest.fail("must not read characters"))
-    at = AppTest.from_string(RENDER.replace('"addon"', '"tsm"')).run()
-    assert not at.exception and not at.metric
-    assert any("no character data" in i.value for i in at.info)

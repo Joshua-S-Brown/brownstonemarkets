@@ -5,7 +5,6 @@ named views; this module keeps the lookup current as observations and catalogs a
 """
 from pathlib import Path
 
-import duckdb
 import polars as pl
 
 from .config import MARKET_KEYS
@@ -82,11 +81,3 @@ def remember_local_catalog_names(db, config_dir: Path | None = None) -> None:
         except Exception:  # Like the app's catalog loader: any malformed catalog is skipped, never fatal.
             continue
     remember_catalog_names(db, catalogs)
-
-
-def seed_catalog_names(data_dir: Path, catalogs: list[dict]) -> None:
-    """Remember already-parsed catalog labels in an existing, current database; never creates one."""
-    database = Path(data_dir) / 'brownstone.duckdb'
-    if database.exists():
-        with duckdb.connect(str(database)) as db:
-            remember_catalog_names(db, catalogs)

@@ -218,7 +218,7 @@ def combined_catalogs():
 @pytest.mark.parametrize("sort_by", ["profit", "margin"])
 @pytest.mark.parametrize("basis", ["cautious", "listed"])
 def test_combined_catalogs_rank_independent_graphs_and_resolve_duplicate_ids(sort_by, basis):
-    from brownstone.action_board import catalog_for_row, filter_profession, rank_catalogs
+    from brownstone.action_board import catalog_for_row, rank_catalogs
     catalogs = combined_catalogs()
     data = observed(prices(), {2592: 20})
     result = rank_catalogs(catalogs, data, MARKET, snapshot(), now=NOW, sort_by=sort_by, basis=basis)
@@ -238,10 +238,6 @@ def test_combined_catalogs_rank_independent_graphs_and_resolve_duplicate_ids(sor
         assert row["profit_by_basis"] == expected["profit_by_basis"]
     wool = [row for row in rows if row["recipe_id"] == 3757]
     assert wool[0]["craft_cost_copper"] != wool[1]["craft_cost_copper"]
-    filtered = filter_profession(result, "alchemy")
-    assert filtered["rows"] == [row for row in rows if row["profession"] == "alchemy"]
-    assert filter_profession(result, None) == result
-    assert not filter_profession(result, "mining")["rows"]
     assert rank_catalogs(list(reversed(catalogs)), data, MARKET, snapshot(), now=NOW,
                          sort_by=sort_by, basis=basis) == result
 

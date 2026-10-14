@@ -2,8 +2,8 @@
 from datetime import UTC, datetime
 
 import pytest
+from app_helpers import app as today_app
 from nicegui import app, ui
-from test_today_view import app as today_app
 
 from brownstone.freshness import assess
 from brownstone.today_loading import load_today

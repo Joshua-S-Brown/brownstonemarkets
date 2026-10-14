@@ -37,10 +37,6 @@ _NOT_A_LIST = ("Not a Wowhead profession spell list page (no canonical .../spell
                ".../spells/secondary-skills/... link)")
 
 
-def spell_list_url(game_path: str, profession: str) -> str:
-    """The Wowhead page listing a profession's spells, under the section Wowhead files it in."""
-    section = "secondary-skills" if profession in SECONDARY_SKILLS else "professions"
-    return f"https://www.wowhead.com/{game_path}/spells/{section}/{profession}"
 _UNQUOTED_KEY = re.compile(r'([{,])([A-Za-z_]\w*):')
 _PATCH = re.compile(r'latest patch \((\d+(?:\.\d+)+)\)')
 _BUILD_FILTER = '"name":"Added in build"'
@@ -143,14 +139,6 @@ def _archive_paths(raw: bytes, archive_dir: Path) -> tuple[str, str, Path, Path]
         raise ValueError(_NOT_A_LIST)
     copy = archive_location(archive_dir, match.group(2), match.group(3), sha256)
     return sha256, html, copy, copy.with_suffix(".json")
-
-
-def archived_saved_at(raw: bytes, archive_dir: Path) -> str | None:
-    """The save date recorded when these exact bytes were archived before, if they were (reads only)."""
-    manifest_path = _archive_paths(raw, archive_dir)[3]
-    if not manifest_path.exists():
-        return None
-    return json.loads(manifest_path.read_text(encoding="utf-8")).get("saved_at")
 
 
 def archive_bytes(raw: bytes, original_name: str, archive_dir: Path, saved_at: str | None = None,
