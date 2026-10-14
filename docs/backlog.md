@@ -91,9 +91,11 @@ As a player, I want Today to use what my characters already hold before buying, 
 
 Proposed acceptance (to confirm when refined):
 - **Holdings** come from Stock's source: the newest readable bags and bank capture per character, scope and ADDON-08 identity rules (base only; variants and unresolved links never count). Unknown banks are unknown, never empty. Captures older than `max_age_hours` are labelled stale but still used.
+- **Mailbox counts:** items waiting in a character's captured mailbox count as held, in the order bags, bank, mailbox, then vendor, then listings (the order TSM's gathering and ProfessionMaster's leveling planner both use). The Queue says *take from the mailbox* where needed.
 - **Held before bought:** a craft's materials, including intermediates such as Bolt of Linen Cloth, come from holdings first, then the cheapest listings. Held units are costed at their cautious sell value after the cut (what selling them would earn), never as free, so profit stays honest while *gold needed* falls. Proposed by Claude; confirm when refined.
 - **Who sends what:** held materials on a character other than the crafter add a Queue step to mail them, with postage still uncharged and unconfirmed.
 - **Held outputs:** catalog outputs already held appear in *Sell* with their held units, labelled as held.
+- **Team's reach cost too** (from ProfessionMaster): CRAFT-11's cost to reach a skill uses holdings first and walks the listing ladder for the whole quantity (80 Linen Cloth costs more than 80 × the cheapest), as Today does. Decide when refining whether this is part of this story or its own.
 - Today's ranking may change, so `TODAY_VERSION` increases.
 
 ### STORY-069 — Today in player terms
@@ -154,7 +156,8 @@ Added 2026-10-14 from the addon comparison (Journalator's *sale rate*: sold agai
 
 Proposed acceptance (to confirm when refined):
 - Per item and character: units posted, sold (from seller invoices), expired and cancelled (from returned mail), sale rate and average sale price after the cut, in integer copper; shown on Today's *Sell* rows and the Market item page.
-- **Decision for refinement:** a seller invoice carries the item's name but no link. Matching it to an item ID needs a rule that respects *names never decide anything*, for example matching to the same character's earlier post by name, count and price, or keeping unmatched invoices as *unidentified*. Check what the beta capture actually holds first.
+- **Matching invoices to items** (proposed 2026-10-14; TSM does the same with its *sale hints*): a seller invoice carries the item's name but no link. Match it to the same character's own post or active auction (STORY-040) with the same name, stack size and buyout, within the auction's longest duration; the post's link supplies the item ID. No match, or more than one item matching, stays *unidentified* and never counts toward any item. The name only narrows candidates; the item ID comes from a link. Check what the beta capture actually holds first.
+- **Stop after repeated expiries** (from TSM's *max expires*): an item that expired or was cancelled N times in a row for you (`max_expiries`, proposed default 3) with no sale in between gets a Today label *expired 3 times running* and a Low confidence reason.
 - This is the first slice of STORY-034's ledger; build it so the ledger can reuse it.
 
 ### STORY-034 — Movement ledger and reconciliation
@@ -354,7 +357,11 @@ Acceptance:
 - **Market for our levels** (walkthrough 2026-10-13): Market's front-page lists were dominated by Wool, Silk and Mithril-level items while the team was level 1–8. Filter or order them by the skill bands the team can reach (Team's window), with the full lists one click away.
 - **Plain identity labels** (walkthrough 2026-10-13): *base* and *unresolved* tags, and items listed twice under each, mean nothing to a player. Say *variant* or *unidentified link* only where it matters, keeping identities separate (ADDON-08).
 - **Shorter removal history** (walkthrough 2026-10-13): an item page lists every scan gap, mostly zeros. Summarise (removed early and could-have-expired totals over the comparable gaps), with each gap on demand.
-- **Vendor value as a floor** (2026-10-14, from CraftProfit's *vendor net*): for leveling crafts whose auction market is flooded, show what the output fetches from a vendor (vendor sell price × output − cost) beside the auction profit, so a craft that only breaks even at the vendor is visible.
+- **Vendor value as a floor** (2026-10-14, from CraftProfit's *vendor net* and TSM's posting rules): for leveling crafts whose auction market is flooded, show what the output fetches from a vendor (vendor sell price × output − cost) beside the auction profit. *Sell* never suggests a post price at or below the vendor price ÷ (1 − cut); it says *vendor it instead*.
+- **Buy a pattern to level cheaper** (2026-10-14, from ProfessionMaster): when a recipe item listed on the auction house would make a CRAFT-11 reach path cheaper including its price, show it as an option. Today such recipes are excluded as *needs pattern or other source*.
+- **Green recipes when much cheaper** (2026-10-14, from ProfessionMaster): allow a green recipe in a reach path only when every orange and yellow option costs more than twice as much per point, labelled as uncertain.
+- **Confirm skill-up colours from our own captures** (2026-10-14): the addon already records each recipe's difficulty in the profession window at the captured rank. Compare that with the catalog's colour ranks to confirm or contradict the Classic estimates on Forever, as evidence for the catalog (ProfessionMaster ships a Forever recipe table, but it's all rights reserved, so we gather our own).
+- **Mail and auction expiry warnings** (2026-10-14, from TSM's task list): items or gold in a captured mailbox close to its 30-day expiry, and your auctions about to end.
 - **Vendor the junk** (walkthrough 2026-10-13): Stock showed 20 of 43 held items with no price, mostly vendor trash. Suggest vendoring held items with a vendor price and no auction price, using captured vendor prices only.
 - **Best use of a material:** for an item such as Linen or Wool Cloth, compare selling it with each craft it feeds, at current prices.
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
@@ -380,7 +387,7 @@ Acceptance:
 - **Mail between your own characters:** count postage as a cost in the ledger (STORY-034), and when a plan moves materials to the character with the right profession, include that postage. The amount is a beta check under *Now*.
 
 **Deferred** (2026-10-06, from the same notes; revisit only with new evidence or a decision):
-- **In-game plan list (`PlanData.lua`):** Brownstone would write a plan file into the addon folder for an in-game to-do tab that ticks itself off. Deferred: Today on a second screen covers it, and it would make Brownstone write into the game folder (`requirements.md` → *Product direction*). If revived, the file is written only by Brownstone and read by the addon on `/reload`; it could also carry an "imported through" marker so the addon never clears what Brownstone hasn't imported.
+- **In-game plan list (`PlanData.lua`):** Brownstone would write a plan file into the addon folder for an in-game to-do tab that ticks itself off. Deferred: Today on a second screen covers it, and it would make Brownstone write into the game folder (`requirements.md` → *Product direction*). If revived, the file is written only by Brownstone and read by the addon on `/reload`; it could also carry an "imported through" marker so the addon never clears what Brownstone hasn't imported. **Still deferred (2026-10-14, product owner):** the out-of-game app is preferred. In-game profit tags and to-do lists, as in CraftProfit, ProfessionMaster and TSM, would also need files carried back from the Mac to the Windows PC, which only ever sends scans one way. Revisit only if switching screens gets in the way after launch.
 - **Capital allocation by optimisation (linear programming):** Today's greedy funded plan is honest and affordable. Revisit with sales speed and fill chance.
 - **Disenchanting outputs:** random results conflict with *Not modeled* (variable yields).
 - **Price forecasting with machine learning:** too little history and too much change after launch.
