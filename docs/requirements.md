@@ -125,6 +125,22 @@ Observed listed supply only, never sales/demand/liquidity/realizable profit or c
 - Reported rank equal to reported maximum displays *at cap: train the next tier*. Team infers no
   character-level tier requirement. This session's tier levels follow UI-12.
   Existing capture, known-recipe and unreadable-read rules remain in ADDON-11/12.
+- Reachable recipes retain CRAFT-11's order and show *Learn from* using the CRAFT-08 learning
+  label (*unknown* when missing). The best recipe tile includes *needs skill 75 · trainer*.
+  CRAFT-11's alternative adds a tile (source, profit, skill): *Pattern worth hunting* or
+  *Or learn now*. Roster, comparison and This session use the best only.
+  With no reachable recipes, skill IDs Mining 186, Herbalism 182, Skinning 393 and Fishing 356
+  show *Mining levels by gathering, not crafting* (using the group's displayed profession).
+  Other or missing skill IDs show *No catalog recipe within the next 25 points*, using the
+  selected reach window. Show the sentence in place of an empty table.
+- *How to get there* adds *pays back training in N crafts* when a recipe has a training cost:
+  divide that integer copper cost by per-craft profit, rounded up; *never* at zero or negative
+  profit, *unknown* without profit. Without a training cost, retain *cost unknown* and no payback.
+- In *Add a character?*, when every profession row's cost to 300 is incomplete, show one note
+  above the rows: *Cost to 300 is incomplete for every profession; open one to see why*;
+  omit *· cost to 300: incomplete* from those row headings. With any complete row, retain
+  individual costs. Team and new-hire cost steps use MONEY-02 formatting, *unknown* when missing,
+  and sort on integer copper, as do Team's per-craft profit columns.
 
 ### ADDON-12 Event journal
 
@@ -220,8 +236,15 @@ preserves original bytes. No third-party Lua/action automation; usage/check in a
 - **CRAFT-11 Team progression:** Team roster uses character-card rules, with Next step per profession. Default first scoped Today character, reach 25, integer slider 5–100 remembered per tab/source.
   - Attribute recipe by latest containing ID list and Today status/rank only. Rank/max from list or newer readable bags same skill ID. Missing list: recipes unknown; unlisted catalog recipes counted with open-window guidance. No names/titles. Window excludes Known, requires skill >rank and <=rank+window. Unknown marked; no trainer code 6 says needs pattern/other source.
   - Profit = newest full-market/source Board per-craft CRAFT-03/04/05; unvalued retains reason, intermediates unranked. Learning/training labels or unknown from CRAFT-08, Today confidence.
+  - Best next recipe uses two learning-source bands: learnable has any verified code 6 (trainer),
+    5 (vendor) or 4 (quest); other has everything else, including drop/unverified/missing source.
+    Best: first learnable recipe with profit > 0, else first valued recipe of any source. Drop
+    rates are uncontrollable, so keep an alternative: under a learnable best, the first valued
+    other recipe with higher profit; under an other best, the first valued learnable one.
+    Bands keep the existing order, as does the reachable list. This best feeds roster Next step, Profession comparison and UI-12's
+    profession steps/order. CRAFT-13's new-hire best remains trainer-only; Today plans are unchanged.
   - Reach cost: per rank choose cheapest attributed catalog craft that skills up and is Known or trainer-learnable by Today once skill reached. Charge training once on first use; CRAFT-03/12 team-aware materials, no sales credit. Orange one expected craft/point; yellow `(grey-rank)/(grey-yellow)` is unconfirmed Classic estimate. Green/grey excluded. Round expected material copper up per point; training integer. Gap/missing price/color/required training cost means incomplete with reason, never free. Stop at cap, crossing says train next tier first; still list beyond-cap window recipes.
-  - Compare profession rank/max, highest window per-craft profit, points/cost/profit. Sort profit descending, complete before incomplete ties, cost ascending; retain incomplete. Label current-scan not forecast, speed/demand unknown, beta/estimated yellow.
+  - Compare profession rank/max, best next recipe's window per-craft profit, points/cost/profit. Sort profit descending, complete before incomplete ties, cost ascending; retain incomplete. Label current-scan not forecast, speed/demand unknown, beta/estimated yellow.
 
 - **CRAFT-12 Crafting across professions:** combine full-market/game/rules-compatible catalogs in graph. Recipe IDs unique or refuse naming both catalogs; keep catalog/profession/qualified board rows. Local eligibility unchanged; other-catalog materials craft only for scoped Known/Train now maker, otherwise buy with no-one-makes-this label. No character evidence = catalog-local costs.
   - Multiple valid makers compete on crafted unit cost; equal lower catalog identity, show profession. CRAFT-03 routes/CRAFT-02 cycle/fractional rejection unchanged.

@@ -86,14 +86,21 @@ Acceptance:
 
 ### STORY-070 — Team's next recipe you can actually learn
 
-Added 2026-10-13 from the walkthrough. Arille's best next Cooking recipe was Peace Tea, which needs a recipe drop (Low confidence), while trainer and quest recipes were within reach.
+Added 2026-10-13 from the walkthrough. Arille's best next Cooking recipe was Peace Tea, which needs a recipe drop (Low confidence), while trainer and quest recipes were within reach. Refined 2026-10-15 against the code: CRAFT-11's `group['best']` (`progression._populate`) is the first valued recipe in profit order, whatever its source.
+
+As a player, I want Team's next step to be a recipe I can go and learn, so that I don't chase a drop when a trainer recipe is nearly as good.
 
 Acceptance:
-- **Best next recipe** prefers recipes the character can learn from a trainer, vendor or quest, then drops and unknown sources; within each, the current CRAFT-11 order. The full list keeps every recipe, with its source.
-- **Gathering professions** (Mining, Herbalism, Skinning, Fishing) with no craftable catalog recipe in reach say *levels by gathering* instead of an empty *No data available* table.
-- **Profession comparison:** when every cost to 300 is incomplete, say so once at the top instead of on every row.
-- **Training payback** (added 2026-10-14 from CraftProfit): beside each recipe that needs training, how many crafts at its current per-craft profit pay back the training cost (rounded up); *never* when the profit is zero or negative, *unknown* when the cost or profit is.
-- Today's plan, ranking and versions unchanged.
+- **Best next recipe** (`group['best']`): two bands by `learned_from`, using the verified codes in `recipe_catalogs.LEARNING_LABELS`. *Learnable* means any of 6 (trainer), 5 (vendor) or 4 (quest); everything else (2 drop, other codes, no source) is *other*. The best is the first learnable recipe with profit above zero, in the current `summary_sort` order; with none, the first valued recipe whatever its source. *Revised 2026-10-15 in review:* drop rates can't be controlled, so the other route shows as `group['alternative']` (*Pattern worth hunting* or *Or learn now*; rule in CRAFT-11). The *Reachable recipes* list keeps every recipe in the current order and gains a *Learn from* column (`learning_label`, *unknown* when missing). The *Best next recipe* tile's note adds the source: *needs skill 75 · trainer*.
+  - It flows wherever `group['best']` is used: the roster card's *Next step*, *Profession comparison* and Today's *This session* profession steps and order (`session_options`). Say so in the report; nothing else in Today changes.
+  - CRAFT-13's *Add a character?* keeps its own trainer-only best; don't touch `hiring.py`'s selection.
+- **Gathering professions:** a profession group with no reachable recipe and a skill ID of Mining 186, Herbalism 182, Skinning 393 or Fishing 356 (reuse `hiring.SKILL_IDS`; never decide by name) shows *Mining levels by gathering, not crafting* in place of the *Reachable recipes* table. Any other group with no reachable recipe shows *No catalog recipe within the next 25 points* (the current window) in place of the table. No empty table with *No data available* on the Team page. A missing skill ID gets the generic sentence.
+- **Add a character? costs:** when every row's cost to 300 is incomplete, one note above the rows, *Cost to 300 is incomplete for every profession; open one to see why*, and the rows drop *· cost to 300: incomplete*. When any row is complete, rows stay as now. The new-hire *Cost steps* table shows money through `money.format_money` (*unknown* when missing, sorted by copper), as STORY-069 did for Today's tables, replacing the `toFixed(4)` gold columns.
+- **Training payback** (from CraftProfit): in *How to get there*, for each recipe with `training_cost_copper`, *pays back training in N crafts*: training cost ÷ per-craft profit, rounded up; *never* when profit is zero or negative; *unknown* when profit is missing. A recipe without a training cost shows nothing extra (training cost unknown stays *cost unknown* as now).
+- **Unchanged:** `build_today` results and `TODAY_VERSION`, Board ranking, CRAFT-11 reach-cost estimates, and hiring summaries. Add a test that `build_today`'s plan is identical on the existing fixtures.
+- **Offline tests:** a drop recipe with higher profit loses to a lower-profit trainer recipe; quest and vendor count as learnable; the drop wins when no learnable recipe is valued; an unvalued trainer recipe doesn't block the fallback; the *Learn from* column and tile note; a gathering group (by skill ID) and a non-gathering empty group each show their sentence and no table; a gathering name without a skill ID gets the generic sentence; the all-incomplete note and its absence when one row is complete; formatted money in the new-hire cost steps; payback rounding up, *never* at zero and negative profit, *unknown* without profit.
+- **Real data** (Forever beta source): report each character's best next recipe per profession before and after, with its source, and what Arille's Cooking now shows; which gathering groups show the sentence; whether *Add a character?* shows the all-incomplete note.
+- **Docs:** the bands under CRAFT-11 and the gathering/payback/note wording under the Team page in `requirements.md`; `status.md`.
 
 ### STORY-071 — Vendor price lists (addon, read-only)
 

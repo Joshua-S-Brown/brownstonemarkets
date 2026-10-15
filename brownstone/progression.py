@@ -5,6 +5,7 @@ from math import ceil
 from . import action_board, professions, today_characters
 from .crafting import basis_prices, evaluate_recipe
 from .markets import MARKET_KEYS
+from .recipe_catalogs import LEARNING_LABELS
 from .recipe_graph import RecipeGraph, route_catalog
 from .today import Ladder, _quote, _sell
 from .today_confidence import confidence, route_notes
@@ -116,7 +117,7 @@ def _groups(catalogs, state):
     for name, record in state['recipes'].items():
         rank, maximum = today_characters.profession_rank(state, record)
         groups[name] = {'profession': name, 'rank': rank, 'max_rank': maximum, 'entries': [], 'recipes': [],
-                        'note': ''}
+                        'note': '', 'skill_id': today_characters._skill_id(record['known_recipes'])}
     _add_unknown_skills(groups, state)
     for catalog in catalogs:
         identity = action_board.catalog_identity(catalog)
@@ -142,7 +143,7 @@ def _add_unknown_skills(groups, state):
         name = row['name']
         key = name if name not in groups else f"{name} (skill {row['skill_id']})"
         groups[key] = {'profession': name, 'rank': row['rank'], 'max_rank': row['max_rank'],
-                       'entries': [], 'recipes': [], 'note': 'recipes unknown'}
+                       'entries': [], 'recipes': [], 'note': 'recipes unknown', 'skill_id': row['skill_id']}
 
 
 def summary_sort(row):
@@ -205,8 +206,24 @@ def _populate(group, state, rows, prices, board, window, ladders, metrics, max_a
             'needs_pattern': 6 not in recipe.get('learned_from', []), 'estimate': estimate,
             **_confidence(catalog, recipe, row, board, ladders, metrics, max_age_hours, auction_cut)})
     group['recipes'].sort(key=lambda r: summary_sort({'best': r, 'profession': group['profession']}))
-    group['best'] = next((r for r in group['recipes'] if r['profit_copper'] is not None), None)
+    group['best'], group['alternative'] = choose_best(group['recipes'])
     del group['entries']
+
+
+def learnable(recipe):
+    """CRAFT-11: a verified trainer, vendor or quest source can be acted on now; drops can't be controlled."""
+    return any(LEARNING_LABELS.get(code) in ('trainer', 'vendor', 'quest') for code in recipe.get('learned_from', []))
+
+
+def choose_best(recipes):
+    """CRAFT-11 bands over recipes already in summary order: (best, the other route or None)."""
+    valued = [r for r in recipes if r['profit_copper'] is not None]
+    best = next((r for r in valued if learnable(r) and r['profit_copper'] > 0), next(iter(valued), None))
+    if best is None:
+        return None, None
+    if learnable(best):
+        return best, next((r for r in valued if not learnable(r) and r['profit_copper'] > best['profit_copper']), None)
+    return best, next((r for r in valued if learnable(r)), None)
 
 
 def _routed_entries(entries, prices, graph):

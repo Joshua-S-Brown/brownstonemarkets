@@ -272,3 +272,75 @@ def test_per_craft_profit_honours_output_quantity_and_material_units():
     c['recipes_by_id'][31].update(output_quantity=2, inputs=[{'item_id': 1, 'quantity': 3}])
     row = next(r for r in rows(calculate(c)) if r['recipe_id'] == 31)
     assert row['profit_copper'] == 380 - 30  # Two 200c outputs after 5% cut; three 10c materials.
+
+
+@pytest.mark.parametrize('codes', [[6], [5], [4], [2, 4]])
+def test_learnable_band_beats_more_profitable_drop_without_reordering_list(codes):
+    c = progression_catalog()
+    c['recipes_by_id'][31]['learned_from'] = [2]
+    c['recipes_by_id'][33]['learned_from'] = codes
+    observations = {1: {'min_buyout': 10}, 131: {'min_buyout': 1000}, 133: {'min_buyout': 200}}
+    group = calculate(c, observations=observations)['professions'][0]
+    assert [r['recipe_id'] for r in group['recipes']] == [31, 33]
+    assert group['recipes'][0]['profit_copper'] > group['best']['profit_copper']
+    assert group['best'] is group['recipes'][1]
+    assert group['alternative'] is group['recipes'][0]  # The better pattern stays visible to hunt.
+
+
+@pytest.mark.parametrize('codes,priced', [([6], False), ([2], True), ([99], True), ([], True)])
+def test_other_band_fallback_including_unvalued_trainer(codes, priced):
+    c = progression_catalog()
+    c['recipes_by_id'][31]['learned_from'] = [2]
+    c['recipes_by_id'][33]['learned_from'] = codes
+    observations = {1: {'min_buyout': 10}, 131: {'min_buyout': 1000}}
+    if priced:
+        observations[133] = {'min_buyout': 200}
+    group = calculate(c, observations=observations)['professions'][0]
+    assert group['best']['recipe_id'] == 31
+    assert group['alternative'] is None
+    if not priced:
+        assert group['recipes'][1]['profit_copper'] is None
+
+
+def test_band_keeps_summary_sort_and_loss_making_learnable_becomes_alternative():
+    c = progression_catalog()
+    c['recipes_by_id'][31]['learned_from'] = [2]
+    c['recipes_by_id'][32]['learned_from'] = [5]
+    c['recipes_by_id'][33]['learned_from'] = [4]
+    observations = {1: {'min_buyout': 10}, 131: {'min_buyout': 1000},
+                    132: {'min_buyout': 40}, 133: {'min_buyout': 30}}
+    group = calculate(c, observations=observations, window=26)['professions'][0]
+    assert group['best']['recipe_id'] == 32
+    assert group['best']['profit_copper'] == 8
+    assert group['alternative']['recipe_id'] == 31
+    observations[132] = {'min_buyout': 20}
+    group = calculate(c, observations=observations, window=26)['professions'][0]
+    assert group['best']['recipe_id'] == 31  # No profitable learnable recipe: the drop leads.
+    assert group['alternative']['recipe_id'] == 33 and group['alternative']['profit_copper'] < 0
+    observations[133] = {'min_buyout': 32}  # floor(32 * .95) - 30 = 0.
+    group = calculate(c, observations=observations, window=26)['professions'][0]
+    assert group['best']['recipe_id'] == 31
+    assert group['alternative']['recipe_id'] == 33 and group['alternative']['profit_copper'] == 0
+
+
+def test_groups_carry_evidenced_skill_ids_without_name_inference():
+    data = evidence()
+    data['bags'] = {'skills': {'modern': {'rows': [
+        {'name': 'Unrelated title', 'skill_id': 186, 'rank': 3, 'max_rank': 75}]}}}
+    groups = calculate(data=data)['professions']
+    assert {g['profession']: g['skill_id'] for g in groups} == {'Arbitrary title': 197, 'Unrelated title': 186}
+    data['recipes']['Arbitrary title']['known_recipes'].pop('skill_id')
+    assert next(g for g in calculate(data=data)['professions'] if g['recipes'])['skill_id'] is None
+
+
+def test_today_plan_identical_to_before_story070():
+    import json
+    from pathlib import Path
+
+    from test_today import plan
+
+    from brownstone.today import TODAY_VERSION
+
+    before = json.loads((Path(__file__).parent / 'fixtures/today_story070.json').read_text())
+    assert json.loads(json.dumps(plan(), default=str)) == before
+    assert TODAY_VERSION == before['today_version'] == 12

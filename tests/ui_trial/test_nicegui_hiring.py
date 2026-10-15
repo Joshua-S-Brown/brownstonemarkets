@@ -46,8 +46,8 @@ async def test_team_hiring_lazy_detail_labels_and_repeat_open(user, tmp_path, mo
     user.find('Cost steps to 75').click()
     await user.should_see('New hire cost steps')
     table = next(e for e in user.find(ui.table).elements if 'New' in e._markers)
-    assert table.rows[0]['Cost (g)'] == .015  # 2 × 20c material + 10c vendor + 100c training.
-    assert table.rows[0]['Training (g)'] == .01
+    assert table.rows[0]['Cost'] == '1s 50c'  # 2 × 20c material + 10c vendor + 100c training.
+    assert table.rows[0]['Training'] == '1s'
 
 
 async def test_team_hiring_without_characters_and_without_scan(user, tmp_path, monkeypatch):
@@ -97,3 +97,63 @@ async def test_hiring_feed_savings_and_primary_comparison_display(user):
     user.find(marker='hire-mining').trigger('update:modelValue', True)
     await user.should_see('What it feeds: 1 current team board rows become cheaper')
     await user.should_see('Copper Bar → Craft 20 · 2s 70c saved per craft')
+
+
+@pytest.mark.parametrize('one_complete', [False, True])
+async def test_all_incomplete_note_and_row_cost_suppression(user, tmp_path, monkeypatch, one_complete):
+    team_app(tmp_path, monkeypatch)
+    original = hiring.summaries
+
+    def summaries(context, **kwargs):
+        result = original(context, **kwargs)
+        if one_complete:
+            result['rows'][0]['estimate'] = {'complete': True, 'cost_copper': 150}
+        return result
+
+    monkeypatch.setattr(hiring, 'summaries', summaries)
+    await user.open('/?place=Team')
+    await user.should_see('Instead of a new hire')
+    note = 'Cost to 300 is incomplete for every profession; open one to see why'
+    labels = [e._props['label'] for e in user.find(ui.expansion).elements
+              if any(m.startswith('hire-') for m in e._markers)]
+    assert labels
+    if one_complete:
+        await user.should_not_see(note)
+        assert any('cost to 300: 1s 50c' in label for label in labels)
+        # With a mixture, the other incomplete rows still disclose their costs.
+        with user.client:
+            from views.nicegui_team import hiring_row
+            hiring_row({}, {'profession': 'cooking', 'holders': [], 'best': None,
+                            'estimate': {'complete': False, 'cost_copper': None}})
+        await user.should_see('cost to 300: incomplete')
+    else:
+        await user.should_see(note)
+        assert all('cost to 300:' not in label for label in labels)
+
+
+async def test_hire_steps_money_unknown_and_copper_sort(user):
+    from views.nicegui_team import hiring_detail
+
+    @ui.page('/hire-money')
+    def page():
+        hiring_detail({'needs_pattern': 0, 'unknown_source': 0, 'tiers': [
+            {'cap': 75, 'required_level': None, 'best': None, 'tier_fees': 'unknown',
+             'feeds': {'count': 0, 'top': []}, 'estimate': {'complete': False, 'reasons': ['missing'], 'steps': [
+                 {'rank': 1, 'recipe': 'A', 'expected_crafts': '1', 'cost_copper': 10000,
+                  'training_cost_copper': 101},
+                 {'rank': 2, 'recipe': 'B', 'expected_crafts': '1', 'cost_copper': 200,
+                  'training_cost_copper': None},
+                 {'rank': 3, 'recipe': 'C', 'expected_crafts': '1', 'cost_copper': None,
+                  'training_cost_copper': 0}]}}]})
+
+    await user.open('/hire-money')
+    table = next(e for e in user.find(ui.table).elements if 'New' in e._markers)
+    assert [(r['Cost'], r['Training']) for r in table.rows] == [
+        ('1g', '1s 1c'), ('2s', 'unknown'), ('unknown', '0c')]
+    assert [r['Cost_copper'] for r in table.rows] == [10000, 200, None]
+    assert [r['Training_copper'] for r in table.rows] == [101, None, 0]
+    for label in ('Cost', 'Training'):
+        column = next(c for c in table.columns if c['label'] == label)
+        assert f'rowA["{label}_copper"]' in column[':sort']
+        assert column['sortable']
+    assert 'toFixed' not in str(table.slots)

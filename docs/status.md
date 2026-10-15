@@ -42,6 +42,20 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Classic scope, source-aware merging, hiring, malformed tables and report output.
 - **Team:** captured roster/history, recipe evidence, reach estimates and hiring comparison
   (CRAFT-11/13). One board shared across characters/hiring; detail loads on demand.
+  STORY-070 chooses a profitable learnable next recipe before other sources and shows the other
+  route as an alternative tile ([CRAFT-11](requirements.md#crafting)); the best flows into
+  This session; reachable order and Today plans stay unchanged. Source labels, skill-ID-based
+  empty states, training payback and consolidated incomplete hire costs follow
+  [Team character-card rules](requirements.md#team-character-cards).
+  Team and hire cost steps and Team profit columns display money with copper sorting. Offline checks are in
+  `test_progression.py`, `test_session_options.py` and the Team/hiring NiceGUI tests;
+  `fixtures/today_story070.json` preserves the full pre-change Today fixture, including version 12.
+  On the imported Forever beta scan `20261015T124940Z-2ef70d`, Arille's Cooking best stays
+  Tasty Raptor Bites (drop, 194c) with *Or learn now* Spiced Wolf Meat (trainer, −45c); Basilly's
+  Tailoring best is Blue Linen Vest (vendor, 479c) with *Pattern worth hunting* Red Linen Robe
+  (unverified codes 16/21, 894c). Training costs are unknown. Arille's Fishing and Keenagen's
+  Mining show gathering sentences; all nine hire estimates to 300 are incomplete. Checked through
+  the native NiceGUI test user against a copy of `data/`; no new evidence imported.
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
   Item pages lead with a base-item decision summary, scoped holdings and own item farming evidence;

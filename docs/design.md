@@ -503,15 +503,21 @@ and lists observed NPC IDs without any captured name. No storage migration, new 
 
 ## Team contracts
 
-Rules: CRAFT-11/13 and Team character cards. nicegui_team reads shared load_today_characters and
+Rules: [CRAFT-11/13](requirements.md#crafting) and [Team character cards](requirements.md#team-character-cards).
+nicegui_team reads shared load_today_characters and
 load_today snapshot/evidence, using tab/source character/window state. Cards select; reach slider
 commits on release. Tiles/reachable recipes lead; steps/history/comparison/provenance on demand.
 Without scan, roster remains readable and pricing explains missing evidence.
 
 `progression.team_board` builds team RecipeGraph/Board once, shared across character progression
-and `hiring.prepare(shared=...)`. build_progression returns profession rank/max/note, recipes/best,
+and `hiring.prepare(shared=...)`. build_progression returns profession rank/max/note/evidenced skill ID, recipes/best,
 unlisted counts/freshness; recipe rows retain Today status/learning/profit/reason/confidence and
 estimate complete/copper/reasons/per-point steps. Unknown stays unknown.
+`progression.choose_best` picks best and the other-band alternative (CRAFT-11) without reordering recipes;
+`session_options` retains that recipe identity while projecting its labelled estimate.
+Team's empty states use the group skill ID and `hiring.SKILL_IDS`; learning labels use
+`recipe_catalogs.learning_label`. Payback and hiring cost disclosures follow Team character-card rules;
+new-hire money cells retain hidden copper fields for the shared table's numeric sort.
 Attribution uses Today's exact ID/rank matcher; planned_rank changes rank check only.
 evaluate_recipe supplies team-aware cautious material costs, including unranked intermediates;
 expected_crafts/estimate_cost use exact rational yellow expectations. One skillup_walk/window/cap

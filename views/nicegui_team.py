@@ -6,7 +6,7 @@ from nicegui import app, ui
 
 from brownstone import hiring, progression
 from brownstone.characters import build_characters
-from brownstone.money import format_money, to_gold
+from brownstone.money import format_money
 from brownstone.progression import build_progression
 from brownstone.recipe_catalogs import learning_label
 from brownstone.tier_levels import fallback_label
@@ -107,10 +107,11 @@ def summary_rows(result):
              'Points needed': g['best']['points_needed'] if g['best'] else None,
              'Estimated cost': estimate_text(g['best']['estimate']) if g['best'] else g['note'] or 'unavailable',
              'Profit per craft': money(g['best']['profit_copper']) if g['best'] else 'unavailable',
+             'Profit per craft_copper': g['best']['profit_copper'] if g['best'] else None,
              'Next step': next_step(g)} for g in result['professions']]
 
 
-def progression_detail(result):
+def progression_detail(result, window=25):
     for group in result['professions']:
         with ui.column().classes('w-full'):
             ui.label(group['profession']).classes('text-xl font-bold')
@@ -118,24 +119,64 @@ def progression_detail(result):
             if best:
                 with ui.element('div').classes('bs-tiles'):
                     theme.tile('Best next recipe', best['name'], compact=True,
-                               note=f"needs skill {best['required_skill']}")
+                               note=f"needs skill {best['required_skill']} · {learning_label(best)}")
                     theme.tile('Points to go', str(best['points_needed']))
                     theme.tile('Cost to get there', estimate_text(best['estimate']), note='estimate · no sales credit')
                     theme.tile('Then earns', money(best['profit_copper']), profit=True,
                                note="per craft at today's prices")
-            table(reachable_rows(group), label='Reachable recipes')
+                    alternative_tile(best, group.get('alternative'))
+            if group['recipes']:
+                table(reachable_rows(group), label='Reachable recipes')
+            else:
+                gathering = {hiring.SKILL_IDS[name] for name in ('mining', 'herbalism', 'skinning', 'fishing')}
+                ui.label(f"{group['profession']} levels by gathering, not crafting"
+                         if group.get('skill_id') in gathering
+                         else f'No catalog recipe within the next {window} points')
             if group['note']:
                 ui.label(group['note'])
             with ui.expansion('How to get there'):
                 recipe_details(group)
-    with ui.expansion('Profession comparison'):
-        table(summary_rows(result), label='Profession summary')
+    if result['professions']:
+        with ui.expansion('Profession comparison'):
+            table(summary_rows(result), label='Profession summary')
+
+
+def alternative_tile(best, alternative):
+    """CRAFT-11's other route: a better pattern to look for, or a recipe to learn now while hunting one."""
+    if alternative is None:
+        return
+    title = 'Or learn now' if progression.learnable(alternative) else 'Pattern worth hunting'
+    hint = ('reliable while you look for the pattern' if progression.learnable(alternative)
+            else 'look for the pattern on the auction house or farm it; drops are not guaranteed')
+    theme.tile(title, alternative['name'], compact=True,
+               note=f"{learning_label(alternative)} · {money(alternative['profit_copper'])} per craft · "
+                    f"needs skill {alternative['required_skill']} · {hint}")
 
 
 def reachable_rows(group):
     return [{'Recipe': r['name'], 'Skill': r['required_skill'], 'Points': r['points_needed'],
-             'Earns per craft': money(r['profit_copper']), 'Cost to reach': estimate_text(r['estimate']),
-             'Status': learning_label(r), 'Confidence': r['confidence']} for r in group['recipes']]
+             'Earns per craft': money(r['profit_copper']), 'Earns per craft_copper': r['profit_copper'],
+             'Cost to reach': estimate_text(r['estimate']),
+             'Learn from': learning_label(r), 'Confidence': r['confidence']} for r in group['recipes']]
+
+
+def cost_step_rows(steps):
+    """Money columns keep hidden copper for the shared table's numeric sort."""
+    return [{'Rank': s['rank'], 'Recipe': s['recipe'], 'Expected crafts': s['expected_crafts'],
+             'Cost_copper': s['cost_copper'], 'Cost': money(s['cost_copper']),
+             'Training_copper': s['training_cost_copper'], 'Training': money(s['training_cost_copper'])}
+            for s in steps]
+
+
+def training_payback(recipe):
+    training, profit = recipe.get('training_cost_copper'), recipe['profit_copper']
+    if not training:
+        return ''
+    if profit is None:
+        return ' · pays back training: unknown'
+    if profit <= 0:
+        return ' · pays back training: never'
+    return f' · pays back training in {(training + profit - 1) // profit} crafts'
 
 
 def recipe_details(group):
@@ -148,11 +189,14 @@ def recipe_details(group):
         ui.label(f"Profit per craft: {money(recipe['profit_copper'])} · {recipe['board_reason']} · "
                  f"{recipe['confidence']} confidence · {'; '.join(recipe['confidence_reasons'])}")
         training = (money(recipe.get('training_cost_copper'))
-                    if recipe.get('training_cost_copper') else 'cost unknown')
-        ui.label(f"Learning: {learning_label(recipe)} · Training: {training}")
+                    if recipe.get('training_cost_copper') is not None else 'cost unknown')
+        ui.label(f"Learning: {learning_label(recipe)} · Training: {training}" + training_payback(recipe))
         ui.label(f"Estimated cost: {estimate_text(recipe['estimate'])}")
         with ui.expansion('Cost steps'):
-            table(recipe['estimate']['steps'], label='Cost steps')
+            if recipe['estimate']['steps']:
+                table(cost_step_rows(recipe['estimate']['steps']), label='Cost steps')
+            else:
+                ui.label('No cost steps available.')
 
 def render(config, catalogs):
     data, warning = load_today_characters(config)
@@ -220,7 +264,7 @@ def render(config, catalogs):
                     result = results[identities[int(choice.value)]]
                     info[0] = lambda: estimates_info(result, config, arguments, cards)
                     route_warnings(result)
-                    progression_detail(result)
+                    progression_detail(result, int(slider.value))
 
     info = [lambda: team_info_unavailable(config, cards)]
     theme.info_button('How these estimates work', lambda: info[0]())
@@ -320,10 +364,13 @@ def hiring_section(catalogs, data, arguments, *, window=25, shared=None):
         freshness_caption(context['board']['freshness'], arguments['market'], banner=False)
     for warning in context['catalog_warnings']:
         ui.label(warning).classes('bs-note')
+    all_incomplete = bool(result['rows']) and all(not row['estimate']['complete'] for row in result['rows'])
+    if all_incomplete:
+        ui.label('Cost to 300 is incomplete for every profession; open one to see why').classes('bs-note')
     with ui.element('div').classes('bs-details'):
         with ui.column().classes('w-full'):
             for row in result['rows']:
-                hiring_row(context, row)
+                hiring_row(context, row, show_cost=not all_incomplete)
             for name in result['no_catalog']:
                 ui.label(hiring.profession_title(name) + ' · ' + hiring.NO_CATALOG).classes('bs-note')
         card = ui.card().classes('bs-card')
@@ -357,12 +404,12 @@ def hiring_comparisons(comparisons, window):
         ui.label('No character has two evidenced primary professions.')
 
 
-def hiring_row(context, row):
+def hiring_row(context, row, *, show_cost=True):
     name = hiring.profession_title(row['profession'])
     best = row['best']
     cost = money(row['estimate']['cost_copper']) if row['estimate']['complete'] else 'incomplete'
     label = (name + ' · best at 300: ' + money(best['profit_copper'] if best else None)
-             + ' per craft · cost to 300: ' + cost)
+             + ' per craft' + (' · cost to 300: ' + cost if show_cost else ''))
     holders = ('Team: ' + ('; '.join(' · '.join(h['character']) +
                f" · {h['rank'] if h['rank'] is not None else 'unknown'} / "
                f"{h['max_rank'] if h['max_rank'] is not None else 'unknown'}" for h in row['holders'])
@@ -400,10 +447,7 @@ def hiring_detail(result):
         for saving in feeds['top']:
             ui.label(f"{saving['material']} → {saving['recipe']} · {money(saving['saved_copper'])} saved per craft")
         with ui.expansion('Cost steps to ' + str(tier['cap'])):
-            steps = table([{'Rank': s['rank'], 'Recipe': s['recipe'], 'Expected crafts': s['expected_crafts'],
-                            'Cost (g)': to_gold(s['cost_copper']),
-                            'Training (g)': to_gold(s['training_cost_copper'])}
-                           for s in tier['estimate']['steps']], label='New hire cost steps')
-            for column in ('Cost (g)', 'Training (g)'):
-                steps.add_slot('body-cell-' + column, '<q-td :props="props">'
-                               '{{ props.value === null ? "unknown" : Number(props.value).toFixed(4) }}</q-td>')
+            if tier['estimate']['steps']:
+                table(cost_step_rows(tier['estimate']['steps']), label='New hire cost steps')
+            else:
+                ui.label('No cost steps available.')

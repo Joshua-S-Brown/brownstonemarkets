@@ -146,7 +146,9 @@ def _label_character(character, rows, levels, game_version):
         recipes = [r | {'estimate': _label_estimate(r['estimate'], rows)} for r in group['recipes']]
         groups.append(group | {'recipes': recipes, 'milestones': milestones(recipes),
                                'tier': next_tier(group, character['level'], levels, game_version),
-                               'best': next((r for r in recipes if r['profit_copper'] is not None), None)})
+                               'best': next((r for r in recipes if group['best'] is not None and
+                                             (r['catalog_id'], r['recipe_id']) ==
+                                             (group['best']['catalog_id'], group['best']['recipe_id'])), None)})
     result = character | {'crafts': crafts, 'professions': sorted(groups, key=profession_order),
                           'craft_profit_copper': sum(r['headline_profit_copper'] for r in crafts)}
     return result | {'next_steps': next_steps(result)}

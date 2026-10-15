@@ -309,3 +309,19 @@ def test_forever_composition_loads_once_and_preserves_plan(monkeypatch):
     assert result['characters'][0]['professions'][0]['tier']['source'] == 'classic_fallback'
     assert 'Levels from captured Forever trainer lists' in result['tier_explanation']
     assert (args, plan) == original
+
+
+def test_session_uses_learnable_best_and_its_profit_order_without_changing_plan(monkeypatch):
+    args = arguments()
+    c = args['catalogs'][0]
+    c['recipes_by_id'][31]['learned_from'] = [2]
+    args['observations'][131] = {'min_buyout': 1000}
+    result, _, _ = compose(monkeypatch, args)
+    character = result['characters'][0]
+    group = character['professions'][0]
+    assert group['recipes'][0]['recipe_id'] == 31
+    assert group['best']['recipe_id'] == 33
+    step = next(s for s in character['next_steps'] if s['kind'] == 'level_profession')
+    assert step['recipe']['recipe_id'] == 33
+    competitor = group | {'profession': 'Another', 'best': group['best'] | {'profit_copper': 200}}
+    assert sorted([group, competitor], key=profession_order) == [competitor, group]
