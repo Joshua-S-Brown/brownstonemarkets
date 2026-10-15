@@ -1,0 +1,24 @@
+{
+  "login_at": 1791639682,
+  "sequence": 1066,
+  "arguments": {
+    "n": 0
+  },
+  "windows": {
+    "mailbox": true,
+    "auction_house": true
+  },
+  "captured_at": 1791639791,
+  "event": "BAG_UPDATE_DELAYED",
+  "item_changes": {
+    "2589": -5
+  },
+  "family": "bags",
+  "character": "Fixture",
+  "addon_version": "0.11.1",
+  "entry_id": "fixture:1066",
+  "captured_at_utc": "2026-10-10T13:43:11Z",
+  "session_time": 1904570.013,
+  "faction": "Alliance",
+  "realm": "Fixture Realm"
+}

@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import duckdb
 
-from . import analysis, farming, flood_signals, removed_listings, scan_changes
+from . import analysis, farming, flood_signals, removed_listings, sales, scan_changes
 from .action_board import catalog_identity, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices, evaluate_recipe
 from .freshness import assess
@@ -213,7 +213,13 @@ def item_summary(config, result, page, now):
     metrics = base_signal(page['metrics'], page['item_id']) or {}
     held, warning = _load_holdings(config, now)
     totals, _, captures, units = held or ({}, {}, [], [])
-    return {'observed': observed, 'metrics': metrics, 'signal': signal, 'floods': floods,
+    try:
+        own_sales, sales_error = sales.load(config), None
+    except Exception as error:  # A sales read failure keeps the rest of the summary, like floods.
+        own_sales, sales_error = {'items': [], 'unidentified': 0}, str(error)
+    return {'your_sales': [r for r in own_sales['items'] if r['item_id'] == page['item_id']],
+            'unidentified_sales': own_sales['unidentified'], 'sales_error': sales_error,
+            'observed': observed, 'metrics': metrics, 'signal': signal, 'floods': floods,
             'floods_error': floods_error,
             'held': totals.get((page['item_id'], None, 'base'), 0) if captures else None,
             'captures': captures,

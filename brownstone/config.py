@@ -19,6 +19,7 @@ NEUTRAL_AUCTION_CUT = 0.15
 
 FLOOD_DEFAULTS = {
     'flood_contested_listings': 10, 'flood_thin_listings': 2, 'flood_churn_percent': 50,
+    'max_expiries': 3,
     'flood_window_days': 7, 'flood_min_days': 3, 'flood_cheap_percent': 60, 'flood_high_percent': 150,
 }
 
@@ -65,6 +66,7 @@ class Source(TypedDict):
     flood_thin_listings: int
     flood_churn_percent: int
     flood_window_days: int
+    max_expiries: int
     flood_min_days: int
     flood_cheap_percent: int
     flood_high_percent: int

@@ -45,7 +45,8 @@ def table(rows, *, label, row_key='id'):
                   'Batch profit', 'Profit per craft', 'Profit basis', 'Confidence'],
         'Sell': ['Output', 'State', 'Batch', 'Held units', 'Held by', 'Held value', 'Warnings',
                  'Lowest competing unit', 'Listings', 'Units',
-                 'Undercut unit', 'Deposit', 'Profit at undercut for batch', 'Thin', 'Confidence', 'Reasons'],
+                 'Undercut unit', 'Deposit', 'Profit at undercut for batch', 'Your sales',
+                 'Thin', 'Confidence', 'Reasons'],
         'Buy': ['Material', 'State', 'Route', 'For', 'Required units', 'Purchased units', 'Cost',
                 'Highest unit price', 'Cheap now'],
     }.get(label, keys)
@@ -519,6 +520,7 @@ def craft_card(row, sell, config=None):
                              f": {step['crafts']} crafts").style(
                         f"margin-left: {step['depth']}rem")
             with ui.column().classes('gap-2'):
+                ui.label('Your sales · ' + tr.sales_text(sell.get('your_sales')))
                 profit = sell['undercut_batch_profit_copper']
                 ui.label(f"Where to sell · Auction house · Sell at "
                          f"{format_money(price) if price is not None else 'unavailable'} · "

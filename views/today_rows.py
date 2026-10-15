@@ -84,7 +84,7 @@ def sell_row(row):
             "Undercut unit (g)": row["undercut_copper"], "Price step": row.get("price_step", "1c"),
             "Profit at undercut for batch (g)": row["undercut_batch_profit_copper"],
             "Deposit_copper": row.get("deposit_copper"), "Deposit": sell_deposit(row),
-            "Thin": row["thin"], "Warnings": warning_fields(row),
+            "Your sales": sales_text(row.get("your_sales")), "Thin": row["thin"], "Warnings": warning_fields(row),
             **held_output_columns(row), **_confidence_columns(row), "State": state(row)})
 
 
@@ -288,3 +288,12 @@ def warning_text(fields):
 
 def money_text(value):
     return format_money(value) if value is not None else 'unknown'
+
+
+def sales_text(row):
+    if not row or not row['resolved']:
+        return 'none resolved yet'
+    text = f"{row['sold']} of {row['resolved']} sold"
+    if row['average_copper'] is not None:
+        text += f" · {format_money(row['average_copper'])} each after cut"
+    return text

@@ -28,6 +28,7 @@ def markdown(report: dict) -> str:
                   'NPC IDs still unnamed: ' + (', '.join(map(str, capture['unnamed_npc_ids'])) or 'none') + '.']
     lines += _scan_attempts(report.get("scan_attempts", {}))
     lines += _vendor_prices(report.get("vendor_prices", {}))
+    lines += _your_sales(report.get("your_sales"))
     lines += _trainer_tiers(report.get("trainer_tiers", {}))
     lines += ["", "## Gold display", ""]
     for character in report.get("characters", []):
@@ -131,4 +132,23 @@ def _trainer_tiers(section):
         lines.append('| ' + ' | '.join('unknown' if row[k] is None else _cell(row[k]) for k in (
             'profession', 'tier', 'required_level', 'required_skill', 'cost_copper', 'character',
             'captured_utc', 'entry_id')) + ' |')
+    return lines
+
+
+def _your_sales(section):
+    if section is None:
+        return []
+    lines = ['', '## Your sales', '']
+    for row in section['posts']:
+        lines.append(f"- {_cell(row['character'][0])} · {_cell(row['entry_id'])}: "
+                     f"{'confirmed' if row['confirmed'] else 'unconfirmed'} · item {row['item_id']} · "
+                     f"{row['quantity']} units · {row['unit_copper']}c each · {row['duration_hours']}h · "
+                     f"auction {row['auction_id']} · {_cell(row['reason'])}")
+    for row in section['outcomes']:
+        lines.append(f"- {_cell(row['character'][0])} · {_cell(row['entry_id'])}: {row['kind']} · "
+                     f"{row['quantity']} units · item {row['item_id']} · "
+                     f"{row.get('net_copper')}c after cut · {_cell(row['reason'])} · arrival {row['at']}")
+        if row['kind'] == 'sold':
+            lines.append(f"  Gross {row['gross_copper']}c · cut {row['cut_copper']}c · "
+                         f"deposit {row['deposit_copper']}c · observed header money {row['observed_money']}")
     return lines

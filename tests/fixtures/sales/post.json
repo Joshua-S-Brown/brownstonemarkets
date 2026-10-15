@@ -1,0 +1,29 @@
+{
+  "login_at": 1791639682,
+  "sequence": 1063,
+  "hook": true,
+  "windows": {
+    "mailbox": true,
+    "auction_house": true
+  },
+  "captured_at": 1791639791,
+  "event": "C_AuctionHouse.PostCommodity",
+  "arguments": {
+    "1": {
+      "slotIndex": 5,
+      "bagID": 1
+    },
+    "2": 3,
+    "3": 5,
+    "4": 23,
+    "n": 4
+  },
+  "family": "auction",
+  "character": "Fixture",
+  "addon_version": "0.11.1",
+  "entry_id": "fixture:1063",
+  "captured_at_utc": "2026-10-10T13:43:11Z",
+  "session_time": 1904569.696,
+  "faction": "Alliance",
+  "realm": "Fixture Realm"
+}

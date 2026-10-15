@@ -121,6 +121,7 @@ def show_item(result, page):
                 ui.tab(name)
         with ui.tab_panels(tabs, value='Summary').classes('w-full'):
             with ui.tab_panel('Summary'):
+                own_sales(summary)
                 where_to_get(config, summary or {
                     'farming': None,
                     'wowhead_url': explorer.wowhead_item_url(config['game_version'], page['item_id'])})
@@ -528,3 +529,20 @@ def where_to_get(config, summary):
         farming_caveat()
     ui.link('Wowhead drop sources and places', summary['wowhead_url'], new_tab=True).classes(
         'min-h-[44px] inline-flex items-center underline')
+
+
+def own_sales(summary):
+    from views.today_rows import sales_text
+
+    ui.label('Your sales').classes('text-lg font-semibold')
+    if summary is None or summary.get('sales_error'):
+        ui.label('Sales evidence unavailable' + (f": {summary['sales_error']}" if summary else ''))
+        return
+    for row in summary.get('your_sales', []):
+        latest = (f"{datetime.fromtimestamp(row['newest_sale'], UTC):%Y-%m-%d %H:%M} UTC"
+                  if row['newest_sale'] else 'none yet')
+        ui.label(f"{' · '.join(row['character'])}: {sales_text(row)} · {row['posted']} posted · "
+                 f"{row['expired']} expired · {row['cancelled']} cancelled · newest sale {latest}")
+    if not summary.get('your_sales'):
+        ui.label('none resolved yet')
+    ui.label(f"Unidentified seller invoices in this source and market: {summary.get('unidentified_sales', 0)}")

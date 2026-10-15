@@ -1,0 +1,63 @@
+{
+  "login_at": 1791716187,
+  "sequence": 1079,
+  "inbox": {
+    "counts": {
+      "1": 1,
+      "2": 1,
+      "n": 2
+    },
+    "messages": [
+      {
+        "items": {},
+        "header": {
+          "1": null,
+          "2": 134939,
+          "3": "Alliance Auction House",
+          "4": "Auction successful: Linen Cloth (5)",
+          "5": 210,
+          "6": 0,
+          "7": 30,
+          "11": true,
+          "13": false,
+          "10": false,
+          "12": false,
+          "9": false,
+          "n": 15
+        },
+        "index": 1,
+        "invoice": {
+          "1": "seller",
+          "2": "Linen Cloth",
+          "3": "",
+          "4": 115,
+          "5": 5,
+          "6": 100,
+          "7": 5,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 5,
+          "12": false,
+          "n": 12
+        }
+      }
+    ]
+  },
+  "family": "mail",
+  "captured_at": 1791716191,
+  "event": "MAIL_INBOX_UPDATE",
+  "character": "Fixture",
+  "windows": {
+    "mailbox": true
+  },
+  "arguments": {
+    "n": 0
+  },
+  "entry_id": "fixture:1079",
+  "faction": "Alliance",
+  "captured_at_utc": "2026-10-11T10:56:31Z",
+  "addon_version": "0.11.2",
+  "session_time": 1980971.346,
+  "realm": "Fixture Realm"
+}

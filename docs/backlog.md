@@ -45,20 +45,19 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-079 tier levels from trainers
-2. STORY-073 your own sale rate (refine first)
-3. STORY-070 Team's next recipe you can actually learn
-4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-6. STORY-036 vendor price ceilings (STORY-071's lists captured 2026-10-15)
-7. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
-8. STORY-026 scan coverage and rhythm
-9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-10. STORY-006 replay
+1. STORY-073 your own sale rate
+2. STORY-070 Team's next recipe you can actually learn
+3. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+4. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+5. STORY-036 vendor price ceilings (STORY-071's lists captured 2026-10-15)
+6. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
+7. STORY-026 scan coverage and rhythm
+8. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+9. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 071, 072, 074, 075, 076, 077, 078 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 071, 072, 074, 075, 076, 077, 078, 079 and SPIKE-009/009b.
 
 ### STORY-069 — Today in player terms
 
@@ -114,13 +113,31 @@ Acceptance:
 
 ### STORY-073 — Your own sale rate
 
-Added 2026-10-14 from the addon comparison (Journalator's *sale rate*: sold against expired and cancelled per item, with the average sale price). Our journal already records posts, invoices and returned mail; nothing shows them. It's the only direct proof that something sells, and it fills in by itself from launch. **Refine first.**
+Added 2026-10-14 from the addon comparison (Journalator's *sale rate*: sold against expired and cancelled per item, with the average sale price). Our journal already records posts, invoices and returned mail; nothing shows them. It's the only direct proof that something sells, and it fills in by itself from launch. Refined 2026-10-15 against the beta journal (`forever-us-normal-alliance-addon`, 2026-10-10 to 10-15: 18 post attempts, 7 seller invoices, 2 expiries, 1 cancel). No addon change is needed.
 
-Proposed acceptance (to confirm when refined):
-- Per item and character: units posted, sold (from seller invoices), expired and cancelled (from returned mail), sale rate and average sale price after the cut, in integer copper; shown on Today's *Sell* rows and the Market item page.
-- **Matching invoices to items** (proposed 2026-10-14; TSM does the same with its *sale hints*): a seller invoice carries the item's name but no link. Match it to the same character's own post or active auction (STORY-040) with the same name, stack size and buyout, within the auction's longest duration; the post's link supplies the item ID. No match, or more than one item matching, stays *unidentified* and never counts toward any item. The name only narrows candidates; the item ID comes from a link. Check what the beta capture actually holds first.
-- **Stop after repeated expiries** (from TSM's *max expires*): an item that expired or was cancelled N times in a row for you (`max_expiries`, proposed default 3) with no sale in between gets a Today label *expired 3 times running* and a Low confidence reason.
-- This is the first slice of STORY-034's ledger; build it so the ledger can reuse it.
+As a seller, I want to see how much of what I post actually sells, and for how much, so that I stop posting what doesn't sell and trust what does.
+
+What the capture holds (2026-10-15):
+- **Posts** are `auction` journal hooks `C_AuctionHouse.PostCommodity` (arguments: bag location, duration code, quantity, unit price) and `C_AuctionHouse.PostItem` (bag location, duration code, quantity, *no bid*, buyout). They carry no item link. A post that worked is followed in the same login by `AUCTION_HOUSE_AUCTION_CREATED` (argument 1: auction ID) and a `BAG_UPDATE_DELAYED` whose `item_changes` hold exactly one item ID at minus the posted quantity, within a second or two. All 17 successful posts show both. The refused 299c post (2026-10-13 18:51:05) was followed by `AUCTION_HOUSE_SHOW_ERROR` and nothing else. `OWNED_AUCTIONS_UPDATED` also has item IDs per auction ID, but only when the Auctions tab was open (5 of 17); its `buyoutAmount` meant the total for a sold row and the unit price for active ones, so don't use it for prices.
+- **Duration codes** 1, 2, 3 are 2, 8 and 24 hours (STORY-035; the 2-hour Brown Linen Shirt post was back by mail two hours later, the 8- and 24-hour ones weren't).
+- **Seller invoices** are in `mail` journal inbox states: `GetInboxInvoiceInfo` positions 1 type (`seller`, `buyer`), 2 item name, 3 buyer (often empty at first, filled in a later read), 4 total sale price, 5 *buyout* (equals the count for commodities: don't use), 6 deposit, 7 cut, 11 count. The header's money is sale + deposit − cut (checked on all 7). No link, no item ID.
+- **Commodities merge on sale:** two 1-unit Light Leather posts at 44c sold as one invoice *Light Leather (2)* for 88c; three 1-unit Linen Cloth posts as *Linen Cloth (3)*. So an invoice is not a post. Light Leather and Stringy Wolf Meat were both posted at 44c, so price alone doesn't identify the item.
+- **Returned mail** (expired or cancelled) comes from the auction house with the item attached, link and count included. Subjects read *Auction expired: Bolt of Linen Cloth (4)* and *Auction canceled: Stringy Wolf Meat* (enUS, American spelling). The cancel is also a `C_AuctionHouse.CancelAuction` hook with the auction ID.
+- **Inbox states repeat messages:** each mailbox read saves the whole inbox again, and the same six messages appear in up to 17 states within three seconds, in and out as the client reloads them. Fresh auction mail shows 30 days left.
+
+Acceptance:
+- **Posts:** a post counts when its hook is followed, in the same character's login, by `AUCTION_HOUSE_AUCTION_CREATED` and a `BAG_UPDATE_DELAYED` with exactly one item ID at minus the posted quantity, before the next post hook. That item ID, quantity, unit price (commodity: argument 4; item: buyout ÷ quantity, whole copper only), duration and auction ID make the post. A hook without both is not a post and is counted as *unconfirmed*; a refused post never counts.
+- **One message, once:** a mail message is identified by its character, sender, subject, money and invoice or attachment contents (not the buyer name, which fills in late), and its arrival, estimated as capture time − (30 − days left) days; estimates within two minutes are the same message. Count each message as many times as it appears in a single inbox state at most (two identical sales arriving together stay two). Buyer invoices are ignored here.
+- **Sold:** each seller invoice's units (position 11) at `total − cut` (positions 4 and 7), in integer copper. Its item is the one item ID among the same character's posts that (a) have the invoice's unit price (total ÷ count, exact), (b) were posted before the invoice arrived and no more than their duration plus one hour before it (the sale-to-mail delay is unconfirmed), and (c) whose item name in scope (a captured link or the scan's item names) equals the invoice's name. Exactly one item ID: identified. None or several: *unidentified*, kept with its reason and never counted toward any item. The name only narrows; the item ID comes from the post.
+- **Expired and cancelled:** auction-house mails with an attachment and no invoice, by subject prefix `Auction expired: ` or `Auction canceled: ` (enUS constants, one place); item ID and units from the attachment's link and count. Anything else is ignored. The cancel hook isn't needed.
+- **Per item and character**, within the source's full market scope: units posted, sold, expired and cancelled; sale rate as sold ÷ (sold + expired + cancelled) units, shown as *4 of 5 sold* (no percentage alone, and *none resolved yet* when nothing has come back); average sale price after the cut, per unit, total ÷ units rounded down; and the newest sale's time. Units still listed aren't in the rate.
+- **Expired N times running** (from TSM's *max expires*): per character and item, ordered by arrival, the returned mails (expired or cancelled) since the last sale. At `max_expiries` or more (new setting, default 3, positive integer, shared with source overrides like the `flood_*` settings), Today labels the craft *expired 3 times running* and adds a Low confidence reason. Bump `TODAY_VERSION` to 12.
+- **Where it shows:** Today's *Sell* rows get *Your sales* for Today's scoped characters combined (*4 of 5 sold · 42c each after cut*); the craft card's evidence repeats it. The Market item page lists it per character, with unidentified invoices counted. Display only otherwise: ranking, batches, prices and gold needed don't use it.
+- **Beta report:** a *Your sales* section lists each post (confirmed or not), each seller invoice with the item it matched or why it didn't, and each returned mail, so new captures can be checked.
+- **Reuse:** a framework-free module that STORY-034's ledger can build on.
+- **Offline tests:** a confirmed post; a refused post (error, no bag change); an invoice spanning two posts; two items at the same price told apart by name; an invoice matching nothing and one matching two items (unidentified); a message repeated across inbox states counted once; two identical messages in one state counted twice; a late buyer name not splitting a message; a buyer invoice ignored; expired and cancelled mail; the rate and average with rounding; *expired 3 times running* resetting after a sale; the setting's validation; scope (another source or market never mixes).
+- **Real data** (copy of `data/`): every one of the 7 seller invoices identified. Cicelyna: Linen Bag 1 of 1 sold, 285c; Copper Bar 5 of 5, 56c each; Stringy Wolf Meat 4 of 5, 42c each, 1 cancelled; Linen Cloth 3 of 3, 17c; Light Leather 2 of 2, 42c; Silverleaf 2 of 2, 9c; Brown Linen Shirt 0 of 1 (1 expired, 2 still out); Bolt of Linen Cloth 0 of 4 (4 expired, 10 still out). Basilly: Linen Cloth 5 of 5, 22c. These are as of the 2026-10-15 12:49 mailbox read; the 8- and 24-hour posts of 2026-10-15 (Bolt of Linen Cloth 5 and 5, Brown Linen Shirt 1 and 1) come back in later captures, so their items' numbers will have moved on. Report anything different and why.
+- **Docs:** the matching rules and the setting in `requirements.md` (with Today's confidence reasons and the Market item page); `design.md`; `status.md`.
 
 ### STORY-077 — Mob names (addon, read-only)
 
@@ -177,24 +194,7 @@ Acceptance:
 
 ### STORY-079 — Tier levels from trainers
 
-Added 2026-10-15 from the beta trainer lists. *This session* uses Classic Era's levels (Journeyman 10, Expert 20, Artisan 35), so it told Arille to reach level 10 to train Journeyman Cooking. On Forever, Journeyman Cooking, First Aid, Herbalism and Skinning need no character level; Fishing needs 10.
-
-As a player, I want *This session* to ask for a character level only when the trainer does, so that I don't level a character for nothing.
-
-Acceptance:
-- **Evidence table:** a tracked file, `config/tier_levels.toml`, of Forever character levels per profession and tier. Each value cites its trainer list: journal entry ID, character and capture date. Values change only with new evidence (AGENTS.md), and anything missing is unknown. A malformed file is an error, never a silent fallback. Values now, all from Cicelyna's trainer lists on 2026-10-15:
-  - Cooking Journeyman 0 (`8:Cicelyna18:Classic Beta PvE 2:journal:1792058711:4109`)
-  - First Aid Journeyman 0 (`…:1792059436:4224`)
-  - Fishing Journeyman 10 (`…:1792059062:4172`)
-  - Herbalism Journeyman, Expert and Artisan 0 (`…:1792059350:4220`)
-  - Skinning Journeyman, Expert and Artisan 0 (`…:1792058809:4153`)
-- **Scope:** the table applies to Forever sources (`game_version` `forever`). Classic Era sources keep Classic's ladder (Journeyman 10, Expert 20, Artisan 35, from the wiki) with no *unconfirmed* label.
-- **This session:** a known level of 0 drops the *level the character* step, so a capped profession goes straight to *train Journeyman Cooking at a trainer*. A known level above 0 is used as is. An unknown one falls back to the Classic level, and that step says so: *(Classic level, unconfirmed on Forever)*. *How these options were made* says which levels come from trainer lists. STORY-069's merged steps still merge only professions with the same level and the same source.
-- **Beta report:** lists each tier service seen per profession, with its level, skill and cost, so new values can be added.
-- **Team's hiring estimate** (`hiring.py`, STORY-059) reads the same table, so Team and *This session* agree.
-- **Unchanged:** Today's plan and Market.
-- **Offline tests:** level 0, a known level, unknown (Classic fallback with label), a Classic Era source (no label), merging only equal levels, hiring with a table value, a malformed table, and the report's tier list.
-- **Docs:** UI-12 in `requirements.md`; `status.md`.
+Implemented; current behavior is in `status.md` and UI-12 in `requirements.md`. Story text is in Git.
 
 ### STORY-036 — Vendor price ceilings
 

@@ -16,7 +16,8 @@ def test_pre_story_plans_identical():
         def legacy(value):
             if isinstance(value, dict):
                 return {k: 10 if k == 'today_version' else legacy(v) for k, v in value.items()
-                        if k not in ('deposit_copper', 'post_duration_hours', 'deposits_to_post_copper')}
+                        if k not in ('deposit_copper', 'post_duration_hours', 'deposits_to_post_copper',
+                                  'your_sales', 'max_expiries')}
             if isinstance(value, list):
                 return [legacy(v) for v in value]
             return value

@@ -7,7 +7,7 @@ from bisect import bisect_left
 from collections import Counter
 from decimal import Decimal
 
-from . import today_holdings
+from . import sales, today_holdings
 from .action_board import catalog_for_row, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices
 from .deposits import auction_deposit
@@ -19,7 +19,7 @@ from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 from .today_warnings import PRICE_NOTE, base_signals, price_caps, warning_fields
 
-TODAY_VERSION = 11
+TODAY_VERSION = 12
 ROW_LIMIT = 10
 
 
@@ -401,7 +401,7 @@ def _deposits(crafts, sells, vendor_prices, stack_sizes, metrics, hours, faction
 def build_today(catalogs, observations, market, snapshot, settings: TodaySettings, *, now,
                 listings=None, metrics=None, vendor_prices=None, stack_sizes=None, max_age_hours=24, auction_cut=.05,
                 choices=None, refill=True, character_data=None, flood_evidence=None, holdings_data=None,
-                holdings_warning=None):
+                holdings_warning=None, sales_data=None):
     if any(snapshot.get(key) != market.get(key) for key in MARKET_KEYS):
         raise ValueError("The snapshot belongs to a different market")
     for key in ("source_id", "rules_version"):
@@ -427,6 +427,8 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
     shopping = _shopping(crafts, metrics)
     sells = [_sell(row, metrics, auction_cut) for row in crafts]
     for row, sell in zip(crafts, sells, strict=True):
+        sell['your_sales'] = sales.combined(sales_data, row['output_item_id'], projection['character'])
+        sell['max_expiries'] = market.get('max_expiries', 3)
         label = confidence(row, sell, freshness, max_age_hours, metrics, ladders)
         row.update(label)
         sell.update(label)

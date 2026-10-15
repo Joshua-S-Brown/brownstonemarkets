@@ -4,6 +4,8 @@ max_age_hours = 24
 auction_cut = 0.05  # Neutral auction houses default to 0.15 unless a source sets its own.
 min_discount = 0.20
 top_n = 20
+# UI-14 Own sales; shared setting, overridable per source.
+max_expiries = 3
 # UI-13 Farming rates; shared setting, overridable per source.
 farming_idle_minutes = 10
 farming_cell_percent = 5

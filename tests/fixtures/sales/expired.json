@@ -1,0 +1,252 @@
+{
+  "login_at": 1792068566,
+  "sequence": 48,
+  "event": "MAIL_INBOX_UPDATE",
+  "faction": "Alliance",
+  "captured_at": 1792068596,
+  "inbox": {
+    "counts": {
+      "1": 6,
+      "2": 6,
+      "n": 2
+    },
+    "messages": [
+      {
+        "items": {},
+        "index": 1,
+        "header": {
+          "1": null,
+          "2": 134939,
+          "3": "Alliance Auction House",
+          "4": "Auction successful: Stringy Wolf Meat (4)",
+          "5": 268,
+          "6": 0,
+          "7": 30,
+          "11": true,
+          "13": false,
+          "10": false,
+          "12": false,
+          "9": false,
+          "n": 15
+        },
+        "invoice": {
+          "1": "seller",
+          "2": "Stringy Wolf Meat",
+          "3": "",
+          "4": 176,
+          "5": 4,
+          "6": 100,
+          "7": 8,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 4,
+          "12": false,
+          "n": 12
+        }
+      },
+      {
+        "items": {},
+        "index": 2,
+        "header": {
+          "1": null,
+          "2": 134939,
+          "3": "Alliance Auction House",
+          "4": "Auction successful: Linen Cloth (3)",
+          "5": 352,
+          "6": 0,
+          "7": 30,
+          "11": true,
+          "13": false,
+          "10": false,
+          "12": false,
+          "9": false,
+          "n": 15
+        },
+        "invoice": {
+          "1": "seller",
+          "2": "Linen Cloth",
+          "3": "",
+          "4": 54,
+          "5": 3,
+          "6": 300,
+          "7": 2,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 3,
+          "12": false,
+          "n": 12
+        }
+      },
+      {
+        "items": {},
+        "index": 3,
+        "header": {
+          "1": null,
+          "2": 134939,
+          "3": "Alliance Auction House",
+          "4": "Auction successful: Silverleaf (2)",
+          "5": 119,
+          "6": 0,
+          "7": 30,
+          "11": true,
+          "13": false,
+          "10": false,
+          "12": false,
+          "9": false,
+          "n": 15
+        },
+        "invoice": {
+          "1": "seller",
+          "2": "Silverleaf",
+          "3": "",
+          "4": 20,
+          "5": 2,
+          "6": 100,
+          "7": 1,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 2,
+          "12": false,
+          "n": 12
+        }
+      },
+      {
+        "items": {},
+        "index": 4,
+        "header": {
+          "1": null,
+          "2": 134939,
+          "3": "Alliance Auction House",
+          "4": "Auction successful: Light Leather (2)",
+          "5": 284,
+          "6": 0,
+          "7": 30,
+          "11": true,
+          "13": false,
+          "10": false,
+          "12": false,
+          "9": false,
+          "n": 15
+        },
+        "invoice": {
+          "1": "seller",
+          "2": "Light Leather",
+          "3": "",
+          "4": 88,
+          "5": 2,
+          "6": 200,
+          "7": 4,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 2,
+          "12": false,
+          "n": 12
+        }
+      },
+      {
+        "items": [
+          {
+            "info": {
+              "1": "Bolt of Linen Cloth",
+              "2": 2996,
+              "3": 132890,
+              "4": 4,
+              "5": 1,
+              "6": true,
+              "7": false,
+              "n": 7
+            },
+            "link": "|cnIQ1:|Hitem:2996::::::::1:1491:::::::::|h[Bolt of Linen Cloth]|h|r"
+          }
+        ],
+        "index": 5,
+        "header": {
+          "1": 132890,
+          "2": 134939,
+          "3": "Alliance Auction House",
+          "4": "Auction expired: Bolt of Linen Cloth (4)",
+          "5": 0,
+          "6": 0,
+          "7": 29.98762702941895,
+          "8": 1,
+          "9": false,
+          "10": false,
+          "11": true,
+          "12": false,
+          "13": false,
+          "14": 4,
+          "15": "|cnIQ1:|Hitem:2996::::::::1:1491:::::::::|h[Bolt of Linen Cloth]|h|r",
+          "n": 15
+        },
+        "invoice": {
+          "6": 0,
+          "7": 0,
+          "4": 0,
+          "5": 0,
+          "n": 7
+        }
+      },
+      {
+        "items": [
+          {
+            "info": {
+              "1": "Brown Linen Shirt",
+              "2": 4344,
+              "3": 135006,
+              "4": 1,
+              "5": 1,
+              "6": true,
+              "7": false,
+              "n": 7
+            },
+            "link": "|cnIQ1:|Hitem:4344::::::::1:1491:::::::::|h[Brown Linen Shirt]|h|r"
+          }
+        ],
+        "index": 6,
+        "header": {
+          "1": 135006,
+          "2": 134939,
+          "3": "Alliance Auction House",
+          "4": "Auction expired: Brown Linen Shirt",
+          "5": 0,
+          "6": 0,
+          "7": 29.98622703552246,
+          "8": 1,
+          "9": false,
+          "10": false,
+          "11": true,
+          "12": false,
+          "13": false,
+          "14": 1,
+          "15": "|cnIQ1:|Hitem:4344::::::::1:1491:::::::::|h[Brown Linen Shirt]|h|r",
+          "n": 15
+        },
+        "invoice": {
+          "6": 0,
+          "7": 0,
+          "4": 0,
+          "5": 0,
+          "n": 7
+        }
+      }
+    ]
+  },
+  "session_time": 3832.245,
+  "captured_at_utc": "2026-10-15T12:49:56Z",
+  "arguments": {
+    "n": 0
+  },
+  "addon_version": "0.12.8",
+  "entry_id": "fixture:48",
+  "windows": {
+    "mailbox": true,
+    "auction_house": false
+  },
+  "character": "Fixture",
+  "family": "mail",
+  "realm": "Fixture Realm"
+}

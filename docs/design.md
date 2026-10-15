@@ -56,7 +56,7 @@ frameworks/views. Calculation modules take supplied data/clock and do not downlo
 | config, markets | Typed Source, local overrides, MARKET_KEYS/derived ID/scope |
 | sources, normalization, pipeline | TSM download/validate/collect; shared addon preview/import |
 | scans, scan_details, variants | Lua parsing, validation, references, variant identity |
-| addon_records, character_snapshots, journal, professions, characters | Non-scan lifecycle and scoped projections |
+| addon_records, character_snapshots, journal, sales, professions, characters | Non-scan lifecycle and scoped projections |
 | scan_inputs, drop_files, import_review | Drop inventory, review rows/status, per-file imports |
 | storage, metrics, item_names | Migrations, facts/reads, versioned metrics and labels |
 | analysis, scan_changes, removed_listings, flood_signals | Browse/CLI screening and scoped market comparisons |
@@ -192,6 +192,17 @@ journal/diagnostics/errors. Latest: capture then sequence. Tuples retain nils; n
 - Merchant lists: raw vendor journal, no migration; journal.merchantItems/merchantRead mirror
   trainers (`sameMerchant` ignores position). beta_vendor projects source/full market/rules, entry/time and catalog comparisons;
   beta_markdown renders vendor prices. Confirmation: CRAFT-08.
+- `sales.load` reads auction/bags/mail once with source/full market predicates and scoped scan names;
+  `sales.project` is pure, reusable by the future ledger: post confirmation, arrival/multiplicity mail
+  identity, invoice matching, returned mail, per-character/item units/net/newest sale/expiry run.
+  Lua tuples retain string numeric keys. Collected invoice identity keeps observed header money
+  separately from invoice gross/deposit/cut/net (rules: UI-14); raw storage is unchanged.
+  `today_loading` passes `sales_data` into `build_today` for Today; `sales.combined` attaches scoped
+  display evidence before `today_confidence` labels the selected plan. Today v12, no ranking/sizing
+  changes. Sell/table/card share `today_rows.sales_text`. Market's item-only `item_summary` loads
+  per-character outcomes and scoped unidentified count; `nicegui_market.own_sales` renders them.
+  `beta_report` supplies validated matching-house journal and parsed scan names to the same projection;
+  `beta_markdown` lists attempts/outcomes including money evidence. No schema/addon changes.
 - `scan_timing` isn't imported; `beta_report.scan_attempts` reports it.
 
 API shape evidence: [Classic trade skill](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua),

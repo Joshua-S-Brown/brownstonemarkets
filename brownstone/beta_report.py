@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from . import addon_records, pipeline, professions, scans
+from . import addon_records, pipeline, professions, sales, scans
 from . import beta_evidence as evidence
 from .beta_markdown import markdown
 from .beta_vendor import catalog_evidence
@@ -230,6 +230,8 @@ def create_report(path: Path, config: Source, output_root: Path, previous: Path 
                              and c["detail"] == "journal"}
         journal = [r for r in lists[2] if isinstance(r, dict) and r.get("entry_id") in valid_journal_ids]
         report["vendor_prices"] = catalog_evidence(journal, config)
+        report["your_sales"] = sales.project([r for r in journal if not addon_records.check_house(r, config)],
+                                             sales_names(lists[0], config))
         report["trainer_tiers"] = trainer_tiers(journal, config)
         report["file"]["name"] = path.name
         if not any(c["check"] == "parse" for c in report["checks"]):
@@ -312,3 +314,18 @@ def trainer_tiers(records, config):
                          'entry_id': record['entry_id'], 'character': record['character'],
                          'captured_utc': _utc(record['captured_at'])})
     return {'observations': rows}
+
+
+def sales_names(records, config):
+    names = defaultdict(set)
+    for scan in records:
+        if not isinstance(scan, dict) or scans.check_house(scan, config):
+            continue
+        try:
+            rows = scans.listing_frame(scan).select('item_id', 'item_name').unique().iter_rows()
+            for item, name in rows:
+                if name:
+                    names[item].add(name)
+        except (ValueError, KeyError):
+            continue  # Invalid scans have their own report checks; never supply matching evidence.
+    return names

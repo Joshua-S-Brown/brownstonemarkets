@@ -12,7 +12,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
   authenticated reuse/restart, loopback browser fallback and idle shutdown.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
-  queue, confidence, character eligibility and captured funds; today_version 11.
+  queue, confidence, character eligibility and captured funds; today_version 12.
   STORY-069 aligns headline profit with the reserved post quote (explicit cautious fallback),
   formats Today table money in g/s/c with copper sorting, and shows team gold-mail suggestions
   in Queue/copy/tick identity (rules in requirements → Today). This session combines equal tier
@@ -26,6 +26,15 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   in at least three qualifying gaps (Classic time-left assumptions pending Forever confirmation). This session
   composes reserved crafts and Team-window unlock costs with flood labels (UI-12)
   and measured journal farming rates and zone/NPC/position-cell farming spots (UI-13).
+- **Your sales (STORY-073, UI-14):** journal-confirmed posts, deduplicated seller invoices and
+  expired/cancelled attachments feed Today's Sell/card evidence and display-only expiry Low reason.
+  Market item Summary lists per-character outcomes and scoped unidentified invoices; beta reports
+  list every attempt, invoice match/reason, return and observed/gross/deposit/cut money evidence.
+  `max_expiries` defaults to 3 with source overrides. Tests use sanitized beta record shapes in
+  `tests/fixtures/sales`; run `pytest tests/test_sales.py` plus the required full gates below.
+  The imported beta journal matches all seven expected identified invoices and all story item totals;
+  18 attempts include 17 confirmed posts and one refused post. Sale-mail delay remains provisional;
+  return prefixes currently require enUS.
 - **Tier levels (STORY-079):** This session and hiring share validated trainer evidence from
   `config/tier_levels.toml`; missing Forever tiers carry the UI-12 Classic fallback label.
   Beta reports list captured Apprentice/Journeyman/Expert/Artisan services with level, skill,

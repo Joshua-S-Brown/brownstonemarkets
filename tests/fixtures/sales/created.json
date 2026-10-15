@@ -1,0 +1,22 @@
+{
+  "login_at": 1791639682,
+  "sequence": 1064,
+  "windows": {
+    "mailbox": true,
+    "auction_house": true
+  },
+  "captured_at": 1791639791,
+  "event": "AUCTION_HOUSE_AUCTION_CREATED",
+  "arguments": {
+    "1": 51937920,
+    "n": 1
+  },
+  "family": "auction",
+  "character": "Fixture",
+  "addon_version": "0.11.1",
+  "entry_id": "fixture:1064",
+  "captured_at_utc": "2026-10-10T13:43:11Z",
+  "session_time": 1904569.896,
+  "faction": "Alliance",
+  "realm": "Fixture Realm"
+}

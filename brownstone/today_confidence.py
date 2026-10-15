@@ -21,6 +21,9 @@ def route_notes(catalog, recipe, row):
 
 def confidence(row, sell, freshness, max_age_hours, metrics, ladders):
     low, medium = [], []
+    run = sell.get('your_sales', {}).get('expiry_run', 0)
+    if run >= sell.get('max_expiries', 3):
+        low.append(f'expired {run} times running')
     if freshness["stale"]:
         low.append("stale")
     elif freshness["age_hours"] > max_age_hours * CONFIDENCE_AGE_FRACTION:

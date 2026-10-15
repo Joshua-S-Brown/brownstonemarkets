@@ -176,7 +176,7 @@ def test_one_flood_read_loader_and_pure_build(tmp_path, monkeypatch):
     assert args['flood_evidence']['rows'][0]['item_id'] == 1
     monkeypatch.setattr(flood_signals, 'signals', Mock(side_effect=AssertionError('pure build must not read')))
     build_today(**args)
-    assert TODAY_VERSION == 11
+    assert TODAY_VERSION == 12
 
 
 def test_cap_changes_batch_peak_and_can_remove_unprofitable_craft():
