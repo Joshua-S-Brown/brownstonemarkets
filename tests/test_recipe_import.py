@@ -162,7 +162,7 @@ def test_forever_catalog_has_beta_tiers_new_dyes_and_only_forever_evidence():
         assert recipe["output_quantity"] == 1
         assert recipe["output_quantity_verified"] is (recipe["recipe_id"] in counted)
     assert {i: item["vendor_verified"] for i, item in catalog["items_by_id"].items()
-            if item["role"] == "vendor_material"} == {2320: True} | {i: False for i in (
+            if item["role"] == "vendor_material"} == {i: True for i in (2320,
                 2321, 2324, 2325, 2604, 2605, 4291, 4340, 4341, 4342, 4470, 6260, 6261, 8343, 10290, 14341)}
 
 

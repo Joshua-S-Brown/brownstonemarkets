@@ -374,7 +374,12 @@ def _catalog_item(extract: dict, item_id: int, role: str, note: dict) -> dict:
         # vendor status comes from the selection's evidence; only the price comes from the page.
         if not row["buyprice"]:
             raise ValueError(f"Item {item_id} is marked as sold by vendors but the page has no buy price")
-        item.update(vendor_price_copper=row["buyprice"], vendor_price_source_url=extract["source_url"],
+        quantity = note.get("vendor_quantity", 1)
+        if type(quantity) is not int or quantity <= 0 or row["buyprice"] % quantity:
+            raise ValueError(f"Item {item_id}: vendor_quantity must divide the buy price exactly")
+        item.update(vendor_price_copper=row["buyprice"] // quantity,
+                    vendor_quantity=quantity, vendor_bundle_price_copper=row["buyprice"],
+                    vendor_price_source_url=extract["source_url"],
                     vendor_price_note="Wowhead buy price; availability and reputation discounts are not modeled")
     item.update({key: value for key, value in note.items() if key not in ("item_id", "vendor")})
     _check_availability(item, f"Item {item_id}")

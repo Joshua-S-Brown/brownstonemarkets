@@ -11,6 +11,7 @@ from brownstone.recipe_graph import made_by_label
 from views import nicegui_theme as theme
 from views.nicegui_navigation import set_href
 from views.nicegui_stock import capture_text
+from views.today_rows import vendor_cap_label
 
 
 def money(value):
@@ -207,6 +208,7 @@ def recipe_heading(config, row):
         ui.label(f"× {recipe['output_quantity']} · {row['catalog']['profession']}")
         profit = value['profit_copper']
         ui.label('Profit per craft: ' + (format_money(profit) if profit is not None else 'unknown'))
+        ui.label(vendor_cap_label(value))
         theme.badge(value['action'], 'warn' if profit is None else 'neutral')
 
 
@@ -481,6 +483,7 @@ def summary_card(result, page, summary):
             choice = summary[key]
             if choice['recipe']:
                 ui.label(label + ' · Profit per craft: ' + format_money(choice['recipe']['value']['profit_copper']))
+                ui.label(vendor_cap_label(choice['recipe']['value']))
                 item_id = choice['recipe']['recipe']['output_item_id']
                 item_link(result['config'], item_id, choice['recipe']['catalog']['items_by_id'][item_id]['name'])
             elif page[key] or key == 'used_in':

@@ -202,7 +202,9 @@ def _populate(group, state, rows, prices, board, window, ladders, metrics, max_a
                        {'profit_copper': None, 'action': 'intermediate: not ranked by the Action Board'})
         estimate = estimate_cost(group['entries'], state, rank, maximum, required, prices, walk)
         group['recipes'].append(recipe | status | {'catalog_id': action_board.catalog_identity(catalog),
-            'points_needed': required - rank, 'profit_copper': row['profit_copper'], 'board_reason': row['action'],
+            'points_needed': required - rank, 'profit_copper': row['profit_copper'],
+            'vendor_price_cap_copper': row.get('vendor_price_cap_copper'), 'vendor_capped': row.get('vendor_capped'),
+            'board_reason': row['action'],
             'needs_pattern': 6 not in recipe.get('learned_from', []), 'estimate': estimate,
             **_confidence(catalog, recipe, row, board, ladders, metrics, max_age_hours, auction_cut)})
     group['recipes'].sort(key=lambda r: summary_sort({'best': r, 'profession': group['profession']}))

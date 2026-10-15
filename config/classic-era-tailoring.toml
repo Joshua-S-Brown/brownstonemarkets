@@ -18,6 +18,8 @@ name = "Fine Thread"
 role = "vendor_material"
 source_url = "https://www.wowhead.com/classic/item=2321"
 vendor_price_copper = 100
+vendor_quantity = 1
+vendor_bundle_price_copper = 100
 vendor_price_source_url = "https://www.wowhead.com/classic/spells/professions/tailoring"
 vendor_price_note = "Wowhead buy price; availability and reputation discounts are not modeled"
 vendor_evidence_url = "https://warcraft.wiki.gg/wiki/Fine_Thread"
@@ -46,6 +48,8 @@ name = "Silken Thread"
 role = "vendor_material"
 source_url = "https://www.wowhead.com/classic/item=4291"
 vendor_price_copper = 500
+vendor_quantity = 1
+vendor_bundle_price_copper = 500
 vendor_price_source_url = "https://www.wowhead.com/classic/spells/professions/tailoring"
 vendor_price_note = "Wowhead buy price; availability and reputation discounts are not modeled"
 vendor_evidence_url = "https://warcraft.wiki.gg/wiki/Silken_Thread"
@@ -98,6 +102,8 @@ name = "Rune Thread"
 role = "vendor_material"
 source_url = "https://www.wowhead.com/classic/item=14341"
 vendor_price_copper = 5000
+vendor_quantity = 1
+vendor_bundle_price_copper = 5000
 vendor_price_source_url = "https://www.wowhead.com/classic/spells/professions/tailoring"
 vendor_price_note = "Wowhead buy price; availability and reputation discounts are not modeled"
 vendor_evidence_url = "https://warcraft.wiki.gg/wiki/Rune_Thread"

@@ -96,9 +96,20 @@ def _check_item(item: dict) -> None:
         raise ValueError("Vendor prices must be positive copper integers")
     if not _https(item.get("vendor_price_source_url", "https://")):
         raise ValueError("Vendor price provenance must be an HTTPS URL")
+    _check_vendor_bundle(item)
     _check_flags(item)
     if "raw_material" in item and (item["raw_material"] is not True or not item.get("raw_material_note")):
         raise ValueError("raw_material must be true and carry a raw_material_note")
+
+
+def _check_vendor_bundle(item: dict) -> None:
+    quantity = item.get("vendor_quantity", 1)
+    if not _positive(quantity):
+        raise ValueError("vendor_quantity must be a positive integer")
+    if "vendor_bundle_price_copper" in item:
+        bundle = item["vendor_bundle_price_copper"]
+        if not _positive(bundle) or bundle != quantity * item.get("vendor_price_copper", 0):
+            raise ValueError("Vendor bundle price must equal unit price times vendor_quantity")
 
 
 def _check_recipe(recipe: dict, profession: str, items: dict, output_recipes: dict) -> None:
@@ -303,6 +314,10 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
 
     output_id = recipe["output_item_id"]
     sale = (prices if sale_prices is None else sale_prices).get(output_id)
+    vendor_cap = catalog["items_by_id"][output_id].get("vendor_price_copper")
+    vendor_capped = _positive(sale) and _positive(vendor_cap) and sale > vendor_cap
+    if vendor_capped:
+        sale = vendor_cap
     valid_sale = _positive(sale)
     valid = not missing and valid_sale
     retained = Decimal(1) - Decimal(str(auction_cut))
@@ -320,6 +335,7 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
         "valid": valid, "missing_item_ids": missing + ([] if valid_sale else [output_id]),
         "craft_cost_copper": total if not missing else None,
         "sale_price_copper": sale if valid_sale else None,
+        **({"vendor_price_cap_copper": vendor_cap, "vendor_capped": vendor_capped} if _positive(vendor_cap) else {}),
         "net_revenue_copper": net_revenue, "profit_copper": profit,
         "choices": choices,
         "intermediate_steps": _intermediate_steps(catalog, prices, recipe_id),

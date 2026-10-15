@@ -31,6 +31,7 @@ from views import nicegui_theme as theme
 from views import today_rows as tr
 from views.nicegui_market import item_link, item_url
 from views.nicegui_navigation import VIEWS, set_href, today_config, today_location
+from views.today_rows import vendor_cap_label, vendor_cap_suffix
 
 TABS = ['Plan', 'Shopping list', 'Sell', 'Queue', 'Extras']
 LEGACY_TABS = {'Craft': 'Plan', 'Buy': 'Shopping list', 'Below vendor': 'Extras'}
@@ -42,10 +43,10 @@ def table(rows, *, label, row_key='id'):
                               if key != 'id' and not key.endswith('_copper') and not key.startswith('_')))
     decisions = {
         'Craft': ['Item', 'State', 'Can make', 'Who can make it', 'Batch', 'Material cost',
-                  'Batch profit', 'Profit per craft', 'Profit basis', 'Confidence'],
+                  'Batch profit', 'Profit per craft', 'Profit basis', 'Vendor ceiling', 'Confidence'],
         'Sell': ['Output', 'State', 'Batch', 'Held units', 'Held by', 'Held value', 'Warnings',
                  'Lowest competing unit', 'Listings', 'Units',
-                 'Undercut unit', 'Deposit', 'Profit at undercut for batch', 'Your sales',
+                 'Undercut unit', 'Deposit', 'Profit at undercut for batch', 'Vendor ceiling', 'Your sales',
                  'Thin', 'Confidence', 'Reasons'],
         'Buy': ['Material', 'State', 'Route', 'For', 'Required units', 'Purchased units', 'Cost',
                 'Highest unit price', 'Cheap now'],
@@ -486,6 +487,7 @@ def craft_card(row, sell, config=None):
                 ui.label(f"Limited by {row['limiting_factor']}" + (' · thin' if sell['thin'] else '')).classes(
                     'bs-note')
             with ui.column().classes('items-end gap-0'):
+                ui.label(vendor_cap_label(row, sell)).classes('bs-note')
                 ui.label(format_money(headline['headline_profit_copper']) + headline['profit_basis']).classes(
                     'bs-big bs-profit')
                 ui.label(f"per craft {format_money(headline['headline_per_craft_copper'])} · "
@@ -774,7 +776,7 @@ def step_text(step, character, window):
         more = f" (+{step['more']} more on the way)" if step['more'] else ''
         return (f"Level {profession} {group['rank']} → {recipe['required_skill']} for "
                 f"{format_money(estimate['cost_copper'])}, {cheap_share(estimate)} · unlocks {recipe['name']} "
-                f"at {format_money(recipe['profit_copper'])} per craft{more}")
+                f"at {format_money(recipe['profit_copper'])} per craft{more}{vendor_cap_suffix(recipe)}")
     tier = step['tier']
     if len(step.get('groups', [])) > 1:
         return merged_tier_text(step, character)
@@ -833,6 +835,7 @@ def session_milestone(milestone, group, config):
                 item_link(config, recipe['output_item_id'], recipe['name'])
                 ui.label(f"{session_money(recipe['profit_copper'])} per craft" if recipe['profit_copper'] is not None
                          else f"profit per craft unknown · {recipe['board_reason']}")
+                ui.label(vendor_cap_label(recipe))
                 theme.badge(recipe['confidence'] + ' confidence',
                             'warn' if recipe['confidence'] in ('Low', 'Unavailable') else 'neutral')
                 if recipe['needs_pattern']:
@@ -866,6 +869,7 @@ def session_crafts(character, config):
                      f"{format_money(row['headline_profit_copper'])}{row['profit_basis']} · "
                      f"per craft {format_money(row['headline_per_craft_copper'])} · "
                      f"cost {format_money(row['batch_cost_copper'])}")
+            ui.label(vendor_cap_label(row))
             session_signal(row['signal'])
             for material in row['purchases']:
                 with ui.row().classes('items-center gap-2'):

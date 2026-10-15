@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "engineering"
 status = "beta-observed"
-catalog_version = "0.4"
+catalog_version = "0.5"
 
 [recipe_defaults]
 output_quantity_verified = false
@@ -629,41 +629,55 @@ recipe_id = 1319165  # Large Yellow Rocket Cluster
 [[items]]
 item_id = 159  # Refreshing Spring Water
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 5
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058714:4113, vendor NPC 5483, Stormwind City; unlimited stock, 25c per 5."
 
 [[items]]
 item_id = 2880  # Weak Flux
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058911:4161, vendor NPC 5512, Stormwind City; unlimited stock, 100c per 1."
 
 [[items]]
 item_id = 4399  # Wooden Stock
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058933:4168, vendor NPC 5519, Stormwind City; unlimited stock, 200c per 1."
 
 [[items]]
 item_id = 4400  # Heavy Stock
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058933:4168, vendor NPC 5519, Stormwind City; unlimited stock, 2000c per 1."
 
 [[items]]
 item_id = 6530  # Nightcrawlers
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792059065:4175, vendor NPC 5494, Stormwind City; unlimited stock, 100c per 1."
 
 [[items]]
 item_id = 10647  # Engineer's Ink
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058933:4168, vendor NPC 5519, Stormwind City; unlimited stock, 2000c per 1."
 
 [[items]]
 item_id = 10648  # Blank Parchment
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058933:4168, vendor NPC 5519, Stormwind City; unlimited stock, 500c per 1."
+
+[[items]]
+item_id = 16583  # Demonic Figurine
+vendor = true
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792059246:4217, vendor NPC 1308, Stormwind City; unlimited stock, 10000c per 1."

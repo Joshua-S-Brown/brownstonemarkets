@@ -8,7 +8,7 @@ from .crafting import PRICE_BASES, basis_prices, evaluate_recipe
 from .freshness import assess
 from .recipe_graph import RecipeGraph, catalog_compatible, identity, label_routes, route_catalog
 
-POLICY_VERSION = "0.3"
+POLICY_VERSION = "0.4"
 
 
 def compatible(catalog: dict, market: dict) -> bool:
@@ -110,4 +110,6 @@ def rank_catalogs(catalogs, observations, market, snapshot, *, now, sort_by="pro
 
 def _evaluate(catalog, recipe_id, buy, sell, cut, graph):
     routed = route_catalog(catalog, recipe_id, buy, graph)
+    output = catalog['recipes_by_id'][recipe_id]['output_item_id']
+    routed = routed | {'items_by_id': routed['items_by_id'] | {output: catalog['items_by_id'][output]}}
     return label_routes(evaluate_recipe(routed, recipe_id, buy, cut, sell), routed)

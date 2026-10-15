@@ -164,7 +164,7 @@ async def test_why_summary_order_and_details_retain_ids(user):
     await user.should_see('1,298 need a profession nobody has · 441 need more skill · 3 need prices')
     details = next(iter(user.find(ui.expansion, content='Details').elements))
     text = '\n'.join(e.text for e in details.descendants() if isinstance(e, ui.label))
-    for value in ['snapshot-evidence', 'scan-evidence', 'fixture', 'classic-us-mankrik-alliance', 'Today rules v12']:
+    for value in ['snapshot-evidence', 'scan-evidence', 'fixture', 'classic-us-mankrik-alliance', 'Today rules v13']:
         assert value in text
 
 

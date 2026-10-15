@@ -84,12 +84,12 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 - Twenty-five complete Normal Alliance scans and one stopped scan are imported; no RP/neutral scans.
   Bulk API supplies no sellers (ADDON-07), blocking seller analysis.
-- Catalog yields/vendor marks/availability still need game evidence; no multi-yield support.
-  Bolt of Linen Cloth's yield of 1 was confirmed on 2026-10-15 (17 crafts, 34 Linen Cloth). Vendor marks
-  are confirmed only for Coarse Thread; that day's 25 vendor lists matched 27 more marked prices at Friendly
-  standing (CRAFT-08 confirmation is STORY-036). Bundle items (vials, spices, drinks: 5 per purchase) are
-  marked at the bundle price, so their unit cost is 5× too high (Empty Vial 20c, not 4c). Runecloth Bag/dye post-launch flags
-  need review; both dyes appear on beta listings.
+- Catalog yields/availability still need game evidence; no multi-yield support.
+  Bolt of Linen Cloth's yield of 1 was confirmed on 2026-10-15 (17 crafts, 34 Linen Cloth).
+  The 39 marked vendor items and eight new unlimited items are confirmed against that day's
+  25 vendor lists; bundle unit prices are corrected (CRAFT-08). Limited-stock items remain
+  unmarked. Recipe profits and Today's posts respect vendor ceilings (CRAFT-04).
+  Runecloth Bag/dye post-launch flags need review; both dyes appear on beta listings.
 - Hiring cost walks complete only for Tailoring, Alchemy and Blacksmithing. Other catalogs lack
   starter learning evidence or put Smelt Copper at skill 25; gaps remain unknown.
 - Farming requires loot-source context (addon 0.11.3+); older unmatched messages supply no rate.

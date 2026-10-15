@@ -15,6 +15,7 @@ from brownstone.today_loading import load_today, load_today_characters
 from brownstone.today_settings import TodaySettings
 from views import nicegui_theme as theme
 from views.nicegui_today import freshness_caption, table
+from views.today_rows import vendor_cap_label, vendor_cap_suffix
 
 HONESTY = ('Cost to reach is an estimate, with no credit for selling results. Current-scan profit, not a forecast; '
            'sales speed and demand unknown; beta prices; yellow skill-up chances are estimates.')
@@ -108,6 +109,7 @@ def summary_rows(result):
              'Estimated cost': estimate_text(g['best']['estimate']) if g['best'] else g['note'] or 'unavailable',
              'Profit per craft': money(g['best']['profit_copper']) if g['best'] else 'unavailable',
              'Profit per craft_copper': g['best']['profit_copper'] if g['best'] else None,
+             'Vendor ceiling': vendor_cap_label(g['best'] or {}),
              'Next step': next_step(g)} for g in result['professions']]
 
 
@@ -123,7 +125,7 @@ def progression_detail(result, window=25):
                     theme.tile('Points to go', str(best['points_needed']))
                     theme.tile('Cost to get there', estimate_text(best['estimate']), note='estimate · no sales credit')
                     theme.tile('Then earns', money(best['profit_copper']), profit=True,
-                               note="per craft at today's prices")
+                               note="per craft at today's prices" + vendor_cap_suffix(best))
                     alternative_tile(best, group.get('alternative'))
             if group['recipes']:
                 table(reachable_rows(group), label='Reachable recipes')
@@ -150,12 +152,13 @@ def alternative_tile(best, alternative):
             else 'look for the pattern on the auction house or farm it; drops are not guaranteed')
     theme.tile(title, alternative['name'], compact=True,
                note=f"{learning_label(alternative)} · {money(alternative['profit_copper'])} per craft · "
-                    f"needs skill {alternative['required_skill']} · {hint}")
+                    f"needs skill {alternative['required_skill']} · {hint}{vendor_cap_suffix(alternative)}")
 
 
 def reachable_rows(group):
     return [{'Recipe': r['name'], 'Skill': r['required_skill'], 'Points': r['points_needed'],
              'Earns per craft': money(r['profit_copper']), 'Earns per craft_copper': r['profit_copper'],
+             'Vendor ceiling': vendor_cap_label(r),
              'Cost to reach': estimate_text(r['estimate']),
              'Learn from': learning_label(r), 'Confidence': r['confidence']} for r in group['recipes']]
 
@@ -188,6 +191,7 @@ def recipe_details(group):
             ui.label(recipe['character_reason'])
         ui.label(f"Profit per craft: {money(recipe['profit_copper'])} · {recipe['board_reason']} · "
                  f"{recipe['confidence']} confidence · {'; '.join(recipe['confidence_reasons'])}")
+        ui.label(vendor_cap_label(recipe))
         training = (money(recipe.get('training_cost_copper'))
                     if recipe.get('training_cost_copper') is not None else 'cost unknown')
         ui.label(f"Learning: {learning_label(recipe)} · Training: {training}" + training_payback(recipe))
@@ -399,7 +403,7 @@ def hiring_comparisons(comparisons, window):
         for group in character['professions']:
             best = group['best']
             ui.label(hiring.profession_title(group['profession']) + ' · ' +
-                     money(best['profit_copper'] if best else None) + ' per craft')
+                     money(best['profit_copper'] if best else None) + ' per craft' + vendor_cap_suffix(best or {}))
     if not comparisons:
         ui.label('No character has two evidenced primary professions.')
 
@@ -409,7 +413,8 @@ def hiring_row(context, row, *, show_cost=True):
     best = row['best']
     cost = money(row['estimate']['cost_copper']) if row['estimate']['complete'] else 'incomplete'
     label = (name + ' · best at 300: ' + money(best['profit_copper'] if best else None)
-             + ' per craft' + (' · cost to 300: ' + cost if show_cost else ''))
+             + ' per craft' + (' · cost to 300: ' + cost if show_cost else '')
+             + vendor_cap_suffix(best or {}))
     holders = ('Team: ' + ('; '.join(' · '.join(h['character']) +
                f" · {h['rank'] if h['rank'] is not None else 'unknown'} / "
                f"{h['max_rank'] if h['max_rank'] is not None else 'unknown'}" for h in row['holders'])
@@ -440,7 +445,8 @@ def hiring_detail(result):
         ui.label(tier['tier_fees']).classes('bs-note')
         best = tier['best']
         ui.label('Best trainer recipe: ' + (best['output_name'] + ' · ' + money(best['profit_copper'])
-                                          + ' per craft' if best else 'no valued board recipe'))
+                                          + ' per craft' + vendor_cap_suffix(best)
+                                          if best else 'no valued board recipe'))
         feeds = tier['feeds']
         ui.label(f"What it feeds: {feeds['count']} current team board rows become cheaper" if feeds['count']
                  else 'What it feeds: feeds nothing')

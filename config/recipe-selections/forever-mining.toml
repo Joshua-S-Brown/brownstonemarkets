@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "mining"
 status = "beta-observed"
-catalog_version = "0.4"
+catalog_version = "0.5"
 
 [recipe_defaults]
 output_quantity_verified = false
@@ -61,3 +61,17 @@ recipe_id = 1263071  # Molten Foundry
 
 [[recipes]]
 recipe_id = 1306126  # Smelt Heavy Thorium
+
+[[items]]
+item_id = 3857  # Coal
+vendor = true
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058911:4161, vendor NPC 5512, Stormwind City; unlimited stock, 500c per 1."
+
+[[items]]
+item_id = 18567  # Elemental Flux
+vendor = true
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058911:4161, vendor NPC 5512, Stormwind City; unlimited stock, 150000c per 1."

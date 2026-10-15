@@ -54,6 +54,7 @@ def craft_row(row, sell):
             "Cautious output unit (g)": row["sale_price_copper"], "Listings": sell["listings"],
             "Units": sell["units"], "Thin": sell["thin"], "Availability": row["availability"],
             "Profit basis": headline["profit_basis"].strip() or "at post price",
+            "Vendor ceiling": vendor_cap_label(row, sell),
             "Evidence notes": "; ".join(row["evidence_notes"]), "Recipe source": row["recipe_source"],
             **_character_columns(row), **_confidence_columns(row), "State": state(row)})
 
@@ -82,6 +83,7 @@ def sell_row(row):
             "Batch": row["batch_size"], "Lowest competing unit (g)": row["lowest_copper"],
             "Listings": row["listings"], "Units": row["units"], "Largest stack units": row["largest_stack_units"],
             "Undercut unit (g)": row["undercut_copper"], "Price step": row.get("price_step", "1c"),
+            "Vendor ceiling": vendor_cap_label(row),
             "Profit at undercut for batch (g)": row["undercut_batch_profit_copper"],
             "Deposit_copper": row.get("deposit_copper"), "Deposit": sell_deposit(row),
             "Your sales": sales_text(row.get("your_sales")), "Thin": row["thin"], "Warnings": warning_fields(row),
@@ -297,3 +299,14 @@ def sales_text(row):
     if row['average_copper'] is not None:
         text += f" · {format_money(row['average_copper'])} each after cut"
     return text
+
+
+def vendor_cap_label(*rows):
+    """Label only a value the vendor price actually lowered; a sale already below it is uncapped."""
+    row = next((r for r in rows if r.get('vendor_capped')), None)
+    return f"capped at vendor price {format_money(row['vendor_price_cap_copper'])}" if row else ""
+
+
+def vendor_cap_suffix(*rows):
+    label = vendor_cap_label(*rows)
+    return f" · {label}" if label else ""

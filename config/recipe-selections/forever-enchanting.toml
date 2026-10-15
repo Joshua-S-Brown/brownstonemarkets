@@ -5,7 +5,7 @@ game_version = "forever"
 rules_version = "forever-beta-1.60"
 profession = "enchanting"
 status = "beta-observed"
-catalog_version = "0.4"
+catalog_version = "0.5"
 
 [recipe_defaults]
 output_quantity_verified = false
@@ -98,11 +98,27 @@ recipe_id = 1306525  # Idol of the Ursine Twins
 [[items]]
 item_id = 4470  # Simple Wood
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058714:4113, vendor NPC 5483, Stormwind City; unlimited stock, 38c per 1."
 
 [[items]]
 item_id = 6217  # Copper Rod
 vendor = true
-vendor_verified = false
-vendor_note = "Marked in the app; confirm at a vendor."
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792059097:4178, vendor NPC 1318, Stormwind City; unlimited stock, 124c per 1."
+
+[[items]]
+item_id = 11291  # Star Wood
+vendor = true
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792058714:4113, vendor NPC 5483, Stormwind City; unlimited stock, 4500c per 1."
+
+[[items]]
+item_id = 247786  # Mote of Magic
+vendor = true
+vendor_quantity = 1
+vendor_verified = true
+vendor_note = "Confirmed 2026-10-15 Forever beta: work/beta-reports/20261015T105955759834Z-c0f823d5/report.md, entry 8:Cicelyna18:Classic Beta PvE 2:journal:1792059097:4178, vendor NPC 1318, Stormwind City; unlimited stock, 10c per 1."

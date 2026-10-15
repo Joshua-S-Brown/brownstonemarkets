@@ -184,6 +184,7 @@ preserves original bytes. No third-party Lua/action automation; usage/check in a
   - **Cautious** is the default for ranking and labels. It buys inputs at the higher, and sells output at the lower, of minimum buyout and market value. When only one value is positive, that value is used.
   - **Listed** uses minimum buyout only.
   - Every board row shows profit under both bases.
+  - **Vendor sale ceiling:** every recipe profit (Action Board, Today, Team and Market) values a priced output at no more than its catalog's positive vendor buy price. Label it *capped at vendor price* with the price only where the ceiling lowered the value. Today's undercut post price is capped too, preserving its posting increment. Missing/zero sale prices remain unknown; outputs without a vendor price are unchanged.
 - **CRAFT-05 Action Board:** ranks finished outputs of every catalog compatible with the selected source (same game version and `rules_version`) on one board. Routes follow CRAFT-12 when scoped team evidence is supplied; without it each recipe keeps its catalog-local costs.
   - Each ranked row retains profession and catalog-qualified recipe identity; catalogs making the same item retain separate rows.
   - Shows craft cost, sale price, net revenue after the auction cut, profit and margin, where margin = profit / net revenue.
@@ -221,6 +222,8 @@ preserves original bytes. No third-party Lua/action automation; usage/check in a
     | 16/21 | other, unverified | tailoring/5ac55d42c839793b | Red Linen Robe 2389, source [2,16,21] |
 
   - `raw_material=true` requires `raw_material_note`; skill-up raw totals stop there, Board still compares crafting (e.g. directly obtained leather). This is a selection planning choice, not game value.
+  - Selection `vendor_quantity` is a positive integer, default 1. The page's buy price is the bundle price; divide exactly by this quantity for integer unit `vendor_price_copper`, refusing any remainder. Catalogs retain `vendor_quantity` and `vendor_bundle_price_copper` as evidence.
+  - Confirm vendor marks with `vendor_verified=true` and a `vendor_note` citing date, beta report, entry ID, vendor NPC ID and zone. New items require unlimited stock and an equal saved-page unit price × observed list quantity; missing/differing page prices leave them unmarked. Equal prices establish no reputation discount. Limited stock (1–4 units that restock) cannot supply a shopping list and is never marked; it remains visible in the beta report. Apply marks and bundle corrections consistently across every Forever selection containing the item, retaining crafted roles and recipes.
   - Vendor status requires selection evidence or `vendor_verified=false`; page buy price alone proves no vendor (Felcloth/essences/gear can have it). Use buy price, not sell*4 (Coarse Thread 10c versus 8c).
   - `output_quantity_verified=false`/`vendor_verified=false` stay until in-game confirmation and remain visible. Forever yields require counting; Wowhead tooltip (2) is an effect index, not quantity, and list data suggests yield 1. Unconfirmed flags remain until evidence verifies them.
   - `availability="post-launch"` requires note, display-only; Board still prices it. After game update re-save/regenerate; CLI lists recipe/vendor changes, changed values require catalog_version bump. Loader-invalid catalogs refuse before writing.

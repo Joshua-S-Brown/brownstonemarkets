@@ -19,7 +19,7 @@ from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 from .today_warnings import PRICE_NOTE, base_signals, price_caps, warning_fields
 
-TODAY_VERSION = 12
+TODAY_VERSION = 13
 ROW_LIMIT = 10
 
 
@@ -65,10 +65,17 @@ def _held_quote(choices, batch, ladders, reserved, holdings=None, row=None):
         else:
             ladder = ladders.get(item_id)
             quote = ladder.quote(quantity, reserved.get(item_id, 0)) if ladder else None
-        if quote is None:
+        if not _within_vendor_ceiling(choice, quote):
             return None, steps
         result.append({**choice, **quote, "quantity": quantity})
     return result, steps
+
+
+def _within_vendor_ceiling(choice, quote):
+    if quote is None:
+        return False
+    cap = choice.get('vendor_price_cap_copper')
+    return cap is None or choice['method'] == 'vendor' or quote['highest_unit_copper'] <= cap
 
 
 def _relevant(row, holdings):
@@ -169,6 +176,9 @@ def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, au
         row = {**row, 'holding_steps': today_holdings.route_evidence(catalog, prices, row),
                'holding_consumers': today_holdings.consumers(catalog, row)}
         for choice in [*row['shopping_choices'], *row['holding_steps']]:
+            vendor_cap = catalog['items_by_id'][choice['item_id']].get('vendor_price_copper')
+            if vendor_cap and choice['method'] != 'vendor':
+                choice['vendor_price_cap_copper'] = vendor_cap
             price = sales.get(choice['item_id'])
             choice['held_unit_copper'] = _net(price, 1, auction_cut) if price else choice['unit_cost_copper']
         rows.append({**row, "output_quantity": recipe["output_quantity"],
@@ -330,9 +340,12 @@ def _sell(row, metrics, auction_cut):
     lowest = metric.get("min_buyout")
     undercut = undercut_price(lowest, metric.get("max_stack_size"))
     cap = row.get('price_cap_copper')
-    if cap is not None and undercut is not None:
+    vendor_cap = row.get('vendor_price_cap_copper')
+    post_cap = min(c for c in (cap, vendor_cap) if c is not None) if cap or vendor_cap else None
+    vendor_capped = bool(vendor_cap and undercut and undercut > vendor_cap)
+    if post_cap is not None and undercut is not None:
         step = SILVER if metric.get('max_stack_size') == 1 else 1
-        undercut = min(undercut, cap) // step * step or None
+        undercut = min(undercut, post_cap) // step * step or None
     profit = (_net(undercut, row["output_quantity"], auction_cut) * row["batch_size"] - row["batch_cost_copper"]
               if undercut else None)
     thin = (metric["listings"] < 3 or metric["largest_stack_units"] * 2 >= metric["units"]) if metric else None
@@ -341,6 +354,7 @@ def _sell(row, metrics, auction_cut):
             "lowest_copper": lowest, "listings": metric.get("listings"), "units": metric.get("units"),
             "largest_stack_units": metric.get("largest_stack_units"), "thin": thin,
             "undercut_copper": undercut, "undercut_batch_profit_copper": profit,
+            **({"vendor_price_cap_copper": vendor_cap, "vendor_capped": vendor_capped} if vendor_cap else {}),
             "price_step": "whole silver" if metric.get("max_stack_size") == 1 else "1c",
             **warning_fields(row), "price_note": PRICE_NOTE if cap is not None else None}
 

@@ -343,4 +343,4 @@ def test_today_plan_identical_to_before_story070():
 
     before = json.loads((Path(__file__).parent / 'fixtures/today_story070.json').read_text())
     assert json.loads(json.dumps(plan(), default=str)) == before
-    assert TODAY_VERSION == before['today_version'] == 12
+    assert TODAY_VERSION == before['today_version'] == 13
