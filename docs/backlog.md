@@ -23,7 +23,7 @@ Nothing in progress; the next story is the top of *Order* under Next.
 Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted on the beta with addon 0.3.1; the measurement record is in `addon/README.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
 
 **Through the last full beta testing day, 21 October** (manual, in game):
-- **Keep scanning.** Sixteen complete scans of the Normal Alliance house are imported (`status.md` → *Limitations*). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
+- **Keep scanning.** Twenty-five complete scans of the Normal Alliance house are imported (`status.md` → *Limitations*). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
 - **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. Buy your crafting reagents (thread, dye, flux, vials, spices) from a trade-supplies vendor rather than the auction house when you need them: the addon records each purchase, and Claude confirms the marked vendor prices from it. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
 - **Widen the Forever catalogs** (manual saved pages and `python -m brownstone recipes`): the rest of Tailoring, then the professions you plan to level at launch. The board and Today's *Craft* list only cover catalog recipes, so this is what gives them something to show.
 - **If any yield is more than 1** (now unlikely: Wowhead's "(2)" is an effect number, not a count; see `requirements.md` → CRAFT-08), *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
@@ -35,7 +35,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
   - **Active auctions (STORY-040):** open the Auctions tab before posting, after posting, after a cancel and after a sale, and note whether the list arrives without opening the tab.
   - **Professions (STORY-041):** open each profession window (Mining and Engineering on the new character; Tailoring and Enchanting on the druid), learn one new recipe and open the window again, gain a skill point, then log out.
   - **Who checks (added 2026-10-07, product owner):** the product owner only plays: gathering, crafting, posting, mailing and logging out. Claude checks every session's file with the STORY-042 report and says what is confirmed, missing or wrong. Nobody reads the addon file by hand.
-  - **Unconfirmed claims** (`requirements.md` → *Known Forever market facts*): time from a sale to its gold in the mailbox; the deposit charged for a few posts of known vendor price and duration (STORY-035); whether the Black Market vendor exists, where, and its prices (STORY-036); the postage for mail to your own characters, with and without attached items and gold (added 2026-10-06: moving materials to the character with the right profession may cost something per mail).
+  - **Unconfirmed claims** (`requirements.md` → *Product direction*): time from a sale to its gold in the mailbox, and whether the Black Market vendor exists, where, and its prices (STORY-036). Deposits and postage between your own characters were measured on 2026-10-15.
 
 ## Next
 
@@ -45,20 +45,21 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`; more posts in the next beta session: refine after it)
-2. STORY-073 your own sale rate (refine first)
-3. STORY-070 Team's next recipe you can actually learn
-4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-6. STORY-036 vendor price ceilings (after STORY-071)
-7. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
-8. STORY-026 scan coverage and rhythm
-9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-10. STORY-006 replay
+1. STORY-035 auction deposits (refined 2026-10-15; formula confirmed)
+2. STORY-079 tier levels from trainers
+3. STORY-073 your own sale rate (refine first)
+4. STORY-070 Team's next recipe you can actually learn
+5. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+6. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+7. STORY-036 vendor price ceilings (STORY-071's lists captured 2026-10-15)
+8. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
+9. STORY-026 scan coverage and rhythm
+10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+11. STORY-006 replay
 
-**Pending an in-game beta check:** STORY-071 and STORY-077 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
+**Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 072, 074, 075, 076, 078 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 071, 072, 074, 075, 076, 077, 078 and SPIKE-009/009b.
 
 ### STORY-069 — Today in player terms
 
@@ -98,6 +99,8 @@ Acceptance:
 
 ### STORY-071 — Vendor price lists (addon, read-only)
 
+Confirmed in game on 2026-10-15 (25 vendors, 830 rows; late lists fill in on the delayed read). Outcome in `status.md`. Addon 0.12.7 stops re-saving a list when only the player's position changes. Acceptance text retained until the next commit.
+
 Added 2026-10-14 from the addon comparison (aux and CraftProfit both record a vendor's full list when it opens). Today we only learn a vendor price when we buy something, so catalog vendor prices stay *unconfirmed* (the reason White Linen Shirt was Medium confidence) and STORY-036 has little to work with. **Time-critical:** it needs one beta play session before 21 October.
 
 As the owner, I want every vendor I open to record what it sells and for how much, so that Brownstone can confirm vendor prices without me buying anything.
@@ -122,7 +125,7 @@ Proposed acceptance (to confirm when refined):
 
 ### STORY-077 — Mob names (addon, read-only)
 
-Implemented in addon 0.12.6; current behavior is in `status.md` and ADDON-12/UI-13 in `requirements.md`. Awaiting the in-game check (`addon/README.md` → *Last beta play session*, step 7).
+Implemented in addon 0.12.6 and confirmed in game on 2026-10-15 (7 of 29 loot windows named, none unnamed); current behavior is in `status.md` and ADDON-12/UI-13 in `requirements.md`. Acceptance text retained until the next commit.
 
 Added 2026-10-14 from play feedback: farming spots say *NPC 475*; the Wowhead link works, but the app should say *Kobold Tunneler*. Loot only gives the mob's ID (from its GUID). Best done before 21 October so a beta session confirms it; names don't change at launch.
 
@@ -158,21 +161,36 @@ Acceptance:
 
 ### STORY-035 — Auction deposits
 
-Added 2026-10-06.
+Added 2026-10-06. Refined 2026-10-15 from 13 beta posts, all of which fit the formula below, as does the 2026-10-10 post (`status.md`; facts in `requirements.md` → *Product direction*).
 
 As a gold maker, I want Today's *Sell* list to show the deposit for posting and what an expiry would lose, so that profit at undercut isn't overstated for cheap or slow items.
 
 Acceptance:
-- **Formula from evidence:** the beta tests under *Now* record the deposit for a few posts of known vendor price, stack size and duration. The formula is recorded in `requirements.md` with that evidence; if it can't be confirmed, deposits stay *not modeled*.
-- **Shown, not ranked:** Today's *Sell* shows the deposit for the planned post and the loss if it expires. Ranking stays on batch profit (the deposit is refunded on a sale) until sell-through data exists (STORY-034).
-- Needs the item's vendor price (STORY-031); missing vendor price shows *deposit unknown*, never zero.
-- **Formula to test** (added 2026-10-14 from aux, a Classic addon): deposit = vendor sell price × 5% (25% neutral) × stack size, rounded down, × hours ÷ 2 for the duration. The 2026-10-10 post below already contradicts it (100c against about 3c), which points to a minimum deposit on Forever; test both against all captured posts.
+- **Formula:** deposit = ⌊vendor sell price × quantity × 5% × hours ÷ 2⌋, in integer copper, for 2, 8 or 24 hours. A **commodity** post (the scan item pass reports a maximum stack above 1) costs at least 100c and is one post for the whole batch. An **item** post (maximum stack 1) has no minimum and is one post per unit, so the batch deposit is the per-unit deposit × batch size. Evidence: Linen Cloth ×1 at 2/8/24 h paid 100c each; Bolt of Linen Cloth ×5 at 24 h paid 120c; Brown Linen Shirt (vendor 11c) paid 0c, 2c and 6c.
+- **Duration:** a *Post duration* setting in Today (2, 8 or 24 hours; default 24), saved with the other settings. Changing it resets choices like any other setting change. The default is provisional: once your own sales show which duration sells best, *Sell-through and fill chance* (Later) recommends one.
+- **Shown, not ranked:** *Sell* and the Queue's post line show the deposit and, separately, *lost if it expires* (the deposit; it's refunded on a sale). Ranking, minimum gain and headline profit stay on batch profit until sell-through data exists (STORY-034).
+- **Unknown, never zero:** a missing vendor price or unknown maximum stack shows *deposit unknown*. The neutral house (15% cut) is unmeasured, so its deposits are unknown too.
+- **Unchanged:** routes, batches, funds and gold needed (the deposit is shown, not reserved). `TODAY_VERSION` increases only if a plan field changes.
+- **Offline tests:** every 2026-10-15 post as a fixture with its exact deposit; the 100c minimum and its absence for items; rounding down; per-unit item posts summed over a batch; unknown vendor price and stack size; neutral unknown; the duration setting and its reset.
+- **Docs:** remove *deposits* from *Not modeled*; the deposit rule under Today in `requirements.md`; `status.md`.
 
-**Beta evidence so far (2026-10-10):** one post: 5 Linen Cloth (vendor 13c) cost a **100c** deposit, more than a Classic-style formula gives (`PostCommodity` with duration argument 3; money went 145c → 45c; status 1 *sold* 30 s later, no invoice mail captured yet). **Next play session** (play actions only; Claude checks the file): post an item worth more to a vendor (a stack of 5 and a single, for example Bolt of Linen Cloth or a crafted shirt) once at each of the three durations; post one more stack of Linen Cloth at the shortest duration; then open the mailbox after the sale and take the gold. That separates a minimum from the per-vendor-value rate and duration, and times the sale-to-mail delay.
+### STORY-079 — Tier levels from trainers
+
+Added 2026-10-15 from the beta trainer lists. *This session* uses Classic Era's levels (Journeyman 10, Expert 20, Artisan 35), so it told Arille to reach level 10 to train Journeyman Cooking. On Forever, Journeyman Cooking, First Aid, Herbalism and Skinning need no character level; Fishing needs 10.
+
+As a player, I want *This session* to ask for a character level only when the trainer does, so that I don't level a character for nothing.
+
+Acceptance:
+- **Evidence table:** a tracked table of Forever tier levels per profession and tier, each value citing the beta-report entry (trainer list, character, date) that shows it. Values now: Journeyman Cooking 0, First Aid 0, Herbalism 0, Skinning 0, Fishing 10. Values change only with new evidence (AGENTS.md); professions and tiers without evidence are unknown.
+- **This session:** a known level of 0 drops the *level the character* step, so a capped profession goes straight to *train Journeyman Cooking at a trainer*. A known level above 0 is used without the *unconfirmed* label. An unknown one keeps the Classic level and its *unconfirmed* label. STORY-069's merged steps only merge professions with the same level.
+- **Beta report:** lists each tier service seen per profession, with its level, skill and cost, so new values can be added.
+- **Unchanged:** Today's plan, Team and Market.
+- **Offline tests:** level 0, a known level, unknown (Classic fallback with label), merging only equal levels, the report's tier list.
+- **Docs:** UI-12 in `requirements.md`; `status.md`.
 
 ### STORY-036 — Vendor price ceilings
 
-Added 2026-10-06. Waits for the in-game check under *Now*. Trade-supplies reagents in every Forever catalog were marked as vendor items on 2026-10-13 from the saved pages' buy prices, unconfirmed except Coarse Thread (`status.md` → *Limitations*); this story confirms them and adds the caps.
+Added 2026-10-06. Trade-supplies reagents in every Forever catalog were marked as vendor items on 2026-10-13 from the saved pages' buy prices, unconfirmed except Coarse Thread (`status.md` → *Limitations*); this story confirms them and adds the caps. The 2026-10-15 vendor lists (STORY-071) matched 27 marked prices and showed that bundle items are marked 5× too high.
 
 As a gold maker, I want items a vendor sells at a fixed price to be capped at that price, so that the board never values them above it or suggests buying them for more.
 
@@ -181,8 +199,12 @@ Acceptance:
 - **Buying:** already capped by CRAFT-03's cheapest route; Today's *Buy* never lists an auction purchase above the vendor price.
 - **Selling:** a sale value above the vendor price is capped at it, with a label, and the rule is recorded in `requirements.md`.
 - **Limited stock** (if the vendor has any) is noted, since vendor stock is otherwise *not modeled*.
+- **Confirm from the lists** (added 2026-10-15): the 27 marked prices the 2026-10-15 lists matched become confirmed, each citing its beta-report entry and vendor.
+- **Bundle prices** (added 2026-10-15): a merchant price buys `quantity` units. Items sold in bundles (Empty, Leaded and Crystal Vial, Mild Spices, Shiny Red Apple, Refreshing Spring Water, Ice Cold Milk, Melon Juice, Sweet Nectar, Moonberry Juice, Morning Glory Dew; all in 5s) are marked at the bundle price. Correct each to bundle price ÷ quantity (all divide exactly: Empty Vial 4c, Mild Spices 2c), citing the list. The beta report then shows them as *confirms*, not *lower*.
 
 ### STORY-044 — Brownstone panel from a minimap button
+
+Confirmed in game on 2026-10-15 (`addon/README.md` → *Panel*). Acceptance text retained until the next commit.
 
 Added 2026-10-07 (product owner: "it would be a lot easier to just hit those as needed", wanted before the next play session). Addon only, plus one Brownstone regression test. **Reverses the STORY-029 visibility decision** (`addon/README.md` → *Reload and clear controls*: controls only with the auction house open, no persistent panel); the auction-house button row stays as it is.
 
@@ -355,7 +377,7 @@ Acceptance:
 - **Calibrate removed listings:** your own sales from invoices show how many *removed* listings (STORY-027) were real sales.
 
 **Ledger analytics** (from the 2026-10-06 design notes; each needs STORY-034 and some weeks of your own sales):
-- **Sell-through and fill chance:** for each of your posts, its premium over the lowest price at posting, and whether and when it sold. Start with simple buckets (how often posts at 0–5%, 5–15% … above the lowest sold within their duration); more refined models only once there is enough data.
+- **Sell-through and fill chance:** for each of your posts, its premium over the lowest price at posting, and whether and when it sold, and at which duration (to recommend STORY-035's post duration). Start with simple buckets (how often posts at 0–5%, 5–15% … above the lowest sold within their duration); more refined models only once there is enough data.
 - **Gold per minute of auction time:** expected profit net of the auction cut and expected deposit losses, per minute you spend at the auction house. Replaces *Gold per hour* under *Today, later versions* if the scaled minimum gain feels wrong.
 - **Cost basis:** lots per item (gathered, bought, crafted, vendor), first in first out. Two values per lot: what you paid (zero for gathered), for *what did I actually make?*; and what it would sell for now (depth-aware, after the cut, capped at any vendor price), for *craft it or sell it raw?*. Farming judged separately from trading, as gold per hour.
 - **Capital view:** gold across all characters, holdings at market value, gold tied up in listings and mail, and net worth. A **reserve** you set (mount, training, spending) is kept back; Today's *Gold available* could then default to cash minus reserve instead of being typed in.
@@ -413,7 +435,7 @@ Acceptance:
   - backing up before and after (STORY-016)
   - adding and enabling the live Roleplaying Alliance source in `config/market.local.toml`, with its own `source_id`, `environment = "live"`, the live game folder's `scan_path` and its `rules_version` (DATA-03)
   - re-saving each Forever Wowhead page and regenerating. If the live `rules_version` differs from the beta's, every Forever catalog stays inspection-only until regenerated (*Refresh due* flags it).
-  - re-checking *Known Forever market facts* in `requirements.md`
+  - re-checking the confirmed and unconfirmed facts under *Product direction* in `requirements.md`
 - **Checked** using archived scans and data copies: the backup, restore and source-cutover steps work end to end. Live-house checks happen at launch.
 - Depends on STORY-016 (deferred; its backup steps wait for it) and STORY-020a.
 

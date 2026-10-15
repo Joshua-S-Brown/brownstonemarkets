@@ -642,6 +642,33 @@ def test_lua_trainer_list_loading_after_show_is_read_on_update_or_one_second_lat
     assert entries(g)[-1]["event"] == "TRAINER_CLOSED"
 
 
+def test_lua_merchant_moving_player_is_not_a_new_list():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        timers, x, stock, standing = {}, 0.41, 3, 4
+        C_Timer = { After = function(seconds, callback) timers[#timers + 1] = callback end }
+        C_Map = { GetBestMapForUnit = function() return 1429 end,
+                  GetPlayerMapPosition = function() return { GetXY = function() return x, 0.65 end } end }
+        function GetMerchantNumItems() return 1 end
+        function GetMerchantItemLink(i) return "|Hitem:2320|h[Thread]|h" end
+        function GetMerchantItemInfo(i) return "Thread", nil, 10, 1, stock, true, true, false end
+        function UnitGUID(unit) return "Creature-0-1-2-3-66-0001" end
+        function UnitReaction(player, unit) return standing end
+    ''')
+    fire(g, "MERCHANT_SHOW")
+    count = len(entries(g))
+    lua.execute('x = 0.4142; timers[1]()')
+    fire(g, "MERCHANT_UPDATE")
+    assert len(entries(g)) == count
+    lua.execute('stock = 2')
+    fire(g, "MERCHANT_UPDATE")
+    assert len(entries(g)) == count + 1 and entries(g)[-1]["merchant_items"][0]["stock"] == 2
+    lua.execute('standing = 5')
+    fire(g, "MERCHANT_UPDATE")
+    assert len(entries(g)) == count + 2 and entries(g)[-1]["vendor_standing"] == 5
+    assert g.actionCalls == 0
+
+
 def test_lua_merchant_late_loading_unchanged_closed_and_cost_stock():
     lua, g, _ = journal_client()
     lua.execute('''

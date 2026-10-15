@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.6"
+local ADDON_VERSION = "0.12.7"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -979,10 +979,20 @@ function journal.merchantItems()
         zone = journal.zone() }
 end
 
+-- The player's position moves while a window is open; only a changed list or vendor is new evidence.
+function journal.sameMerchant(a, b)
+    if type(a) ~= "table" or type(b) ~= "table" then return false end
+    for _, key in ipairs({ "merchant_item_count", "merchant_items", "vendor_guid", "vendor_npc_id",
+        "vendor_standing" }) do
+        if not journal.equal(a[key], b[key]) then return false end
+    end
+    return true
+end
+
 function journal.merchantRead(event, arguments)
     if not journal.windows.merchant then return end
     local context = journal.merchantItems()
-    if (context.merchant_item_count or 0) == 0 or journal.equal(context, journal.lastMerchant) then return end
+    if (context.merchant_item_count or 0) == 0 or journal.sameMerchant(context, journal.lastMerchant) then return end
     if journal.add(event, "vendor", arguments, context) then journal.lastMerchant = context end
 end
 

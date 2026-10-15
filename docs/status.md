@@ -48,15 +48,18 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   evidence and training costs. Generation is offline from manually saved pages (CRAFT-08).
 - **Sources:** local overrides enable `forever-us-normal-alliance-addon` beta; tracked config
   keeps it disabled. Mankrik Alliance is development data; Retail is regression-only.
-- **Addon:** 0.12.6, account format 6/scan format 4. Usage, capture fields and remaining game
+- **Addon:** 0.12.7 (vendor lists no longer re-saved when only the player's position changes; install before the next play), account format 6/scan format 4. Usage, capture fields and remaining game
   checks live in [addon README](../addon/README.md). App retirement does not alter addon/data.
 
 ## Limitations
 
-- Twenty-three complete Normal Alliance scans and one stopped scan are imported; no RP/neutral scans.
+- Twenty-five complete Normal Alliance scans and one stopped scan are imported; no RP/neutral scans.
   Bulk API supplies no sellers (ADDON-07), blocking seller analysis.
 - Catalog yields/vendor marks/availability still need game evidence; no multi-yield support.
-  Vendor prices remain unconfirmed except Coarse Thread. Runecloth Bag/dye post-launch flags
+  Bolt of Linen Cloth's yield of 1 was confirmed on 2026-10-15 (17 crafts, 34 Linen Cloth). Vendor marks
+  are confirmed only for Coarse Thread; that day's 25 vendor lists matched 27 more marked prices at Friendly
+  standing (CRAFT-08 confirmation is STORY-036). Bundle items (vials, spices, drinks: 5 per purchase) are
+  marked at the bundle price, so their unit cost is 5× too high (Empty Vial 20c, not 4c). Runecloth Bag/dye post-launch flags
   need review; both dyes appear on beta listings.
 - Hiring cost walks complete only for Tailoring, Alchemy and Blacksmithing. Other catalogs lack
   starter learning evidence or put Smelt Copper at skill 25; gaps remain unknown.
@@ -69,11 +72,15 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   (all 15 coin loots matched), and 0.12.5 loot-time vendor values on 2026-10-14 (grey items the scans don't price). Coin without a nearby matching money delta stays unavailable.
   Addon 0.12.6 captures matching targeted mob names; UI-13 displays the newest scoped name beside
   its NPC ID in spots and evidence, with NPC-only fallback. The beta report counts named windows
-  and lists unnamed NPC IDs. This new capture still needs an in-game check.
+  and lists unnamed NPC IDs. Confirmed on the beta on 2026-10-15 (7 of 29 windows named, no NPC ID unnamed).
   Other unpriced gathered items are counted and excluded; spot evidence includes all item values.
 - Listings are not sales/demand/forecasts. Removed-listing time-left bounds are Classic assumptions,
-  pending Forever confirmation. Tier levels 10/20/35 and yellow skill-up chances are unconfirmed.
-  Deposits, sale speed, postage, ledger and suggested stock targets remain backlog work.
+  pending Forever confirmation. Trainers on 2026-10-15 contradict Classic tier levels: Journeyman Cooking,
+  First Aid, Herbalism and Skinning need no character level, Fishing needs 10 (STORY-079); crafting tiers and
+  yellow skill-up chances are unconfirmed. Deposits (13 posts) and postage are measured (requirements →
+  Product direction) but not modeled (STORY-035); sale speed, ledger and stock targets remain backlog work.
+  A gold-only mail recorded the previous draft's items and no gold, so the ledger (STORY-034) must use money
+  changes. Each profession window event saves the full recipe list: 25 MB of the 29.6 MB 2026-10-15 file.
 - Today fixes aggregate routes before whole-stack sizing; surplus uncredited/unshared, greedy plan
   affordable but no global optimum. Rows using a held item compare every feasible size up to the 1,000-craft cap;
   large caps cost those rows more calculation time than the breakpoint search other rows keep. Cross-profession routes need scoped Known/Train now evidence.
@@ -82,11 +89,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 - Bronze/silver/DB/gold are not jointly atomic; failed post-commit runs need preserved evidence
   for recovery; replay is pending. Run one writer. Synced drops can change during read: retry.
 - App reads on load: reload after imports elsewhere. Native clipboard/appearance and phone-width
-  behavior still need manual checks. Remaining in-game checks (addon README → *Last beta play
-  session*): vendor lists (0.12.3 captures prices/stock/standing on opening; existing beta data
-  has no lists yet; STORY-071 report section is empty until a vendor is opened), trainer tier levels
-  (0.12.2 reads the list after it loads; 0.11.3 saved empty lists),
-  removed-listing time-left bounds, yellow skill-up chances and the panel. Item pass measured
+  behavior still need manual checks. Vendor lists, trainer lists, mob names and the panel
+  were confirmed on 2026-10-15. Remaining in-game checks (addon README → *Last beta play session*):
+  removed-listing time-left bounds, the sale-to-mailbox delay, crafting tier levels and yellow skill-up chances. Item pass measured
   2026-10-13: 5.9 s listing read, 0.34 s pass, 1,590 of 1,909 requests answered, none timed out.
 
 ## Verify

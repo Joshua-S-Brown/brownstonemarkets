@@ -1,4 +1,4 @@
-# Brownstone Scan 0.12.2
+# Brownstone Scan 0.12.7
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -32,18 +32,17 @@ game doesn't offer and carry on.
 `addon/BrownstoneScan` into `_classic_beta_/Interface/AddOns/` as in step 1 of *Windows scans to the
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
-Done on 2026-10-13: everything in the earlier checklists except the items below. Install **0.12.6**
-first (it reads trainer and vendor lists after they load, and records farming positions and coin), then:
+Done on 2026-10-15: vendor lists, trainers, mob names, loot vendor prices, the panel and the deposit
+posts. Install **0.12.7** first (vendor lists are no longer saved twice when you move), then:
 
-1. **Vendor lists:** open a trade-supplies vendor, a general goods vendor and one other vendor, without buying.
-2. **Trainers (tier levels):** open the trainer for each profession you have once, then close it.
-3. **Time-left labels (STORY-027):** post three cheap items at 2h, 8h and 24h and scan right away.
-   Scan again about 35 minutes later, about 2h 10m later, and once more 8 or more hours later.
-4. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
-5. **Panel (STORY-044):** start one scan from the minimap panel, and use its reload and clear buttons once.
-6. **Loot vendor prices** (with 0.12.5): kill and loot a few mobs, including at least one grey item.
-7. **Mob names** (with 0.12.6): kill and loot a few mobs as usual (you normally have the mob targeted when you loot it).
-8. `/reload`, log out and run the drop script.
+1. **Time-left labels (STORY-027):** the posts from 15 October (10:30–10:32 UTC) are still listed. Scan
+   after 12:45 UTC (7:45 am Central), and again after 18:35 UTC (1:35 pm Central). If both times have
+   passed, post three cheap items at 2h, 8h and 24h, scan right away, then about 35 minutes, about
+   2h 10m and 8 or more hours later.
+2. **Sale gold:** each time, open the mailbox and take anything there.
+3. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
+4. **Crafting tier levels:** when a crafting profession reaches skill 50, open its trainer once.
+5. `/reload`, log out and run the drop script.
 
 ## Run a scan
 
@@ -89,7 +88,7 @@ routine is a reminder; opening it captures nothing and never performs an action 
 The authoritative convenience-view contract is in [ADDON-13](../docs/requirements.md#addon-13-brownstone-panel-story-044);
 capture and clear rules remain in ADDON-11/12 and the controls above.
 
-**In-game check (pending):**
+**In-game check** (played 2026-10-15; the moved minimap position survived reload. Clear was cancelled, not accepted):
 
 1. Click the minimap coin to open the panel; close it with Escape, open it again,
    and close it with the window's close button.
