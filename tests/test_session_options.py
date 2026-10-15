@@ -184,7 +184,8 @@ def test_next_steps_craft_then_level_and_character_level_gate(monkeypatch):
     kinds = [s['kind'] for s in character['next_steps']]
     assert kinds[0] == 'craft'
     group = character['professions'][0]
-    assert group['tier'] == {'name': 'Journeyman', 'cap': 75, 'required_level': 10, 'level_ok': False}
+    assert group['tier'] == {'name': 'Journeyman', 'cap': 75, 'required_level': 10, 'level_ok': False,
+                             'source': 'classic'}
     level = next(s for s in character['next_steps'] if s['kind'] == 'level_character')
     assert level['tier']['required_level'] == 10
     step = next(s for s in character['next_steps'] if s['kind'] == 'level_profession')
@@ -197,9 +198,9 @@ def test_next_steps_craft_then_level_and_character_level_gate(monkeypatch):
 
 
 @pytest.mark.parametrize(('rank', 'maximum', 'level', 'expected'), [
-    (8, 75, None, {'name': 'Journeyman', 'cap': 75, 'required_level': 10, 'level_ok': False}),
-    (150, 150, 20, {'name': 'Expert', 'cap': 150, 'required_level': 20, 'level_ok': True}),
-    (200, 225, 34, {'name': 'Artisan', 'cap': 225, 'required_level': 35, 'level_ok': False}),
+    (8, 75, None, {'name': 'Journeyman', 'cap': 75, 'required_level': 10, 'level_ok': False, 'source': 'classic'}),
+    (150, 150, 20, {'name': 'Expert', 'cap': 150, 'required_level': 20, 'level_ok': True, 'source': 'classic'}),
+    (200, 225, 34, {'name': 'Artisan', 'cap': 225, 'required_level': 35, 'level_ok': False, 'source': 'classic'}),
     (250, 300, 60, None), (None, 75, 10, None)])
 def test_next_tier_classic_levels(rank, maximum, level, expected):
     assert next_tier({'rank': rank, 'max_rank': maximum}, level) == expected
@@ -262,3 +263,49 @@ def test_session_copies_sell_profit_without_changing_cautious_plan(monkeypatch):
             assert row['headline_profit_copper'] == expected
             assert row['headline_per_craft_copper'] == expected // row['batch_size']
         assert character['craft_profit_copper'] == sum(r['headline_profit_copper'] for r in character['crafts'])
+
+
+@pytest.mark.parametrize(('profession', 'level', 'version', 'required', 'source', 'kind'), [
+    ('cOoKiNg', 6, 'forever', 0, 'trainer', 'train'),
+    ('Cooking', None, 'forever', 0, 'trainer', 'train'),
+    ('Fishing', 6, 'forever', 10, 'trainer', 'level_character'),
+    ('Tailoring', 6, 'forever', 10, 'classic_fallback', 'level_character'),
+    ('Cooking', 6, 'classic', 10, 'classic', 'level_character'),
+    ('Cooking', 10, 'classic', 10, 'classic', 'train'),
+])
+def test_trainer_tiers_steps(profession, level, version, required, source, kind):
+    from brownstone.tier_levels import load
+    group = {'profession': profession, 'rank': 75, 'max_rank': 75,
+             'best': None, 'capped': True, 'recipes': []}
+    tier = next_tier(group, level, load(), version)
+    assert tier['required_level'] == required and tier['source'] == source
+    steps = next_steps({'crafts': [], 'professions': [group | {'tier': tier}]})
+    assert [s['kind'] for s in steps] == ['nothing', kind]
+
+
+def test_merge_tiers_requires_equal_level_and_source():
+    from brownstone.session_options import merge_tier_steps
+    base = {'kind': 'level_character', 'group': {'profession': 'Fishing'},
+            'tier': {'name': 'Journeyman', 'required_level': 10, 'source': 'trainer'}}
+    fallback = base | {'tier': base['tier'] | {'source': 'classic_fallback'}}
+    higher = base | {'tier': base['tier'] | {'required_level': 20}}
+    steps = merge_tier_steps([base, base, fallback, higher])
+    assert [len(s['groups']) for s in steps] == [2, 1, 1]
+
+
+def test_forever_composition_loads_once_and_preserves_plan(monkeypatch):
+    from brownstone import tier_levels
+    args = arguments()
+    market = MARKET | {'game_version': 'forever'}
+    args.update(market=market, snapshot=SNAPSHOT | {'game_version': 'forever'})
+    args['catalogs'] = [c | {'game_version': 'forever'} for c in args['catalogs']]
+    plan = build_today(**args)
+    original = deepcopy((args, plan))
+    read = Mock(wraps=tier_levels.load)
+    monkeypatch.setattr(tier_levels, 'load', read)
+    monkeypatch.setattr('brownstone.flood_signals.signals', lambda *a: {'rows': []})
+    result = build_options(None, market, args, plan)
+    assert read.call_count == 1
+    assert result['characters'][0]['professions'][0]['tier']['source'] == 'classic_fallback'
+    assert 'Levels from captured Forever trainer lists' in result['tier_explanation']
+    assert (args, plan) == original

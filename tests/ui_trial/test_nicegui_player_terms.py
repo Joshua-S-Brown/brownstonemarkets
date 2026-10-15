@@ -172,7 +172,7 @@ async def test_why_summary_order_and_details_retain_ids(user):
 async def test_farming_caveat_once_from_both_page_callers(user, monkeypatch, market):
     from test_farming import loot
 
-    from brownstone import farming
+    from brownstone import farming, tier_levels
     from brownstone.freshness import assess
     from views.nicegui_market import where_to_get
 
@@ -189,6 +189,7 @@ async def test_farming_caveat_once_from_both_page_callers(user, monkeypatch, mar
             where_to_get(MARKET, {'farming': characters, 'wowhead_url': 'https://www.wowhead.com/classic/item=2770'})
         else:
             view.session_options({'characters': characters,
+                                  'tier_explanation': tier_levels.explanation({}, MARKET['game_version']),
                                   'freshness': assess({'collected_at': NOW.isoformat()}, NOW, 24),
                                   'signals': {'note': '', 'scan': None}, 'window': 25,
                                   'snapshot': {'snapshot_id': 'fixture'}}, MARKET | {'max_age_hours': 24})

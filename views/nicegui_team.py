@@ -9,6 +9,7 @@ from brownstone.characters import build_characters
 from brownstone.money import format_money, to_gold
 from brownstone.progression import build_progression
 from brownstone.recipe_catalogs import learning_label
+from brownstone.tier_levels import fallback_label
 from brownstone.today_characters import available_characters
 from brownstone.today_loading import load_today, load_today_characters
 from brownstone.today_settings import TodaySettings
@@ -296,7 +297,8 @@ def route_warnings(result):
 
 
 HIRING_LABELS = ('Current-scan prices are not a forecast; listings never sales; sales speed and demand unknown; '
-                 'beta prices; estimated yellow chances and tier levels unconfirmed on Forever. '
+                 'beta prices; estimated yellow chances unconfirmed on Forever. '
+                 'Forever tier levels use trainer lists where known, otherwise Classic assumptions. '
                  'Costs give no credit for selling results. No gathering income. Tier fees not included (unknown).')
 
 
@@ -384,7 +386,7 @@ def hiring_detail(result):
     ui.label(f"New hire: rank 1, no known recipes · {result['needs_pattern']} needs pattern or other source · "
              f"{result['unknown_source']} learning source unknown")
     for tier in result['tiers']:
-        level = (f" · character level {tier['required_level']} (Classic Era; unconfirmed on Forever)"
+        level = (f" · character level {tier['required_level']}{fallback_label(tier)}"
                  if tier['required_level'] is not None else '')
         ui.label(f"Rank {tier['cap']}" + level).classes('text-lg font-semibold')
         ui.label('Cumulative cost from rank 1: ' + estimate_text(tier['estimate']))

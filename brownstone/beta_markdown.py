@@ -28,6 +28,7 @@ def markdown(report: dict) -> str:
                   'NPC IDs still unnamed: ' + (', '.join(map(str, capture['unnamed_npc_ids'])) or 'none') + '.']
     lines += _scan_attempts(report.get("scan_attempts", {}))
     lines += _vendor_prices(report.get("vendor_prices", {}))
+    lines += _trainer_tiers(report.get("trainer_tiers", {}))
     lines += ["", "## Gold display", ""]
     for character in report.get("characters", []):
         for snapshot in character["snapshots"]:
@@ -116,4 +117,18 @@ def _scan_attempts(section: dict) -> list[str]:
             cells = [row["at_utc"], row["reason"], row["waited_seconds"],
                      since // 60 if type(since) is int else None, row["late_reply_seconds"]]
             lines.append("| " + " | ".join("unknown" if v is None else _cell(v) for v in cells) + " |")
+    return lines
+
+
+def _trainer_tiers(section):
+    lines = ['', '## Trainer tiers', '', 'Captured tier services for human review; application values are unchanged.']
+    rows = section.get('observations', [])
+    if not rows:
+        return lines + ['', 'No tier services captured.']
+    lines += ['', '| Profession | Tier | Character level | Skill | Cost (copper) | Character | Captured UTC | Entry |',
+              '| --- | --- | --- | --- | --- | --- | --- | --- |']
+    for row in rows:
+        lines.append('| ' + ' | '.join('unknown' if row[k] is None else _cell(row[k]) for k in (
+            'profession', 'tier', 'required_level', 'required_skill', 'cost_copper', 'character',
+            'captured_utc', 'entry_id')) + ' |')
     return lines

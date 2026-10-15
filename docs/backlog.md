@@ -182,11 +182,18 @@ Added 2026-10-15 from the beta trainer lists. *This session* uses Classic Era's 
 As a player, I want *This session* to ask for a character level only when the trainer does, so that I don't level a character for nothing.
 
 Acceptance:
-- **Evidence table:** a tracked table of Forever tier levels per profession and tier, each value citing the beta-report entry (trainer list, character, date) that shows it. Values now: Journeyman Cooking 0, First Aid 0, Herbalism 0, Skinning 0, Fishing 10. Values change only with new evidence (AGENTS.md); professions and tiers without evidence are unknown.
-- **This session:** a known level of 0 drops the *level the character* step, so a capped profession goes straight to *train Journeyman Cooking at a trainer*. A known level above 0 is used without the *unconfirmed* label. An unknown one keeps the Classic level and its *unconfirmed* label. STORY-069's merged steps only merge professions with the same level.
+- **Evidence table:** a tracked file, `config/tier_levels.toml`, of Forever character levels per profession and tier. Each value cites its trainer list: journal entry ID, character and capture date. Values change only with new evidence (AGENTS.md), and anything missing is unknown. A malformed file is an error, never a silent fallback. Values now, all from Cicelyna's trainer lists on 2026-10-15:
+  - Cooking Journeyman 0 (`8:Cicelyna18:Classic Beta PvE 2:journal:1792058711:4109`)
+  - First Aid Journeyman 0 (`…:1792059436:4224`)
+  - Fishing Journeyman 10 (`…:1792059062:4172`)
+  - Herbalism Journeyman, Expert and Artisan 0 (`…:1792059350:4220`)
+  - Skinning Journeyman, Expert and Artisan 0 (`…:1792058809:4153`)
+- **Scope:** the table applies to Forever sources (`game_version` `forever`). Classic Era sources keep Classic's ladder (Journeyman 10, Expert 20, Artisan 35, from the wiki) with no *unconfirmed* label.
+- **This session:** a known level of 0 drops the *level the character* step, so a capped profession goes straight to *train Journeyman Cooking at a trainer*. A known level above 0 is used as is. An unknown one falls back to the Classic level, and that step says so: *(Classic level, unconfirmed on Forever)*. *How these options were made* says which levels come from trainer lists. STORY-069's merged steps still merge only professions with the same level and the same source.
 - **Beta report:** lists each tier service seen per profession, with its level, skill and cost, so new values can be added.
-- **Unchanged:** Today's plan, Team and Market.
-- **Offline tests:** level 0, a known level, unknown (Classic fallback with label), merging only equal levels, the report's tier list.
+- **Team's hiring estimate** (`hiring.py`, STORY-059) reads the same table, so Team and *This session* agree.
+- **Unchanged:** Today's plan and Market.
+- **Offline tests:** level 0, a known level, unknown (Classic fallback with label), a Classic Era source (no label), merging only equal levels, hiring with a table value, a malformed table, and the report's tier list.
 - **Docs:** UI-12 in `requirements.md`; `status.md`.
 
 ### STORY-036 — Vendor price ceilings

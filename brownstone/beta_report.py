@@ -9,8 +9,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+from . import addon_records, pipeline, professions, scans
 from . import beta_evidence as evidence
-from . import pipeline, professions, scans
 from .beta_markdown import markdown
 from .beta_vendor import catalog_evidence
 from .config import Source
@@ -228,8 +228,9 @@ def create_report(path: Path, config: Source, output_root: Path, previous: Path 
         valid_journal_ids = {c["entry_ids"][0] for c in report["checks"]
                              if c["check"] == "import validation" and c["status"] == "pass"
                              and c["detail"] == "journal"}
-        report["vendor_prices"] = catalog_evidence(
-            [r for r in lists[2] if isinstance(r, dict) and r.get("entry_id") in valid_journal_ids], config)
+        journal = [r for r in lists[2] if isinstance(r, dict) and r.get("entry_id") in valid_journal_ids]
+        report["vendor_prices"] = catalog_evidence(journal, config)
+        report["trainer_tiers"] = trainer_tiers(journal, config)
         report["file"]["name"] = path.name
         if not any(c["check"] == "parse" for c in report["checks"]):
             round_trip(report, raw, config, now)
@@ -289,3 +290,25 @@ def scan_attempts(database: dict) -> dict:
     return {"recorded": True, "last_reply_utc": _utc(last) if type(last) is int else None,
             "last_reply_wait_seconds": timing.get("last_reply_wait_seconds"),
             "attempts": [{k: r.get(k) for k in keys} for r in rows if isinstance(r, dict)]}
+
+
+def trainer_tiers(records, config):
+    """Raw service names select human-review evidence only; never supply application tier values."""
+    from .tier_levels import TIERS
+
+    rows = []
+    for record in records:
+        if record.get('family') != 'vendor' or addon_records.check_house(record, config):
+            continue
+        for service in scans._list(record.get('trainer_services'), 'trainer services'):
+            name = scans._dict(service.get('info')).get(1)
+            if not isinstance(name, str) or name.partition(' ')[0] not in ('Apprentice', *TIERS):
+                continue
+            tier, _, profession = name.partition(' ')
+            rows.append({'name': name, 'profession': profession, 'tier': tier,
+                         'required_level': scans._dict(service.get('level_required')).get(1),
+                         'required_skill': scans._dict(service.get('skill_required')).get(2),
+                         'cost_copper': scans._dict(service.get('cost')).get(1),
+                         'entry_id': record['entry_id'], 'character': record['character'],
+                         'captured_utc': _utc(record['captured_at'])})
+    return {'observations': rows}

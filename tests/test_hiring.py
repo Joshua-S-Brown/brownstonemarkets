@@ -247,3 +247,24 @@ def test_catalog_header_identity_and_stale_snapshot_keep_current_profit_visible(
     assert ctx['board']['freshness']['stale']
     assert row(ctx)['best']['profit_copper'] == 85
     assert hiring.feeds(ctx, 'mining', 75)['top'][0]['saved_copper'] == 270
+
+
+def test_hiring_uses_shared_trainer_levels_case_insensitively():
+    from brownstone.tier_levels import load
+    catalogs = fixture()
+    catalogs[0]['profession'] = 'cOoKiNg'
+    ctx = context(catalogs)
+    ctx['market'] = ctx['market'] | {'game_version': 'forever'}
+    tiers = hiring.detail(ctx, row(ctx, 'cOoKiNg'))['tiers']
+    assert [t['required_level'] for t in tiers] == [None, 0, 20, 35]
+    assert tiers[1]['source'] == 'trainer'
+    assert tiers[1]['evidence'] == load()[('cooking', 'Journeyman')]
+    assert tiers[2]['source'] == 'classic_fallback'
+
+
+def test_hiring_first_aid_catalog_slug():
+    catalogs = fixture()
+    catalogs[0]['profession'] = 'first-aid'
+    ctx = context(catalogs)
+    ctx['market'] = ctx['market'] | {'game_version': 'forever'}
+    assert hiring.detail(ctx, row(ctx, 'first-aid'))['tiers'][1]['required_level'] == 0

@@ -1,5 +1,5 @@
 """Read-only new-hire comparisons; scoped evidence and prices are supplied by the caller."""
-from . import action_board, professions, progression, today_characters
+from . import action_board, professions, progression, tier_levels, today_characters
 from .crafting import basis_prices, evaluate_recipe
 from .markets import MARKET_KEYS
 from .recipe_catalogs import PROFESSIONS, profession_title
@@ -64,6 +64,7 @@ def prepare(catalogs, observations, market, snapshot, character_data, *, now, ma
                                           max_age_hours=max_age_hours, auction_cut=auction_cut,
                                           recipe_graph=graph) if catalogs else {'rows': [], 'freshness': None}
     return {'catalogs': catalogs, 'market': market, 'data': character_data, 'makers': makers, 'board': board,
+            'tier_levels': tier_levels.load(),
             'prices': basis_prices(observations, 'cautious')[0],
             'consumers': [r for r in board['rows'] if makers.get((r['catalog_id'], r['recipe_id']))],
             'catalog_warnings': graph.warnings,
@@ -203,10 +204,12 @@ def _saving(context, graph, row, profession):
 def detail(context, row):
     name = row['profession']
     recipes = [r for c in context['catalogs'] if c['profession'] == name for r in c['recipes_by_id'].values()]
-    levels = {next_cap: NEXT_TIER[cap][1] for cap, next_cap in zip(CAPS, CAPS[1:], strict=False)}
+    levels = {next_cap: tier_levels.lookup(context['tier_levels'], context['market']['game_version'], name,
+                                         *NEXT_TIER[cap])
+              for cap, next_cap in zip(CAPS, CAPS[1:], strict=False)}
     return {'profession': name,
             'needs_pattern': sum(not _trainer(r) and not _unknown_source(r) for r in recipes),
             'unknown_source': sum(_unknown_source(r) for r in recipes),
-            'tiers': [{'cap': cap, 'required_level': levels.get(cap), 'tier_fees': TIER_FEES,
+            'tiers': [{'cap': cap, **levels.get(cap, {'required_level': None}), 'tier_fees': TIER_FEES,
                        'estimate': progression.estimate_cost([], {}, 1, 300, cap, context['prices'], row['walk']),
                        'best': _best(context, name, cap), 'feeds': feeds(context, name, cap)} for cap in CAPS]}

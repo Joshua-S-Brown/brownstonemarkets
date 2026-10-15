@@ -245,3 +245,30 @@ async def test_farming_cell_centre_coin_share_and_vendor_disagreement(user, tmp_
     user.find('Spot item values').elements.pop().open()
     await user.should_see('vendor price disagreement')
     await user.should_see('using scan')
+
+
+async def test_tier_labels_single_merged_and_classic(user):
+    from brownstone.session_options import next_tier
+    from brownstone.tier_levels import load
+    from views.nicegui_today import step_text
+
+    character = {'character': ('Arille', 'realm', 'Alliance'), 'level': 6}
+    group = {'profession': 'Cooking', 'rank': 75, 'max_rank': 75, 'capped': True}
+    @ui.page('/tier-labels')
+    def page():
+        for version, profession, kind in [('forever', 'Cooking', 'train'),
+                                          ('forever', 'Fishing', 'level_character'),
+                                          ('forever', 'Tailoring', 'level_character'),
+                                          ('classic', 'Cooking', 'level_character')]:
+            g = group | {'profession': profession}
+            tier = next_tier(g, 6, load(), version)
+            step = {'kind': kind, 'group': g, 'tier': tier}
+            text = step_text(step, character, 25)
+            assert ('(Classic level, unconfirmed on Forever)' in text) == (profession == 'Tailoring')
+            ui.label(text)
+            merged = step_text(step | {'groups': [g, g | {'profession': 'First Aid'}]}, character, 25)
+            assert ('(Classic level, unconfirmed on Forever)' in merged) == (profession == 'Tailoring')
+            ui.label(merged)
+    await user.open('/tier-labels')
+    await user.should_see('train Journeyman Cooking at a trainer')
+    await user.should_see('Classic level, unconfirmed on Forever')

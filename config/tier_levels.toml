@@ -1,0 +1,73 @@
+# UI-12: values change only with new trainer evidence. Missing entries are unknown.
+
+[[levels]]
+profession = "Cooking"
+tier = "Journeyman"
+level = 0
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792058711:4109"
+character = "Cicelyna"
+captured_date = 2026-10-15
+
+[[levels]]
+profession = "First Aid"
+tier = "Journeyman"
+level = 0
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792059436:4224"
+character = "Cicelyna"
+captured_date = 2026-10-15
+
+[[levels]]
+profession = "Fishing"
+tier = "Journeyman"
+level = 10
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792059062:4172"
+character = "Cicelyna"
+captured_date = 2026-10-15
+
+[[levels]]
+profession = "Herbalism"
+tier = "Journeyman"
+level = 0
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792059350:4220"
+character = "Cicelyna"
+captured_date = 2026-10-15
+
+[[levels]]
+profession = "Herbalism"
+tier = "Expert"
+level = 0
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792059350:4220"
+character = "Cicelyna"
+captured_date = 2026-10-15
+
+[[levels]]
+profession = "Herbalism"
+tier = "Artisan"
+level = 0
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792059350:4220"
+character = "Cicelyna"
+captured_date = 2026-10-15
+
+[[levels]]
+profession = "Skinning"
+tier = "Journeyman"
+level = 0
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792058809:4153"
+character = "Cicelyna"
+captured_date = 2026-10-15
+
+[[levels]]
+profession = "Skinning"
+tier = "Expert"
+level = 0
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792058809:4153"
+character = "Cicelyna"
+captured_date = 2026-10-15
+
+[[levels]]
+profession = "Skinning"
+tier = "Artisan"
+level = 0
+entry_id = "8:Cicelyna18:Classic Beta PvE 2:journal:1792058809:4153"
+character = "Cicelyna"
+captured_date = 2026-10-15

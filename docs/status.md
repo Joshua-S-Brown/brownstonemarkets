@@ -16,7 +16,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   STORY-069 aligns headline profit with the reserved post quote (explicit cautious fallback),
   formats Today table money in g/s/c with copper sorting, and shows team gold-mail suggestions
   in Queue/copy/tick identity (rules in requirements → Today). This session combines equal tier
-  requirements, compresses empty farming history and shares one farming caveat per page;
+  requirements including their sources, compresses empty farming history and shares one farming caveat per page;
   hidden-recipe information leads with ordered plain reasons and retains provenance in Details.
   STORY-068 uses scoped Stock bags/bank holdings along the Board route, including intermediates,
   with held value in profit, purchase gold separate, shared reservation, take/mail lines and held outputs.
@@ -26,6 +26,11 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   in at least three qualifying gaps (Classic time-left assumptions pending Forever confirmation). This session
   composes reserved crafts and Team-window unlock costs with flood labels (UI-12)
   and measured journal farming rates and zone/NPC/position-cell farming spots (UI-13).
+- **Tier levels (STORY-079):** This session and hiring share validated trainer evidence from
+  `config/tier_levels.toml`; missing Forever tiers carry the UI-12 Classic fallback label.
+  Beta reports list captured Apprentice/Journeyman/Expert/Artisan services with level, skill,
+  copper cost and provenance for review. Offline checks cover zero/positive/unknown levels,
+  Classic scope, source-aware merging, hiring, malformed tables and report output.
 - **Team:** captured roster/history, recipe evidence, reach estimates and hiring comparison
   (CRAFT-11/13). One board shared across characters/hiring; detail loads on demand.
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
@@ -76,10 +81,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   and lists unnamed NPC IDs. Confirmed on the beta on 2026-10-15 (7 of 29 windows named, no NPC ID unnamed).
   Other unpriced gathered items are counted and excluded; spot evidence includes all item values.
 - Listings are not sales/demand/forecasts. Removed-listing time-left bounds are Classic assumptions,
-  pending Forever confirmation. Trainers on 2026-10-15 contradict Classic tier levels: Journeyman Cooking,
-  First Aid, Herbalism and Skinning need no character level, Fishing needs 10 (STORY-079); crafting tiers and
-  yellow skill-up chances are unconfirmed. Deposits (13 posts) and postage are measured (requirements →
-  Product direction). Today models deposits under requirements → Today (v11): Sell and Queue show
+  pending Forever confirmation. Tier requirements without trainer evidence use the labelled UI-12
+  fallback; crafting tiers and yellow skill-up chances remain unconfirmed. Deposits (13 posts) and postage
+  are measured (requirements → Product direction). Today models deposits under requirements → Today (v11): Sell and Queue show
   refundable posting gold and expiry loss at the saved 2/8/24-hour duration, including held outputs;
   deposits do not reserve funds or reduce ranked profit. Neutral/missing evidence stays unknown.
   Postage, sale speed, ledger and stock targets remain backlog work.

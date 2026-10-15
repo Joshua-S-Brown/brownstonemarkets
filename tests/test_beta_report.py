@@ -620,3 +620,36 @@ def test_scan_attempts_reported_raw_and_unknown_when_missing():
     assert "Failed starts: 2." in lines[3]
     assert lines[-2] == "| 2026-10-15T11:41:00Z | timeout | 120.2 | 46 | 150.5 |"
     assert lines[-1] == "| 2026-10-15T11:50:00Z | not ready | unknown | unknown | unknown |"
+
+
+def test_trainer_tier_report_values_provenance_scope_and_markdown(tmp_path):
+    def service(name, level=0, skill=50, cost=100):
+        return dict(info={1: name, 'n': 1} if name else {}, level_required={1: level, 'n': 1},
+                    skill_required={1: 'Cooking', 2: skill, 'n': 2}, cost={1: cost, 'n': 1})
+    services = [service('Apprentice Cooking', skill=0, cost=10), service('Journeyman Cooking'),
+                service('Expert Cooking', 20, 125, 1000), service('Artisan Cooking', 35, 200, 5000),
+                service('Spiced Wolf Meat'), service(None)]
+    record = entry('trainer', trainer_services=services)
+    record.update(family='vendor', event='TRAINER_SHOW', sequence=6)
+    db = database()
+    db['journal'].append(record)
+    path = write(tmp_path, db)
+    config = addon_source(tmp_path / 'untouched', path)
+    section = beta_report.trainer_tiers([record, record | {'faction': 'Horde'},
+                                        record | {'family': 'craft'}], config)
+    assert [r['tier'] for r in section['observations']] == ['Apprentice', 'Journeyman', 'Expert', 'Artisan']
+    assert [r['required_level'] for r in section['observations']] == [0, 0, 20, 35]
+    assert [r['required_skill'] for r in section['observations']] == [0, 50, 125, 200]
+    assert [r['cost_copper'] for r in section['observations']] == [10, 100, 1000, 5000]
+    assert all(r['entry_id'] == 'trainer' and r['character'] == record['character']
+               and r['captured_utc'] for r in section['observations'])
+    folder, report, _ = beta_report.create_report(path, config, tmp_path / 'reports', now=NOW)
+    assert report['trainer_tiers'] == section
+    text = (folder / 'report.md').read_text()
+    assert '## Trainer tiers' in text and '| Cooking | Journeyman | 0 | 50 | 100 |' in text
+    from brownstone.beta_markdown import _trainer_tiers
+    assert 'No tier services captured.' in '\n'.join(_trainer_tiers({}))
+    missing = beta_report.trainer_tiers([record | {'trainer_services': [dict(info={1: 'Expert Cooking'})]}], config)
+    assert missing['observations'][0]['required_level'] is None
+    assert '| unknown | unknown | unknown |' in '\n'.join(_trainer_tiers(missing))
+    assert not config['data_dir'].exists()

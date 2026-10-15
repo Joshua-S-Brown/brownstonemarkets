@@ -30,7 +30,7 @@ async def test_team_hiring_lazy_detail_labels_and_repeat_open(user, tmp_path, mo
         e.id for e in user.find(marker='reach-window').elements)
     user.find(marker='hire-tailoring').trigger('update:modelValue', True)
     await user.should_see('New hire: rank 1, no known recipes')
-    await user.should_see('character level 35 (Classic Era; unconfirmed on Forever)')
+    await user.should_see('character level 35')
     await user.should_see('tier fees not included (unknown)')
     await user.should_see('What it feeds: feeds nothing')
     await user.should_see('incomplete: Rank 40: no qualifying skill-up craft')

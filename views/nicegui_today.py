@@ -10,6 +10,7 @@ from brownstone.freshness import STALE_WARNING, age_caption
 from brownstone.money import format_money, parse_money
 from brownstone.recipe_graph import step_label
 from brownstone.session_options import build_options
+from brownstone.tier_levels import fallback_label
 from brownstone.today import apply_removals, build_today, craft_details, purchase_uses
 from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_funds import resolve_funds
@@ -776,12 +777,13 @@ def step_text(step, character, window):
     if len(step.get('groups', [])) > 1:
         return merged_tier_text(step, character)
     if kind == 'train':
-        return f"{profession} is capped at {tier['cap']}: train {tier['name']} {profession} at a trainer"
+        return (f"{profession} is capped at {tier['cap']}: train {tier['name']} {profession} at a trainer"
+                f"{fallback_label(tier)}")
     level = character['level']
     reach = (f"{profession} is capped at {tier['cap']}" if group['capped']
              else f"Before {profession} reaches {tier['cap']}")
     now = f"{level} → {tier['required_level']}" if level is not None else f"to {tier['required_level']} (level unknown)"
-    return f"{reach}: level {name} {now} to train {tier['name']}"
+    return f"{reach}: level {name} {now} to train {tier['name']}{fallback_label(tier)}"
 
 
 
@@ -790,10 +792,10 @@ def merged_tier_text(step, character):
     names = ', '.join(professions[:-1]) + ' and ' + professions[-1]
     tier = step['tier']
     if step['kind'] == 'train':
-        return f"Train {tier['name']} at a trainer: {names}"
+        return f"Train {tier['name']} at a trainer: {names}{fallback_label(tier)}"
     level = character['level']
     now = f"{level} → {tier['required_level']}" if level is not None else f"to {tier['required_level']} (level unknown)"
-    return f"Level {character['character'][0]} {now} to train {tier['name']} {names}"
+    return f"Level {character['character'][0]} {now} to train {tier['name']} {names}{fallback_label(tier)}"
 
 
 def session_summary(character, options, config):
@@ -894,8 +896,8 @@ def session_options(options, config):
     with ui.expansion('How these options were made'):
         ui.label(f"Reach window {options['window']} points (set on Team) · cost and unlocks side by side; "
                  'current profit is not a forecast. Listings, never sales. No sales credit in costs. Yellow '
-                 'skill-up chances and Classic Era tier levels (Journeyman 10, Expert 20, Artisan 35) are '
-                 'unconfirmed on Forever.')
+                 'skill-up chances are unconfirmed on Forever.')
+        ui.label(options['tier_explanation'])
         ui.label(f"Snapshot {snapshot['snapshot_id']} · scan {snapshot.get('scan_id', 'unavailable')} · "
                  f"source {config['source_id']} · market {config['market_id']} · rules {config.get('rules_version')}")
         if signal['scan']:
@@ -912,7 +914,8 @@ def session_professions(character, config):
                  f"{group['max_rank'] if group['max_rank'] is not None else 'unknown'}").classes('font-bold')
         tier = group['tier']
         if tier is not None:
-            ui.label(f"{tier['name']} (past {tier['cap']}) needs character level {tier['required_level']}").classes(
+            ui.label(f"{tier['name']} (past {tier['cap']}) needs character level {tier['required_level']}"
+                     f"{fallback_label(tier)}").classes(
                 'bs-note')
         if group['capped']:
             theme.badge('capped · train the next tier first', 'warn')

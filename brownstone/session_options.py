@@ -2,7 +2,7 @@
 from fractions import Fraction
 from math import ceil
 
-from . import action_board, farming, flood_signals, progression, today_characters
+from . import action_board, farming, flood_signals, progression, tier_levels, today_characters
 from .crafting import basis_prices, evaluate_recipe
 from .markets import MARKET_KEYS
 from .recipe_graph import route_catalog
@@ -10,7 +10,7 @@ from .today_session import headline_profit
 
 PROGRESSION_KEYS = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut', 'listings', 'metrics')
 # Classic Era's proficiency ladder (warcraft.wiki.gg/wiki/Classic_proficiency): a tier's cap gives the next
-# tier and the character level its trainer requires. Unconfirmed on Forever, like CRAFT-11's yellow chances.
+# tier and the Classic character level; Forever overrides use captured trainer evidence.
 NEXT_TIER = {75: ('Journeyman', 10), 150: ('Expert', 20), 225: ('Artisan', 35)}
 
 
@@ -90,14 +90,16 @@ def _label_estimate(estimate, rows):
     return estimate | {'steps': steps, 'cheap_cost_copper': cheap if estimate['complete'] else None}
 
 
-def next_tier(group, level):
+def next_tier(group, level, levels=None, game_version="classic"):
     """The tier past this cap and whether the character is high enough level to train it."""
     tier = NEXT_TIER.get(group['max_rank'])
     if tier is None or group['rank'] is None:
         return None
     name, required = tier
-    return {'name': name, 'cap': group['max_rank'], 'required_level': required,
-            'level_ok': level is not None and level >= required}
+    requirement = tier_levels.lookup(levels or {}, game_version, group.get('profession', ''), name, required)
+    required = requirement['required_level']
+    return {'name': name, 'cap': group['max_rank'], **requirement,
+            'level_ok': required == 0 or (level is not None and level >= required)}
 
 
 def milestones(recipes):
@@ -136,14 +138,14 @@ def next_steps(character):
     return merge_tier_steps(steps)
 
 
-def _label_character(character, rows):
+def _label_character(character, rows, levels, game_version):
     crafts = [r | {'signal': base_signal(rows, r['output_item_id']), 'purchases': [
         p | {'signal': base_signal(rows, p['item_id'])} for p in r['purchases']]} for r in character['crafts']]
     groups = []
     for group in character['professions']:
         recipes = [r | {'estimate': _label_estimate(r['estimate'], rows)} for r in group['recipes']]
         groups.append(group | {'recipes': recipes, 'milestones': milestones(recipes),
-                               'tier': next_tier(group, character['level']),
+                               'tier': next_tier(group, character['level'], levels, game_version),
                                'best': next((r for r in recipes if r['profit_copper'] is not None), None)})
     result = character | {'crafts': crafts, 'professions': sorted(groups, key=profession_order),
                           'craft_profit_copper': sum(r['headline_profit_copper'] for r in crafts)}
@@ -154,6 +156,7 @@ def build_options(db, config, arguments, plan, *, window=25):
     """Use load_today's evidence and the displayed plan; one flood read for the union of item IDs."""
     if any(config.get(k) != arguments['market'].get(k) for k in (*MARKET_KEYS, 'source_id', 'rules_version')):
         raise ValueError('Session signals must use the plan source, full market and rules version')
+    levels = tier_levels.load()
     catalogs = action_board.compatible_catalogs(arguments['catalogs'], arguments['market'])
     by_id = {action_board.catalog_identity(c): c for c in catalogs}
     prices, sell_prices = basis_prices(arguments['observations'], 'cautious')
@@ -178,7 +181,8 @@ def build_options(db, config, arguments, plan, *, window=25):
     characters = [c | {'farming': farming.valued(c['farming'], sell_prices, signals['rows'],
                                                 arguments['auction_cut'], arguments.get('vendor_prices', {}))}
                   for c in characters]
-    return {'characters': [_label_character(c, signals['rows']) for c in characters],
+    return {'characters': [_label_character(c, signals['rows'], levels, config['game_version']) for c in characters],
+            'tier_explanation': tier_levels.explanation(levels, config['game_version']),
             'snapshot': arguments['snapshot'], 'freshness': plan['freshness'], 'signals': signals, 'window': window}
 
 
@@ -190,7 +194,7 @@ def merge_tier_steps(steps):
             result.append(step)
             continue
         tier = step['tier']
-        key = (step['kind'], tier['name'], tier['required_level'])
+        key = (step['kind'], tier['name'], tier['required_level'], tier.get('source'))
         if key in tiers:
             tiers[key]['groups'].append(step['group'])
         else:
