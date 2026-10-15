@@ -45,39 +45,20 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-034 gold ledger and reconciliation (refined 2026-10-15)
-2. STORY-034b item movements and reconciliation (after STORY-034)
-3. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
-4. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
-5. STORY-026 scan coverage and rhythm
-6. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-7. STORY-006 replay
+1. STORY-034b item movements and reconciliation (refine first)
+2. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
+3. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
+4. STORY-026 scan coverage and rhythm
+5. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+6. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 036, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
-
-### STORY-034 — Gold ledger and reconciliation
-
-Added 2026-10-06. Refined 2026-10-15 against the code and the beta journal, and split: this story is gold only; item movements are STORY-034b. Decisions (user, 2026-10-15): the ledger is additive (Stock, Today funds and *Your sales* keep their current sources), lots and cost basis are deferred (*Lots and cost basis* under Later), and the ledger lives on Stock.
-
-Beta evidence (2026-10-15, read-only): 384 `PLAYER_MONEY` entries carry `before_copper`/`after_copper` with no breaks in the chain within a login. Between consecutive readable bags snapshots, summed journal deltas equal the snapshot gold change for every pair except Basilly's first (52c, 2026-10-08 → 2026-10-09, played without the journal recording). Vendor buys are followed by an own `CHAT_MSG_LOOT` in the same second, so "nearest preceding event" misclassifies them. Quest rewards and flights have no event.
-
-As a gold maker, I want every gold change on each character sorted by what caused it, with anything unexplained shown, so that I can see where my gold actually comes from and goes.
-
-Acceptance:
-- **Gold movements:** each scoped `PLAYER_MONEY` with integer before and after copper is one movement: time, character (character, realm, faction), machine, signed copper (after − before) and its journal entry ID. Missing before or after is excluded and counted, never zero. Integer copper throughout. Characters stay separate; the team total is an explicit sum.
-- **Categories:** each movement gets exactly one category from the economy hook or window it follows within the same character and login: **auction sale** and **deposit refund** (from a seller invoice, below), **auction purchase**, **auction deposit** (post), **vendor sale**, **vendor purchase**, **repairs**, **training**, **mail in**, **mail out** (money sent plus postage), **coin loot**, or **other**. Own loot chat and bag updates never decide a category. Write the mapping as a numbered rule list in `requirements.md` (new UI-15, `ledger_version` 1, like ADDON-10); a rule change bumps the version. Quests and flights have no event, so they stay in **other**: say so on the page.
-- **Mail money:** `TakeInboxMoney`'s argument is a 1-based inbox index. Resolve it against the latest inbox observation before it, removing messages taken earlier in the same burst so later indexes shift. Several takes can share one `PLAYER_MONEY` (beta 2026-10-15 12:49:58: four takes, two money entries, 268c then 755c); match by amount, and if the amounts don't reconcile, the movement is **mail in (unidentified)** with a reason. A seller invoice splits into **auction sale** (gross − cut, the cut taken from the invoice) and **deposit refund** (the rest of the header money). Reuse `brownstone/sales.py` for invoice reading and identity rather than parsing again.
-- **Reconciliation:** for each character, between consecutive readable bags snapshots (ADDON-11; unreadable ones excluded and disclosed), show actual gold change, recorded movements and the difference as **unexplained**. Unexplained is shown, never hidden or folded into a category.
-- **Page:** a *Gold* section on Stock that answers *where did our gold come from and go?*: gold in and out by category per character and UTC day, the team total, reconciliation rows, and each movement's entry ID on demand. Money via `money.format_money`, sorting on copper. Passes the UI-08 checklist.
-- **Unchanged:** Today plans, `today_version`, Stock holdings and targets, and *Your sales* are identical (test this).
-- **Offline tests** from copied beta records: one per category; a burst of takes sharing one money entry; an unreconciled take; missing before/after copper; a reconciliation with and without a gap; characters kept separate.
-- **Real data** (Forever beta source, read-only): the category table per character, every **other** and unidentified movement listed with its time and amount, and the reconciliation. Expected: Basilly's first pair 52c unexplained and every later pair 0; seven seller invoices giving 999c **auction sale** (1,048c gross, 49c cut) and 910c **deposit refund**; three **mail in** from own characters (1c, 200c, 400c). Explain any difference.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 036, 031, 032, 033, 034, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
 
 ### STORY-034b — Item movements and reconciliation
 
-Added 2026-10-15 from the STORY-034 split; refine after STORY-034 is accepted.
+Added 2026-10-15 from the STORY-034 split; STORY-034 is done, so refine this before handing it off.
 
 As a gold maker, I want every item movement on each character sorted by what caused it, so that I can see what I gathered, crafted, bought, sold and moved between characters.
 
@@ -241,7 +222,7 @@ Acceptance:
 - **Best use of a material:** for an item such as Linen or Wool Cloth, compare selling it with each craft it feeds, at current prices.
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
 
-**Your own character's data** (approved 2026-10-06; capture is STORY-032/033 and the ledger STORY-034 in Next). Once those exist:
+**Your own character's data** (approved 2026-10-06; capture is STORY-032/033 and the gold ledger STORY-034, all done). Once those exist:
 - **Known recipes and skill:** moved to Next on 2026-10-07 as STORY-041 (capture) and STORY-043 (Today); 2026-10-09 added STORY-049 (Forever capture), STORY-051 (Characters) and STORY-052 (progression; *what can I learn next*). Still here: the Action Board filtered to what you can make.
 - **Profession page** (added 2026-10-09, product owner): drill into one profession: every catalog recipe by skill band, with each character's status (known, train now, not yet), how it's learned, profit from the newest scan and its materials; linking to the item page (STORY-021). Builds on STORY-043, STORY-050 and STORY-052.
 - **Calibrate removed listings:** your own sales from invoices show how many *removed* listings (STORY-027) were real sales.
@@ -259,7 +240,7 @@ Acceptance:
 - **Spread across many markets:** prefer several modest, steady markets over one contested one, for example a cap on how much of one market's supply Today plans to add. Needs sales speed (STORY-027, then the ledger).
 - **Average cost and procurement:** what each item in inventory cost on average, and buying below that average to drive it down. Decide whether *Cost basis* (FIFO lots, under *Ledger analytics*) also shows a weighted average, and combine it with *Market timing*'s cheapest-to-buy windows.
 - **Your own postings:** each active auction with when it was posted, at what price against the lowest at the time, and what sold, when (day and hour) and how fast. The journal (STORY-033) records posts and invoices, and STORY-040 records the active auctions themselves (decided 2026-10-07).
-- **Mail between your own characters:** count postage as a cost in the ledger (STORY-034), and when a plan moves materials to the character with the right profession, include that postage. The amount is a beta check under *Now*.
+- **Mail between your own characters:** the ledger (STORY-034) already counts postage in **mail out**; still to do: when a plan moves materials to the character with the right profession, include that postage. The amount is a beta check under *Now*.
 
 **Deferred** (2026-10-06, from the same notes; revisit only with new evidence or a decision):
 - **In-game plan list (`PlanData.lua`):** Brownstone would write a plan file into the addon folder for an in-game to-do tab that ticks itself off. Deferred: Today on a second screen covers it, and it would make Brownstone write into the game folder (`requirements.md` → *Product direction*). If revived, the file is written only by Brownstone and read by the addon on `/reload`; it could also carry an "imported through" marker so the addon never clears what Brownstone hasn't imported. **Still deferred (2026-10-14, product owner):** the out-of-game app is preferred. In-game profit tags and to-do lists, as in CraftProfit, ProfessionMaster and TSM, would also need files carried back from the Mac to the Windows PC, which only ever sends scans one way. Revisit only if switching screens gets in the way after launch.

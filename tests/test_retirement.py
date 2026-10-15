@@ -55,12 +55,12 @@ def test_retired_artifacts_and_dependency_are_absent():
 
 def test_document_size_and_rule_id_inventory():
     requirements = ROOT / 'docs/requirements.md'
-    # Allow STORY-036's bundle and ceiling rules alongside existing requirements.
-    assert requirements.stat().st_size <= 112_000
-    assert (ROOT / 'docs/design.md').stat().st_size <= 54_000
+    # Allow STORY-034's required UI-15 rules and ledger contracts alongside existing documentation.
+    assert requirements.stat().st_size <= 116_000
+    assert (ROOT / 'docs/design.md').stat().st_size <= 56_000
     expected = {f'{prefix}-{i:02}' for prefix, numbers in {
         'DATA': [1, 2, 3, 4, 5, 8], 'ADDON': range(1, 14), 'CRAFT': range(1, 14),
-        'MONEY': [1, 2], 'OPS': [1, 2, 3], 'UI': range(1, 15),
+        'MONEY': [1, 2], 'OPS': [1, 2, 3], 'UI': range(1, 16),
     }.items() for i in numbers}
     actual = set(re.findall(r'\b(?:DATA|ADDON|CRAFT|MONEY|UI|OPS)-\d+\b', requirements.read_text()))
     assert actual == expected

@@ -380,6 +380,52 @@ preserves original bytes. No third-party Lua/action automation; usage/check in a
   - Short is max(target − readable held, 0), labelled **at most** when any character's bank or bags is unknown or only partly readable. Quote only targeted items with Today's cheapest-first whole-stack ladder. Split the short into units within the buy limit (**buy now**), listed units above it (**wait**) and unlisted units. Include whole-stack purchase quantities/surplus and costs; insufficient supply never gets a full-fill price. Holdings and captures are not live counts, and target changes do not change Today plans, ranking or `today_version`; Today uses holdings under its held-material rule.
   - UI-08 presentation: capture/character and scan-age chips, items-held/value/items-short/within-limit-cost tiles, short items first in the table, holdings and target purchase evidence on demand, and an ⓘ dialog for snapshot/captures/price rules. Read snapshots, newest scan and targets once per page; filtering uses cached evidence.
 
+### UI-15 Gold ledger (STORY-034)
+
+`ledger_version` **1**. These numbered interpretation rules are versioned; changing them bumps
+that version. Gold evidence is additive on Stock; Today funds/plans/version, holdings/targets
+and Your sales keep their existing sources. No item movements or cost basis.
+
+1. One scoped `PLAYER_MONEY` with integer before/after copper is one movement, including zero:
+   after minus before. Missing/noninteger baselines are excluded and counted, never zero.
+   Keep entry ID, UTC time, character/realm/faction and machine. Deduplicate entry IDs within
+   the scoped source/full market; order with `sales.order` per character, machine and known login.
+2. Match preceding economy hooks within **one second**, including same-second sequence order,
+   within that character/machine/login. Beta 2026-10-15 observed matches at 0 or 1 seconds for
+   vendor/trainer/repair/mail/post/purchase hooks; a longer interval would attach unrelated changes.
+   Most recent eligible economy hook decides, with the required delta sign. Own loot chat and
+   bag updates never decide a category; window flags alone never establish a transaction.
+3. Negative `BuyMerchantItem` → **vendor purchase**; `RepairAllItems` → **repairs**;
+   `BuyTrainerService` → **training**. Positive `C_MerchantFrame.SellAllJunkItems`,
+   `SellCursorItem`, or container-use hooks with merchant observed open → **vendor sale**.
+4. Negative `C_AuctionHouse.PostItem`/`PostCommodity` (legacy `StartAuction`/`PostAuction`)
+   → **auction deposit**; `AUCTION_HOUSE_PURCHASE_COMPLETED` → **auction purchase**.
+   Hook arguments alone never establish success; a matching money movement supplies the amount.
+5. Negative `SendMail` → **mail out**, using the whole movement (sent money plus postage).
+6. Positive money following `TakeInboxMoney` uses argument 1 as the 1-based index into the latest
+   preceding inbox observation. Remove taken messages before resolving another take against that
+   observation; a newer observation replaces it. Retain pending takes across updates and money
+   entries within the one-second window; consume the ordered prefix whose header amounts exactly
+   match the money entry. Missing index/invoice evidence or unmatched sums → **mail in (unidentified)**,
+   retaining the reason. Do not invent an invoice allocation for an unmatched movement.
+7. Reuse sales mail identity/invoice projection: a seller invoice's gross (position 4) minus cut
+   (7) is **auction sale**; header money minus that net is **deposit refund** (deposit evidence
+   is position 6). Both are allocation parts of one movement, with integer nonnegative amounts
+   summing to its delta. Other resolved incoming money → **mail in**.
+8. Positive money matched by `farming.coin_windows` → **coin loot**: explicit coin slot,
+   same character/machine/login, within five seconds, with its existing interference rules.
+   Slot quantities are never copper. All remaining movements → **other**; quests and flights
+   have no event and remain other, as stated on the page.
+9. Per character, consecutive readable bags captures reconcile actual `gold_copper` change
+   against recorded movement deltas in the open-left, closed-right capture/sequence interval.
+   Exclude and disclose `unreadable_backpack` records. Missing gold/baselines make residual
+   unknown; otherwise show actual minus recorded as **unexplained**, even zero. Never make it
+   a movement/category. Preserve snapshot IDs on demand.
+10. Stock shows in/out by character, UTC day and category, explicit summed team totals,
+    reconciliation and expandable movement IDs/machine/reasons/version/exclusion counts.
+    Copper drives sorting; shared money formatting drives display. No evidence explains how
+    to import it in Data. UI-08 applies.
+
 - **UI-08 Design checklist:** every app page passes these before review, checked on screenshots, not only code.
   1. **Answer first:** the top of the page answers its place's question; one subtle business-question subtitle per place.
   2. **One primary action** per view, visually distinct.

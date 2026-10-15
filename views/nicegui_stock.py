@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from nicegui import ui
 
-from brownstone import stock
+from brownstone import ledger, stock
 from brownstone.freshness import age_caption
 from brownstone.money import format_money
 from views import nicegui_theme as theme
@@ -63,6 +63,15 @@ def render(config, catalogs):
                       'Character': h['character'], 'Location': h['kind'], 'Units': h['units']}
                      for h in result['holdings']], 'stock-holdings')
         ui.label('Each location has its own capture time; open an unknown bank and import to complete holdings.')
+    # Gold is additive (UI-15): a ledger failure must not hide the holdings answer above it.
+    try:
+        gold = ledger.load(config)
+    except Exception as error:
+        with ui.card().classes('bs-card bs-empty'):
+            ui.label(f'Unable to read gold evidence: {error}. Check saved journal evidence in Data, '
+                     'then reload.').classes('bs-sentence')
+        return
+    gold_section(gold)
 
 
 def table_row(row):
@@ -193,3 +202,61 @@ def evidence(result):
                      f"units {capture['units']} · machine {capture['machine'] or 'unknown'}")
     popup.on('hide', popup.delete)
     popup.open()
+
+
+def gold_time(at):
+    return datetime.fromtimestamp(at, UTC).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def gold_table(rows, marker):
+    """Keep integer copper as table data; format for display and sort numerically."""
+    widget = plain_table(rows, marker)
+    for column in widget.columns:
+        if column['name'].endswith('copper'):
+            column.update(sortable=True, label=column['name'].replace('_copper', ' (gold)'))
+            field = column['name']
+            widget.add_slot('body-cell-' + field,
+                            '<q-td :props="props">{{ props.row["' + field + '_text"] }}</q-td>')
+    for row in widget.rows:
+        for key, value in list(row.items()):
+            if key.endswith('copper'):
+                row[key + '_text'] = money(value) if value is not None else 'unknown'
+    widget.update()
+
+
+def gold_section(data):
+    with ui.card().classes('bs-card w-full'):
+        ui.label('Gold').classes('text-xl font-bold')
+        ui.label('Where did our gold come from and go?').classes('bs-note')
+        theme.chip(f"{len(data['movements'])} recorded changes")
+        if data['excluded_money'] or data['unreadable_snapshots']:
+            theme.badge('Incomplete evidence', 'warn')
+        with ui.element('div').classes('bs-tiles'):
+            theme.tile('Team gold in', money(data['team']['in_copper']))
+            theme.tile('Team gold out', money(data['team']['out_copper']))
+        ui.label('UTC days. Quests and flights have no event and remain other. '
+                 'Team totals explicitly sum these characters; mail between them is included.').classes('bs-note')
+        if not data['movements']:
+            ui.label('No gold movements for this source and market. Import journal evidence in Data.')
+        gold_table([{'Character': ' · '.join(r['character']), 'UTC day': r['day'],
+                     'Category': r['category'], 'In_copper': r['in_copper'], 'Out_copper': r['out_copper']}
+                    for r in data['totals']], 'gold-totals')
+        ui.label('Reconciliation · unexplained is an evidence gap').classes('font-bold')
+        if not data['reconciliation']:
+            ui.label('Two readable bags captures per character are needed. Import bags snapshots in Data.')
+        gold_table([{'Character': ' · '.join(r['character']), 'From UTC': gold_time(r['from']),
+                     'To UTC': gold_time(r['to']), 'Actual_copper': r['actual_copper'],
+                     'Recorded_copper': r['recorded_copper'], 'Unexplained_copper': r['unexplained_copper'],
+                     'Reason': r['reason'] or ''} for r in data['reconciliation']], 'gold-reconciliation')
+        with ui.expansion('Gold movements and evidence'):
+            ui.label(f"Ledger version {data['ledger_version']} · UI-15 · economy match within "
+                     f"{ledger.MATCH_SECONDS}s; coin loot within 5s. "
+                     f"Excluded money baselines: {data['excluded_money']}; "
+                     f"unreadable bags excluded: {data['unreadable_snapshots']}.")
+            gold_table([{'UTC': gold_time(m['at']), 'Character': ' · '.join(m['character']),
+                         'Machine': m['machine'] or 'unknown', 'Change_copper': m['copper'],
+                         'Allocation': ', '.join(p['category'] + ': ' + money(p['copper']) for p in m['parts']),
+                         'Reason': m['reason'] or '', 'Entry ID': m['entry_id']}
+                         for m in data['movements']], 'gold-movements')
+            plain_table([{'Before snapshot': r['before_id'], 'After snapshot': r['after_id']}
+                         for r in data['reconciliation']], 'gold-snapshots')

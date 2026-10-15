@@ -5,6 +5,17 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Implemented
 
+- **Gold ledger (STORY-034):** Stock shows scoped per-character/UTC-day category in/out,
+  explicit team totals, readable-bags reconciliation and expandable movement provenance.
+  Rules: [UI-15](requirements.md#ui-15-gold-ledger-story-034); contracts: design → Gold ledger.
+  Offline tests: `tests/test_ledger.py`, `tests/ui_trial/test_nicegui_stock.py`.
+  Imported Forever beta: 384 movements, no missing money baselines or unidentified mail;
+  seven seller invoices allocate 999c proceeds and 910c refunds; plain mail is 1c/200c/400c.
+  All 70 readable snapshot pairs reconcile to zero; three unreadable bags captures are excluded.
+  The story's expected initial Basilly 52c pair starts at a zero-slot backpack capture on
+  October 8, so ADDON-11/UI-15 excludes it; first readable capture is October 9 at 52c.
+  Quests/flights remain other; timing attribution is evidence, not proof of hook success.
+
 - **App:** NiceGUI Today, Team, Market, Stock and Data → Import, with shared light theme,
   URL-only back links for Today item/Team links and Market item chains (STORY-076, UI-07);
   Today tab/view refresh persistence with This session loaded on URL entry,
@@ -111,8 +122,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   are measured (requirements → Product direction). Today models deposits under requirements → Today (v11): Sell and Queue show
   refundable posting gold and expiry loss at the saved 2/8/24-hour duration, including held outputs;
   deposits do not reserve funds or reduce ranked profit. Neutral/missing evidence stays unknown.
-  Postage, sale speed, ledger and stock targets remain backlog work.
-  A gold-only mail recorded the previous draft's items and no gold, so the ledger (STORY-034) must use money
+  Postage in plans and sale speed remain backlog work.
+  A gold-only mail recorded the previous draft's items and no gold, so the ledger (STORY-034) uses money
   changes. Each profession window event saves the full recipe list: 25 MB of the 29.6 MB 2026-10-15 file.
 - Today fixes aggregate routes before whole-stack sizing; surplus uncredited/unshared, greedy plan
   affordable but no global optimum. Rows using a held item compare every feasible size up to the 1,000-craft cap;

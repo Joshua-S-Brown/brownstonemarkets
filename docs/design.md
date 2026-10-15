@@ -615,3 +615,18 @@ Update/remove changes only that draft, Save revalidates the current file and ato
 it, then reloads the page. Malformed files are preserved and explained. No schema or Today
 version/state changes. Offline coverage: `tests/test_stock.py` and
 `tests/ui_trial/test_nicegui_stock.py`.
+
+## Gold ledger contracts
+
+Rules: [UI-15](requirements.md#ui-15-gold-ledger-story-034). `ledger.load` opens read-only,
+reads source/full-market journal families money/vendor/auction/mail/loot once and bags snapshots
+once, preserving database machine provenance. `ledger.project` is framework-free and deduplicates
+entry IDs; `sales.order` orders each character/machine/login. `sales.messages`/`sales.project`
+supply inbox identity and seller net copper; `farming.coin_windows` supplies coin matching.
+Movements retain one entry ID/delta with allocation parts (seller proceeds and deposit refund),
+so invoice splits never duplicate the movement in reconciliation. `summarize` groups parts by
+character, UTC day and category; team totals explicitly sum the groups. Snapshot reconciliation
+uses capture/sequence intervals and excludes unreadable backpacks; missing baselines leave an
+unknown residual. Stock loads this evidence once, below holdings, and displays cached totals,
+reconciliation and expandable movements/IDs; a ledger failure shows only in the Gold area. Today and existing Stock/sales
+contracts are unchanged. No storage migration, addon capture or price path.

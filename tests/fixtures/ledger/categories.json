@@ -1,0 +1,40 @@
+{
+  "other": [
+    {"after_copper": 58, "login_at": 1791462787, "sequence": 99, "before_copper": 0, "windows": {"loot": false, "merchant": true}, "captured_at": 1791463138, "event": "PLAYER_MONEY", "arguments": {"n": 0}, "family": "money", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791463138:99"}
+  ],
+  "vendor sale": [
+    {"login_at": 1791462787, "sequence": 305, "windows": {"loot": false, "merchant": true}, "captured_at": 1791464324, "event": "C_Container.UseContainerItem", "arguments": {"1": 0, "2": 15, "3": null, "4": 0, "5": false, "n": 5}, "family": "vendor", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791464324:305"},
+    {"after_copper": 152, "login_at": 1791462787, "sequence": 306, "before_copper": 151, "windows": {"loot": false, "merchant": true}, "captured_at": 1791464324, "event": "PLAYER_MONEY", "arguments": {"n": 0}, "family": "money", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791464324:306"}
+  ],
+  "training": [
+    {"login_at": 1791537371, "sequence": 500, "captured_at": 1791538129, "event": "BuyTrainerService", "family": "vendor", "arguments": {"1": 1, "n": 1}, "windows": {"loot": false, "trainer": true}, "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791538129:500"},
+    {"sequence": 501, "login_at": 1791537371, "arguments": {"n": 0}, "captured_at": 1791538129, "event": "PLAYER_MONEY", "windows": {"loot": false, "trainer": true}, "family": "money", "before_copper": 167, "after_copper": 67, "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791538129:501"}
+  ],
+  "vendor purchase": [
+    {"login_at": 1791537371, "sequence": 868, "captured_at": 1791540089, "event": "BuyMerchantItem", "family": "vendor", "arguments": {"1": 1, "2": 1, "n": 2}, "windows": {"trainer": false, "loot": false, "bank": false, "trade_skill": true, "merchant": true, "mailbox": true}, "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791540089:868"},
+    {"sequence": 870, "login_at": 1791537371, "arguments": {"n": 0}, "captured_at": 1791540089, "event": "PLAYER_MONEY", "windows": {"trainer": false, "loot": false, "bank": false, "trade_skill": true, "merchant": true, "mailbox": true}, "family": "money", "before_copper": 261, "after_copper": 251, "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791540089:870"}
+  ],
+  "mail out": [
+    {"sequence": 913, "captured_at": 1791540320, "windows": {"mailbox": true}, "login_at": 1791540244, "event": "SendMail", "arguments": {"n": 3, "1": "Fixture recipient", "2": "Fixture", "3": ""}, "family": "mail", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791540320:913"},
+    {"windows": {"mailbox": true}, "login_at": 1791540244, "sequence": 915, "captured_at": 1791540320, "after_copper": 200, "arguments": {"n": 0}, "before_copper": 231, "family": "money", "event": "PLAYER_MONEY", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791540320:915"}
+  ],
+  "auction deposit": [
+    {"login_at": 1791639682, "sequence": 1063, "windows": {"mailbox": true, "auction_house": true}, "captured_at": 1791639791, "event": "C_AuctionHouse.PostCommodity", "arguments": {"1": {"slotIndex": 5, "bagID": 1}, "2": 3, "3": 5, "4": 23, "n": 4}, "family": "auction", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791639791:1063"},
+    {"after_copper": 45, "login_at": 1791639682, "sequence": 1065, "before_copper": 145, "windows": {"mailbox": true, "auction_house": true}, "captured_at": 1791639791, "event": "PLAYER_MONEY", "arguments": {"n": 0}, "family": "money", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791639791:1065"}
+  ],
+  "repairs": [
+    {"login_at": 1791918384, "sequence": 3644, "windows": {"merchant": true, "mailbox": true, "bank": false}, "captured_at": 1791918475, "event": "RepairAllItems", "arguments": {"n": 0}, "family": "vendor", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791918475:3644"},
+    {"after_copper": 370, "login_at": 1791918384, "sequence": 3645, "before_copper": 386, "windows": {"merchant": true, "mailbox": true, "bank": false}, "captured_at": 1791918475, "event": "PLAYER_MONEY", "arguments": {"n": 0}, "family": "money", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791918475:3645"}
+  ],
+  "auction purchase": [
+    {"login_at": 1791925113, "sequence": 3688, "family": "auction", "captured_at": 1791925284, "event": "AUCTION_HOUSE_PURCHASE_COMPLETED", "arguments": {"1": 0, "n": 1}, "windows": {"auction_house": true, "mailbox": true}, "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791925284:3688"},
+    {"windows": {"auction_house": true, "mailbox": true}, "login_at": 1791925113, "sequence": 3689, "captured_at": 1791925284, "after_copper": 633, "arguments": {"n": 0}, "before_copper": 651, "family": "money", "event": "PLAYER_MONEY", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791925284:3689"}
+  ],
+  "coin loot": [
+    {"sequence": 3837, "captured_at": 1791996270, "windows": {"merchant": false, "loot": true, "trainer": false}, "login_at": 1791995993, "event": "LOOT_OPENED", "loot_slots": [{"slot_type": 2}], "arguments": {"1": true, "2": false, "n": 2}, "family": "loot", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791996270:3837"},
+    {"login_at": 1791995993, "sequence": 3838, "windows": {"merchant": false, "loot": true, "trainer": false}, "captured_at": 1791996270, "event": "LOOT_SLOT_CLEARED", "arguments": {"1": 1, "n": 1}, "family": "loot", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791996270:3838"},
+    {"login_at": 1791995993, "sequence": 3839, "windows": {"merchant": false, "loot": true, "trainer": false}, "captured_at": 1791996270, "event": "LOOT_CLOSED", "arguments": {"n": 0}, "family": "loot", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791996270:3839"},
+    {"login_at": 1791995993, "sequence": 3840, "windows": {"merchant": false, "loot": false, "trainer": false}, "captured_at": 1791996270, "event": "LOOT_CLOSED", "arguments": {"n": 0}, "family": "loot", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791996270:3840"},
+    {"after_copper": 680, "login_at": 1791995993, "sequence": 3841, "before_copper": 669, "windows": {"merchant": false, "loot": false, "trainer": false}, "captured_at": 1791996270, "event": "PLAYER_MONEY", "arguments": {"n": 0}, "family": "money", "character": "Fixture", "realm": "Fixture Realm", "faction": "Alliance", "machine": "fixture", "entry_id": "fixture:1791996270:3841"}
+  ]
+}
