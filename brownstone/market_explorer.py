@@ -3,15 +3,17 @@ from datetime import UTC, datetime
 
 import duckdb
 
-from . import analysis, flood_signals, removed_listings, scan_changes
+from . import analysis, farming, flood_signals, removed_listings, scan_changes
 from .action_board import catalog_identity, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices, evaluate_recipe
 from .freshness import assess
 from .metrics import read_scan_metrics
 from .recipe_graph import RecipeGraph, label_routes, route_catalog
+from .recipe_import import GAME_PATHS
+from .session_options import base_signal
 from .skillups import build_skillups
 from .today_characters import project_recipes, recipe_status, team_makeable
-from .today_loading import load_today, load_today_characters
+from .today_loading import _load_holdings, load_today, load_today_characters
 from .today_settings import TodaySettings
 
 
@@ -21,7 +23,8 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
     manifest, arguments = load_today(config, selected, TodaySettings(), characters, now)
     result = {'config': config, 'catalogs': selected,
               'incompatible': [c for c in catalogs if c not in selected], 'warning': warning, 'snapshot': None,
-              'items': [], 'metrics': [], 'vendors': {}, 'recipes': [], 'demand': [], 'freshness': None,
+              'observations': {}, 'characters': characters, 'items': [], 'metrics': [],
+              'vendors': {}, 'recipes': [], 'demand': [], 'freshness': None,
               'movement': {'note': 'No earlier scan', 'rows': [], 'comparison': None},
               'removals': {'pair': None, 'rows': [], 'note': 'Fewer than two eligible scans.'}}
     if manifest is None:
@@ -37,7 +40,8 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
             {item for catalog in selected for item in catalog['items_by_id']}))
     items = [{**row, **{k: row[k] if row[k] and row[k] > 0 else None
                         for k in ('min_buyout', 'market_value')}} for row in items]
-    result.update(snapshot=snapshot, items=items, metrics=metrics, movement=movement, removals=removals, floods=floods,
+    result.update(observations=arguments['observations'], snapshot=snapshot, items=items, metrics=metrics,
+                  movement=movement, removals=removals, floods=floods,
                   vendors=arguments['vendor_prices'], freshness=assess(snapshot, now, config['max_age_hours']),
                   recipes=recipe_rows(selected, arguments, characters),
                   demand=skill_demand(selected))
@@ -169,3 +173,54 @@ def item_removals(config, item_id):
 def item_floods(config, item_id, now):
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
         return flood_signals.signals(db, config, [item_id], now)
+
+
+def wowhead_item_url(game_version, item_id):
+    path = GAME_PATHS.get(game_version)
+    return f'https://www.wowhead.com/{path + "/" if path else ""}item={item_id}'
+
+
+def best_use(rows):
+    known = [r for r in rows if r['value']['profit_copper'] is not None]
+    best = max(known, key=lambda r: r['value']['profit_copper']) if known else None
+    return {'recipe': best, 'reason': '; '.join(dict.fromkeys(r['value']['action'] for r in rows))
+            or 'No compatible catalog recipe'}
+
+
+def item_farming(config, result, item_id, floods):
+    _, sell = basis_prices(result['observations'], 'cautious')
+    characters = []
+    for identity, state in sorted(result['characters'].items()):
+        history = farming.history(state.get('observations', []), config.get('farming_idle_minutes', 10),
+                                  config.get('farming_cell_percent', 5))
+        history = farming.valued(history, sell, floods['rows'], config['auction_cut'], result['vendors'])
+        # Filter after valuing: denominators and ordering remain those of This session.
+        history = history | {'rows': [r for r in history['rows'] if r['item_id'] == item_id],
+                             'spots': [s for s in history['spots']
+                                       if any(i['item_id'] == item_id for i in s['items'])]}
+        if history['rows'] or history['spots']:
+            characters.append({'character': identity, 'farming': history})
+    return characters
+
+
+def item_summary(config, result, page, now):
+    try:
+        floods, floods_error = item_floods(config, page['item_id'], now), None
+    except Exception as error:  # A flood read failure keeps holdings, best use and farming.
+        floods, floods_error = {'rows': []}, str(error)
+    signal = base_signal(floods['rows'], page['item_id'])
+    observed = base_signal(page['observed'], page['item_id'])
+    metrics = base_signal(page['metrics'], page['item_id']) or {}
+    held, warning = _load_holdings(config, now)
+    totals, _, captures, units = held or ({}, {}, [], [])
+    return {'observed': observed, 'metrics': metrics, 'signal': signal, 'floods': floods,
+            'floods_error': floods_error,
+            'held': totals.get((page['item_id'], None, 'base'), 0) if captures else None,
+            'captures': captures,
+            'holdings': [r for r in units if r['key'] == (page['item_id'], None, 'base')],
+            'holdings_warning': warning,
+            # Uncaptured or partly readable locations can only add units: the count is a lower bound.
+            'at_least': any(c['unknown'] or c['partial'] for c in captures),
+            'used_in': best_use(page['used_in']), 'made_from': best_use(page['made_from']),
+            'farming': item_farming(config, result, page['item_id'], floods),
+            'wowhead_url': wowhead_item_url(config['game_version'], page['item_id'])}

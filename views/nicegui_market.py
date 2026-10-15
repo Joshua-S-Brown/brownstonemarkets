@@ -10,6 +10,7 @@ from brownstone.money import format_money
 from brownstone.recipe_graph import made_by_label
 from views import nicegui_theme as theme
 from views.nicegui_navigation import set_href
+from views.nicegui_stock import capture_text
 
 
 def money(value):
@@ -67,9 +68,10 @@ def render(config, catalogs, item: int | None = None, origin=None):
     search_panel(result)
     if page is not None:
         show_item(result, page)
-    flood_lists(result)
-    removal_list(result)
-    movement(result)
+    else:
+        flood_lists(result)
+        removal_list(result)
+        movement(result)
 
 
 def empty(message):
@@ -105,43 +107,73 @@ def search_panel(result):
 
 def show_item(result, page):
     config = result['config']
-    with ui.card().classes('bs-card').mark('market-item'):
+    with ui.column().classes('w-full').mark('market-item'):
         ui.label(page['name']).classes('text-2xl font-bold')
-        prices(page)
-        load_item_floods(config, page)
         try:
-            history = explorer.item_removals(config, page['item_id'])
+            summary = explorer.item_summary(config, result, page, datetime.now(UTC))
         except Exception as error:
-            ui.label(f'Unable to read removed listings: {error}. Use Data to check saved scans.')
-        else:
-            removal_history(history)
-        if not page['in_chain']:
-            ui.label('This item is in no compatible catalog. Price evidence only.')
-            return
-        ui.label('Made from').classes('text-xl font-bold')
-        for row in page['made_from']:
-            recipe_heading(config, row)
-            catalog_warnings(row['value'])
-            for material in row['materials']:
-                with ui.row().classes('items-center gap-2').style(f"padding-left:{material['depth'] * 24}px"):
-                    item_link(config, material['item_id'], material['item_name'])
-                    ui.label(f"× {material['quantity']} · {material['method']} · "
-                             f"{money(material['unit_cost_copper'])} / unit · "
-                             f"{money(material['total_cost_copper'])} total"
-                             + (f" · {made_by_label(material)}" if material.get('profession') else '')
-                             + (f" · {material['route_note']}" if material.get('route_note') else ''))
-            with ui.expansion('Expanded quantities (catalog recipe; independent of buy route)'):
-                for item_id, units in row['value'].get('expanded_materials', {}).items():
-                    item_link(config, item_id, row['catalog']['items_by_id'][item_id]['name'] + f' × {units}')
-        if not page['made_from']:
-            ui.label('No compatible recipe makes this item.')
-        used_in(config, page)
-        ui.label('Skill-up demand').classes('text-xl font-bold')
-        for demand in page['demand']:
-            ui.label(' · '.join(demand['professions']) + ': ' + ', '.join(demand['bands']))
-        ui.label('Catalog skill-up bands, not observed demand or sales. No forecast.').classes('bs-note')
-        if not page['demand']:
-            ui.label('No skill-up bands in the compatible catalogs need this material.')
+            ui.label(f'Unable to read item summary: {error}. Use Data to check saved scans.')
+            summary = None
+        if summary:
+            summary_card(result, page, summary)
+        with ui.tabs().classes('w-full') as tabs:
+            for name in ('Summary', 'Crafting', 'Market', 'Identity and evidence'):
+                ui.tab(name)
+        with ui.tab_panels(tabs, value='Summary').classes('w-full'):
+            with ui.tab_panel('Summary'):
+                where_to_get(config, summary or {
+                    'farming': None,
+                    'wowhead_url': explorer.wowhead_item_url(config['game_version'], page['item_id'])})
+            with ui.tab_panel('Crafting'):
+                crafting(config, page)
+            with ui.tab_panel('Market'):
+                prices(page)
+                if summary and summary['floods_error']:
+                    ui.label(f"Unable to read flood signals: {summary['floods_error']}. "
+                             'Use Data to check saved scans.')
+                elif summary:
+                    item_floods(summary['floods'], page)
+                try:
+                    history = explorer.item_removals(config, page['item_id'])
+                except Exception as error:
+                    ui.label(f'Unable to read removed listings: {error}. Use Data to check saved scans.')
+                else:
+                    removal_history(history)
+            with ui.tab_panel('Identity and evidence'):
+                ui.label(f"Item {page['item_id']}")
+                for row in page['observed']:
+                    ui.label(f"Variant {row['variant_id'] or 'none'} · state {row['variant_state'] or 'legacy'}")
+                ui.button('Provenance and catalogs', on_click=lambda: evidence(result))
+
+
+def crafting(config, page):
+    if not page['in_chain']:
+        ui.label('This item is in no compatible catalog. Price evidence only.')
+        return
+    ui.label('Made from').classes('text-xl font-bold')
+    for row in page['made_from']:
+        recipe_heading(config, row)
+        catalog_warnings(row['value'])
+        for material in row['materials']:
+            with ui.row().classes('items-center gap-2').style(f"padding-left:{material['depth'] * 24}px"):
+                item_link(config, material['item_id'], material['item_name'])
+                ui.label(f"× {material['quantity']} · {material['method']} · "
+                         f"{money(material['unit_cost_copper'])} / unit · "
+                         f"{money(material['total_cost_copper'])} total"
+                         + (f" · {made_by_label(material)}" if material.get('profession') else '')
+                         + (f" · {material['route_note']}" if material.get('route_note') else ''))
+        with ui.expansion('Expanded quantities (catalog recipe; independent of buy route)'):
+            for item_id, units in row['value'].get('expanded_materials', {}).items():
+                item_link(config, item_id, row['catalog']['items_by_id'][item_id]['name'] + f' × {units}')
+    if not page['made_from']:
+        ui.label('No compatible recipe makes this item.')
+    used_in(config, page)
+    ui.label('Skill-up demand').classes('text-xl font-bold')
+    for demand in page['demand']:
+        ui.label(' · '.join(demand['professions']) + ': ' + ', '.join(demand['bands']))
+    ui.label('Catalog skill-up bands, not observed demand or sales. No forecast.').classes('bs-note')
+    if not page['demand']:
+        ui.label('No skill-up bands in the compatible catalogs need this material.')
 
 
 def prices(page):
@@ -300,15 +332,22 @@ def removal_history(history):
                  'Time-left bounds use Classic Era evidence; Forever beta check pending.').classes('bs-note')
         if history['note']:
             ui.label(history['note'])
-        for pair in history['pairs']:
-            removal_pair_heading(pair)
-            if pair['skipped']:
-                theme.badge('Skipped: gap exceeds 12 hours', 'warn')
-                continue
-            for row in pair['items']:
-                removal_counts(row)
-            if not pair['items']:
-                ui.label('No listings for this item in either scan; no removals.')
+        pairs = [p for p in history['pairs'] if not p['skipped']]
+        skipped = len(history['pairs']) - len(pairs)
+        ui.label(f"{skipped} skipped gap{'' if skipped == 1 else 's'} (over 12 hours)")
+        removal_pairs(pairs[:3])
+        if len(pairs) > 3:
+            with ui.expansion('Show all scan gaps'):
+                removal_pairs(pairs[3:])
+
+
+def removal_pairs(pairs):
+    for pair in pairs:
+        removal_pair_heading(pair)
+        for row in pair['items']:
+            removal_counts(row)
+        if not pair['items']:
+            ui.label('No listings for this item in either scan; no removals.')
 
 
 def removal_list(result):
@@ -393,15 +432,6 @@ def item_floods(floods, page):
             ui.label('Not listed in the newest eligible scan; no flood signal.')
 
 
-def load_item_floods(config, page):
-    try:
-        floods = explorer.item_floods(config, page['item_id'], datetime.now(UTC))
-    except Exception as error:
-        ui.label(f'Unable to read flood signals: {error}. Use Data to check saved scans.')
-    else:
-        item_floods(floods, page)
-
-
 def flood_list_row(config, row, group):
     with ui.row().classes('items-center gap-2'):
         item_link(config, row['item_id'], row['item_name'])
@@ -425,3 +455,74 @@ def flood_list_row(config, row, group):
 def catalog_warnings(value):
     for warning in value.get("catalog_warnings", []):
         ui.label(warning).classes("bs-note")
+
+
+def summary_card(result, page, summary):
+    with ui.card().classes('bs-card').mark('item-summary'):
+        observed, signal = summary['observed'], summary['signal']
+        if observed is None:
+            ui.label('Not listed in this snapshot')
+        typical = signal['overshoot']['typical_copper'] if signal else None
+        with ui.element('div').classes('bs-tiles'):
+            theme.tile('Price now / unit', money(observed['min_buyout']) if observed else 'unknown')
+            theme.tile('Typical / unit', money(typical) if typical else 'typical unknown')
+            theme.tile('Units listed', str(summary['metrics'].get('units', 'unknown')))
+            theme.tile('Listings', str(summary['metrics'].get('listings', 'unknown')))
+            theme.tile('Vendor buy / unit', ' / '.join(money(v) for v in page['vendor_buy']) or 'unknown')
+            theme.tile('Vendor sell / unit', money(page['vendor_sell']))
+            theme.tile('Held by the team', 'unknown' if summary['held'] is None
+                       else ('at least ' if summary['at_least'] else '') + str(summary['held']))
+        if signal:
+            theme.badge(signal['crowding'])
+            theme.badge(signal['overshoot']['label'])
+        ui.label('Best use in our catalogs').classes('text-lg font-bold')
+        for key, label in (('used_in', 'Used in'), ('made_from', 'Made from')):
+            choice = summary[key]
+            if choice['recipe']:
+                ui.label(label + ' · Profit per craft: ' + format_money(choice['recipe']['value']['profit_copper']))
+                item_id = choice['recipe']['recipe']['output_item_id']
+                item_link(result['config'], item_id, choice['recipe']['catalog']['items_by_id'][item_id]['name'])
+            elif page[key] or key == 'used_in':
+                ui.label(label + ' · no profitable use known · ' + choice['reason'])
+        summary_evidence(result, summary)
+
+
+def summary_evidence(result, summary):
+    signal = summary['signal']
+    with ui.expansion('Summary evidence'):
+        if result['snapshot']:
+            ui.label(f"Snapshot {result['snapshot']['snapshot_id']}")
+            ui.label(age_caption(result['freshness'], result['config']['max_age_hours']))
+        if summary['floods_error']:
+            ui.label(f"Unable to read flood signals: {summary['floods_error']}")
+        else:
+            flood_heading(summary['floods'])
+        if signal:
+            flood_row(signal)
+        if summary['holdings_warning']:
+            ui.label(summary['holdings_warning'])
+        if not summary['captures']:
+            ui.label('No character captures for this source and market. Import bags and bank snapshots in Data.')
+        for capture in summary['captures']:
+            ui.label(capture_text(capture))
+            if capture['unknown']:
+                ui.label(capture['character'] + ' · ' + capture['kind'] + ' not captured')
+            ui.label(f"Capture {capture['captured_at']} · snapshot {capture['snapshot_id']} · "
+                     f"machine {capture['machine'] or 'unknown'}")
+        for row in summary['holdings']:
+            ui.label(f"{row['character']} · {row['realm']} · {row['kind']}: {row['units']}")
+
+
+def where_to_get(config, summary):
+    from views.nicegui_today import session_farming
+
+    ui.label('Where to get it').classes('text-xl font-bold')
+    if summary['farming'] is None:
+        ui.label('Farming evidence unavailable. Use Data to check saved character evidence.')
+    elif not summary['farming']:
+        ui.label('not gathered yet')
+    for character in summary['farming'] or []:
+        ui.label(' · '.join(character['character'])).classes('text-lg font-bold')
+        session_farming(character['farming'], config, limit=None)
+    ui.link('Wowhead drop sources and places', summary['wowhead_url'], new_tab=True).classes(
+        'min-h-[44px] inline-flex items-center underline')

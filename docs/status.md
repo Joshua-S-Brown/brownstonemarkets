@@ -25,6 +25,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   (CRAFT-11/13). One board shared across characters/hiring; detail loads on demand.
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
+  Item pages lead with a base-item decision summary, scoped holdings and own item farming evidence;
+  Summary/Crafting/Market/Identity and evidence tabs retain details. Three removal gaps lead,
+  the remainder expand, skipped gaps are counted; market-wide lists stay on home (STORY-078, UI-09).
   UI-11 typical prices use equal-weight UTC daily medians, with days/scans evidence and
   `flood_min_days` history validation (STORY-072; rules in requirements → UI-11).
 - **Stock:** readable bags/bank holdings, cautious listed value, Save-only source-local team

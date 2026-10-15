@@ -550,6 +550,13 @@ expanded quantities, retaining no Board profit. Routed nested choices multiply b
 count and carry depth. Skill bands combine direct and raw memberships without multiplying quantities.
 `item_page` returns all observed variant identities separately, vendor references, catalog-qualified
 made-from/used-in rows and team statuses. Catalog-only items remain reachable with unknown market prices.
+`item_summary` lazily composes one `item_floods` read (also reused by the Market tab),
+`today_loading._load_holdings` and cached explorer character/price evidence. `base_signal` selects
+only an unambiguous base/legacy price/signal/metric row; Stock's exact base holdings exclude variants.
+`item_farming` values complete histories before filtering item rows and containing spots, preserving
+UI-13 denominators and ordering. The item view reuses `session_farming(limit=None)` and its spot/mob
+helpers; This session keeps its three-row default. `wowhead_item_url` shares recipe import's game paths.
+UI-09 defines the summary, tabs and removal disclosure; home alone renders market-wide lists.
 `scan_movement` calls `eligible_scans`/`compare_scans`, retaining exact identities and comparison facts;
 UI-09 defines ordering, distinct-item limit and handling of missing evidence.
 `views/nicegui_market.py` uses the shared theme and anchor links carrying source, game, Market and

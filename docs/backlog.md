@@ -45,7 +45,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-078 an item page you can read (replaces the item-page half of STORY-021)
+1. STORY-078 an item page you can read (replaces the item-page half of STORY-021; ready for handoff)
 2. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
 3. STORY-073 your own sale rate (refine first)
 4. STORY-069 Today in player terms
@@ -203,14 +203,24 @@ Added 2026-10-14 from play feedback on Linen Cloth: the Market item page is one 
 
 As a player, I want an item's page to answer the useful questions first, so that I can decide whether to buy, sell, craft with or farm it.
 
+Refined 2026-10-14 against the code: the item page is `show_item` in `views/nicegui_market.py`; the Market home lists render under it today.
+
 Acceptance:
-- **Summary first,** in one card: price now and typical with the UI-11 label (cheap, high, contested, thin), units listed, vendor buy and sell price, what the team holds (Stock's holdings) and the best use in our catalogs (its top *Used in* craft by profit, or its own craft when it's an output). Each figure keeps its evidence on demand.
-- **Where to get it:** your own farming evidence for the item (UI-13 rows and spots: zone, mob, rate per hour and position, newest first), or *not gathered yet*. Always a link to Wowhead's item page for drop sources and places you haven't farmed. Wowhead's drop data isn't imported (no source evidence; CRAFT-08 covers only saved recipe pages).
-- **Sections as tabs or headed panels,** in this order: *Summary* · *Crafting* (made from, used in, team eligibility, skill-up demand) · *Market* (crowding and overshoot, removals) · *Identity and evidence*. Removals show the newest three gaps with *show all*; skipped gaps are counted, not listed.
-- **Off the item page:** the market-wide lists (*Flood signals in our chains*, *Removed early in our chains*, *What moved since the last scan*) stay on the Market home page only.
-- **Rules unchanged:** every label, rule and number stays as now (UI-09, UI-10, UI-11); only the layout and the summary/farming composition are new. The item stays in the URL (STORY-076's back link works).
+- **Summary first,** in one card, for the base item (ADDON-08 base/legacy identity; variants never feed the summary and stay listed under *Market*):
+  - **Price now and typical:** lowest buyout, UI-11's typical earlier price, and UI-11's labels (cheap / high / steady, and contested / thin / steady) from the item's flood signal. Not listed shows *not listed in this snapshot*; no typical shows *typical unknown*.
+  - **Units listed** and listings.
+  - **Vendor buy and sell** prices, *unknown* when missing.
+  - **Held by the team:** Stock's holdings for every scoped character (base identity only), total plus who holds how many in bags or bank on demand. An unknown bank says *bank not captured*; a stale capture shows its age; an uncaptured or partial location makes the total *at least* N (Stock's *at most* applies to shortfalls); no captures shows *unknown*.
+  - **Best use in our catalogs:** the *Used in* craft with the highest known Board profit per craft and, when the item is a craft output, its own *Made from* recipe's profit per craft; both lines when both apply. Without a known profit, *no profitable use known* with the reason; never zero.
+  - Each figure keeps its evidence on demand (scan and age, signal counts, captures).
+- **Where to get it** (under the summary): your own farming evidence for this item from UI-13, across every scoped character: per character, its rate rows (zone, mob or object, units/hour, value/hour, evidence minutes) and the spots where it dropped (zone, mob name as STORY-077, position), ordered as *This session* orders them. Without any, *not gathered yet*. Always a link to the item's Wowhead page for drop sources and places you haven't farmed. Wowhead's drop data isn't imported (no source evidence; CRAFT-08 covers only saved recipe pages).
+- **Sections as tabs** below the summary, in this order: *Summary* · *Crafting* (made from, used in, team eligibility, skill-up demand) · *Market* (identity price tiles, crowding and overshoot, removals) · *Identity and evidence* (item ID, variants, provenance). The page opens on *Summary*; the tab is not in the URL, so a refresh reopens *Summary* on the same item. Removals show the newest three gaps that weren't skipped, then *show all*; skipped gaps are counted, not listed.
+- **Off the item page:** the market-wide lists (*Flood signals in our chains*, *Removed early in our chains*, *What moved since the last scan*) render only on the Market home page (no `item`). The search card stays on both.
+- **Read only when the item opens:** the summary's holdings, farming and signal reads happen for the open item only; the Market home page reads nothing new.
+- **Rules unchanged:** every label, rule and number stays as now (UI-09, UI-10, UI-11, UI-13); only the layout and the summary/farming composition are new. No `TODAY_VERSION` change. The item stays in the URL and STORY-076's back link and item-to-item origin still work.
 - **UI-08 checklist** on screenshots of Linen Cloth, an item with no listings, and a crafted output.
-- **Offline tests:** the summary's figures and fallbacks (no price, no holdings, not in a catalog), farming evidence for an item and *not gathered yet*, the section order, the removals cut to three with the skipped count, and market-wide lists absent from the item page.
+- **Offline tests** through the NiceGUI harness: the summary's figures and fallbacks (no price, no typical, no holdings, unknown bank, not in a catalog, no known profit), best use for a material and for an output, farming evidence for an item and *not gathered yet*, the tab order with *Summary* open, removals cut to three with the skipped count and *show all*, market-wide lists absent from the item page and present on the home page, and STORY-076's back link on an item page.
+- **Real data:** on the Forever beta source (a copy of `data/`), Linen Cloth's summary, holdings and farming rows; report what the page shows.
 - **Docs:** UI-09 in `requirements.md`; `status.md`.
 
 ### STORY-034 — Movement ledger and reconciliation

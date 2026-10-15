@@ -880,13 +880,13 @@ def session_professions(character, config):
             ui.label(f"{catalog}: {count} not in a recipe list; open that profession's window")
 
 
-def session_farming(history, config):
-    with ui.column().classes('gap-1').mark('session-farming'):
+def session_farming(history, config, limit=3):
+    with ui.column().classes('gap-1 w-full min-w-0').mark('session-farming'):
         ui.label('Farming').classes('text-lg font-bold')
         if not history['rows']:
             ui.label(f"Not enough farming history · {history['recorded_seconds'] / 60:.1f} minutes recorded so far")
-        for row in history['rows'][:3]:
-            with ui.row().classes('items-baseline gap-2'):
+        for row in history['rows'][:limit]:
+            with ui.row().classes('items-baseline gap-2 w-full'):
                 item_link(config, row['item_id'], row['item_name'] or f"Item {row['item_id']}")
                 value = (format_money(row['value_per_hour_copper']) + '/hour'
                          if row['value_per_hour_copper'] is not None else 'no price')
