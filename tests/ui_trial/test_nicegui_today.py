@@ -56,7 +56,7 @@ async def test_page_matches_shared_plan_and_row_details(user, tmp_path, monkeypa
     materials = next(t for t in all_tables(user) if 'Materials' in t._markers)
     assert [r['Material'] for r in materials.rows] == [
         r['item_name'] for r in craft_details(result['craft'][0])['materials']]
-    assert sum(round(r['Cost (g)'] * 10000) for r in materials.rows) == result['craft'][0]['batch_cost_copper']
+    assert sum(parse_money(r['Cost']) for r in materials.rows) == result['craft'][0]['batch_cost_copper']
     if not addon:
         await user.should_see('not available for this source')
 
@@ -178,7 +178,7 @@ async def test_recorded_funds_summary_plan_override_and_missing(user, tmp_path, 
     await user.should_see('Gold available: 2s 55c (Basilly, captured 2026-10-11 10:57 UTC')
     assert load_settings(path).gold_copper == 250000  # Resolved funds are never saved automatically.
     buy = next(t for t in all_tables(user) if 'Buy' in t._markers)
-    assert sum(round(r['Cost (g)'] * 10000) for r in buy.rows) <= 255
+    assert sum(parse_money(r['Cost']) for r in buy.rows) <= 255
     user.find('Enter an amount instead').click()
     user.find(kind=ui.input, content='Gold available').clear().type('1s')
     user.find('Save Today settings').click()
@@ -483,9 +483,11 @@ async def test_cards_shared_buy_uses_vendor_and_intermediate(user, monkeypatch):
     for card, row in zip(cards, result['craft'], strict=True):
         text = card_text(card)
         assert_card_cost(card)
-        assert f"Batch profit {format_money(row['batch_profit_copper'])}" in text
-        assert f"per craft {format_money(row['profit_per_craft_copper'])}" in text
+        assert ("Profit at the cautious sale price (used for ranking): "
+                + format_money(row['batch_profit_copper'])) in text
         sell = next(r for r in result['sell'] if r['output_item_id'] == row['output_item_id'])
+        profit = sell['undercut_batch_profit_copper']
+        assert f"per craft {format_money(profit // row['batch_size'])}" in text
         assert f"Sell at {format_money(sell['undercut_copper'])}" in text
         assert f"profit {format_money(sell['undercut_batch_profit_copper'])}" in text
         why = (f"Cautious sale {format_money(row['sale_price_copper'])} · "
@@ -516,7 +518,7 @@ async def test_cards_shared_buy_uses_vendor_and_intermediate(user, monkeypatch):
             purchase = next(p for p in row['purchases']
                             if (p['item_id'], p['method']) == (merged['item_id'], merged['method']))
             assert f"{row['output_name']}: {purchase['purchased_units']} units" in contributions
-    assert sum(round(r['Cost (g)'] * 10000) for r in buy.rows) == result['shopping_total_copper']
+    assert sum(parse_money(r['Cost']) for r in buy.rows) == result['shopping_total_copper']
     assert sum(r['batch_cost_copper'] for r in result['craft']) == result['shopping_total_copper']
 
 

@@ -45,44 +45,24 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-069 Today in player terms (ready for handoff)
-2. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`; more posts in the next beta session: refine after it)
-3. STORY-073 your own sale rate (refine first)
-4. STORY-070 Team's next recipe you can actually learn
-5. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-6. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-7. STORY-036 vendor price ceilings (after STORY-071)
-8. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
-9. STORY-026 scan coverage and rhythm
-10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-11. STORY-006 replay
+1. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`; more posts in the next beta session: refine after it)
+2. STORY-073 your own sale rate (refine first)
+3. STORY-070 Team's next recipe you can actually learn
+4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+6. STORY-036 vendor price ceilings (after STORY-071)
+7. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
+8. STORY-026 scan coverage and rhythm
+9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+10. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-071 and STORY-077 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 072, 074, 075, 076, 078 and SPIKE-009/009b.
-
-### STORY-068 — Use what the team holds
-
-Implemented; current behavior is in `status.md` and Today in `requirements.md`. Acceptance text retained until the next commit.
-
-Promoted from *Restock* (Later) on 2026-10-13 after the walkthrough: Basilly held 8 Bolts of Linen Cloth, but Today bought 19 Linen Cloth to make 5 more. Refined 2026-10-14. Mailbox holdings, CRAFT-11's reach cost and choosing a different route because of holdings are split off to *Today, later versions* (Later).
-
-As a player, I want Today to use what my characters already hold before buying, so that I don't spend gold on materials sitting in my bags.
-
-Acceptance:
-- **Holdings** are Stock's (`stock.holdings`): the newest readable bags and bank capture per character in the selected source and full market, base ADDON-08 identity only (variants and unresolved links never count). An unknown bank adds nothing and is labelled *bank not captured*, never treated as empty. A capture older than `max_age_hours` is still used, with its age shown and a confidence reason *held count from a stale capture* (the level is unchanged). Holdings are read in `load_today` and passed to `build_today` as data, like `character_data`; nothing loads inside the calculation.
-- **Whose holdings:** with one character selected, only that character's holdings (as with funds); with *Our team*, every scoped character's.
-- **Held before bought, along the chosen route:** the Board's route is unchanged (CRAFT-03). Sizing a batch takes the route's materials from holdings first, then the listing ladder or vendor as now. This applies to purchased materials and to the route's crafted intermediates: a held Bolt of Linen Cloth replaces one Bolt craft and its two Linen Cloth. Go top-down (an intermediate before its own inputs). Use only as many held units of an intermediate as leave a whole number of its crafts (CRAFT-02's fractional rule is unchanged).
-- **Shared across the plan:** holdings are used up in plan order, like reserved listings. A later craft sees only what earlier crafts left, and an adjusted batch (`choices`) re-reserves them the same way.
-- **Never free:** a held unit costs what selling it would earn, the CRAFT-04 cautious sell price after the cut, rounded down. Without a sell price, it costs the route's unit cost for that item. Batch cost and profit include this; **gold needed** and the shopping list don't. Batch sizing therefore checks funds against gold spent only, and the batch sizes it compares include the craft counts where any holding runs out.
-- **Showing it:** a craft's materials list held units as **held** with their value (*worth Xs if sold*). *Buy* leaves them out. The Queue starts with *take* lines, grouped by character and place (*Basilly: take 8 Bolt of Linen Cloth from the bank*). A held unit on a character other than the crafter (the row's `made_by`) adds *Basilly mails 8 Bolt of Linen Cloth to Arille*, with postage uncharged and unconfirmed (the existing mail note). Allocation order: the crafter's bags, then bank, then other characters by name, bags before bank.
-- **Held outputs:** when the team holds units of a planned output, *Sell* and the Queue's post line show them beside the batch (*post 5 crafted + 2 held*, naming who holds them) at the same post price. Their value is shown separately and is not added to the craft's profit.
-- **Unchanged:** routes, prices, funds, Stock targets and This session (STORY-063 stays independent of holdings). Today's results change, so `TODAY_VERSION` increases.
-- **Offline tests:** held leaf material lowers gold needed and keeps profit honest (held value counted); held intermediate replaces its subtree, including the whole-craft limit on an intermediate making more than one; holdings used up in plan order across two crafts and through an adjusted batch; selected character vs *Our team*; variant and unresolved slots ignored; unknown bank; stale capture reason; missing sell price uses route cost (never zero); mail and take lines with allocation order; held outputs in *Sell*; the chosen batch matches a brute-force search over every size from 1 to `max_crafts` on fixtures with holdings; no holdings gives exactly today's plan apart from `today_version`.
-- **Real data:** on a copy of the Forever beta data, the Linen Cloth case: Basilly's bolts appear as held in the craft that uses them and gold needed falls. Report the before and after.
-- **Docs:** the held rule under Today in `requirements.md` (next to *Routes/batches*); remove Stock's *stock changes no Today plan* sentence as it applies to holdings (targets still change nothing); `design.md` for the data flow; `status.md`.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 072, 074, 075, 076, 078 and SPIKE-009/009b.
 
 ### STORY-069 — Today in player terms
+
+Implemented; current behavior is in `status.md` and Today in `requirements.md`. Acceptance retained until the next commit.
 
 Added 2026-10-13 from the walkthrough. Refined 2026-10-14 against the code. Presentation only: the plan, ranking, hidden reasons, funds and `TODAY_VERSION` don't change.
 
@@ -130,21 +110,6 @@ Acceptance:
 - **Beta check** (play actions only, added to `addon/README.md` → *Last beta play session*): open a trade-supplies vendor, a general goods vendor and one other vendor, without buying.
 - **Docs:** the capture in `requirements.md` under the ADDON journal rules; `design.md`; `status.md`.
 
-### STORY-072 — Typical price from one point per day
-
-Implemented; current behavior is in `status.md` and UI-11 in `requirements.md`. Acceptance text retained until the next commit.
-
-Added 2026-10-14 from the addon comparison: aux, Auctioneer and CraftProfit all collapse many scans into one point per time period before taking a typical price. UI-11 takes the median over every eligible scan, so an evening with six scans outweighs the other days. This matters more once STORY-067 caps Today's sale prices at the typical price.
-
-Acceptance:
-- **Daily points:** for each UTC day in the window, the day's point is the median of that day's eligible scans' lowest positive buyouts for the identity (ADDON-08 rules unchanged). The typical price is the median of the daily points. Daily points use earlier eligible scans only: the newest scan is never part of its own typical price, as now.
-- **Enough history:** `flood_min_days` (default **3** distinct days) replaces `flood_min_scans`; the window stays `flood_window_days`. Config validation and inheritance as for the other flood settings; an old `flood_min_scans` setting is rejected with a message naming the replacement.
-- **Shown:** evidence says *N days, M scans* instead of *N earlier scans*. Market, *This session* and Today (after STORY-067) all use the new value; nothing else changes.
-- **Version:** if STORY-067 is done, `TODAY_VERSION` increases again.
-- **Offline tests:** six scans on one day and one on each of two others give three equal-weight points; two days are *too few days*; integer copper; variants never pooled.
-- **Real-data check:** on the Forever beta source, list the items whose label changes (cheap, typical, high, too few) and why.
-- **Docs:** UI-11 in `requirements.md`, `design.md`, `status.md`.
-
 ### STORY-073 — Your own sale rate
 
 Added 2026-10-14 from the addon comparison (Journalator's *sale rate*: sold against expired and cancelled per item, with the average sale price). Our journal already records posts, invoices and returned mail; nothing shows them. It's the only direct proof that something sells, and it fills in by itself from launch. **Refine first.**
@@ -154,40 +119,6 @@ Proposed acceptance (to confirm when refined):
 - **Matching invoices to items** (proposed 2026-10-14; TSM does the same with its *sale hints*): a seller invoice carries the item's name but no link. Match it to the same character's own post or active auction (STORY-040) with the same name, stack size and buyout, within the auction's longest duration; the post's link supplies the item ID. No match, or more than one item matching, stays *unidentified* and never counts toward any item. The name only narrows candidates; the item ID comes from a link. Check what the beta capture actually holds first.
 - **Stop after repeated expiries** (from TSM's *max expires*): an item that expired or was cancelled N times in a row for you (`max_expiries`, proposed default 3) with no sale in between gets a Today label *expired 3 times running* and a Low confidence reason.
 - This is the first slice of STORY-034's ledger; build it so the ledger can reuse it.
-
-### STORY-075 — Farming spot capture: coin, position and vendor value (addon, read-only)
-
-Implemented and confirmed in game on 2026-10-14; outcome in `status.md` and UI-13. Acceptance text retained until the next commit. Positions and coin (0.12.4: 30 of 30 windows positioned, 15 of 15 coin loots matched) and loot-time vendor prices (0.12.5: Broken Fang 6c, Chipped Claw 4c and others, none of which the scans price). The two-camp game check was dropped: positions vary between windows, and the split is offline-tested. Added 2026-10-14. Follows STORY-074, and STORY-071's addon change, to avoid two version bumps at once. It can be checked on Classic Era as well as the beta, since nothing here is Forever-specific.
-
-As the owner, I want each loot window to record where I stood, which slots were coin and what each item sells to a vendor for, so that farming spots separate two camps of the same mob and value grey items and coin properly.
-
-Acceptance:
-- **Addon capture (read-only):** `journal.zone()` adds the player's map position (`C_Map.GetPlayerMapPosition(map_id, "player")`, x and y as raw fractions; omitted when nil, for example in instances). `journal.lootSources()` adds each slot's `GetLootSlotType` (item, coin or currency) and quantity, and the item's vendor sell price from `GetItemInfo`'s sell price return when the client has it cached (omitted, never zero, when not). Bounded, `safe`/`readAll`, no clicks or automation. Bump the addon version.
-- **Brownstone:** coin slots replace STORY-074's money-change inference where present. If both exist, the money change is the amount and the slot type is the evidence. A loot-time vendor sell price fills in for items the scan's item info lacks, preferring the scan's value when both exist and reporting any disagreement. A spot gains an optional position cell: x and y rounded down to 5% of the map (`farming_cell_percent`, default 5, a config setting read like `farming_idle_minutes`), taken from the median of the stretch's loot positions. Two stretches against the same mob in different cells become separate spots. No position means zone and mob only, as STORY-074.
-- **Display:** the spot shows *around 45, 70* (cell centre, map percent). No map artwork. A simple scatter of loot positions on a 0–100 grid can come later.
-- **Beta report:** the STORY-042 report counts loot windows with positions, coin slots and vendor prices.
-- **Offline tests:** Lua tests in `addon/BrownstoneScan/test_addon.py` for a nil position, a coin slot, an uncached sell price and the slot cap. Python tests for the cell rounding, the median, the split of one mob into two spots, and the preference between the scan's vendor price and the loot-time one.
-- **Check in game** (play actions only, in `addon/README.md` → *Last beta play session*): loot mobs with coin and a grey item (positions and coin confirmed 2026-10-14; the vendor price awaits 0.12.5).
-- **Docs:** the capture in `requirements.md` under the ADDON journal rules and UI-13; `design.md`; `status.md`.
-
-### STORY-076 — Back to where I was
-
-Implemented; current behavior is in `status.md` and UI-07 in `requirements.md`. Acceptance text retained until the next commit.
-
-Added 2026-10-14 from play feedback: opening Copper Ore from *This session* → *Farming* goes to its Market page, and getting back means clicking Today, then *This session* again. The desktop window has no browser back button.
-
-As a player, I want a back link on any page I reached from another, so that drilling into an item doesn't lose my place.
-
-Refined 2026-10-14 against the code: Team and Stock have no links to Market items today, and Today's *Today plan* / *This session* view is kept in tab storage, not the URL.
-
-Acceptance:
-- **Linking places (as they exist now):** Today to a Market item (*This session* cards, including Farming, and the *Today plan* craft cards and tables), Today's *This session* character name to Team, and Market item to item. Team and Stock gain no new links in this story.
-- **Back link:** each of those links carries where it came from in the URL: place, Today tab and Today view. The destination shows *← Back to Today · This session* (or *Today · Plan*, *Market · Linen Cloth*: the place, then the tab, view or item it came from) at the top. Clicking it returns there with the same source. The character doesn't travel in the URL: Today's comes from its saved settings and Team's from its selection, and the back link never changes either. Pages opened directly (place tabs, a typed URL) show no back link, and neither does a place tab clicked from a page that had one.
-- **Today's view in the URL:** Today reads its view (*Today plan* or *This session*) from the URL, so a back link and a refresh both reopen *This session*, loaded, not just with its toggle set. Changing the toggle updates the URL without reloading, as the tab already does. Without the parameter Today behaves as now.
-- **Chains:** after item-to-item links, the back link returns to the place you started from, not the previous item. Nothing is stored outside the URL. Unknown or invalid origin values show no back link, never an error.
-- **Unchanged:** the place tabs, URLs that already work, and refresh keeping your place (UI-07).
-- **Offline tests** through the existing NiceGUI harness (`tests/ui_trial/`): back links from Today *This session* (a Farming item and the character link to Team) and from a *Today plan* table, landing on *This session* loaded; an item-to-item chain returning to the start; no back link on direct pages or after a place tab; an invalid origin; refresh keeping both the back link and Today's view.
-- **Docs:** UI-07 in `requirements.md`; `status.md`.
 
 ### STORY-077 — Mob names (addon, read-only)
 

@@ -48,7 +48,7 @@ async def test_toggle_team_window_labels_links_and_plan_retained(user, tmp_path,
     await user.should_see('cheap')
     user.find('How these options were made').click()
     await user.should_see('label-scan')
-    await user.should_see('Not enough farming history')
+    await user.should_see('Farming: not enough history yet')
     assert len(user.find(marker='session-character').elements) == 2
     await user.should_see('Recipe 33')
     await user.should_not_see('Recipe 31')
@@ -178,7 +178,7 @@ async def test_farming_top_three_prices_evidence_and_caveats(user, tmp_path, mon
     await user.should_see('units/hour')
     await user.should_see('no price')
     await user.should_see('typical unit')
-    await user.should_see('1 stretches excluded')
+    await user.should_see('1 skipped stretch')
     await user.should_see('Your own past sessions, not a promise')
     await user.should_see('launch respawn competition differs')
     await user.should_see('listings are not sales')

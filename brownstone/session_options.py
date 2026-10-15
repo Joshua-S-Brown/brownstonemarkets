@@ -6,6 +6,7 @@ from . import action_board, farming, flood_signals, progression, today_character
 from .crafting import basis_prices, evaluate_recipe
 from .markets import MARKET_KEYS
 from .recipe_graph import route_catalog
+from .today_session import headline_profit
 
 PROGRESSION_KEYS = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut', 'listings', 'metrics')
 # Classic Era's proficiency ladder (warcraft.wiki.gg/wiki/Classic_proficiency): a tier's cap gives the next
@@ -56,7 +57,8 @@ def _crafts(plan, catalogs, state):
         recipe = catalogs[row['catalog_id']]['recipes_by_id'][row['recipe_id']]
         status = today_characters.recipe_status(recipe, state)
         if status['craft_status'] in ('Known', 'Train now'):
-            result.append(row | {'session_status': status})
+            sell = next(r for r in plan['sell'] if r['output_item_id'] == row['output_item_id'])
+            result.append(row | {'session_status': status} | headline_profit(row, sell))
     return result
 
 
@@ -131,7 +133,7 @@ def next_steps(character):
         return steps + [{'kind': 'evidence'}]
     if not any(s['kind'] in ('craft', 'level_profession') for s in steps):
         steps.insert(0, {'kind': 'nothing'})
-    return steps
+    return merge_tier_steps(steps)
 
 
 def _label_character(character, rows):
@@ -144,7 +146,7 @@ def _label_character(character, rows):
                                'tier': next_tier(group, character['level']),
                                'best': next((r for r in recipes if r['profit_copper'] is not None), None)})
     result = character | {'crafts': crafts, 'professions': sorted(groups, key=profession_order),
-                          'craft_profit_copper': sum(r['batch_profit_copper'] for r in crafts)}
+                          'craft_profit_copper': sum(r['headline_profit_copper'] for r in crafts)}
     return result | {'next_steps': next_steps(result)}
 
 
@@ -178,3 +180,21 @@ def build_options(db, config, arguments, plan, *, window=25):
                   for c in characters]
     return {'characters': [_label_character(c, signals['rows']) for c in characters],
             'snapshot': arguments['snapshot'], 'freshness': plan['freshness'], 'signals': signals, 'window': window}
+
+
+def merge_tier_steps(steps):
+    """Combine equal character-level/tier requirements without merging profession levelling."""
+    result, tiers = [], {}
+    for step in steps:
+        if step['kind'] not in ('level_character', 'train'):
+            result.append(step)
+            continue
+        tier = step['tier']
+        key = (step['kind'], tier['name'], tier['required_level'])
+        if key in tiers:
+            tiers[key]['groups'].append(step['group'])
+        else:
+            merged = step | {'groups': [step['group']]}
+            tiers[key] = merged
+            result.append(merged)
+    return result

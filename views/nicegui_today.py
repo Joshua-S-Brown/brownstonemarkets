@@ -14,7 +14,15 @@ from brownstone.today import apply_removals, build_today, craft_details, purchas
 from brownstone.today_characters import available_characters, resolve_character
 from brownstone.today_funds import resolve_funds
 from brownstone.today_loading import load_today, load_today_characters, load_today_removals
-from brownstone.today_session import digest, plan_context, queue_line, queue_total, stable_queue
+from brownstone.today_session import (
+    digest,
+    headline_profit,
+    plan_context,
+    queue_line,
+    queue_total,
+    queue_with_gold,
+    stable_queue,
+)
 from brownstone.today_settings import TodaySettings, load_settings, save_settings, settings_path
 from brownstone.today_warnings import REMOVAL_EVIDENCE
 from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
@@ -29,19 +37,23 @@ LEGACY_TABS = {'Craft': 'Plan', 'Buy': 'Shopping list', 'Below vendor': 'Extras'
 
 def table(rows, *, label, row_key='id'):
     rows = [{**row, 'id': i} for i, row in enumerate(rows)]
-    keys = list(dict.fromkeys(key for row in rows for key in row if key != 'id'))
+    keys = list(dict.fromkeys(key for row in rows for key in row
+                              if key != 'id' and not key.endswith('_copper') and not key.startswith('_')))
     decisions = {
-        'Craft': ['Item', 'State', 'Can make', 'Who can make it', 'Batch', 'Material cost (g)',
-                  'Batch profit (g)', 'Profit per craft (g)', 'Confidence'],
+        'Craft': ['Item', 'State', 'Can make', 'Who can make it', 'Batch', 'Material cost',
+                  'Batch profit', 'Profit per craft', 'Profit basis', 'Confidence'],
         'Sell': ['Output', 'State', 'Batch', 'Held units', 'Held by', 'Held value', 'Warnings',
-                 'Lowest competing unit (g)', 'Listings', 'Units',
-                 'Undercut unit (g)', 'Profit at undercut for batch (g)', 'Thin', 'Confidence', 'Reasons'],
-        'Buy': ['Material', 'State', 'Route', 'For', 'Required units', 'Purchased units', 'Cost (g)',
-                'Highest unit price (g)', 'Cheap now'],
+                 'Lowest competing unit', 'Listings', 'Units',
+                 'Undercut unit', 'Profit at undercut for batch', 'Thin', 'Confidence', 'Reasons'],
+        'Buy': ['Material', 'State', 'Route', 'For', 'Required units', 'Purchased units', 'Cost',
+                'Highest unit price', 'Cheap now'],
     }.get(label, keys)
 
     def columns(selected):
-        return [{'name': key, 'label': key, 'field': key, 'sortable': True, 'align': 'left'}
+        return [{'name': key, 'label': key, 'field': key, 'sortable': True, 'align': 'left',
+                 **({':sort': f'(a, b, rowA, rowB) => {{ const x = rowA["{key}_copper"] ?? Infinity, '
+                             f'y = rowB["{key}_copper"] ?? Infinity; return x === y ? 0 : (x < y ? -1 : 1) }}'}
+                    if any(key + '_copper' in r for r in rows) else {})}
                 for key in selected if key in keys]
 
     with ui.row():
@@ -320,6 +332,7 @@ def render(config, catalogs, character_data, active_tab='Craft', active_view='')
             except Exception as error:
                 ui.label(f'Unable to build Today: {error}')
                 return
+            session['display_queue'] = queue_with_gold(result, latest_characters, funds)
             info[0] = lambda: plan_info(result, config, manifest, arguments, funds, session)
             restore_view(initial_view, session, link_config)
             display = view_toggle(session)
@@ -445,6 +458,7 @@ def craft_title(config, row):
 
 def craft_card(row, sell, config=None):
     details = craft_details(row)
+    headline = headline_profit(row, sell)
     character = tr.craft_row(row, sell)
     with ui.card().classes('bs-card').mark('craft-card'):
         with ui.row().classes('w-full justify-between items-start'):
@@ -466,15 +480,20 @@ def craft_card(row, sell, config=None):
                 ui.label(f"Limited by {row['limiting_factor']}" + (' · thin' if sell['thin'] else '')).classes(
                     'bs-note')
             with ui.column().classes('items-end gap-0'):
-                ui.label(format_money(row['batch_profit_copper'])).classes('bs-big bs-profit')
-                ui.label(f"per craft {format_money(row['profit_per_craft_copper'])} · "
+                ui.label(format_money(headline['headline_profit_copper']) + headline['profit_basis']).classes(
+                    'bs-big bs-profit')
+                ui.label(f"per craft {format_money(headline['headline_per_craft_copper'])} · "
                          f"costs {format_money(row['batch_cost_copper'])}").classes('bs-note')
         with (ui.expansion('What to buy and where to sell').classes('w-full'),
               ui.element('div').classes('bs-details')):
             with ui.column().classes('gap-2'):
                 ui.label(f"What to buy · Material cost {format_money(row['batch_cost_copper'])}")
-                purchases = tr.material_card_rows(details['materials'])
-                ui.table(columns=[{'name': key, 'label': key, 'field': key, 'align': 'left'}
+                purchases = [r | {'Cost_copper': m['cost_copper']}
+                             for r, m in zip(tr.material_card_rows(details['materials']),
+                                             details['materials'], strict=True)]
+                ui.table(columns=[{'name': key, 'label': key, 'field': key, 'align': 'left',
+                                   'sortable': True, **({':sort': '(a,b,rowA,rowB) => '
+                                   'rowA.Cost_copper - rowB.Cost_copper'} if key == 'Cost' else {})}
                                   for key in ('Material', 'Where', 'Units', 'Cost')], rows=purchases,
                          row_key='Material').classes('w-full').props('flat hide-bottom').mark('Reserved purchases')
                 with ui.expansion('Material evidence'):
@@ -500,7 +519,8 @@ def craft_card(row, sell, config=None):
                          f"{format_money(price) if price is not None else 'unavailable'} · "
                          f"{competition(sell)} · profit "
                          f"{format_money(profit) if profit is not None else 'unavailable'}")
-                ui.label(f"Batch profit {format_money(row['batch_profit_copper'])}")
+                ui.label("Profit at the cautious sale price (used for ranking): "
+                         + format_money(row['batch_profit_copper']))
                 ui.label(f"Cautious sale {format_money(row['sale_price_copper'])} · {competition(sell)} · "
                          f"limited by {row['limiting_factor']}" + (' · thin' if sell['thin'] else ''))
                 capability = [f"{key}: {character[key]}" for key in ('Can make', 'Who can make it')
@@ -511,23 +531,26 @@ def craft_card(row, sell, config=None):
 
 def plan_info(result, config, manifest, arguments, funds, session):
     with theme.dialog('How this plan was made') as popup:
-        ui.label(tr.provenance(result, config, manifest, arguments['snapshot']['snapshot_id']))
-        ui.label(age_caption(result['freshness'], config['max_age_hours']))
-        if result['freshness']['stale']:
-            ui.label(STALE_WARNING)
-        for capture in result.get('holdings_captures', []):
-            ui.label(tr.capture_label(capture))
-        ui.label(funds.summary)
-        if funds.settings.gold_override:
-            table(tr.recorded_gold_rows(arguments['character_data'], funds.settings.character), label='Recorded gold')
-        for note in funds.notes:
-            ui.label(note)
-        ui.label(tr.SETTINGS_NOTE)
-        ui.label(tr.hidden_line(result['hidden']))
-        if session.get('hide_low'):
-            ui.label(f"Hidden Low confidence: {tr.display_hidden(result, True)['low confidence']}")
-        for name, count in result['remaining'].items():
-            ui.label(f"{name}: {count} {tr.ROW_LIMIT_NOTE}.")
+        ui.label(tr.hidden_summary(tr.display_hidden(result, session.get('hide_low', False))))
+        with ui.expansion('Details'):
+            ui.label(tr.provenance(result, config, manifest, arguments['snapshot']['snapshot_id']))
+            ui.label(age_caption(result['freshness'], config['max_age_hours']))
+            if result['freshness']['stale']:
+                ui.label(STALE_WARNING)
+            for capture in result.get('holdings_captures', []):
+                ui.label(tr.capture_label(capture))
+            ui.label(funds.summary)
+            if funds.settings.gold_override:
+                table(tr.recorded_gold_rows(arguments['character_data'], funds.settings.character),
+                      label='Recorded gold')
+            for note in funds.notes:
+                ui.label(note)
+            ui.label(tr.SETTINGS_NOTE)
+            ui.label(tr.hidden_line(result['hidden']))
+            if session.get('hide_low'):
+                ui.label(f"Hidden Low confidence: {tr.display_hidden(result, True)['low confidence']}")
+            for name, count in result['remaining'].items():
+                ui.label(f"{name}: {count} {tr.ROW_LIMIT_NOTE}.")
     popup.on('hide', popup.delete)
     popup.open()
 
@@ -535,11 +558,11 @@ def plan_info(result, config, manifest, arguments, funds, session):
 def competition(sell):
     if sell['listings'] is None or sell['units'] is None:
         return 'competing listings and units not available for this source'
-    return f"{sell['listings']} listings / {sell['units']} units"
+    return f"{tr.count_word(sell['listings'], 'listing')} / {sell['units']} units"
 
 
 def queue_panel(result, session):
-    queue = result['queue']
+    queue = session.get('display_queue', result['queue'])
     ui.label(queue['mail_note']).classes('bs-note')
     identity = digest({'queue': stable_queue(queue), 'context': session.get('context')})
     if session.get('queue_identity') != identity:
@@ -641,9 +664,8 @@ def session_view(display, config, arguments, result, session, status):
     return plan_area
 
 
-CROWDING = {'thin': ('thin: few listings', 'warn'), 'contested': ('contested: many sellers', 'warn')}
-OVERSHOOT = {'cheap': ('cheap right now', 'good'), 'high': ('pricier than usual', 'warn'),
-             'too few days': ('price history too short', 'neutral'), 'no buyout': ('no buyout', 'neutral')}
+CROWDING = tr.CROWDING
+OVERSHOOT = tr.OVERSHOOT
 
 
 def session_money(value):
@@ -663,7 +685,7 @@ def session_signal(signal):
         with ui.expansion('Listing evidence').classes('bs-note'):
             churn = signal['churn']
             history = signal['overshoot']
-            ui.label(f"{signal['crowding']} · {history['label']} · {signal['listings']} listings · "
+            ui.label(f"{signal['crowding']} · {history['label']} · {tr.count_word(signal['listings'], 'listing')} · "
                      f"{signal['units']} units · largest stack {signal['largest_stack_units']} / "
                      f"{signal['units']} units")
             ui.label(f"Lowest-buyout changes {churn['changed']} / {churn['pairs']} comparable pairs"
@@ -696,13 +718,14 @@ def sell_warning_slot(widget):
     spans = []
     for field, labels in (('crowding', CROWDING), ('overshoot.label', OVERSHOOT)):
         for key, (text, tone) in labels.items():
-            spans.append(f'<span v-if="props.value.signal && props.value.signal.{field} === \'{key}\'" '
+            spans.append(f'<span v-if="props.row._warnings.signal && props.row._warnings.signal.{field} === \'{key}\'" '
                          f'class="bs-badge bs-{tone}">{text}</span> ')
     widget.add_slot('body-cell-Warnings', '<q-td :props="props"><div class="column gap-2">' + ''.join(spans)
-                    + '<span v-if="props.value.early_removals && props.value.early_removals.pairs >= 3 '
-                    '&& props.value.early_removals.units === 0" class="bs-badge bs-warn">'
-                    'no early removals in {{props.value.early_removals.pairs}} scan gaps</span>'
-                    '<span v-if="props.value.price_note" class="bs-note">{{props.value.price_note}}</span>'
+                    + '<span v-if="props.row._warnings.early_removals && props.row._warnings.early_removals.pairs >= 3 '
+                    '&& props.row._warnings.early_removals.units === 0" class="bs-badge bs-warn">'
+                    'no early removals in {{props.row._warnings.early_removals.pairs}} scan gaps</span>'
+                    '<span v-if="props.row._warnings.price_note" class="bs-note">'
+                    '{{props.row._warnings.price_note}}</span>'
                     '<span class="bs-note">Click row for evidence</span></div></q-td>')
 
 
@@ -730,7 +753,8 @@ def step_text(step, character, window):
     kind = step['kind']
     if kind == 'craft':
         rows = ', '.join(f"{r['batch_size']} {r['output_name']}" for r in character['crafts'])
-        return f"Craft {rows} · planned profit {format_money(character['craft_profit_copper'])}"
+        return (f"Craft {rows} · planned profit {format_money(character['craft_profit_copper'])}"
+                f"{session_profit_basis(character)}")
     if kind == 'nothing':
         return (f'Nothing to craft or level within {window} points. '
                 'Gathering is an option here.')
@@ -745,6 +769,8 @@ def step_text(step, character, window):
                 f"{format_money(estimate['cost_copper'])}, {cheap_share(estimate)} · unlocks {recipe['name']} "
                 f"at {format_money(recipe['profit_copper'])} per craft{more}")
     tier = step['tier']
+    if len(step.get('groups', [])) > 1:
+        return merged_tier_text(step, character)
     if kind == 'train':
         return f"{profession} is capped at {tier['cap']}: train {tier['name']} {profession} at a trainer"
     level = character['level']
@@ -752,6 +778,18 @@ def step_text(step, character, window):
              else f"Before {profession} reaches {tier['cap']}")
     now = f"{level} → {tier['required_level']}" if level is not None else f"to {tier['required_level']} (level unknown)"
     return f"{reach}: level {name} {now} to train {tier['name']}"
+
+
+
+def merged_tier_text(step, character):
+    professions = [g['profession'] for g in step['groups']]
+    names = ', '.join(professions[:-1]) + ' and ' + professions[-1]
+    tier = step['tier']
+    if step['kind'] == 'train':
+        return f"Train {tier['name']} at a trainer: {names}"
+    level = character['level']
+    now = f"{level} → {tier['required_level']}" if level is not None else f"to {tier['required_level']} (level unknown)"
+    return f"Level {character['character'][0]} {now} to train {tier['name']} {names}"
 
 
 def session_summary(character, options, config):
@@ -809,15 +847,16 @@ def session_crafts(character, config):
     if not character['crafts']:
         ui.label('No reserved Today plan rows this character can make.')
         return
-    ui.label(f"Planned profit total {format_money(character['craft_profit_copper'])}")
+    ui.label(f"Planned profit total {format_money(character['craft_profit_copper'])}{session_profit_basis(character)}")
     for row in character['crafts']:
         with ui.card().classes('bs-card').mark('session-craft'):
             item_link(config, row['output_item_id'], row['output_name'])
             with ui.row().classes('items-center gap-2'):
                 theme.badge(row['session_status']['craft_status'])
                 theme.badge(row['confidence'] + ' confidence', 'warn' if row['confidence'] == 'Low' else 'neutral')
-            ui.label(f"{row['batch_size']} planned crafts · profit {format_money(row['batch_profit_copper'])} · "
-                     f"per craft {format_money(row['profit_per_craft_copper'])} · "
+            ui.label(f"{row['batch_size']} planned crafts · profit "
+                     f"{format_money(row['headline_profit_copper'])}{row['profit_basis']} · "
+                     f"per craft {format_money(row['headline_per_craft_copper'])} · "
                      f"cost {format_money(row['batch_cost_copper'])}")
             session_signal(row['signal'])
             for material in row['purchases']:
@@ -844,6 +883,8 @@ def session_options(options, config):
             with ui.expansion(f"Details for {character['character'][0]}").classes('w-full'):
                 session_crafts(character, config)
                 session_professions(character, config)
+    if any(c['farming']['rows'] or c['farming'].get('spots') for c in options['characters']):
+        farming_caveat()
     if not options['characters']:
         ui.label('No scoped Today characters imported. Use Data → Import.')
     with ui.expansion('How these options were made'):
@@ -882,6 +923,10 @@ def session_professions(character, config):
 
 def session_farming(history, config, limit=3):
     with ui.column().classes('gap-1 w-full min-w-0').mark('session-farming'):
+        if not history['rows'] and not history.get('spots'):
+            ui.label(f"Farming: not enough history yet ({history['recorded_seconds'] / 60:.1f} minutes recorded)")
+            farming_evidence(history)
+            return
         ui.label('Farming').classes('text-lg font-bold')
         if not history['rows']:
             ui.label(f"Not enough farming history · {history['recorded_seconds'] / 60:.1f} minutes recorded so far")
@@ -894,28 +939,34 @@ def session_farming(history, config, limit=3):
                            if row['typical_price_copper'] is not None else 'unknown')
                 ui.label(f"{row['zone'] or 'unknown zone'} · {row['source_kind']} · "
                          f"{row['units_per_hour']} units/hour · {value} · typical unit {typical} · "
-                         f"{row['seconds'] / 60:.1f} evidence minutes · {row['stretches']} stretches")
+                         f"{row['seconds'] / 60:.1f} evidence minutes · "
+                         f"{tr.count_word(row['stretches'], 'stretch', 'stretches')}")
         session_farming_spots(history)
-        ui.label(f"{history['excluded_stretches']} stretches excluded from rates").classes('bs-note')
-        ui.label('Your own past sessions, not a promise; launch respawn competition differs; '
-                 'listings are not sales.').classes('bs-note')
-        with ui.expansion('Farming evidence'):
-            for row in history['rows']:
-                value = (format_money(row['value_per_hour_copper'])
-                         if row['value_per_hour_copper'] is not None else 'no price')
-                ui.label(f"Item {row['item_id']} · map {row['map_id']} · {row['source_kind']} · "
-                         f"object IDs {row['object_ids']} · {row['units']} units · {row['seconds']} seconds · "
-                         f"{row['units_per_hour']} units/hour · "
-                         f"{value}"
-                         f" · typical unit {session_money(row['typical_price_copper'])}")
-            for stretch in history['stretches']:
-                ui.label(f"Map {stretch['key'][0]} · {len(stretch['loots'])} loots · {stretch['seconds']} seconds · "
-                         f"{'included' if stretch['qualifies'] else 'excluded: under 5 minutes or 3 loots'}")
-                first = datetime.fromtimestamp(stretch['first'], UTC).isoformat()
-                last = datetime.fromtimestamp(stretch['last'], UTC).isoformat()
-                origins = sorted({f"{loot['machine']} / login {loot['login_at']}"
-                                  for loot in stretch['loots']})
-                ui.label(f"Loot times (UTC) {first}–{last} · {', '.join(origins)}").classes('bs-note')
+        ui.label(tr.count_word(history['excluded_stretches'], 'skipped stretch', 'skipped stretches')).classes(
+            'bs-note')
+        farming_evidence(history)
+
+
+def farming_evidence(history):
+    with ui.expansion('Farming evidence'):
+        if not history['rows'] and not history.get('spots'):
+            ui.label(tr.count_word(history['excluded_stretches'], 'skipped stretch', 'skipped stretches'))
+        for row in history['rows']:
+            value = (format_money(row['value_per_hour_copper'])
+                     if row['value_per_hour_copper'] is not None else 'no price')
+            ui.label(f"Item {row['item_id']} · map {row['map_id']} · {row['source_kind']} · "
+                     f"object IDs {row['object_ids']} · {row['units']} units · {row['seconds']} seconds · "
+                     f"{row['units_per_hour']} units/hour · "
+                     f"{value}"
+                     f" · typical unit {session_money(row['typical_price_copper'])}")
+        for stretch in history['stretches']:
+            ui.label(f"Map {stretch['key'][0]} · {len(stretch['loots'])} loots · {stretch['seconds']} seconds · "
+                     f"{'included' if stretch['qualifies'] else 'excluded: under 5 minutes or 3 loots'}")
+            first = datetime.fromtimestamp(stretch['first'], UTC).isoformat()
+            last = datetime.fromtimestamp(stretch['last'], UTC).isoformat()
+            origins = sorted({f"{loot['machine']} / login {loot['login_at']}"
+                              for loot in stretch['loots']})
+            ui.label(f"Loot times (UTC) {first}–{last} · {', '.join(origins)}").classes('bs-note')
 
 
 def session_farming_spots(history):
@@ -979,3 +1030,15 @@ def spot_coin_share(spot):
     if coin is None:
         return 'Coin unavailable'
     return f'Coin {coin * 100 // total}%' if total else 'Coin unknown'
+
+
+def session_profit_basis(character):
+    bases = [r.get('profit_basis') for r in character['crafts']]
+    if bases and all(bases):
+        return ' at cautious sale price'
+    return ' (includes crafts at cautious sale price)' if any(bases) else ''
+
+
+def farming_caveat():
+    ui.label('Your own past sessions, not a promise; launch respawn competition differs; '
+             'listings are not sales.').classes('bs-note')

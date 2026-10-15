@@ -514,7 +514,7 @@ def summary_evidence(result, summary):
 
 
 def where_to_get(config, summary):
-    from views.nicegui_today import session_farming
+    from views.nicegui_today import farming_caveat, session_farming
 
     ui.label('Where to get it').classes('text-xl font-bold')
     if summary['farming'] is None:
@@ -524,5 +524,7 @@ def where_to_get(config, summary):
     for character in summary['farming'] or []:
         ui.label(' · '.join(character['character'])).classes('text-lg font-bold')
         session_farming(character['farming'], config, limit=None)
+    if any(c['farming']['rows'] or c['farming'].get('spots') for c in summary['farming'] or []):
+        farming_caveat()
     ui.link('Wowhead drop sources and places', summary['wowhead_url'], new_tab=True).classes(
         'min-h-[44px] inline-flex items-center underline')

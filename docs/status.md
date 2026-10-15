@@ -13,6 +13,11 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   authenticated reuse/restart, loopback browser fallback and idle shutdown.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
   queue, confidence, character eligibility and captured funds; today_version 10.
+  STORY-069 aligns headline profit with the reserved post quote (explicit cautious fallback),
+  formats Today table money in g/s/c with copper sorting, and shows team gold-mail suggestions
+  in Queue/copy/tick identity (rules in requirements → Today). This session combines equal tier
+  requirements, compresses empty farming history and shares one farming caveat per page;
+  hidden-recipe information leads with ordered plain reasons and retains provenance in Details.
   STORY-068 uses scoped Stock bags/bank holdings along the Board route, including intermediates,
   with held value in profit, purchase gold separate, shared reservation, take/mail lines and held outputs.
   Capture ages/unknown bank appear on Today; stale held counts add a reason without changing confidence.

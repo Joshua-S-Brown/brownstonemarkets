@@ -25,7 +25,7 @@ async def test_warnings_on_each_output_surface(user, tmp_path, monkeypatch):
         user.find(kind=ui.tab, content=tab).click()
         if tab == 'Sell':
             widget = user.find(kind=ui.table, marker='Sell').elements.pop()
-            assert widget.rows[0]['Warnings']['signal']['crowding'] == 'contested'
+            assert 'contested: many sellers' in widget.rows[0]['Warnings']
             user.find(kind=ui.table, marker='Sell').trigger('rowClick', [{}, widget.rows[0], 0])
         await user.should_see('pricier than usual')
         await user.should_see('contested: many sellers')

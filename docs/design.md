@@ -427,7 +427,9 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
   `session_queue` projects reserved shopping, route steps in postorder and posts without re-quoting.
 - **Session.** `today_session.plan_context` fingerprints catalogs, market, snapshot, settings,
   freshness limit, auction cut, Today version, character evidence and holdings (capture identity/counts, not age); a changed context resets
-  choices and ticks. Queue tick identity is the plan without confidence labels (`stable_queue`).
+  choices and ticks. `today_session.queue_with_gold` projects the Queue with transfers using
+  `today_funds.recorded_balances` and reserved `craft_details` purchases; `build_today` is untouched.
+  Queue tick identity includes these presentation lines, excluding confidence labels (`stable_queue`).
 
 ### This session (STORY-063)
 
@@ -441,7 +443,10 @@ Direct callers without loaded signals retain the standalone signal read.
 It returns character sections, annotated copies, per-character craft totals, character level,
 `next_steps` (kinds `craft`, `level_profession`, `level_character`, `train`, `nothing`, `evidence`),
 per-profession `milestones` and `tier` (`NEXT_TIER`), snapshot/freshness and separate signal
-provenance; the view turns steps into lines (`step_text`). The input plan/arguments and Today version are untouched.
+provenance; the view turns steps into lines (`step_text`). Craft copies carry `headline_profit_copper`,
+`headline_per_craft_copper` and `profit_basis` from the reserved Sell row via `today_session.headline_profit`;
+`merge_tier_steps` combines equal character-level/tier requirements. The input plan/arguments and Today version
+are untouched.
 `views/nicegui_today.py` places the toggle above the plan status so it stays put, composes lazily
 when **This session** opens, reads Team's per-tab/source
 reach window, uses the shared theme and links to Market items and the selected Team character.

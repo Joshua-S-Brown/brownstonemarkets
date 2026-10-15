@@ -249,3 +249,16 @@ def test_farming_vendor_data_passed_without_changing_plan_or_item_rows(monkeypat
     assert history['spots'][0]['value_per_hour_copper'] == 252
     assert history['spots'][0]['items'][0]['basis'] == 'vendor'
     assert 999 in read.call_args.args[2]
+
+
+def test_session_copies_sell_profit_without_changing_cautious_plan(monkeypatch):
+    args = arguments(metrics={3: {'min_buyout': 200, 'listings': 4, 'units': 4, 'largest_stack_units': 1}})
+    result, plan, _ = compose(monkeypatch, args)
+    sells = {r['output_item_id']: r for r in plan['sell']}
+    for character in result['characters']:
+        for row in character['crafts']:
+            quote = sells[row['output_item_id']]['undercut_batch_profit_copper']
+            expected = row['batch_profit_copper'] if quote is None else quote
+            assert row['headline_profit_copper'] == expected
+            assert row['headline_per_craft_copper'] == expected // row['batch_size']
+        assert character['craft_profit_copper'] == sum(r['headline_profit_copper'] for r in character['crafts'])

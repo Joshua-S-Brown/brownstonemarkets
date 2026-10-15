@@ -41,12 +41,12 @@ def resolve_funds(settings: TodaySettings, data: dict, now: datetime, max_age_ho
     # A saved character missing from this source and market plans as Our team, so funds follow.
     selected = settings.character if settings.character in data else None
     characters = [selected] if selected is not None else sorted(data)
+    balances = recorded_balances(data)
     captures = []
     missing = []
     for character in characters:
         bags = data.get(character, {}).get("bags", {})
-        gold = bags.get("gold_copper")
-        if type(gold) is int and gold > 0 and "captured_at" in bags:
+        if character in balances:
             captures.append((character, bags))
         else:
             missing.append(character[0])
@@ -62,3 +62,10 @@ def resolve_funds(settings: TodaySettings, data: dict, now: datetime, max_age_ho
     if missing:
         notes += (f"No captured gold for {', '.join(missing)}; excluded from the recorded total.",)
     return TodayFunds(effective, f"across {len(captures)} characters; gold must be mailed to the crafter", notes)
+
+
+def recorded_balances(data):
+    """Readable balances under the same rule as funds resolution, in this already-scoped projection."""
+    return {character: record['bags']['gold_copper'] for character, record in data.items()
+            if type(record.get('bags', {}).get('gold_copper')) is int
+            and record['bags']['gold_copper'] > 0 and 'captured_at' in record['bags']}

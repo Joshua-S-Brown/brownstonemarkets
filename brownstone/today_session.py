@@ -4,7 +4,8 @@ import json
 
 from brownstone.money import format_money
 from brownstone.recipe_graph import made_by_label
-from brownstone.today import TODAY_VERSION
+from brownstone.today import TODAY_VERSION, craft_details
+from brownstone.today_funds import recorded_balances
 
 
 def digest(value):
@@ -45,6 +46,10 @@ def queue_line(line):
 
 def queue_line_text(line):
     stage, name = line["stage"], line["name"]
+    if stage == 'gold mail':
+        return f"{line['character']} mails {format_money(line['copper'])} to {name}"
+    if stage == 'gold unknown':
+        return f"{name}'s gold isn't captured; {name} needs {format_money(line['copper'])} for purchases"
     if stage in ("auction house", "vendor"):
         return (f"Buy at {stage}: {name} · {line['purchased_units']} units · "
                 f"highest unit {format_money(line['highest_unit_copper'])} · total {format_money(line['cost_copper'])}")
@@ -69,3 +74,46 @@ def queue_line_text(line):
     return f"Post: {name} · {line['quantity']} units · undercut unit {price} · profit {profit}"
 
 
+def headline_profit(row, sell):
+    """Use the reserved Sell quote, falling back explicitly when it cannot be posted."""
+    post = sell['undercut_batch_profit_copper']
+    profit = row['batch_profit_copper'] if post is None else post
+    return {'headline_profit_copper': profit, 'headline_per_craft_copper': profit // row['batch_size'],
+            'profit_basis': ' at cautious sale price' if post is None else ''}
+
+
+def gold_mail_lines(result, character_data, funds):
+    """Suggest transfers from recorded surpluses; never change funding or the reserved plan."""
+    balances = recorded_balances(character_data)
+    # A saved character missing from this projection plans as Our team (resolve_funds), so mail follows.
+    if funds.settings.character in character_data or funds.origin == 'entered amount' or len(balances) < 2:
+        return []
+    purchases = {}
+    for row in result['craft']:
+        maker = row.get('made_by')
+        if maker:
+            purchases[maker] = purchases.get(maker, 0) + sum(
+                m['cost_copper'] for m in craft_details(row)['materials'] if m['method'] != 'held')
+    available = {c[0]: gold - purchases.get(c[0], 0) for c, gold in balances.items()}
+    lines = []
+    for maker, cost in sorted(purchases.items()):
+        if maker not in available:
+            lines.append({'stage': 'gold unknown', 'name': maker, 'copper': cost})
+            continue
+        gap = max(0, -available[maker])
+        donors = sorted(available, key=lambda name: (-available[name], name))
+        for donor in donors:
+            amount = min(gap, max(0, available[donor]))
+            if amount:
+                lines.append({'stage': 'gold mail', 'name': maker, 'character': donor, 'copper': amount})
+                available[donor] -= amount
+                gap -= amount
+    return lines
+
+
+def queue_with_gold(result, character_data, funds):
+    """Presentation-only Queue with gold after all held-item transfers and before purchases."""
+    queue = result['queue']
+    lines = queue['lines']
+    index = next((i for i, line in enumerate(lines) if line['stage'] not in ('take', 'mail')), len(lines))
+    return queue | {'lines': lines[:index] + gold_mail_lines(result, character_data, funds) + lines[index:]}

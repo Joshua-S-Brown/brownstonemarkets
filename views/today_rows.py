@@ -1,7 +1,8 @@
 """Framework-free Today table projections and wording for the app; copper conversion uses money.py."""
 from datetime import UTC, datetime
 
-from brownstone.money import format_money, to_gold
+from brownstone.money import format_money
+from brownstone.today_session import headline_profit
 from brownstone.today_warnings import warning_fields
 
 ROW_LIMIT_NOTE = "more rows outside this list's 10-row limit"
@@ -43,15 +44,18 @@ def shopping_line(result):
 
 
 def craft_row(row, sell):
-    return {"Item": row["output_name"], "Profession": row["profession"].title(), "Catalog": row["catalog_id"],
+    headline = headline_profit(row, sell)
+    return present_row({"Item": row["output_name"], "Profession": row["profession"].title(),
+            "Catalog": row["catalog_id"],
             "Recipe": row["recipe_id"], "Batch": row["batch_size"], "Limited by": row["limiting_factor"],
-            "Material cost (g)": to_gold(row["batch_cost_copper"]),
-            "Batch profit (g)": to_gold(row["batch_profit_copper"]),
-            "Profit per craft (g)": to_gold(row["profit_per_craft_copper"]),
-            "Cautious output unit (g)": to_gold(row["sale_price_copper"]), "Listings": sell["listings"],
+            "Material cost (g)": row["batch_cost_copper"],
+            "Batch profit (g)": headline["headline_profit_copper"],
+            "Profit per craft (g)": headline["headline_per_craft_copper"],
+            "Cautious output unit (g)": row["sale_price_copper"], "Listings": sell["listings"],
             "Units": sell["units"], "Thin": sell["thin"], "Availability": row["availability"],
+            "Profit basis": headline["profit_basis"].strip() or "at post price",
             "Evidence notes": "; ".join(row["evidence_notes"]), "Recipe source": row["recipe_source"],
-            **_character_columns(row), **_confidence_columns(row), "State": state(row)}
+            **_character_columns(row), **_confidence_columns(row), "State": state(row)})
 
 
 def _character_columns(row):
@@ -66,13 +70,13 @@ def _character_columns(row):
 
 
 def sell_row(row):
-    return {"Output": row["output_name"], "Catalog": row["catalog_id"], "Recipe": row["recipe_id"],
-            "Batch": row["batch_size"], "Lowest competing unit (g)": to_gold(row["lowest_copper"]),
+    return present_row({"Output": row["output_name"], "Catalog": row["catalog_id"], "Recipe": row["recipe_id"],
+            "Batch": row["batch_size"], "Lowest competing unit (g)": row["lowest_copper"],
             "Listings": row["listings"], "Units": row["units"], "Largest stack units": row["largest_stack_units"],
-            "Undercut unit (g)": to_gold(row["undercut_copper"]), "Price step": row.get("price_step", "1c"),
-            "Profit at undercut for batch (g)": to_gold(row["undercut_batch_profit_copper"]),
+            "Undercut unit (g)": row["undercut_copper"], "Price step": row.get("price_step", "1c"),
+            "Profit at undercut for batch (g)": row["undercut_batch_profit_copper"],
             "Thin": row["thin"], "Warnings": warning_fields(row),
-            **held_output_columns(row), **_confidence_columns(row), "State": state(row)}
+            **held_output_columns(row), **_confidence_columns(row), "State": state(row)})
 
 
 def capture_label(capture):
@@ -89,7 +93,7 @@ def held_output_columns(row):
     value = row.get('held_value_copper')
     return {'Held units': sum(u['units'] for u in held),
             'Held by': ', '.join(f"{u['character']} ({u['kind']}): {u['units']}" for u in held),
-            'Held value': format_money(value) if value is not None else 'unavailable'}
+            'Held value_copper': value, 'Held value': money_text(value)}
 
 
 def _confidence_columns(row):
@@ -106,29 +110,29 @@ def buy_row(row, names, *, item_id=False, used_for=None):
               "Route": row["method"]}
     if used_for is not None:
         result["For"] = used_for
-    return result | {"Required units": row["quantity"], "Purchased units": row["purchased_units"],
-                     "Cost (g)": to_gold(row["cost_copper"]),
-                     "Highest unit price (g)": to_gold(row["highest_unit_copper"]),
-                     "Scan p25 (g)": to_gold(row["p25_copper"]), "Cheap now": row["cheap_now"], "State": state(row)}
+    return present_row(result | {"Required units": row["quantity"], "Purchased units": row["purchased_units"],
+                     "Cost (g)": row["cost_copper"],
+                     "Highest unit price (g)": row["highest_unit_copper"],
+                     "Scan p25 (g)": (row["p25_copper"]), "Cheap now": row["cheap_now"], "State": state(row)})
 
 
 def vendor_row(row, names, *, item_id=False):
-    return {"Item": _name(names, row["item_id"]),
+    return present_row({"Item": _name(names, row["item_id"]),
             **({"Item ID": row["item_id"], "Listings": row["listings"]} if item_id else {}),
-            "Units": row["purchased_units"], "Cost (g)": to_gold(row["cost_copper"]),
-            "Vendor pays per unit (g)": to_gold(row["vendor_sell_copper"]),
-            "Highest listing unit (g)": to_gold(row["highest_unit_copper"]), "Gain (g)": to_gold(row["gain_copper"]),
-            "State": state(row)}
+            "Units": row["purchased_units"], "Cost (g)": row["cost_copper"],
+            "Vendor pays per unit (g)": row["vendor_sell_copper"],
+            "Highest listing unit (g)": row["highest_unit_copper"], "Gain (g)": row["gain_copper"],
+            "State": state(row)})
 
 
 def material_row(row, *, item_id=False):
     """One reserved purchase from ``today.craft_details``."""
-    return {"Material": row["item_name"], **({"Item ID": row["item_id"]} if item_id else {}),
+    return present_row({"Material": row["item_name"], **({"Item ID": row["item_id"]} if item_id else {}),
             "Route": ("held" if row["method"] == "held" else
                       ("vendor" if row["method"] == "vendor" else "auction house")),
             "Required units": row["quantity"], "Purchased units": row["purchased_units"],
-            "Cost (g)": to_gold(row["cost_copper"]), "Highest unit price (g)": to_gold(row["highest_unit_copper"]),
-            "State": state(row)}
+            "Cost (g)": row["cost_copper"], "Highest unit price (g)": row["highest_unit_copper"],
+            "State": state(row)})
 
 
 def summary_tiles(result, *, hide_low=False):
@@ -153,16 +157,8 @@ def empty_sentence(hidden, minimum_copper, gold_copper):
     """Explain the largest exclusions without claiming knowledge or prices we do not have."""
     reasons = sorted(((reason, count) for reason, count in hidden.items() if count),
                      key=lambda entry: (-entry[1], entry[0]))[:2]
-    wording = {
-        'no character has this profession': 'your team does not have the required professions',
-        'rank below required skill': 'profession ranks are below the required skill',
-        'below minimum gain': 'profit is below minimum gain',
-        'one craft exceeds funds': 'one craft costs more than the available gold',
-        'insufficient listed materials': 'there are not enough listed materials',
-        'missing prices': 'prices are missing',
-    }
     why = ' Most recipes are hidden because ' + ' and '.join(
-        wording.get(r, r) for r, _ in reasons) + '.' if reasons else ''
+        HIDDEN_WORDING.get(r, (r, r))[0] for r, _ in reasons) + '.' if reasons else ''
     return (f"No craft meets the {format_money(minimum_copper)} minimum batch gain with "
             f"{format_money(gold_copper)} available.{why} Review your settings or inspect all reasons.")
 
@@ -200,8 +196,8 @@ def material_card_rows(materials):
              'Where': 'Held' if r['method'] == 'held' else ('Vendor' if r['method'] == 'vendor' else 'Auction house'),
              'Units': str(r['purchased_units']) + (f" ({r['quantity']} needed)"
                        if r['purchased_units'] != r['quantity'] else ''),
-             'Cost': f"worth {format_money(r['cost_copper'])} if sold" if r['method'] == 'held'
-             else format_money(r['cost_copper']), 'State': state(r)} for r in materials]
+             'Cost': f"worth {money_text(r['cost_copper'])} if sold" if r['method'] == 'held'
+             else money_text(r['cost_copper']), 'State': state(r)} for r in materials]
 
 
 def display_hidden(result, hide_low):
@@ -225,3 +221,61 @@ def recorded_gold_rows(data, character):
                      'Captured (UTC)': datetime.fromtimestamp(captured, UTC).strftime('%Y-%m-%d %H:%M UTC')
                      if type(captured) is int else 'unknown'})
     return rows
+
+
+def present_row(row):
+    """Money stays sortable in copper while visible cells use the player's units."""
+    result = {}
+    for key, value in row.items():
+        if key.endswith(' (g)'):
+            key = key.removesuffix(' (g)')
+            result[key + '_copper'] = value
+            value = money_text(value)
+        elif key in ('Thin', 'Cheap now'):
+            value = 'unknown' if value is None else ('yes' if value else 'no')
+        elif key == 'Warnings':
+            result['_warnings'] = value
+            value = warning_text(value)
+        result[key] = value
+    return result
+
+
+def count_word(count, singular, plural=None):
+    return f"{count:,} {singular if count == 1 else (plural or singular + 's')}"
+
+
+HIDDEN_WORDING = {
+    'no character has this profession': ('your team does not have the required professions',
+                                         'need a profession nobody has'),
+    'rank below required skill': ('profession ranks are below the required skill', 'need more skill'),
+    'below minimum gain': ('profit is below minimum gain', 'are below minimum gain'),
+    'one craft exceeds funds': ('one craft costs more than the available gold', 'cost more than available gold'),
+    'insufficient listed materials': ('there are not enough listed materials', 'need more listed materials'),
+    'missing prices': ('prices are missing', 'need prices'),
+}
+
+
+def hidden_summary(counts):
+    return ' · '.join(f"{count:,} {HIDDEN_WORDING.get(reason, (reason, reason))[1]}"
+                      for reason, count in sorted(counts.items(), key=lambda r: (-r[1], r[0])) if count) or '0 hidden'
+
+
+CROWDING = {'thin': ('thin: few listings', 'warn'), 'contested': ('contested: many sellers', 'warn')}
+OVERSHOOT = {'cheap': ('cheap right now', 'good'), 'high': ('pricier than usual', 'warn'),
+             'too few days': ('price history too short', 'neutral'), 'no buyout': ('no buyout', 'neutral')}
+
+
+def warning_text(fields):
+    signal = fields.get('signal') or {}
+    words = [labels[key][0] for labels, key in ((CROWDING, signal.get('crowding')),
+             (OVERSHOOT, signal.get('overshoot', {}).get('label'))) if key in labels]
+    removals = fields.get('early_removals')
+    if removals and removals['pairs'] >= 3 and removals['units'] == 0:
+        words.append(f"no early removals in {removals['pairs']} scan gaps")
+    if fields.get('price_note'):
+        words.append(fields['price_note'])
+    return '; '.join(words)
+
+
+def money_text(value):
+    return format_money(value) if value is not None else 'unknown'
