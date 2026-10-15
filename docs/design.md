@@ -428,7 +428,7 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
   per-recipe SQL. Craft rows keep board routes, `purchases`, `intermediate_steps` (chosen craft
   branches only), `plan_order` and `feasible_size`. `today_confidence.confidence` labels the funded
   plan afterwards. Today passes optional sell-price caps through `rank_catalogs`/`rank_recipes`'s
-  cautious sell map; their buy map is unchanged. `evaluate_recipe` applies the catalog-local vendor sale ceiling (CRAFT-04), retaining `vendor_price_cap_copper` and `vendor_capped` (the ceiling lowered the value) for presentation; Today v13 also caps the post price. Whole-listing quotes above a selected material's vendor ceiling are infeasible, preserving the chosen route. `today_warnings`
+  cautious sell map; their buy map is unchanged. `evaluate_recipe` applies the catalog-local vendor sale ceiling (CRAFT-04), retaining `vendor_price_cap_copper` and `vendor_capped` (the ceiling lowered the value) for presentation; Today v13 also caps the post price. Today v14 splits at `Ladder.units_at_or_below`; `_capped_quote` may swap a part-used last listing for the vendor. Peaks add capped segments' first sizes. `today_warnings`
   selects base/legacy signals and carries caps/evidence into Sell and Queue posts. The NiceGUI view
   reuses `session_signal`/`CROWDING`/`OVERSHOOT` badges with on-demand removal evidence.
   `craft_details(row)` projects held/purchased materials and the batch's retained `reserved_steps`

@@ -46,17 +46,16 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
 1. STORY-036 vendor price ceilings (refined 2026-10-15)
-2. STORY-080 top up from the vendor (follow-up to STORY-036)
-3. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-4. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
-5. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
-6. STORY-026 scan coverage and rhythm
-7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-8. STORY-006 replay
+2. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+3. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
+4. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
+5. STORY-026 scan coverage and rhythm
+6. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+7. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
 
 ### STORY-034 — Movement ledger and reconciliation
 
@@ -96,22 +95,6 @@ Acceptance:
 - **Offline tests:** bundle division and the inexact refusal; a confirmed note survives regeneration; a new item marked only on an equal page price; a limited-stock item never marked; the sale and post price capped for a crafted vendor item, with its label; Buy never above the vendor price; unchanged results for recipes whose outputs have no vendor price (the existing fixtures).
 - **Real data** (Forever beta source, copy of `data/`): rerun the beta report and give the vendor section's counts before and after (expected: all 39 matched items *confirm*, none *lower*); list each new item marked or left, and why; Copper Rod's and Dust to Motes' profit on the board before and after the cap; and Today's plan before and after (crafts added, dropped or re-ranked).
 - **Docs:** CRAFT-08 (bundle quantity, limited stock, new items), the selling cap, *Limitations* in `status.md` (vendor marks now confirmed), `design.md` if the importer contract changes.
-
-### STORY-080 — Top up from the vendor
-
-Added 2026-10-15 from the STORY-036 review. STORY-036 treats an auction quote whose deeper listings rise above a material's vendor price as infeasible, so Today shrinks the batch (`test_buy_never_above_vendor_ceiling_including_deeper_listings`) and reports it as *Limited by: listed materials*, which hides the real cause and gives up profitable crafts.
-
-As a gold maker, I want Today to buy a material's cheap auction listings and the rest from the vendor, so that a vendor-sold material never limits how many I craft.
-
-Acceptance:
-- **Split purchase:** for a material with a marked vendor price (CRAFT-08) whose chosen route is the auction house, Today buys listings up to and including the vendor price, then the remaining units from the vendor at its unit price. Buy shows two lines for that material (auction units with their highest unit price; vendor units), and the batch cost is their sum in integer copper.
-- **Never above the vendor price:** no auction line is above it (STORY-036's rule stays).
-- **Batch size:** a vendor-sold material no longer limits the batch through listings; gold available, the per-item cap and *more crafts lower profit* still do. `limiting_factor` never says *listed materials* for a material the vendor tops up.
-- **Holdings and reservations:** held units are used first (STORY-068); units reserved by an earlier craft in the plan are not bought twice, and the vendor share is shared across crafts using the same material.
-- **Unchanged otherwise:** materials without a vendor price, and materials whose route is already the vendor, give identical plans (existing fixtures). The Board's per-craft costs (CRAFT-03) are unchanged; this is Today's batch quoting only.
-- **Version:** bump `TODAY_VERSION` and record the rule in `requirements.md` → Today.
-- **Offline tests:** a ladder that crosses the vendor price (split lines, larger batch than STORY-036's test, correct cost); a ladder entirely below it (unchanged); two crafts sharing the material; holdings covering part of the need.
-- **Real data** (Forever beta source, copy of `data/`): Today's plan before and after, naming any craft whose batch grew and the materials topped up.
 
 ### STORY-021 — Item page and charts
 

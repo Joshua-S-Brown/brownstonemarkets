@@ -122,7 +122,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 13
+      "today_version": 14
     }
   ],
   "buy": [
@@ -143,7 +143,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 13
+      "today_version": 14
     },
     {
       "item_id": 2,
@@ -162,7 +162,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 13
+      "today_version": 14
     }
   ],
   "sell": [
@@ -205,7 +205,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 13
+      "today_version": 14
     }
   ],
   "below_vendor": [],
@@ -229,7 +229,7 @@
   },
   "listing_evidence_available": true,
   "minimum_gain_copper": 1,
-  "today_version": 13,
+  "today_version": 14,
   "shopping_total_copper": 130,
   "dropped_choices": [],
   "refill": true,

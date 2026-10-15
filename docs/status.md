@@ -12,7 +12,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
   authenticated reuse/restart, loopback browser fallback and idle shutdown.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
-  queue, confidence, character eligibility and captured funds; today_version 12.
+  queue, confidence, character eligibility and captured funds; today_version 14.
+  STORY-080 splits auction/vendor material purchases during batch sizing (requirements → Today),
+  retaining holdings-first use, shared listing reservations and separate Buy/Queue lines.
   STORY-069 aligns headline profit with the reserved post quote (explicit cautious fallback),
   formats Today table money in g/s/c with copper sorting, and shows team gold-mail suggestions
   in Queue/copy/tick identity (rules in requirements → Today). This session combines equal tier
@@ -49,7 +51,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   [Team character-card rules](requirements.md#team-character-cards).
   Team and hire cost steps and Team profit columns display money with copper sorting. Offline checks are in
   `test_progression.py`, `test_session_options.py` and the Team/hiring NiceGUI tests;
-  `fixtures/today_story070.json` preserves the full pre-change Today fixture, including version 12.
+  `fixtures/today_story070.json` preserves the full Today regression fixture; only its version fields track Today changes.
   On the imported Forever beta scan `20261015T124940Z-2ef70d`, Arille's Cooking best stays
   Tasty Raptor Bites (drop, 194c) with *Or learn now* Spiced Wolf Meat (trainer, −45c); Basilly's
   Tailoring best is Blue Linen Vest (vendor, 479c) with *Pattern worth hunting* Red Linen Robe

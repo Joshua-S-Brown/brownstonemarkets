@@ -181,7 +181,7 @@ def test_today_board_versions_and_inputs_unchanged():
     assert (catalogs, data, observations) == original
     assert plan == build_today(**args, settings=TodaySettings(1000, 1, 'fixed'))
     assert board == rank_catalogs(**board_args, team_makeable=team_makeable(catalogs, data))
-    assert (POLICY_VERSION, TODAY_VERSION) == ('0.4', 13)
+    assert (POLICY_VERSION, TODAY_VERSION) == ('0.4', 14)
 
 
 def test_material_routes_current_team_plus_own_trainers_never_other_hire_professions():

@@ -107,7 +107,11 @@ def test_buy_never_above_vendor_ceiling_including_deeper_listings():
     c['items_by_id'][1]['vendor_price_copper'] = 25
     p = plan(catalogs=[c], observations={1: {'min_buyout': 10}, 3: {'min_buyout': 200}},
              listings={1: [(2, 20, 10), (2, 60, 30)]})
-    assert p['craft']
+    craft = p['craft'][0]
+    assert (craft['batch_size'], craft['batch_cost_copper'], craft['limiting_factor']) == (5, 270, 'per-item cap')
+    purchases = [r for r in p['buy'] if r['item_id'] == 1]
+    assert [(r['method'], r['quantity'], r['cost_copper']) for r in purchases] == [
+        ('vendor', 8, 200), ('buy', 2, 20)]
     assert all(r['highest_unit_copper'] <= 25 for r in p['buy'] if r['item_id'] == 1)
     p = plan(catalogs=[c], observations={1: {'min_buyout': 100}, 3: {'min_buyout': 200}})
     purchase = next(r for r in p['buy'] if r['item_id'] == 1)

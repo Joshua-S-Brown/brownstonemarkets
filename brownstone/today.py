@@ -3,7 +3,7 @@
 Routes retain the board’s team-aware choices. Prefix ladders price complete stacks in O(log n),
 without expanding units; the clock and all scoped evidence are supplied by the caller.
 """
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections import Counter
 from decimal import Decimal
 
@@ -19,7 +19,7 @@ from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 from .today_warnings import PRICE_NOTE, base_signals, price_caps, warning_fields
 
-TODAY_VERSION = 13
+TODAY_VERSION = 14
 ROW_LIMIT = 10
 
 
@@ -41,6 +41,11 @@ class Ladder:
         return {"cost_copper": self.costs[end] - self.costs[start], "end": end,
                 "purchased_units": self.units[end] - self.units[start], "highest_unit_copper": self.prices[end]}
 
+    def units_at_or_below(self, price, start=0):
+        """Unreserved units in complete listings whose unit ceiling is at most price."""
+        end = max(start, bisect_right(self.prices, price) - 1)
+        return self.units[end] - self.units[start]
+
 
 def _net(price, quantity, auction_cut):
     return int(Decimal(price * quantity) * (Decimal(1) - Decimal(str(auction_cut))))
@@ -58,24 +63,45 @@ def _held_quote(choices, batch, ladders, reserved, holdings=None, row=None):
         quantity = needs.get(item_id, choice["quantity"] * batch)
         if not quantity:
             continue
-        if ladders is None or choice["method"] == "vendor":
-            unit = choice["unit_cost_copper"]
-            quote = {"cost_copper": unit * quantity, "purchased_units": quantity,
-                     "highest_unit_copper": unit, "end": 0}
-        else:
-            ladder = ladders.get(item_id)
-            quote = ladder.quote(quantity, reserved.get(item_id, 0)) if ladder else None
-        if not _within_vendor_ceiling(choice, quote):
+        purchases = _purchase_quote(choice, quantity, ladders, reserved)
+        if purchases is None:
             return None, steps
-        result.append({**choice, **quote, "quantity": quantity})
+        result.extend(purchases)
     return result, steps
 
 
-def _within_vendor_ceiling(choice, quote):
-    if quote is None:
-        return False
-    cap = choice.get('vendor_price_cap_copper')
-    return cap is None or choice['method'] == 'vendor' or quote['highest_unit_copper'] <= cap
+def _fixed_purchase(choice, quantity, unit, method=None):
+    return {**choice, "method": method or choice["method"], "unit_cost_copper": unit,
+            "quantity": quantity, "cost_copper": unit * quantity, "purchased_units": quantity,
+            "highest_unit_copper": unit, "end": 0}
+
+
+def _purchase_quote(choice, quantity, ladders, reserved):
+    """Retain auction listing offsets while topping up vendor-priced leaves without reserving supply."""
+    if ladders is None or choice["method"] == "vendor":
+        return [_fixed_purchase(choice, quantity, choice["unit_cost_copper"])]
+    item = choice["item_id"]
+    ladder, start = ladders.get(item), reserved.get(item, 0)
+    cap = choice.get("vendor_price_cap_copper")
+    if not cap:
+        quote = ladder.quote(quantity, start) if ladder else None
+        return None if quote is None else [{**choice, **quote, "quantity": quantity}]
+    quote = _capped_quote(ladder, quantity, start, cap) if ladder else None
+    auction_units = min(quantity, quote["purchased_units"]) if quote else 0
+    purchases = [{**choice, **quote, "quantity": auction_units}] if auction_units else []
+    if auction_units < quantity:
+        purchases.append(_fixed_purchase(choice, quantity - auction_units, cap, "vendor"))
+    return purchases
+
+
+def _capped_quote(ladder, quantity, start, cap):
+    """Listings at or below the vendor price; a partly used last stack only when it costs less than the vendor."""
+    quote = ladder.quote(min(quantity, ladder.units_at_or_below(cap, start)), start)
+    if quote["purchased_units"] <= quantity:
+        return quote
+    previous = ladder.quote(ladder.units[quote["end"] - 1] - ladder.units[start], start)
+    topup = previous["cost_copper"] + cap * (quantity - previous["purchased_units"])
+    return previous if topup < quote["cost_copper"] else quote
 
 
 def _relevant(row, holdings):
@@ -99,23 +125,29 @@ def _largest(choices, cap, ladders, reserved, funds, holdings=None, row=None):
 def _profit_peaks(choices, largest, ladders, reserved, holdings=None):
     """Batch sizes where profit can peak: the largest, or the last size before any input needs another listing.
 
-    Without holdings, costs between these sizes are constant while revenue rises. With holdings,
-    compare every bounded feasible size to include nested whole-craft depletion boundaries.
+    Without holdings, costs between these sizes are constant while revenue rises. A vendor top-up makes a
+    segment's cost the lesser of its next whole listing and linear vendor units, so profit there is convex
+    and its first size is also a candidate. With holdings, compare every bounded feasible size to include
+    nested whole-craft depletion boundaries.
     """
     if holdings:
         return range(1, largest + 1)
     sizes = {largest}
     for choice in choices:
         ladder = None if ladders is None or choice["method"] == "vendor" else ladders.get(choice["item_id"])
+        cap = choice.get("vendor_price_cap_copper")
+        if cap:
+            sizes.add(1)
         if ladder is None:
             continue
         start = reserved.get(choice["item_id"], 0)
-        for units in ladder.units[start + 1:]:
+        end = bisect_right(ladder.prices, cap) if cap else len(ladder.units)
+        for units in ladder.units[start + 1:end]:
             crafts = (units - ladder.units[start]) // choice["quantity"]
             if crafts >= largest:
                 break
-            if crafts:
-                sizes.add(crafts)
+            sizes.update((crafts, crafts + 1) if cap else (crafts,))
+    sizes.discard(0)
     return sorted(sizes)
 
 
