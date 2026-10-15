@@ -33,6 +33,7 @@ def analyze(raw: bytes, now: datetime) -> tuple[dict, tuple]:
     report["scans"] = [_scan_facts(r) for r in valid_scans]
     report["characters"] = _characters(records)
     report["farming_capture"] = farming_capture(records)
+    report["scan_attempts"] = scan_attempts(database)
     moments = [r["captured_at"] for r in records] + [r[k] for r in valid_scans for k in ("started_at", "finished_at")]
     report["file"]["time_span_utc"] = [_utc(min(moments)), _utc(max(moments))] if moments else None
     sessions = evidence.load_sessions(records)
@@ -273,3 +274,18 @@ def farming_capture(records):
             'coin_slots': sum(s.get('slot_type') == 2 for s in slots),
             'vendor_prices': sum(type(s.get('vendor_sell_copper')) is int and s['vendor_sell_copper'] > 0
                                  for s in slots)}
+
+
+def scan_attempts(database: dict) -> dict:
+    """Failed scan starts as the addon recorded them (0.12.8+); missing means not recorded, not none."""
+    timing = database.get("scan_timing")
+    if not isinstance(timing, dict):
+        return {"recorded": False, "attempts": []}
+    raw = timing.get("attempts")
+    rows = list(raw.values()) if isinstance(raw, dict) else raw if isinstance(raw, list) else []
+    keys = ("at_utc", "api", "status", "reason", "waited_seconds", "since_last_reply_seconds",
+            "late_reply_seconds")
+    last = timing.get("last_reply_at")
+    return {"recorded": True, "last_reply_utc": _utc(last) if type(last) is int else None,
+            "last_reply_wait_seconds": timing.get("last_reply_wait_seconds"),
+            "attempts": [{k: r.get(k) for k in keys} for r in rows if isinstance(r, dict)]}

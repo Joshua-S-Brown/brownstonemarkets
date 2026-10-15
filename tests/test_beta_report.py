@@ -601,3 +601,22 @@ def test_farming_capture_names_counts_and_unnamed_all_source_guids():
     result = farming_capture([older, named])
     assert result['windows_with_names'] == 1
     assert result['unnamed_npc_ids'] == [999]
+
+
+def test_scan_attempts_reported_raw_and_unknown_when_missing():
+    from brownstone.beta_markdown import _scan_attempts
+    from brownstone.beta_report import scan_attempts
+
+    assert scan_attempts({}) == {"recorded": False, "attempts": []} and _scan_attempts(scan_attempts({})) == []
+    timing = {"last_reply_at": 1792061738, "last_reply_wait_seconds": 3.5, "attempts": {
+        1: {"at_utc": "2026-10-15T11:41:00Z", "api": "modern", "status": "stopped", "reason": "timeout",
+            "waited_seconds": 120.2, "since_last_reply_seconds": 2762, "late_reply_seconds": 150.5},
+        2: {"at_utc": "2026-10-15T11:50:00Z", "api": "modern", "status": "stopped", "reason": "not ready"},
+        3: "malformed"}}
+    section = scan_attempts({"scan_timing": timing})
+    assert section["last_reply_utc"] == "2026-10-15T10:55:38+00:00" and len(section["attempts"]) == 2
+    assert section["attempts"][1]["since_last_reply_seconds"] is None
+    lines = _scan_attempts(section)
+    assert "Failed starts: 2." in lines[3]
+    assert lines[-2] == "| 2026-10-15T11:41:00Z | timeout | 120.2 | 46 | 150.5 |"
+    assert lines[-1] == "| 2026-10-15T11:50:00Z | not ready | unknown | unknown | unknown |"

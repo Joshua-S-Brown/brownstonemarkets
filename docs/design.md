@@ -190,8 +190,9 @@ journal/diagnostics/errors. Latest: capture then sequence. Tuples retain nils; n
   renders Team; latest/preview/active_auction_rows feed Import. Modern skills win names,
   never fill legacy holes.
 - Merchant lists: raw vendor journal, no migration; journal.merchantItems/merchantRead mirror
-  trainers, except `journal.sameMerchant` compares vendor, items and standing, never position. beta_vendor projects source/full market/rules, entry/time and catalog comparisons;
+  trainers (`sameMerchant` ignores position). beta_vendor projects source/full market/rules, entry/time and catalog comparisons;
   beta_markdown renders vendor prices. Confirmation: CRAFT-08.
+- `scan_timing` isn't imported; `beta_report.scan_attempts` reports it.
 
 API shape evidence: [Classic trade skill](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_TradeSkillUI/Vanilla/Blizzard_TradeSkillUI.lua),
 [Classic craft](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_CraftUI/Vanilla/Blizzard_CraftUI.lua),

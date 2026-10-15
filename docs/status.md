@@ -48,7 +48,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   evidence and training costs. Generation is offline from manually saved pages (CRAFT-08).
 - **Sources:** local overrides enable `forever-us-normal-alliance-addon` beta; tracked config
   keeps it disabled. Mankrik Alliance is development data; Retail is regression-only.
-- **Addon:** 0.12.7 (vendor lists no longer re-saved when only the player's position changes; install before the next play), account format 6/scan format 4. Usage, capture fields and remaining game
+- **Addon:** 0.12.8 (0.12.7 stopped re-saving vendor lists when only the player moves; 0.12.8 waits 120 s for the
+  server and keeps failed scan starts in `scan_timing`; install before the next play), account format 6/scan format 4. Usage, capture fields and remaining game
   checks live in [addon README](../addon/README.md). App retirement does not alter addon/data.
 
 ## Limitations
@@ -90,7 +91,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   for recovery; replay is pending. Run one writer. Synced drops can change during read: retry.
 - App reads on load: reload after imports elsewhere. Native clipboard/appearance and phone-width
   behavior still need manual checks. Vendor lists, trainer lists, mob names and the panel
-  were confirmed on 2026-10-15. Remaining in-game checks (addon README → *Last beta play session*):
+  were confirmed on 2026-10-15. A scan 46 minutes after the last answered one got no reply within 30 s and
+  was wrongly blamed on the 15-minute limit (2026-10-15, not saved; 0.12.8 records the next one). Remaining in-game checks (addon README → *Last beta play session*):
   removed-listing time-left bounds, the sale-to-mailbox delay, crafting tier levels and yellow skill-up chances. Item pass measured
   2026-10-13: 5.9 s listing read, 0.34 s pass, 1,590 of 1,909 requests answered, none timed out.
 

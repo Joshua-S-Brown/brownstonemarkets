@@ -1,4 +1,4 @@
-# Brownstone Scan 0.12.7
+# Brownstone Scan 0.12.8
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -8,7 +8,8 @@ A **read-only** auction house scanner, character snapshot recorder and silent ec
 - It never bids, buys, posts or cancels, and never scans on a timer or unattended. Closing the window during listing reading saves a `stopped` scan. Once listings have been saved, closing the window leaves its item info pass running.
 - It issues one auction-house request, `C_AuctionHouse.ReplicateItems()`, which is Blizzard's own full-snapshot call, then reads the result. If the client has only the older Classic API, it falls back to the `QueryAuctionItems` "get all" scan. Each scan records which one it used (`api`).
 - It only records what the client reports. Brownstone does all pricing (per-unit division, rounding, market value) after import, so the addon stays small and does as little as possible in game.
-- The server allows one full scan per 15 minutes per account. If nothing comes back within 30 seconds the attempt stops with a throttling message. Attempts that read zero listings are not saved; partial scans with some listings are, marked `stopped`.
+- The server allows one full scan per 15 minutes per account. If nothing comes back within 120 seconds the attempt stops. The message blames the 15-minute limit only when the last answered scan was under 15 minutes ago; otherwise it says how long ago that was and suggests reopening the auction house. Attempts that read zero listings are not saved as scans; partial scans with some listings are, marked `stopped`.
+- Since 0.12.8, `BrownstoneScanDB.scan_timing` keeps `last_request_at`, `last_reply_at` and `last_reply_wait_seconds`, and up to 50 failed starts (`attempts`: start time, API, status, reason, seconds waited, seconds since the last request and the last answered scan, and `late_reply_seconds` when the server answers after Brownstone stopped waiting). A late answer is only recorded; press Scan again. `/bscan clear` leaves this table alone, Brownstone's import ignores it, and the beta report lists it under *Scan attempts*.
 
 I checked the API against [warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/API_C_AuctionHouse.ReplicateItems) (Retail documentation; Forever's client isn't documented yet, which is why the scan records `api` and falls back). Not yet confirmed on Forever: whether `ReplicateItems` needs a hardware click, and whether commodity and house-faction calls exist. The scan records what it finds; see the checklist.
 
@@ -33,7 +34,7 @@ game doesn't offer and carry on.
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
 Done on 2026-10-15: vendor lists, trainers, mob names, loot vendor prices, the panel and the deposit
-posts. Install **0.12.7** first (vendor lists are no longer saved twice when you move), then:
+posts. Install **0.12.8** first (vendor lists are no longer saved twice when you move; a scan waits 2 minutes for the server and records a failed start), then:
 
 1. **Time-left labels (STORY-027):** the posts from 15 October (10:30–10:32 UTC) are still listed. Scan
    after 12:45 UTC (7:45 am Central), and again after 18:35 UTC (1:35 pm Central). If both times have

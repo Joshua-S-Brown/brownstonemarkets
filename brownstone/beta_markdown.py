@@ -26,6 +26,7 @@ def markdown(report: dict) -> str:
                   f"Coin slots: {capture['coin_slots']}; vendor prices: {capture['vendor_prices']}. "
                   f"With captured names: {capture['windows_with_names']}.",
                   'NPC IDs still unnamed: ' + (', '.join(map(str, capture['unnamed_npc_ids'])) or 'none') + '.']
+    lines += _scan_attempts(report.get("scan_attempts", {}))
     lines += _vendor_prices(report.get("vendor_prices", {}))
     lines += ["", "## Gold display", ""]
     for character in report.get("characters", []):
@@ -98,4 +99,21 @@ def _vendor_prices(section: dict) -> list[str]:
         lines.append("| " + " | ".join(_cell(v) for v in (
             row["item_id"], row["vendor_npc_id"], row["zone"], price, row["quantity"], stock,
             row["standing"], comparison, row["entry_id"])) + " |")
+    return lines
+
+
+def _scan_attempts(section: dict) -> list[str]:
+    if not section.get("recorded"):
+        return []
+    lines = ["", "## Scan attempts", "",
+             f"Last answered scan: {section.get('last_reply_utc') or 'none recorded'}. Failed starts: "
+             f"{len(section['attempts'])}."]
+    if section["attempts"]:
+        lines += ["", "| Started (UTC) | Reason | Waited (s) | Minutes since last answered scan | Late reply (s) |",
+                  "| --- | --- | --- | --- | --- |"]
+        for row in section["attempts"]:
+            since = row["since_last_reply_seconds"]
+            cells = [row["at_utc"], row["reason"], row["waited_seconds"],
+                     since // 60 if type(since) is int else None, row["late_reply_seconds"]]
+            lines.append("| " + " | ".join("unknown" if v is None else _cell(v) for v in cells) + " |")
     return lines

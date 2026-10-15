@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.7"
+local ADDON_VERSION = "0.12.8"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -22,7 +22,9 @@ local ITEM_REQUESTS_PER_FRAME = 200
 local missingEvents = {}
 local itemPass  -- transient queue/pending IDs; observations live only in the saved scan
 
-local START_TIMEOUT = 30      -- seconds to wait for the server to answer the request
+local START_TIMEOUT = 120     -- seconds to wait for the server to answer the request
+local SCAN_INTERVAL = 900     -- the server's documented limit: one full scan per 15 minutes per account
+local ATTEMPT_LIMIT = 50      -- failed starts kept in scan_timing, oldest dropped first
 
 local frame = CreateFrame("Frame")
 local button, reloadButton, clearButton
@@ -618,6 +620,54 @@ local function beginItemPass(s)
     frame:SetScript("OnUpdate", updateItemPass)
 end
 
+-- Survives /bscan clear, so a failed start can be told apart from the 15-minute limit afterwards.
+local function scanTiming()
+    local db = BrownstoneScanDB
+    db.scan_timing = type(db.scan_timing) == "table" and db.scan_timing or {}
+    local timing = db.scan_timing
+    timing.attempts = type(timing.attempts) == "table" and timing.attempts or {}
+    return timing
+end
+
+local function recordAttempt(s, status, reason)
+    local timing = scanTiming()
+    local attempt = { at = s.started_at, at_utc = s.started_at_utc, api = s.api, status = status,
+        reason = reason, waited_seconds = s.waited, since_last_reply_seconds = s.since_last_reply,
+        since_last_request_seconds = s.since_last_request }
+    timing.attempts[#timing.attempts + 1] = attempt
+    while #timing.attempts > ATTEMPT_LIMIT do table.remove(timing.attempts, 1) end
+    if reason == "timeout" then timing.pending = { at = s.started_at, clock = s.clock_start } end
+end
+
+-- Only blame the server's limit when the last answered scan really was under 15 minutes ago.
+local function timeoutMessage(since)
+    if since and since < SCAN_INTERVAL then
+        return ("no reply from the auction house; the last full scan was %d minutes ago and the server allows "
+            .. "one every 15 minutes per account, so try again in about %d minutes"):format(
+            math.floor(since / 60), math.ceil((SCAN_INTERVAL - since) / 60))
+    end
+    local last = since and (", and the last full scan was %d minutes ago, so this isn't the 15-minute limit")
+        :format(math.floor(since / 60)) or ""
+    return ("no reply from the auction house within %d seconds%s. Close and reopen the auction house, "
+        .. "then try again"):format(START_TIMEOUT, last)
+end
+
+-- A reply after Brownstone stopped waiting is recorded on that attempt; the scan is not resumed.
+local function lateReply()
+    local timing = scanTiming()
+    local pending = timing.pending
+    timing.pending = nil
+    if type(pending) ~= "table" or type(pending.clock) ~= "number" then return end
+    local attempt
+    for i = #timing.attempts, 1, -1 do
+        if timing.attempts[i].at == pending.at then attempt = timing.attempts[i] break end
+    end
+    if not attempt then return end
+    attempt.late_reply_seconds = GetTime() - pending.clock
+    say(("The auction house answered %d seconds after the request, after Brownstone stopped waiting. "
+        .. "Press Scan again."):format(math.floor(attempt.late_reply_seconds)))
+end
+
 local function finish(status, reason)
     local s = scan
     if not s then return end
@@ -627,6 +677,8 @@ local function finish(status, reason)
     s.finished_at = time()
     s.finished_at_utc = utc(s.finished_at)
     s.duration_seconds = GetTime() - s.clock_start
+    if #s.listings == 0 then recordAttempt(s, status, reason) end
+    s.since_last_reply, s.since_last_request = nil, nil
     s.clock_start = nil
     s.phase, s.waited, s.cursor, s.total, s.skipped, s.textIndexes, s.itemSeen = nil, nil, nil, nil, nil, nil, nil
     commodityCache = {}
@@ -679,6 +731,8 @@ end
 local function beginReading()
     local s = scan
     if not s or s.phase == "reading" then return end
+    local timing = scanTiming()
+    timing.last_reply_at, timing.last_reply_wait_seconds, timing.pending = s.started_at, s.waited, nil
     s.phase = "reading"
     s.cursor = 0
     s.listings = {}
@@ -708,9 +762,7 @@ local function onTimeout(_, elapsed)
     s.waited = s.waited + elapsed
     if s.waited >= START_TIMEOUT then
         frame:SetScript("OnUpdate", nil)
-        local why = s.api == "modern"
-            and "no reply from the auction house; ReplicateItems is throttled to once per 15 minutes per account, so wait and try again"
-            or "no reply from the auction house; a full legacy scan is limited to once per 15 minutes"
+        local why = timeoutMessage(s.since_last_reply)
         s.errors[#s.errors + 1] = why
         finish("stopped", "timeout")
         say(why)
@@ -750,6 +802,9 @@ local function startScan()
         waited = 0,
     }
 
+    local timing = scanTiming()
+    scan.since_last_reply = timing.last_reply_at and now - timing.last_reply_at or nil
+    scan.since_last_request = timing.last_request_at and now - timing.last_request_at or nil
     StaticPopup_Hide(CLEAR_POPUP)
     setMaintenanceEnabled(false)
 
@@ -761,6 +816,7 @@ local function startScan()
             return
         end
         local ok, err = pcall(C_AuctionHouse.ReplicateItems)
+        timing.last_request_at = now
         if not ok then
             scan.errors[#scan.errors + 1] = "ReplicateItems failed: " .. tostring(err)
             finish("stopped", "error")
@@ -776,6 +832,7 @@ local function startScan()
             return
         end
         local ok, err = pcall(QueryAuctionItems, "", nil, nil, 0, false, 0, true, false, nil)
+        timing.last_request_at = now
         if not ok then
             scan.errors[#scan.errors + 1] = "QueryAuctionItems failed: " .. tostring(err)
             finish("stopped", "error")
@@ -1885,6 +1942,8 @@ frame:SetScript("OnEvent", function(_, event, ...)
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then
         if scan and scan.api == "modern" and scan.phase == "waiting" then
             beginReading()
+        elseif not scan then
+            lateReply()
         end
     elseif event == "AUCTION_ITEM_LIST_UPDATE" then
         if scan and scan.api == "legacy" and scan.phase == "waiting" then

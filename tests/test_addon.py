@@ -129,7 +129,7 @@ def test_button_starts_only_on_click_and_timeout_does_not_save_empty_scan():
     assert g.requests == 0
     g.scanButton.scripts.OnClick()
     assert g.requests == 1
-    g.mainFrame.scripts.OnUpdate(g.mainFrame, 31)
+    g.mainFrame.scripts.OnUpdate(g.mainFrame, 121)
     assert len(g.BrownstoneScanDB.scans) == 0 and g.mainFrame.scripts.OnUpdate is None
     assert any("timeout" in m for m in g.messages.values())
 
@@ -202,7 +202,7 @@ def test_clear_confirmation_cancel_and_accept_match_protected_slash_clear():
                                             lua.table_from({"scan_id": "old-2"})])
     g.SlashCmdList.BROWNSTONESCAN("clear")
     assert python_value(g.BrownstoneScanDB) == button_result
-    assert g.BrownstoneScanDB.addon_version == "0.12.7" and g.BrownstoneScanDB.schema_version == 6
+    assert g.BrownstoneScanDB.addon_version == "0.12.8" and g.BrownstoneScanDB.schema_version == 6
 
 
 @pytest.mark.parametrize("ending", [
@@ -234,7 +234,7 @@ def test_maintenance_buttons_disabled_until_every_scan_exit(ending):
         elif ending == "closed":
             g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_CLOSED")
         else:
-            g.mainFrame.scripts.OnUpdate(g.mainFrame, 31)
+            g.mainFrame.scripts.OnUpdate(g.mainFrame, 121)
     assert g.reloadButton.enabled and g.clearButton.enabled
     assert g.BrownstonePanelReload.enabled and g.BrownstonePanelClear.enabled
     assert g.BrownstonePanelStart.enabled == (ending != "closed")
@@ -767,3 +767,60 @@ def test_loot_target_name_only_for_matching_creature(target, expected):
     fire(g, 'LOOT_OPENED')
     assert 'target_name' not in entries(g)[-1] and 'target_guid' not in entries(g)[-1]
     assert g.actionCalls == 0
+
+
+def _timed_scan(lua, g, minute, ending):
+    lua.execute(f"time = function() return 1793816400 + {minute * 60} end")
+    g.scanButton.Click(g.scanButton)
+    if ending == "reply":
+        return complete(g)
+    g.mainFrame.scripts.OnUpdate(g.mainFrame, 121)
+    return g.messages[len(g.messages)]
+
+
+@pytest.mark.parametrize(("minutes", "expected"), [
+    (5, "the last full scan was 5 minutes ago and the server allows one every 15 minutes per account, "
+        "so try again in about 10 minutes"),
+    (45, "within 120 seconds, and the last full scan was 45 minutes ago, so this isn't the 15-minute limit. "
+         "Close and reopen the auction house, then try again")])
+def test_timeout_blames_the_15_minute_limit_only_when_it_applies(minutes, expected):
+    lua, g = client()
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    _timed_scan(lua, g, 0, "reply")
+    assert expected in _timed_scan(lua, g, minutes, "timeout")
+    timing = python_value(g.BrownstoneScanDB.scan_timing)
+    attempt = timing["attempts"][-1]
+    assert (attempt["reason"], attempt["status"], attempt["api"]) == ("timeout", "stopped", "modern")
+    assert attempt["since_last_reply_seconds"] == attempt["since_last_request_seconds"] == minutes * 60
+    assert attempt["waited_seconds"] == 121 and timing["last_reply_at"] == 1793816400
+    assert len(g.BrownstoneScanDB.scans) == 1
+
+
+def test_first_timeout_and_late_reply_are_recorded_without_resuming():
+    lua, g = client()
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    assert "within 120 seconds. Close and reopen" in _timed_scan(lua, g, 0, "timeout")
+    g.clock = 150
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "REPLICATE_ITEM_LIST_UPDATE")
+    attempt = python_value(g.BrownstoneScanDB.scan_timing)["attempts"][-1]
+    assert attempt["late_reply_seconds"] == 150 and "since_last_reply_seconds" not in attempt
+    assert "answered 150 seconds after the request" in g.messages[len(g.messages)]
+    assert len(g.BrownstoneScanDB.scans) == 0 and g.mainFrame.scripts.OnUpdate is None
+    count = len(g.messages)
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "REPLICATE_ITEM_LIST_UPDATE")
+    assert len(g.messages) == count
+    assert "pending" not in python_value(g.BrownstoneScanDB.scan_timing)
+
+
+def test_attempts_are_capped_and_survive_clear():
+    lua, g = client()
+    g.mainFrame.scripts.OnEvent(g.mainFrame, "AUCTION_HOUSE_SHOW")
+    lua.execute("C_AuctionHouse.IsThrottledMessageSystemReady = function() return false end")
+    for minute in range(55):
+        lua.execute(f"time = function() return 1793816400 + {minute * 60} end")
+        g.scanButton.Click(g.scanButton)
+    attempts = python_value(g.BrownstoneScanDB.scan_timing)["attempts"]
+    assert len(attempts) == 50 and attempts[0]["at"] == 1793816400 + 5 * 60
+    assert {a["reason"] for a in attempts} == {"not ready"} and "last_request_at" not in g.BrownstoneScanDB.scan_timing
+    g.SlashCmdList.BROWNSTONESCAN("clear")
+    assert len(python_value(g.BrownstoneScanDB.scan_timing)["attempts"]) == 50
