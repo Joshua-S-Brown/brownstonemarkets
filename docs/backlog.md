@@ -45,22 +45,21 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-078 an item page you can read (replaces the item-page half of STORY-021; ready for handoff)
-2. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`: refine first)
+1. STORY-069 Today in player terms (ready for handoff)
+2. STORY-035 auction deposits (deposit, refund and cut evidence captured 2026-10-13, in `status.md`; more posts in the next beta session: refine after it)
 3. STORY-073 your own sale rate (refine first)
-4. STORY-069 Today in player terms
-5. STORY-070 Team's next recipe you can actually learn
-6. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-7. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-8. STORY-036 vendor price ceilings (after STORY-071)
-9. STORY-021 item charts and listing ladder (inside STORY-078's layout)
-10. STORY-026 scan coverage and rhythm
-11. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-12. STORY-006 replay
+4. STORY-070 Team's next recipe you can actually learn
+5. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+6. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+7. STORY-036 vendor price ceilings (after STORY-071)
+8. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
+9. STORY-026 scan coverage and rhythm
+10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+11. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-071 and STORY-077 (time-critical: before 21 October), STORY-044 and STORY-027 (checklist in `addon/README.md` → *Last beta play session*). STORY-031, 032, 033 and 040 were confirmed on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 072, 074, 075, 076 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 072, 074, 075, 076, 078 and SPIKE-009/009b.
 
 ### STORY-068 — Use what the team holds
 
@@ -85,17 +84,26 @@ Acceptance:
 
 ### STORY-069 — Today in player terms
 
-Added 2026-10-13 from the walkthrough. Small presentation fixes; no calculation changes.
+Added 2026-10-13 from the walkthrough. Refined 2026-10-14 against the code. Presentation only: the plan, ranking, hidden reasons, funds and `TODAY_VERSION` don't change.
 
 As a player, I want Today's numbers and steps to read the same way everywhere, so that I can act on them without decoding them.
 
 Acceptance:
-- **One profit:** a craft shows the same expected profit on the summary tile, its card, *Sell* and *This session* (at the post price; currently the card and *This session* show the profit at the cautious sale price, 32s 89c, and the tile shows it at the undercut, 28s 14c). The other figure stays in the evidence, labelled.
-- **Money and words in tables:** *Sell*, *Shopping list* and *Queue* show copper amounts with `money.py` (no gold decimals such as 0.2814) and yes/no or a label instead of true/false.
-- **Mail step:** when the crafter's own gold doesn't cover their purchases, the Queue names who mails how much gold to whom, from the captured gold per character. Postage is uncharged and unconfirmed, as now.
-- ***This session* duplicates:** one *level X to N to train Journeyman* step per character listing every profession it unlocks; characters without farming history show one short line, with the caveats shown once per page instead of per character; correct singular/plural (*1 stretch*).
-- **Hidden recipes:** the *why?* dialog leads with a plain summary (*1,298 need a profession nobody has · 441 need more skill · …*); scope, versions and snapshot IDs move into an expandable *Details*.
-- **Offline tests** for each; UI tests through the existing NiceGUI harness.
+- **One profit, at the post price.** Today tells you to post at the undercut price, so every headline profit uses it: the summary tiles (already), the craft card's big figure and its *per craft*, *Sell* (already), the Queue (already), *This session*'s *planned profit* step, its *Crafting to sell* total and each craft's line. Batch profit at the post price is the Sell row's `undercut_batch_profit_copper`; per craft is that divided by the batch size, rounded down to integer copper. Today, for White Linen Shirt, the card and *This session* show 32s 89c (cautious sale price) and the tile shows 28s 14c (undercut).
+  - The cautious figure (`batch_profit_copper`, which ranks the Board and applies the minimum gain) stays in the card's *What to buy and where to sell* evidence, labelled *profit at the cautious sale price (used for ranking)*. A shown craft can have a lower post-price profit than the minimum gain; that's expected and stays as is.
+  - Where there's no post price (a source without listings, or no competing listing), the headline shows the cautious figure labelled *at cautious sale price*, never *0* or a blank. The tiles' existing *unavailable* stays.
+- **Money and words in tables.** *Plan* (table view), *Shopping list*, *Sell*, *Extras* and the card's material table show copper amounts through `money.format_money` (`12s 34c`) and drop the *(g)* from column names; nothing shows gold decimals such as 0.2814. Money columns still sort by copper value, not as text. Missing amounts show *unknown*, never 0. Yes/no values (*Thin*, *Cheap now*) show *yes* or *no*, not true/false; *Warnings* shows its text, not a list.
+- **Mail gold to the crafter.** With *Our team* and recorded gold (no entered gold override, more than one character with readable gold), the Queue adds gold mail lines after any item take/mail lines and before the first buy line. For each crafter (the craft's `made_by`), their purchases are the gold spent on that crafter's crafts (held units excluded, the same figures as *Buy*). When their recorded gold is less, other characters with recorded gold cover the gap, largest surplus first and then by name, as *Basilly mails 1g 20s to Arille*. The mail note's postage wording is unchanged (uncharged, unconfirmed). A character without readable gold never sends gold; a crafter without readable gold gets *Arille's gold isn't captured; Arille needs 1g 20s for purchases* instead of a mail line. With a single character selected or an entered amount, no gold mail lines. The lines are built by a framework-free helper (not inside `build_today`), are part of *Copy as text* and the Queue's tick identity, and change nothing else.
+- ***This session* reads once:**
+  - When two or more professions on one character are blocked by the same character level for the same tier, show one step: *level Arille 8 → 10 to train Journeyman Tailoring and Cooking*. The same for *train*: one *train Journeyman at a trainer* step listing every profession.
+  - A character with no farming rows and no spots shows one line, *Farming: not enough history yet (12.3 minutes recorded)*, instead of the farming heading, two *not enough history* lines and the caveats.
+  - Farming caveats (*Your own past sessions, not a promise…*) appear once per page, below the characters (and once on a Market item page), not on every character.
+  - Counts read in the singular when one: *1 stretch*, *1 skipped stretch*, *1 more on the way*, *1 listing*. Fix this in the shared farming and session text, wherever it shows.
+- **Hidden recipes (*why?*).** The dialog opens with one plain summary line, largest reasons first, using the wording `empty_sentence` already has: *1,298 need a profession nobody has · 441 need more skill · …* (with thousands separators). Provenance, rules version, source, market, snapshot and scan IDs, capture ages, funds notes and row-limit notes move into a *Details* expansion. Nothing is dropped.
+- **Unchanged:** `build_today` results, `TODAY_VERSION`, ranking, which crafts show, gold needed and Market. Add a test that the plan from `build_today` is identical before and after on the existing fixtures.
+- **Offline tests** through the existing NiceGUI harness: the same profit on tile, card, *Sell*, Queue and *This session* for one craft; the cautious fallback label without listings; formatted money and yes/no in each table, and a money column sorted by copper (*1g 2s* after *50s*); gold mail lines for a short crafter, with a donor order tie, an uncaptured donor, an uncaptured crafter, a single character and an entered amount; one merged level step for two professions; the one-line no-farming character with caveats once per page; singulars; the *why?* summary order with *Details* holding the IDs.
+- **Real data:** on a copy of the Forever beta source, report White Linen Shirt's profit on the tile, card and *This session*, the Queue's gold lines for the team, and Arille's *This session* steps before and after.
+- **Docs:** the one-profit rule and gold mail lines under Today in `requirements.md`; `status.md`.
 
 ### STORY-070 — Team's next recipe you can actually learn
 
@@ -199,29 +207,7 @@ Acceptance:
 
 ### STORY-078 — An item page you can read
 
-Added 2026-10-14 from play feedback on Linen Cloth: the Market item page is one long column. It opens with the crowding rules and every scan-by-scan removal block (15 for Linen Cloth), puts *Made from* and *Used in* below them, and ends with market-wide flood lists about other items. It's hard to answer *what should I do with this item?* This story replaces the item-page half of STORY-021; that story keeps the charts and listing ladder, built into this layout.
-
-As a player, I want an item's page to answer the useful questions first, so that I can decide whether to buy, sell, craft with or farm it.
-
-Refined 2026-10-14 against the code: the item page is `show_item` in `views/nicegui_market.py`; the Market home lists render under it today.
-
-Acceptance:
-- **Summary first,** in one card, for the base item (ADDON-08 base/legacy identity; variants never feed the summary and stay listed under *Market*):
-  - **Price now and typical:** lowest buyout, UI-11's typical earlier price, and UI-11's labels (cheap / high / steady, and contested / thin / steady) from the item's flood signal. Not listed shows *not listed in this snapshot*; no typical shows *typical unknown*.
-  - **Units listed** and listings.
-  - **Vendor buy and sell** prices, *unknown* when missing.
-  - **Held by the team:** Stock's holdings for every scoped character (base identity only), total plus who holds how many in bags or bank on demand. An unknown bank says *bank not captured*; a stale capture shows its age; an uncaptured or partial location makes the total *at least* N (Stock's *at most* applies to shortfalls); no captures shows *unknown*.
-  - **Best use in our catalogs:** the *Used in* craft with the highest known Board profit per craft and, when the item is a craft output, its own *Made from* recipe's profit per craft; both lines when both apply. Without a known profit, *no profitable use known* with the reason; never zero.
-  - Each figure keeps its evidence on demand (scan and age, signal counts, captures).
-- **Where to get it** (under the summary): your own farming evidence for this item from UI-13, across every scoped character: per character, its rate rows (zone, mob or object, units/hour, value/hour, evidence minutes) and the spots where it dropped (zone, mob name as STORY-077, position), ordered as *This session* orders them. Without any, *not gathered yet*. Always a link to the item's Wowhead page for drop sources and places you haven't farmed. Wowhead's drop data isn't imported (no source evidence; CRAFT-08 covers only saved recipe pages).
-- **Sections as tabs** below the summary, in this order: *Summary* · *Crafting* (made from, used in, team eligibility, skill-up demand) · *Market* (identity price tiles, crowding and overshoot, removals) · *Identity and evidence* (item ID, variants, provenance). The page opens on *Summary*; the tab is not in the URL, so a refresh reopens *Summary* on the same item. Removals show the newest three gaps that weren't skipped, then *show all*; skipped gaps are counted, not listed.
-- **Off the item page:** the market-wide lists (*Flood signals in our chains*, *Removed early in our chains*, *What moved since the last scan*) render only on the Market home page (no `item`). The search card stays on both.
-- **Read only when the item opens:** the summary's holdings, farming and signal reads happen for the open item only; the Market home page reads nothing new.
-- **Rules unchanged:** every label, rule and number stays as now (UI-09, UI-10, UI-11, UI-13); only the layout and the summary/farming composition are new. No `TODAY_VERSION` change. The item stays in the URL and STORY-076's back link and item-to-item origin still work.
-- **UI-08 checklist** on screenshots of Linen Cloth, an item with no listings, and a crafted output.
-- **Offline tests** through the NiceGUI harness: the summary's figures and fallbacks (no price, no typical, no holdings, unknown bank, not in a catalog, no known profit), best use for a material and for an output, farming evidence for an item and *not gathered yet*, the tab order with *Summary* open, removals cut to three with the skipped count and *show all*, market-wide lists absent from the item page and present on the home page, and STORY-076's back link on an item page.
-- **Real data:** on the Forever beta source (a copy of `data/`), Linen Cloth's summary, holdings and farming rows; report what the page shows.
-- **Docs:** UI-09 in `requirements.md`; `status.md`.
+Implemented; current behavior is in `status.md` and UI-09 in `requirements.md`. Story text is in Git.
 
 ### STORY-034 — Movement ledger and reconciliation
 
