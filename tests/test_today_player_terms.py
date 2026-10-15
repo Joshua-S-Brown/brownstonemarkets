@@ -12,7 +12,15 @@ def test_pre_story_plans_identical():
                 ({'listings': {}, 'metrics': {}},
                  '72ed2a96e7e186b47798060669b1467833cce2e26ba627e356f2dac67b214c3c')]
     for arguments, expected in fixtures:
-        encoded = json.dumps(plan(**arguments), sort_keys=True, default=str).encode()
+        current = plan(**arguments)
+        def legacy(value):
+            if isinstance(value, dict):
+                return {k: 10 if k == 'today_version' else legacy(v) for k, v in value.items()
+                        if k not in ('deposit_copper', 'post_duration_hours', 'deposits_to_post_copper')}
+            if isinstance(value, list):
+                return [legacy(v) for v in value]
+            return value
+        encoded = json.dumps(legacy(current), sort_keys=True, default=str).encode()
         assert hashlib.sha256(encoded).hexdigest() == expected
 
 

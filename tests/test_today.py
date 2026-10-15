@@ -356,7 +356,7 @@ def test_craft_details_reserved_costs_reconcile_across_crafts_and_vendor(monkeyp
     for buy in result['buy']:
         assert totals[(buy['item_id'], buy['method'])] == {field: buy[field] for field in totals[(1, 'buy')]}
     assert [craft_details(r)['materials'][0]['cost_copper'] for r in result['craft']] == [30, 80]
-    assert result['today_version'] == 10
+    assert result['today_version'] == 11
 
 
 def chain_catalog():
@@ -558,3 +558,124 @@ def test_sell_reports_whole_silver_step_for_unstackable_output():
                            "max_stack_size": 1}})["sell"][0]
     assert (row["undercut_copper"], row["price_step"]) == (300, "whole silver")
     assert plan()["sell"][0]["price_step"] == "1c"
+
+
+@pytest.mark.parametrize('hours', [2, 8, 24])
+@pytest.mark.parametrize('stack', [1, 20])
+def test_deposits_cover_crafted_and_held_without_affecting_plan(hours, stack):
+    from test_today_holdings import evidence
+
+    from brownstone.deposits import auction_deposit
+    from brownstone.today import apply_removals
+    from brownstone.today_session import queue_line_text, queue_total
+    from views.today_rows import sell_row
+
+    args = dict(metrics={3: {'min_buyout': 200, 'listings': 3, 'units': 8,
+                             'largest_stack_units': 3, 'max_stack_size': stack}},
+                vendor_prices={3: 40}, holdings_data=evidence((3, 2, 'Basilly', 'bags')),
+                choices=[{'catalog_id': 'fixture', 'recipe_id': 30, 'batch_size': 5}], refill=False)
+    result = plan(TodaySettings(10000, 1, 'fixed', post_duration_hours=hours), **args)
+    baseline = plan(TodaySettings(10000, 1, 'fixed'), **args)
+    assert result['craft'] == baseline['craft']
+    assert result['buy'] == baseline['buy']
+    assert result['shopping_total_copper'] == baseline['shopping_total_copper']
+    sell = result['sell'][0]
+    deposit = auction_deposit(40, result['craft'][0]['batch_size'] + 2, stack, hours, 'alliance')
+    assert sell['deposit_copper'] == deposit
+    assert sell_row(sell)['Deposit_copper'] == deposit
+    assert 'lost if it expires' in sell_row(sell)['Deposit']
+    assert result['queue']['deposits_to_post_copper'] == deposit
+    assert f'Deposits to post: {format_money(deposit)}' in queue_total(result['queue'])
+    before = result['queue']
+    apply_removals(result, {3: {'pairs': 3, 'units': 0}})
+    assert result['queue']['deposits_to_post_copper'] == before['deposits_to_post_copper']
+    text = queue_line_text(result['queue']['lines'][-1])
+    assert f'deposit {format_money(deposit)}' in text and '2 held' in text
+    assert 'refunded on a sale' in text and f'{hours}h' in text
+
+
+def test_unknown_deposit_propagates_to_sell_queue_and_total():
+    from brownstone.today_session import queue_line_text, queue_total
+    from views.today_rows import sell_row
+
+    result = plan()
+    assert result['sell'][0]['deposit_copper'] is None
+    assert 'deposit unknown' in sell_row(result['sell'][0])['Deposit']
+    assert 'deposit unknown' in queue_line_text(result['queue']['lines'][-1])
+    assert 'Deposits to post: unknown' in queue_total(result['queue'])
+    assert result['queue']['deposits_to_post_copper'] is None
+
+
+@pytest.mark.parametrize('value', [0, 1, 12, 48, 2.0, True, '24', None])
+def test_post_duration_rejects_invalid(value):
+    with pytest.raises(ValueError, match='Post duration'):
+        TodaySettings(post_duration_hours=value)
+
+
+@pytest.mark.parametrize('hours', [2, 8, 24])
+def test_post_duration_persistence_old_files_and_context(tmp_path, hours):
+    from dataclasses import replace
+
+    from brownstone.today_session import plan_context
+
+    path = tmp_path / 'settings.json'
+    path.write_text('{"gold_copper": 10000}')
+    assert load_settings(path).post_duration_hours == 24
+    saved = replace(load_settings(path), post_duration_hours=hours)
+    save_settings(path, saved)
+    assert load_settings(path) == saved
+    args = dict(catalogs=[catalog()], market=MARKET, snapshot=SNAPSHOT,
+                settings=saved, max_age_hours=24, auction_cut=.05)
+    assert plan_context(args) != plan_context({**args, 'settings': replace(saved, post_duration_hours=8 if hours==24
+                                                                         else 24)})
+
+
+def test_neutral_and_mixed_unknown_deposits_keep_total_unknown():
+    neutral = {**MARKET, 'faction': 'neutral'}
+    metric = {'min_buyout': 200, 'listings': 3, 'units': 8, 'largest_stack_units': 3, 'max_stack_size': 20}
+    result = plan(market=neutral, snapshot={**SNAPSHOT, **neutral}, auction_cut=.15,
+                  vendor_prices={3: 40}, metrics={3: metric})
+    assert result['sell'] and result['sell'][0]['deposit_copper'] is None
+    mixed = plan(catalogs=[catalog(), output_catalog(4, 'second')],
+                 observations={1: {'min_buyout': 10, 'market_value': 20},
+                               3: {'min_buyout': 200}, 4: {'min_buyout': 200}},
+                 vendor_prices={3: 40}, metrics={3: metric, 4: metric})
+    assert {s['deposit_copper'] for s in mixed['sell']} == {None, 100}
+    assert mixed['queue']['deposits_to_post_copper'] is None
+
+
+def test_measured_zero_deposit_displays_zero_and_empty_queue_sums_to_zero():
+    from brownstone.today_session import queue_line_text, queue_total
+    from views.today_rows import sell_row
+
+    result = plan(TodaySettings(10000, 1, 'fixed', post_duration_hours=2), vendor_prices={3: 11},
+                  metrics={3: {'min_buyout': 200, 'listings': 3, 'units': 8,
+                               'largest_stack_units': 3, 'max_stack_size': 1}})
+    assert sell_row(result['sell'][0])['Deposit_copper'] == 0
+    assert sell_row(result['sell'][0])['Deposit'] == '0c at 2h, lost if it expires'
+    assert 'deposit 0c' in queue_line_text(result['queue']['lines'][-1])
+    assert 'Deposits to post: 0c' in queue_total(result['queue'])
+    assert plan(TodaySettings())['queue']['deposits_to_post_copper'] == 0
+
+
+def test_deposit_counts_recipe_output_units():
+    c = catalog()
+    c['recipes_by_id'][30]['output_quantity'] = 2
+    result = plan(TodaySettings(10000, 1, 'fixed', max_crafts=5), catalogs=[c], vendor_prices={3: 40},
+                  choices=[{'catalog_id': 'fixture', 'recipe_id': 30, 'batch_size': 5}], refill=False,
+                  metrics={3: {'min_buyout': 200, 'listings': 3, 'units': 8,
+                               'largest_stack_units': 3, 'max_stack_size': 20}})
+    assert result['queue']['lines'][-1]['quantity'] == 10
+    assert result['sell'][0]['deposit_copper'] == 240
+    assert result['queue']['deposits_to_post_copper'] == 240
+
+
+def test_unlisted_output_takes_stack_size_from_scan_references():
+    from brownstone.deposits import auction_deposit
+
+    result = plan(vendor_prices={3: 40}, stack_sizes={3: 20}, metrics={1: {"unit_buyout_p25": 30}})
+    sell, craft = result['sell'][0], result['craft'][0]
+    units = craft['output_quantity'] * craft['batch_size']
+    assert sell['deposit_copper'] == max(100, 40 * units * 24 // 40)
+    assert sell['deposit_copper'] == auction_deposit(40, units, 20, 24, MARKET['faction'])
+    assert result['queue']['deposits_to_post_copper'] == sell['deposit_copper']

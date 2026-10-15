@@ -8,7 +8,7 @@ def read_today_evidence(db, config, snapshot_id, item_ids):
     observations = price_observations(db, config, snapshot_id, item_ids)
     metrics = read_scan_metrics(db, config, snapshot_id)
     if config["provider"] != ADDON_PROVIDER or metrics is None:
-        return observations, None, None, {}
+        return observations, None, None, {}, {}
     predicate, parameters = scope_predicate(config)
     scan = db.execute(f"SELECT scan_id FROM addon_scans WHERE {predicate} AND snapshot_id=? "
                       "AND status='completed' AND NOT partial AND priced", [*parameters, snapshot_id]).fetchone()
@@ -27,7 +27,9 @@ def read_today_evidence(db, config, snapshot_id, item_ids):
     for item_id, _, stack in references:
         if item_id in base_metrics:
             base_metrics[item_id] = base_metrics[item_id] | {"max_stack_size": stack}
-    return observations, ladders, base_metrics, {i: v for i, v, _ in references if v is not None and v > 0}
+    # Stack sizes cover every referenced item, listed or not, so unlisted outputs still get deposits.
+    return (observations, ladders, base_metrics, {i: v for i, v, _ in references if v is not None and v > 0},
+            {i: s for i, _, s in references if s is not None and s > 0})
 
 
 def _base_metrics(metrics):

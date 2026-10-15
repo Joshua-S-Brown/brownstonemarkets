@@ -120,7 +120,7 @@ def test_today_pass_vendor_price_and_scope(tmp_path, key):
     import_scans(config, now=NOW)
     snapshot = {**config, "snapshot_id": "my-scans:enriched", "updated_at": NOW.isoformat()}
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb")) as db:
-        observations, ladders, metrics, vendors = read_today_evidence(db, config, snapshot["snapshot_id"], [2589])
+        observations, ladders, metrics, vendors, _ = read_today_evidence(db, config, snapshot["snapshot_id"], [2589])
         assert vendors == {2589: 100}
         result = build_today([], observations, config, snapshot, TodaySettings(10000, 1, "fixed"),
                              now=NOW, listings=ladders, metrics=metrics, vendor_prices=vendors)

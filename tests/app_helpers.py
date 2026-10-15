@@ -51,8 +51,8 @@ def listing_evidence_app(tmp_path, monkeypatch, hours):
     original = __import__('brownstone.today_loading', fromlist=['read_today_evidence']).read_today_evidence
 
     def evidence(db, config, sid, ids):
-        observations, listings, metrics, _ = original(db, config, sid, ids)
-        return observations, listings, metrics, {1: 21}
+        observations, listings, metrics, _, stacks = original(db, config, sid, ids)
+        return observations, listings, metrics, {1: 21}, stacks
 
     monkeypatch.setattr('brownstone.today_loading.read_today_evidence', evidence)
     return None, source

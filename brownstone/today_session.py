@@ -32,7 +32,9 @@ def stable_queue(queue):
 
 def queue_total(queue):
     profit = queue["expected_profit_copper"]
+    deposits = queue.get("deposits_to_post_copper")
     return (f"Gold needed: {format_money(queue['gold_needed_copper'])} · "
+            f"Deposits to post: {format_money(deposits) if deposits is not None else 'unknown'} · "
             f"Expected profit at undercut: {format_money(profit) if profit is not None else 'unavailable'}")
 
 
@@ -64,14 +66,23 @@ def queue_line_text(line):
                 f"{line['batch_size']} crafts")
     price = format_money(line["unit_copper"]) if line["unit_copper"] is not None else "unavailable"
     profit = format_money(line["profit_copper"]) if line["profit_copper"] is not None else "unavailable"
+    deposit = deposit_text(line)
     held = line.get('held_outputs', [])
     if held:
         owners = ', '.join(f"{u['character']} ({u['kind']}): {u['units']}" for u in held)
         value = line.get('held_value_copper')
         return (f"Post: {name} · post {line['quantity']} crafted + {sum(u['units'] for u in held)} held "
                 f"({owners}) · undercut unit {price} · profit {profit} · held value "
-                f"{format_money(value) if value is not None else 'unavailable'}")
-    return f"Post: {name} · {line['quantity']} units · undercut unit {price} · profit {profit}"
+                f"{format_money(value) if value is not None else 'unavailable'} · {deposit}")
+    return f"Post: {name} · {line['quantity']} units · undercut unit {price} · profit {profit} · {deposit}"
+
+
+def deposit_text(row):
+    """Shared Sell/Queue deposit wording, retaining measured zero and unknown."""
+    value = row.get("deposit_copper")
+    duration = row.get("post_duration_hours", 24)
+    amount = format_money(value) if value is not None else "unknown"
+    return f"deposit {amount} · lost if it expires: {amount} · refunded on a sale · {duration}h"
 
 
 def headline_profit(row, sell):

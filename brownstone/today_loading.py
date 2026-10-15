@@ -23,7 +23,7 @@ def load_today(config, catalogs, settings, character_data, now: datetime, *,
         return None, None
     ids = sorted({item for catalog in catalogs for item in catalog["items_by_id"]} | set(item_ids))
     with duckdb.connect(str(config["data_dir"] / "brownstone.duckdb"), read_only=True) as db:
-        observations, listings, metrics, vendors = read_today_evidence(db, config, sid, ids)
+        observations, listings, metrics, vendors, stacks = read_today_evidence(db, config, sid, ids)
         flood_evidence = flood_signals.signals(db, config, _signal_ids(ids, character_data), now) if flood else None
     holdings_warning = None
     if holdings_data is None and holdings:
@@ -31,7 +31,7 @@ def load_today(config, catalogs, settings, character_data, now: datetime, *,
     settings = resolve_funds(settings, character_data, now, config["max_age_hours"]).settings
     arguments = dict(catalogs=catalogs, observations=observations, market=config,
                      snapshot={**manifest, "snapshot_id": sid}, settings=settings, now=now,
-                     listings=listings, metrics=metrics, vendor_prices=vendors,
+                     listings=listings, metrics=metrics, vendor_prices=vendors, stack_sizes=stacks,
                      max_age_hours=config["max_age_hours"], auction_cut=config["auction_cut"],
                      character_data=character_data, flood_evidence=flood_evidence, holdings_data=holdings_data,
                      holdings_warning=holdings_warning)

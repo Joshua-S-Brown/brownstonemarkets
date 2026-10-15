@@ -44,7 +44,7 @@ def table(rows, *, label, row_key='id'):
                   'Batch profit', 'Profit per craft', 'Profit basis', 'Confidence'],
         'Sell': ['Output', 'State', 'Batch', 'Held units', 'Held by', 'Held value', 'Warnings',
                  'Lowest competing unit', 'Listings', 'Units',
-                 'Undercut unit', 'Profit at undercut for batch', 'Thin', 'Confidence', 'Reasons'],
+                 'Undercut unit', 'Deposit', 'Profit at undercut for batch', 'Thin', 'Confidence', 'Reasons'],
         'Buy': ['Material', 'State', 'Route', 'For', 'Required units', 'Purchased units', 'Cost',
                 'Highest unit price', 'Cheap now'],
     }.get(label, keys)
@@ -168,6 +168,8 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
             minimum = ui.input('Fixed minimum gain', value=format_money(saved.minimum_copper))
             percent = ui.number('Percentage of gold available', value=saved.percent_basis_points / 100,
                                 min=0, max=100, step=.1)
+            duration = ui.select({2: '2 hours', 8: '8 hours', 24: '24 hours'},
+                                 value=saved.post_duration_hours, label='Post duration')
             crafts = ui.number('Most crafts per item', value=saved.max_crafts, min=1, max=1000, step=1)
         percent.bind_visibility_from(mode, 'value', backward=lambda value: value == 'scaled')
         ui.label('Scaled uses the greater of the fixed minimum and this percentage of available gold.').classes(
@@ -181,7 +183,8 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
                     raise ValueError('Most crafts per item must be an integer')
                 entered = TodaySettings(parse_money(gold.value), parse_money(minimum.value), mode.value,
                                         round(float(percent.value) * 100), int(count),
-                                        identities[int(character.value)], override.value, unknown.value)
+                                        identities[int(character.value)], override.value, unknown.value,
+                                        post_duration_hours=duration.value)
                 save_settings(settings_path(config['data_dir'], config['source_id']), entered)
             except (ValueError, TypeError, OSError) as error:
                 message.set_text(f'Settings not saved: {error}. Tables still use the last saved settings.')
@@ -205,6 +208,7 @@ def settings_form(config, saved, character_data, on_saved, *, unreadable=False):
         minimum.set_value(format_money(current.minimum_copper))
         percent.set_value(current.percent_basis_points / 100)
         crafts.set_value(current.max_crafts)
+        duration.set_value(current.post_duration_hours)
         message.set_text('')
 
         dialog.open()

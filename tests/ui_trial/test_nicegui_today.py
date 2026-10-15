@@ -551,3 +551,32 @@ async def test_hidden_low_row_click_opens_shown_craft(user):
     assert [r['Item'] for r in craft_table.rows] == [shown['output_name']]
     user.find(kind=ui.table, marker='Craft').trigger('rowClick', [{}, craft_table.rows[0], 0])
     await user.should_see(f"Materials for {shown['output_name']}")
+
+
+async def test_deposit_column_duration_save_resets_choices_and_ticks(user, tmp_path, monkeypatch):
+    _, source = listing_evidence_app(tmp_path, monkeypatch, -1)
+    path = source['data_dir'] / f"today-settings.{source['source_id']}.local.json"
+    await user.open('/')
+    await user.should_see('Adjust crafts')
+    table = next(t for t in all_tables(user) if 'Sell' in t._markers)
+    column = next(c for c in table.columns if c['name'] == 'Deposit')
+    assert 'Deposit_copper' in column[':sort']
+    assert [r['Deposit'] for r in table.rows] == ['deposit unknown']  # fixture output has no vendor price
+    user.find('Queue').click()
+    tick = next(e for e in user.find(ui.checkbox).elements if e.text.startswith('Post:'))
+    user.find(kind=ui.checkbox, content=tick.text).click()
+    batch = next(e for e in user.find(ui.number).elements if e.label.startswith('Batch for '))
+    batch.set_value(1)
+    user.find(kind=ui.number, content=batch.label).trigger('blur')
+    tick = next(e for e in user.find(ui.checkbox).elements if e.text.startswith('Post:'))
+    user.find(kind=ui.checkbox, content=tick.text).click()
+    user.find(kind=ui.select, content='Post duration').elements.pop().set_value(8)
+    user.find('Save Today settings').click()
+    assert load_settings(path).post_duration_hours == 8
+    await user.should_see('Previous choices were dropped, not resized')
+    await user.should_see('Deposits to post:')
+    assert not any(e.value for e in user.find(ui.checkbox).elements if e.text.startswith('Post:'))
+    assert all('8h' in e.text for e in user.find(ui.checkbox).elements if e.text.startswith('Post:'))
+    await user.open('/')
+    await user.should_see('Adjust crafts')
+    assert next(iter(user.find(kind=ui.select, content='Post duration').elements)).value == 8

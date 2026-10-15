@@ -207,7 +207,7 @@ def test_held_outputs_separate_value_without_profit_credit():
 def test_no_holdings_exact_plan_and_version():
     baseline = plan()
     assert plan(holdings_data=({}, {}, [], [])) == baseline
-    assert baseline['today_version'] == TODAY_VERSION == 10
+    assert baseline['today_version'] == TODAY_VERSION == 11
 
 
 def test_holdings_context_resets_choices_without_clock_age():
@@ -223,7 +223,8 @@ def test_no_holdings_matches_pre_story_golden():
     current = json.loads(json.dumps(plan(), default=str))
     def strip_version(value):
         if isinstance(value, dict):
-            return {k: strip_version(v) for k, v in value.items() if k != 'today_version'}
+            return {k: strip_version(v) for k, v in value.items()
+                    if k not in ('today_version', 'deposit_copper', 'post_duration_hours', 'deposits_to_post_copper')}
         if isinstance(value, list):
             return [strip_version(v) for v in value]
         return value

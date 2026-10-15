@@ -390,12 +390,12 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
   `load_today_removals(config, plan)` reads shown output IDs via `removed_listings.recent_comparisons`;
   `today.apply_removals` attaches confidence and rebuilds the complete Queue.
 - **Evidence.** `today_data.read_today_evidence` returns `(observations, listings, metrics,
-  vendor_sell_prices)` for one source and analytical snapshot: base/legacy listings as
+  vendor_sell_prices, stack_sizes)` for one source and analytical snapshot: base/legacy listings as
   `(quantity, full buyout, unit ceil)` tuples per item, ADDON-10 metrics and effective scan vendor
-  references. Missing listing support is `None`, distinct from an eligible scan's `{}`. No seller
+  and stack references (stack sizes for every referenced item, listed or not). Missing listing support is `None`, distinct from an eligible scan's `{}`. No seller
   strings enter this path; reads keep source, every MARKET_KEYS field, scan/snapshot and variant state.
 - **Settings.** `TodaySettings` holds validated integer settings, the nullable character
-  `(name, realm, faction)`, `gold_override` and `include_unknown` (older files load with defaults);
+  `(name, realm, faction)`, `gold_override`, `include_unknown` and `post_duration_hours` (older files load with defaults).
   `today_settings` persists one atomic JSON file per source. `today_funds.resolve_funds` turns the
   scoped projection into effective settings plus summary and notes, without persisting the balance.
 - **Eligibility.** `today_characters.project_recipes` matches catalog recipe IDs against the
@@ -421,7 +421,10 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
   selects base/legacy signals and carries caps/evidence into Sell and Queue posts. The NiceGUI view
   reuses `session_signal`/`CROWDING`/`OVERSHOOT` badges with on-demand removal evidence.
   `craft_details(row)` projects held/purchased materials and the batch's retained `reserved_steps`
-  (or scales original steps when holdings are absent). Sell retains owners and separate held value;
+  (or scales original steps when holdings are absent). Sell retains owners and separate held value.
+  After held-output allocation, `deposits.auction_deposit` adds Sell's nullable `deposit_copper` and
+  `post_duration_hours` (Today v11), taking stack size from `stack_sizes` so unlisted outputs still get one. Queue post lines retain these fields; its nullable
+  `deposits_to_post_copper` sums the complete post list. Rules remain in requirements → Today.
   Queue take/mail lines and held post annotations survive `apply_removals` rebuilding;
 
   `purchase_uses(crafts)` groups purchased units per item/route and output (Shopping list For);

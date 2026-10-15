@@ -12,7 +12,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
   authenticated reuse/restart, loopback browser fallback and idle shutdown.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
-  queue, confidence, character eligibility and captured funds; today_version 10.
+  queue, confidence, character eligibility and captured funds; today_version 11.
   STORY-069 aligns headline profit with the reserved post quote (explicit cautious fallback),
   formats Today table money in g/s/c with copper sorting, and shows team gold-mail suggestions
   in Queue/copy/tick identity (rules in requirements → Today). This session combines equal tier
@@ -79,7 +79,10 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   pending Forever confirmation. Trainers on 2026-10-15 contradict Classic tier levels: Journeyman Cooking,
   First Aid, Herbalism and Skinning need no character level, Fishing needs 10 (STORY-079); crafting tiers and
   yellow skill-up chances are unconfirmed. Deposits (13 posts) and postage are measured (requirements →
-  Product direction) but not modeled (STORY-035); sale speed, ledger and stock targets remain backlog work.
+  Product direction). Today models deposits under requirements → Today (v11): Sell and Queue show
+  refundable posting gold and expiry loss at the saved 2/8/24-hour duration, including held outputs;
+  deposits do not reserve funds or reduce ranked profit. Neutral/missing evidence stays unknown.
+  Postage, sale speed, ledger and stock targets remain backlog work.
   A gold-only mail recorded the previous draft's items and no gold, so the ledger (STORY-034) must use money
   changes. Each profession window event saves the full recipe list: 25 MB of the 29.6 MB 2026-10-15 file.
 - Today fixes aggregate routes before whole-stack sizing; surplus uncredited/unshared, greedy plan

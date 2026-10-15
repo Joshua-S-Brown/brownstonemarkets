@@ -15,6 +15,7 @@ class TodaySettings:
 
     gold_override: bool = False
     include_unknown: bool = False
+    post_duration_hours: int = 24
 
     def __post_init__(self):
         if type(self.include_unknown) is not bool:
@@ -26,6 +27,8 @@ class TodaySettings:
                     or any(not isinstance(v, str) or not v for v in self.character)):
                 raise ValueError("Character needs name, realm and faction")
             object.__setattr__(self, "character", tuple(self.character))
+        if type(self.post_duration_hours) is not int or self.post_duration_hours not in (2, 8, 24):
+            raise ValueError("Post duration must be 2, 8 or 24 hours")
         integers = (self.gold_copper, self.minimum_copper, self.percent_basis_points, self.max_crafts)
         if any(type(value) is not int or value < 0 for value in integers):
             raise ValueError("Settings must use nonnegative integers")

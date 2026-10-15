@@ -69,12 +69,21 @@ def _character_columns(row):
     return team | {"Can make": row["craft_status"], "Learning": learning}
 
 
+def sell_deposit(row):
+    """Short table cell; the Queue post line keeps the full refund wording."""
+    value = row.get("deposit_copper")
+    if value is None:
+        return "deposit unknown"
+    return f"{format_money(value)} at {row.get('post_duration_hours', 24)}h, lost if it expires"
+
+
 def sell_row(row):
     return present_row({"Output": row["output_name"], "Catalog": row["catalog_id"], "Recipe": row["recipe_id"],
             "Batch": row["batch_size"], "Lowest competing unit (g)": row["lowest_copper"],
             "Listings": row["listings"], "Units": row["units"], "Largest stack units": row["largest_stack_units"],
             "Undercut unit (g)": row["undercut_copper"], "Price step": row.get("price_step", "1c"),
             "Profit at undercut for batch (g)": row["undercut_batch_profit_copper"],
+            "Deposit_copper": row.get("deposit_copper"), "Deposit": sell_deposit(row),
             "Thin": row["thin"], "Warnings": warning_fields(row),
             **held_output_columns(row), **_confidence_columns(row), "State": state(row)})
 

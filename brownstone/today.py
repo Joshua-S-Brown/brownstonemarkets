@@ -10,6 +10,7 @@ from decimal import Decimal
 from . import today_holdings
 from .action_board import catalog_for_row, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices
+from .deposits import auction_deposit
 from .freshness import assess
 from .markets import MARKET_KEYS
 from .recipe_graph import RecipeGraph, route_catalog
@@ -18,7 +19,7 @@ from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 from .today_warnings import PRICE_NOTE, base_signals, price_caps, warning_fields
 
-TODAY_VERSION = 10
+TODAY_VERSION = 11
 ROW_LIMIT = 10
 
 
@@ -386,8 +387,19 @@ def _held_evidence(crafts, sells, holdings, units, captures, max_age_hours, auct
             sell['confidence_reasons'] = row['confidence_reasons']
 
 
+def _deposits(crafts, sells, vendor_prices, stack_sizes, metrics, hours, faction):
+    """Every posted unit, held ones included; stack size from the scan's item references, any listing."""
+    for craft, sell in zip(crafts, sells, strict=True):
+        item = sell['output_item_id']
+        quantity = craft['output_quantity'] * craft['batch_size'] + sum(
+            u['units'] for u in sell.get('held_outputs', []))
+        stack = (stack_sizes or {}).get(item, metrics.get(item, {}).get('max_stack_size'))
+        sell['post_duration_hours'] = hours
+        sell['deposit_copper'] = auction_deposit(vendor_prices.get(item), quantity, stack, hours, faction)
+
+
 def build_today(catalogs, observations, market, snapshot, settings: TodaySettings, *, now,
-                listings=None, metrics=None, vendor_prices=None, max_age_hours=24, auction_cut=.05,
+                listings=None, metrics=None, vendor_prices=None, stack_sizes=None, max_age_hours=24, auction_cut=.05,
                 choices=None, refill=True, character_data=None, flood_evidence=None, holdings_data=None,
                 holdings_warning=None):
     if any(snapshot.get(key) != market.get(key) for key in MARKET_KEYS):
@@ -419,6 +431,8 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
         row.update(label)
         sell.update(label)
     _held_evidence(crafts, sells, holdings, units, captures, max_age_hours, auction_cut)
+    _deposits(crafts, sells, vendor_prices or {}, stack_sizes, metrics or {}, settings.post_duration_hours,
+              market['faction'])
     vendors = _vendor(ladders, vendor_prices or {}, settings.minimum_gain)
     evidence = {"stale": freshness["stale"], "actionable": not freshness["stale"],
                 "observed_at": freshness["observed_at"], "time_basis": freshness["basis"],
@@ -525,10 +539,13 @@ def session_queue(crafts, shopping, sells):
                       "quantity": row["output_quantity"] * row["batch_size"],
                       **({"held_outputs": sell["held_outputs"], "held_value_copper": sell["held_value_copper"]}
                          if "held_outputs" in sell else {}),
+                      "deposit_copper": sell["deposit_copper"], "post_duration_hours": sell["post_duration_hours"],
                       "unit_copper": sell["undercut_copper"], "profit_copper": sell["undercut_batch_profit_copper"],
                       **_confidence_fields(row), **warning_fields(sell)})
     profits = [s["undercut_batch_profit_copper"] for s in sells]
+    deposits = [s["deposit_copper"] for s in sells]
     return {"mail_note": "Mail between characters is not charged; postage is unconfirmed on Forever.",
+            "deposits_to_post_copper": sum(deposits) if all(d is not None for d in deposits) else None,
             "lines": lines, "gold_needed_copper": sum(p["cost_copper"] for p in shopping),
             "expected_profit_copper": sum(profits) if all(p is not None for p in profits) else None}
 

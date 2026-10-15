@@ -45,21 +45,20 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, and 2026-10-14 after the addon comparison):
-1. STORY-035 auction deposits (refined 2026-10-15; formula confirmed)
-2. STORY-079 tier levels from trainers
-3. STORY-073 your own sale rate (refine first)
-4. STORY-070 Team's next recipe you can actually learn
-5. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
-6. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
-7. STORY-036 vendor price ceilings (STORY-071's lists captured 2026-10-15)
-8. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
-9. STORY-026 scan coverage and rhythm
-10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-11. STORY-006 replay
+1. STORY-079 tier levels from trainers
+2. STORY-073 your own sale rate (refine first)
+3. STORY-070 Team's next recipe you can actually learn
+4. STORY-062 sales speed and suggested stock levels (after STORY-027 and enough scans; refine first)
+5. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+6. STORY-036 vendor price ceilings (STORY-071's lists captured 2026-10-15)
+7. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
+8. STORY-026 scan coverage and rhythm
+9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+10. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 071, 072, 074, 075, 076, 077, 078 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 071, 072, 074, 075, 076, 077, 078 and SPIKE-009/009b.
 
 ### STORY-069 — Today in player terms
 
@@ -161,16 +160,18 @@ Acceptance:
 
 ### STORY-035 — Auction deposits
 
+Implemented; current behavior is in `status.md` and Today in `requirements.md`. Acceptance retained until the next commit.
+
 Added 2026-10-06. Refined 2026-10-15 from 13 beta posts, all of which fit the formula below, as does the 2026-10-10 post (`status.md`; facts in `requirements.md` → *Product direction*).
 
 As a gold maker, I want Today's *Sell* list to show the deposit for posting and what an expiry would lose, so that profit at undercut isn't overstated for cheap or slow items.
 
 Acceptance:
-- **Formula:** deposit = ⌊vendor sell price × quantity × 5% × hours ÷ 2⌋, in integer copper, for 2, 8 or 24 hours. A **commodity** post (the scan item pass reports a maximum stack above 1) costs at least 100c and is one post for the whole batch. An **item** post (maximum stack 1) has no minimum and is one post per unit, so the batch deposit is the per-unit deposit × batch size. Evidence: Linen Cloth ×1 at 2/8/24 h paid 100c each; Bolt of Linen Cloth ×5 at 24 h paid 120c; Brown Linen Shirt (vendor 11c) paid 0c, 2c and 6c.
+- **Formula:** deposit = ⌊vendor sell price × quantity × 5% × hours ÷ 2⌋ for 2, 8 or 24 hours, which in integer copper is `vendor × quantity × hours // 40`. Vendor sell price and maximum stack come from the newest scan's item references, which `load_today` already reads. A **commodity** post (maximum stack above 1) costs at least 100c and is one post. An **item** post (maximum stack 1) has no minimum and is one post per unit, so its deposit is the per-unit deposit × units. The deposit covers every unit the post line posts, held units included (STORY-068's *post 5 crafted + 2 held* is one commodity post). Evidence: Linen Cloth ×1 at 2/8/24 h paid 100c each; Bolt of Linen Cloth ×5 at 24 h paid 120c; Brown Linen Shirt (vendor 11c) paid 0c, 2c and 6c.
 - **Duration:** a *Post duration* setting in Today (2, 8 or 24 hours; default 24), saved with the other settings. Changing it resets choices like any other setting change. The default is provisional: once your own sales show which duration sells best, *Sell-through and fill chance* (Later) recommends one.
-- **Shown, not ranked:** *Sell* and the Queue's post line show the deposit and, separately, *lost if it expires* (the deposit; it's refunded on a sale). Ranking, minimum gain and headline profit stay on batch profit until sell-through data exists (STORY-034).
+- **Shown, not ranked:** *Sell* (a *Deposit* column) and the Queue's post line show the deposit and *lost if it expires* (the deposit; it's refunded on a sale). The Queue total adds *Deposits to post* beside gold needed, since that gold is spent before anything sells; unknown if any deposit is unknown. Ranking, minimum gain and headline profit stay on batch profit until sell-through data exists (STORY-034).
 - **Unknown, never zero:** a missing vendor price or unknown maximum stack shows *deposit unknown*. The neutral house (15% cut) is unmeasured, so its deposits are unknown too.
-- **Unchanged:** routes, batches, funds and gold needed (the deposit is shown, not reserved). `TODAY_VERSION` increases only if a plan field changes.
+- **Unchanged:** routes, batches, funds and gold needed (the deposit is shown, not reserved). Sell rows gain deposit fields, so `TODAY_VERSION` becomes 11.
 - **Offline tests:** every 2026-10-15 post as a fixture with its exact deposit; the 100c minimum and its absence for items; rounding down; per-unit item posts summed over a batch; unknown vendor price and stack size; neutral unknown; the duration setting and its reset.
 - **Docs:** remove *deposits* from *Not modeled*; the deposit rule under Today in `requirements.md`; `status.md`.
 
