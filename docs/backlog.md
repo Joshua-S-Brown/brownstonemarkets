@@ -45,8 +45,8 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-036 vendor price ceilings (refined 2026-10-15)
-2. STORY-034 movement ledger and reconciliation (Brownstone; can follow the beta, built on its fixtures)
+1. STORY-034 gold ledger and reconciliation (refined 2026-10-15)
+2. STORY-034b item movements and reconciliation (after STORY-034)
 3. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
 4. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
 5. STORY-026 scan coverage and rhythm
@@ -55,46 +55,37 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 
 **Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 036, 031, 032, 033, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
 
-### STORY-034 — Movement ledger and reconciliation
+### STORY-034 — Gold ledger and reconciliation
 
-Added 2026-10-06. Built in Brownstone from STORY-032/033 evidence; can be finished after the beta closes.
+Added 2026-10-06. Refined 2026-10-15 against the code and the beta journal, and split: this story is gold only; item movements are STORY-034b. Decisions (user, 2026-10-15): the ledger is additive (Stock, Today funds and *Your sales* keep their current sources), lots and cost basis are deferred (*Lots and cost basis* under Later), and the ledger lives on Stock.
 
-As a gold maker, I want one ledger of every item and gold movement across my characters, so that I can see what I actually made, what sells and what I hold.
+Beta evidence (2026-10-15, read-only): 384 `PLAYER_MONEY` entries carry `before_copper`/`after_copper` with no breaks in the chain within a login. Between consecutive readable bags snapshots, summed journal deltas equal the snapshot gold change for every pair except Basilly's first (52c, 2026-10-08 → 2026-10-09, played without the journal recording). Vendor buys are followed by an own `CHAT_MSG_LOOT` in the same second, so "nearest preceding event" misclassifies them. Quest rewards and flights have no event.
 
-Acceptance:
-- **One movement table:** time, character, machine, item or gold, signed quantity, reason (auction buy, post, sale, expiry, cancel, deposit, mail in and out, craft in and out, vendor buy and sell, gathered) and links to the journal entry it came from. Every other view (profit, holdings, sell-through) is derived from it. The rules mapping events to movements are recorded in `requirements.md` with a version, like ADDON-10.
-- **Sales from the mailbox:** an invoice is the only proof of a sale. A listing that vanishes is still only *removed* (STORY-027).
-- **Reconciliation:** between two snapshots of a character, actual change minus recorded movements is the residual. A positive item residual is *gathered or looted*; negative is *used or destroyed*; a gold residual is *other income or spending* (quests, repairs, training), kept apart from trading profit. Residuals are shown, never hidden, so a missing journal shows up.
-- **Integer copper,** all characters kept separate unless summed explicitly, and the 5% (or 15% neutral) cut taken from invoices, not assumed.
-- **Offline tests** from beta fixtures: a full buy → craft → post → sale cycle, an expiry, a mail between characters and a gathering residual.
-- **Across machines** (moved from STORY-037): mail between characters on different machines appears once as sent and once as received; a missing drop shows as an unmatched mail.
-- **Known gold categories** (added 2026-10-14 from Journalator): gold in and out by category (auction sales and purchases, deposits, vendor, repairs, training, flights, quests, mail) by day and character, from the events the journal already records. Only what no event explains stays in the *other* residual.
-- **Sale rate:** reuse STORY-073's per-item results rather than computing them again.
-
-### STORY-036 — Vendor price ceilings
-
-Added 2026-10-06. Refined 2026-10-15 against the code and the 2026-10-15 vendor lists (STORY-071: 25 vendors, 830 rows, all at Friendly standing 5; beta report `work/beta-reports/20261015T105955759834Z-c0f823d5/`, section *Vendor prices*). The Black Market vendor is out of scope: the owner can't reach it before the beta ends, so it moves to *Later* for live.
-
-As a gold maker, I want items a vendor sells at a fixed price to be capped at that price, so that the board never values them above it or suggests buying them for more.
-
-What the lists show, per Forever catalog comparison:
-- **28 confirm** a marked price (equal price, quantity 1): Coarse Thread (already confirmed), Fine Thread, Silken Thread, Heavy Silken Thread, Rune Thread, Bleach, Black, Red, Green, Blue, Gray, Yellow, Orange, Purple and Pink Dye, Hot and Soothing Spices, Salt, Weak and Strong Flux, Wooden and Heavy Stock, Simple Wood, Copper Rod, Nightcrawlers, Simple Flour, Engineer's Ink, Blank Parchment.
-- **11 bundles read *lower***, sold 5 per purchase at the marked price: Empty, Leaded and Crystal Vial, Mild Spices, Shiny Red Apple, Refreshing Spring Water, Ice Cold Milk, Melon Juice, Sweet Nectar, Moonberry Juice, Morning Glory Dew. The page's buy price is the bundle's.
-- **New, unlimited stock** (catalog items not marked as vendor items): Coal (mining), Elemental Flux (blacksmithing, mining), Star Wood (cooking, enchanting), Thick Logs (cooking), Mote of Magic (enchanting; the output of Dust to Motes), Copper Rod (blacksmithing, where it is a recipe output), Demonic Figurine (engineering), Imbued Vial (alchemy, 5 per purchase).
-- **New, limited stock** (1 to 4 units): Rough and Coarse Blasting Powder, Bronze Framework, Aquadynamic Fish Attractor (engineering), Lesser Magic Essence, Peacebloom, Mageroyal, Earthroot.
+As a gold maker, I want every gold change on each character sorted by what caused it, with anything unexplained shown, so that I can see where my gold actually comes from and goes.
 
 Acceptance:
-- **Bundle quantity** (CRAFT-08): a selection item may set `vendor_quantity` (positive integer, default 1). The importer sets `vendor_price_copper` to the page's buy price ÷ `vendor_quantity` and refuses a price that doesn't divide exactly; the catalog keeps `vendor_quantity` and the bundle price for evidence. The beta report compares the list price with the marked unit price × the list's quantity, as now. Set it to 5 on the 11 bundles and Imbued Vial (Empty Vial 4c, Mild Spices 2c).
-- **Confirm** (CRAFT-08's existing path: selection `vendor_verified = true` with a `vendor_note` citing the date, beta report, entry ID, vendor NPC ID and zone, as Coarse Thread's note does): the 27 matched prices and the 11 corrected bundles, in every Forever selection that marks them. Regenerate the catalogs with `python -m brownstone recipes`; the only changes are these vendor fields and prices.
-- **Mark new unlimited items** only where the saved page's buy price ÷ `vendor_quantity` × the list's quantity equals the list price: an equal price can't be a reputation discount. Mark them `vendor = true`, confirmed, with the same citation. If the page has no buy price or it differs, leave the item unmarked and say so in the report. Copper Rod and Mote of Magic are recipe outputs: a vendor price on a crafted item must not change its role or how it is made. Mark and correct an item the same way in every Forever selection whose catalog contains it: `RecipeGraph` drops the vendor price of an item whose catalogs give different `ROUTE_FIELDS` values (say, a bundle divided in one catalog and not another), making it buy-only. Report any such warning before and after.
-- **Limited stock is never marked:** a vendor with 1 to 4 units that restock can't supply a shopping list, so those items stay unmarked. Their stock stays visible in the beta report. Record this rule in CRAFT-08.
-- **Buying:** CRAFT-03 already takes the cheapest route. Add a test that Today's *Buy* never lists an auction purchase above a marked vendor price.
-- **Selling** (new rule in `requirements.md` beside CRAFT-03/04): every recipe profit (the Action Board, Today, Team and the Market item page) values an output at no more than its vendor price in that catalog, labelled *capped at vendor price 1s 24c*. Today's post price (undercut) is also capped at it. Bump `POLICY_VERSION` and `TODAY_VERSION` (to 13). An item without a vendor price is unchanged.
-- **Offline tests:** bundle division and the inexact refusal; a confirmed note survives regeneration; a new item marked only on an equal page price; a limited-stock item never marked; the sale and post price capped for a crafted vendor item, with its label; Buy never above the vendor price; unchanged results for recipes whose outputs have no vendor price (the existing fixtures).
-- **Real data** (Forever beta source, copy of `data/`): rerun the beta report and give the vendor section's counts before and after (expected: all 39 matched items *confirm*, none *lower*); list each new item marked or left, and why; Copper Rod's and Dust to Motes' profit on the board before and after the cap; and Today's plan before and after (crafts added, dropped or re-ranked).
-- **Docs:** CRAFT-08 (bundle quantity, limited stock, new items), the selling cap, *Limitations* in `status.md` (vendor marks now confirmed), `design.md` if the importer contract changes.
+- **Gold movements:** each scoped `PLAYER_MONEY` with integer before and after copper is one movement: time, character (character, realm, faction), machine, signed copper (after − before) and its journal entry ID. Missing before or after is excluded and counted, never zero. Integer copper throughout. Characters stay separate; the team total is an explicit sum.
+- **Categories:** each movement gets exactly one category from the economy hook or window it follows within the same character and login: **auction sale** and **deposit refund** (from a seller invoice, below), **auction purchase**, **auction deposit** (post), **vendor sale**, **vendor purchase**, **repairs**, **training**, **mail in**, **mail out** (money sent plus postage), **coin loot**, or **other**. Own loot chat and bag updates never decide a category. Write the mapping as a numbered rule list in `requirements.md` (new UI-15, `ledger_version` 1, like ADDON-10); a rule change bumps the version. Quests and flights have no event, so they stay in **other**: say so on the page.
+- **Mail money:** `TakeInboxMoney`'s argument is a 1-based inbox index. Resolve it against the latest inbox observation before it, removing messages taken earlier in the same burst so later indexes shift. Several takes can share one `PLAYER_MONEY` (beta 2026-10-15 12:49:58: four takes, two money entries, 268c then 755c); match by amount, and if the amounts don't reconcile, the movement is **mail in (unidentified)** with a reason. A seller invoice splits into **auction sale** (gross − cut, the cut taken from the invoice) and **deposit refund** (the rest of the header money). Reuse `brownstone/sales.py` for invoice reading and identity rather than parsing again.
+- **Reconciliation:** for each character, between consecutive readable bags snapshots (ADDON-11; unreadable ones excluded and disclosed), show actual gold change, recorded movements and the difference as **unexplained**. Unexplained is shown, never hidden or folded into a category.
+- **Page:** a *Gold* section on Stock that answers *where did our gold come from and go?*: gold in and out by category per character and UTC day, the team total, reconciliation rows, and each movement's entry ID on demand. Money via `money.format_money`, sorting on copper. Passes the UI-08 checklist.
+- **Unchanged:** Today plans, `today_version`, Stock holdings and targets, and *Your sales* are identical (test this).
+- **Offline tests** from copied beta records: one per category; a burst of takes sharing one money entry; an unreconciled take; missing before/after copper; a reconciliation with and without a gap; characters kept separate.
+- **Real data** (Forever beta source, read-only): the category table per character, every **other** and unidentified movement listed with its time and amount, and the reconciliation. Expected: Basilly's first pair 52c unexplained and every later pair 0; seven seller invoices giving 999c **auction sale** (1,048c gross, 49c cut) and 910c **deposit refund**; three **mail in** from own characters (1c, 200c, 400c). Explain any difference.
+
+### STORY-034b — Item movements and reconciliation
+
+Added 2026-10-15 from the STORY-034 split; refine after STORY-034 is accepted.
+
+As a gold maker, I want every item movement on each character sorted by what caused it, so that I can see what I gathered, crafted, bought, sold and moved between characters.
+
+Acceptance (to refine):
+- **Item movements** from `BAG_UPDATE_DELAYED` per-item deltas (ADDON-12 baselines; a missing baseline is a gap, never zero), categorised with STORY-034's rules where they apply, plus **craft in/out**, **gathered or looted**, **post** and **expired/cancelled return**. An invoice is the only proof of a sale; a listing that vanishes is only *removed* (STORY-027).
+- **Reconciliation** between snapshots per character and location: a positive item residual is *gathered or looted*, negative *used or destroyed*; bank changes only between bank captures.
+- **Across machines** (from STORY-037): mail between own characters on different machines appears once as sent and once as received; a send with no receipt shows as unmatched.
+- **Sale rate:** reuse STORY-073's per-item results.
 
 ### STORY-021 — Item page and charts
 
@@ -167,6 +158,8 @@ Acceptance:
 - **Documented.** It's the recovery procedure for partial runs referenced in `status.md`. Backup is STORY-016.
 
 ## Later
+
+**Lots and cost basis** (deferred from STORY-034 on 2026-10-15): which purchase each sold or crafted unit came from, for realised profit. Needs STORY-034b's item movements and a rule for held stock of unknown cost.
 
 **Optional client-version cutover guard:** investigate whether recorded client versions can flag a misconfigured beta/live source during STORY-020b and first live imports. Source configuration remains authoritative (DATA-03); STORY-017 adds no client-version evidence checks.
 

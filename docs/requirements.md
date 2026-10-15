@@ -413,7 +413,7 @@ Demand, sale likelihood, vendor stock, reputation discounts, recipe quality/rank
 - Classic regional demand integration (Classic demand context, under Later in `backlog.md`).
 - Which third-party Forever aggregates, if any, offer a usable export or API.
 - Where backups go and how often, historical retention and scheduling.
-- The movement ledger's contract: which recorded events become which movements, and how lots and cost basis are assigned.
+- How lots and cost basis are assigned (deferred 2026-10-15; STORY-034 records gold movements without them).
 - Whether to model the Black Market vendor and its prices, once confirmed in game.
 - Whether to add AI narration, which model runs it and what data may leave this machine (*AI narration*, Later in `backlog.md`).
 - Whether to remove the Retail regression sources. SPIKE-008 found Forever listings are per-stack, not Retail-style per-unit commodities, so the Retail commodity feed is not a close test of Forever's model.
