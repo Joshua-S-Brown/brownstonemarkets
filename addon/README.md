@@ -36,11 +36,11 @@ Mac*, and start the game. Log in fresh (not just `/reload`).
 Done on 2026-10-15: vendor lists, trainers, mob names, loot vendor prices, the panel and the deposit
 posts. Install **0.12.8** first (vendor lists are no longer saved twice when you move; a scan waits 2 minutes for the server and records a failed start), then:
 
-1. **Time-left labels (STORY-027):** the posts from 15 October (10:30–10:32 UTC) are still listed. Scan
-   after 12:45 UTC (7:45 am Central), and again after 18:35 UTC (1:35 pm Central). If both times have
-   passed, post three cheap items at 2h, 8h and 24h, scan right away, then about 35 minutes, about
-   2h 10m and 8 or more hours later.
-2. **Sale gold:** each time, open the mailbox and take anything there.
+1. **12-hour label (STORY-027):** scan once while your 24-hour posts from 15 October have 8–12 hours
+   left: between 22:56 and 02:30 UTC (about 6:00–9:30 pm Central). If they have sold or expired, post
+   two cheap items at 24h and scan between 12 and 16 hours later.
+2. **Sale gold:** post one Linen Cloth just under the lowest price, then open the mailbox every few
+   minutes until the gold arrives, taking it when it does.
 3. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
 4. **Crafting tier levels:** when a crafting profession reaches skill 50, open its trainer once.
 5. `/reload`, log out and run the drop script.
@@ -352,7 +352,9 @@ unchanged, immutable recording of the account file. Keep them: STORY-006 builds 
 them. They can contain other players' names (ADDON-07), so they stay private and are never committed;
 a committed fixture is a small, anonymized extract.
 
-### Removed listings time-left beta check (STORY-027) — pending
+### Removed listings time-left beta check (STORY-027) — 12-hour bound pending
+
+On 2026-10-15 buckets 1–3 and the 30-minute and 2-hour bounds matched (`docs/status.md`).
 
 UI-10 in `docs/requirements.md` uses Classic Era's legacy auction time-left bounds; Forever's
 raw 1–4 capture alone does not establish their durations. In the Forever beta, record client build,
