@@ -79,7 +79,7 @@ async def test_roster_next_steps_choice_window_summary_and_isolation(user, tmp_p
         assert nicegui_app.storage.tab['team-test']['window'] == 26
         assert nicegui_app.storage.tab['team-test']['character'] == list(list(data)[1])
     # Same browser tab retains choice and slider when leaving and returning.
-    await user.open('/?place=Market')
+    await user.open('/?place=Stock')
     await user.open('/?place=Team')
     await user.should_see('Progression')
     assert next(e for e in user.find(ui.select).elements if e.label == 'Progression character').value == '1'

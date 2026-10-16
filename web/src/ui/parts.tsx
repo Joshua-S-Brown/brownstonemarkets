@@ -68,12 +68,13 @@ export function Sparkline({
   values,
   label,
 }: {
-  values: number[];
+  values: (number | null)[];
   label: string;
 }) {
-  if (values.length < 2) return <span>{label}: not enough history</span>;
-  const min = Math.min(...values),
-    range = Math.max(...values) - min || 1;
+  const priced = values.filter((v): v is number => v !== null);
+  if (priced.length < 2) return <span>{label}: not enough history</span>;
+  const min = Math.min(...priced),
+    range = Math.max(...priced) - min || 1;
   return (
     <svg
       viewBox="0 0 100 28"
@@ -82,16 +83,18 @@ export function Sparkline({
       role="img"
       aria-label={label}
     >
-      <polyline
-        fill="none"
-        stroke="currentColor"
-        points={values
-          .map(
-            (v, i) =>
-              `${(i * 100) / Math.max(values.length - 1, 1)},${26 - ((v - min) * 24) / range}`,
-          )
-          .join(" ")}
-      />
+      {values.map((v, i) =>
+        v !== null && i > 0 && values[i - 1] !== null ? (
+          <line
+            key={i}
+            stroke="currentColor"
+            x1={((i - 1) * 100) / Math.max(values.length - 1, 1)}
+            y1={26 - ((values[i - 1]! - min) * 24) / range}
+            x2={(i * 100) / Math.max(values.length - 1, 1)}
+            y2={26 - ((v - min) * 24) / range}
+          />
+        ) : null,
+      )}
     </svg>
   );
 }

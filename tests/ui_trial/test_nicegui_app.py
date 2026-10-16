@@ -37,11 +37,11 @@ async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, m
     await user.should_see('No characters imported for this source')
     await user.open('/?game=classic&source=test&place=Team&tab=Buy')
     await user.should_see('No characters imported for this source')
-    user.find(marker='place-Market').click()
-    await user.should_see(QUESTIONS['Market'])
-    await user.should_see('Find an item')
-    assert user.client.request.query_params['place'] == 'Market'
-    assert user.client.request.query_params['source'] == 'test'
+    targets = []
+    with monkeypatch.context() as patch:
+        patch.setattr(ui.navigate, 'to', targets.append)
+        user.find(marker='place-Market').click()
+    assert targets == ['/app/market?source=test']
     user.find(marker='place-Stock').click()
     await user.should_see(QUESTIONS['Stock'])
     await user.should_see('What needs restocking')

@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: Market in the web app (STORY-082). STORY-081's foundation is done.
+Nothing in progress; the next story is the top of *Order* under Next: Today in the web app (STORY-083). Market moved to the web app in STORY-082.
 
 **Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
@@ -49,40 +49,21 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-082 Market in the web app
-2. STORY-083 Today in the web app
-3. STORY-084 Team in the web app
-4. STORY-085 Ledger and Data in the web app
-5. STORY-086 Supply chains
-6. STORY-087 retire NiceGUI
-7. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-8. STORY-026 scan coverage and rhythm
-9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-10. STORY-006 replay
+1. STORY-083 Today in the web app
+2. STORY-084 Team in the web app
+3. STORY-085 Ledger and Data in the web app
+4. STORY-086 Supply chains
+5. STORY-087 retire NiceGUI
+6. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+7. STORY-026 scan coverage and rhythm
+8. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+9. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081 and SPIKE-009/009b.
-
-### STORY-082 — Market in the web app
-
-Added 2026-10-16. The first full place: mostly reads and tables, so it proves the grid, charts and inspector tabs before Today.
-
-As a gold maker, I want Market as a sortable grid with an item record beside it, so that I can scan prices and supply and open any item without losing my place.
-
-Acceptance:
-- **Pulse strip:** three cards from existing evidence only. *Cheaper than usual* and *Dearer than usual* use UI-11's typical earlier price for items in our catalog chains (the five largest gaps each way, with the percentage). *Left early* uses UI-10's removed-early units over the same comparable gaps as Market home today. Each card states its basis in one line ("upper bound on purchases" for removals).
-- **Grid:** catalog-chain items with lowest unit buyout, typical price, the gap to typical, a sparkline of stored lowest buyout over the eligible scans (`item_history`), listings, units and the UI-11 signal pill with its evidence in a Tip. Columns sort in copper. Filter chips: all in our chains, materials, crafts and intermediates (by catalog role, never names) and with a signal, plus name/ID search over every item in the snapshot (UI-02). The selected row stays highlighted while its record is open.
-- **Item record tabs:** Overview (STORY-081; *Our move* comes with Today in STORY-083); Price history and Listings (UI-17's history and ladder, drawn with Recharts and keeping every UI-17 rule: gaps, null prices, the 95% zoom, the scan picker, no-buyout counts); Made from and used in (UI-09 routes, quantities and Board profits; each item is an `ItemLink`); Our activity (UI-14 sales outcomes and STORY-078 holdings). The evidence footer holds what Identity and evidence holds today.
-- **API:** `GET /api/market?source=` (pulse and grid in one response, from `market_explorer.load_explorer`, `scan_movement`, `flood_signals` and `item_history`, read once per load), `GET /api/items/{id}/history`, `GET /api/items/{id}/ladder?scan=`, `GET /api/items/{id}/chain` and `GET /api/items/{id}/activity`. Projections that exist only inside `views/nicegui_market.py` move into `brownstone/market_explorer.py` first (framework-free, tested), so both views use one source until the NiceGUI view is removed. Routes get the explorer through `api.context.explorer`, which reuses one build per source until the database, config or hourly clock bucket changes (STORY-081 review: about 3 s per build on the beta data).
-- **Variant identity (ADDON-08):** search lists each `item_id, variant_id, variant_state` hit, but STORY-081's record opens the base item for all of them, so an unresolved or variant hit shows base prices. The record shows the chosen identity's price, units and quality (with `variant` in the URL beside `inspect`), or the palette groups an item's identities under one hit that opens a record listing them separately. Never pool them.
-- **Toolchain:** add Recharts and TanStack Table at exact versions in `web/package.json` and commit the updated `package-lock.json` (AGENTS.md's npm rule); no other new package without saying why in the report.
-- **Retire:** the web rail's Market and NiceGUI's Market place button both open `/app/market?source=` with the same source; `views/nicegui_market.py`, `views/nicegui_item_history.py` and their `tests/ui_trial` tests are removed after the side-by-side check. Their behaviour tests move to API and Vitest tests; Today and Team item links open the web inspector.
-- **Offline tests:** every rule named in UI-09, UI-10, UI-11 and UI-17 keeps a test (moved, not dropped): scope, variants never pooled, gaps never zero, missing prices never free, the 95% zoom, sorting in copper, the role filters using catalog membership.
-- **Real data:** Linen Cloth and Bolt of Linen Cloth history point counts and newest ladders match the NiceGUI page before it is removed (UI-17's numbers in `status.md`, plus any scans since). Pulse lists match Market home's lists for the same scans. Screenshots at 1280 and 390 px.
-- Depends on STORY-081. Rules: UI-02, UI-09, UI-10, UI-11, UI-14, UI-17, UI-18, ADDON-08. Design: *Market explorer (STORY-055)*, *Item charts (STORY-021)*, *Removed listings (STORY-027)*, *Flood signals (STORY-064/072)*, *Web app (UI-18)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082 and SPIKE-009/009b.
 
 ### STORY-083 — Today in the web app
 

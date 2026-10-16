@@ -10,13 +10,13 @@ from .scan_changes import eligible_scans
 from .storage import scope_predicate
 
 
-def _metrics_by_scan(db, config, scans, item_id):
+def _metrics_by_scan(db, config, scans, item_ids):
     """One item-only read across the given scans, keyed by scan ID; each row must match its scan's snapshot."""
     predicate, scope = scope_predicate(config)
     rows = db.execute(f"""SELECT scan_id, snapshot_id, item_id, variant_id, variant_state, min_buyout,
         unit_buyout_p25, listings, units FROM scan_metrics
-        WHERE {predicate} AND metrics_version=? AND item_id=? AND scan_id IN (SELECT unnest(?))""",
-        [*scope, METRICS_VERSION, item_id, [s['scan_id'] for s in scans]]).fetchall()
+        WHERE {predicate} AND metrics_version=? AND item_id IN (SELECT unnest(?)) AND scan_id IN (SELECT unnest(?))""",
+        [*scope, METRICS_VERSION, item_ids, [s['scan_id'] for s in scans]]).fetchall()
     snapshots = {s['scan_id']: s['snapshot_id'] for s in scans}
     by_scan: dict[str, list[dict]] = {s['scan_id']: [] for s in scans}
     for scan_id, snapshot_id, *values in rows:
@@ -40,10 +40,31 @@ def _reference(history, item_id):
     return legacy, [legacy]
 
 
-def history(db, config, item_id):
-    """Every eligible scan, including gaps. Numeric facts come only from stored current-version metrics."""
+def histories(db, config, item_ids):
+    """Batch grid histories: one scoped metrics read, no per-row connections or repeated scan reads."""
     scans = eligible_scans(db, config)
-    by_scan = _metrics_by_scan(db, config, scans, item_id)
+    combined = _metrics_by_scan(db, config, scans, item_ids)
+    indexed: dict = {item: {s['scan_id']: [] for s in scans} for item in item_ids}
+    for scan, rows in combined.items():
+        for row in rows:
+            indexed[row['item_id']][scan].append(row)
+    result = {}
+    for item in item_ids:
+        by_scan = indexed[item]
+        evidence = _history(config, scans, by_scan, item)
+        newest = by_scan[scans[0]['scan_id']] if scans else []
+        evidence['series'] = {(r['item_id'], r['variant_id'], r['variant_state']): [
+            compatible_identity(r, by_scan[s['scan_id']], newest) for s in reversed(scans)] for r in newest}
+        result[item] = evidence
+    return result
+
+
+def history(db, config, item_id):
+    return histories(db, config, [item_id])[item_id]
+
+
+def _history(config, scans, by_scan, item_id):
+    """Every eligible scan, including gaps. Numeric facts come only from stored current-version metrics."""
     reference, reference_rows = _reference(by_scan, item_id)
     points = []
     for scan in reversed(scans):
@@ -62,7 +83,7 @@ def ladder(db, config, item_id, evidence, scan_id, now):
     scan = next((s for s in evidence['scans'] if s['scan_id'] == scan_id), None)
     if scan is None:
         raise ValueError('Choose an eligible scan from this source and market; reopen the item to refresh.')
-    identities = _metrics_by_scan(db, config, [scan], item_id)[scan_id]
+    identities = _metrics_by_scan(db, config, [scan], [item_id])[scan_id]
     row = _base(identities) or compatible_identity(evidence['reference'], identities, evidence['reference_rows'])
     result = {'scan': scan, 'rows': [], 'no_buyout_listings': 0, 'no_buyout_units': 0,
               'note': 'Base item absent or legacy identity incompatible in this scan.',
@@ -95,3 +116,11 @@ def load_history(config, item_id):
 def load_ladder(config, item_id, evidence, scan_id):
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
         return ladder(db, config, item_id, evidence, scan_id, datetime.now(UTC))
+
+
+def zoom_end(rows, share=95):
+    """Cheapest positive price covering share% of buyout units; table always retains all levels."""
+    if not rows:
+        return None
+    total = rows[-1]['cumulative_units']
+    return next(r['price_copper'] for r in rows if r['cumulative_units'] * 100 >= total * share)

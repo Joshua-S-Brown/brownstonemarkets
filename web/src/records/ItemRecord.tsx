@@ -1,14 +1,35 @@
 import styles from "../theme/app.module.css";
+import { lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
 import { get, type Item } from "../api/client";
 import { Money } from "../ui/Money";
 import { ItemLink } from "../ui/ItemLink";
 import { ErrorState, Pill } from "../ui/parts";
-export function ItemRecord({ id, source }: { id: number; source: string }) {
+import { Evidence } from "../ui/Evidence";
+import { ItemChain, ItemActivity, ItemGathering } from "./ItemDetails";
+// Recharts loads only when a chart tab opens, keeping it out of the shell's first bundle.
+const ItemCharts = lazy(() =>
+  import("./ItemCharts").then((m) => ({ default: m.ItemCharts })),
+);
+const loadingCharts = <p role="status">Loading charts…</p>;
+export function ItemRecord({
+  id,
+  source,
+  variant,
+}: {
+  id: number;
+  source: string;
+  variant?: string;
+}) {
   const query = useQuery({
-    queryKey: [source, "item", id],
-    queryFn: ({ signal }) => get<Item>(`items/${id}`, source, signal),
+    queryKey: [source, "item", id, variant],
+    queryFn: ({ signal }) =>
+      get<Item>(
+        `items/${id}${variant ? "?variant=" + encodeURIComponent(variant) : ""}`,
+        source,
+        signal,
+      ),
     enabled: !!source,
   });
   if (query.error)
@@ -35,11 +56,16 @@ export function ItemRecord({ id, source }: { id: number; source: string }) {
         <ItemLink id={id} name={item.name} quality={item.quality} />
       </h1>
       <p className={styles["muted"]}>
-        Quality {item.quality ?? "unknown"} · base-item Overview
+        Quality {item.quality ?? "unknown"} ·{" "}
+        {variant ? JSON.parse(variant).join(" · ") : "base-item Overview"}
       </p>
       <Tabs.Root defaultValue="overview">
         <Tabs.List aria-label="Item tabs">
           <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
+          <Tabs.Trigger value="history">Price history</Tabs.Trigger>
+          <Tabs.Trigger value="listings">Listings</Tabs.Trigger>
+          <Tabs.Trigger value="chain">Made from and used in</Tabs.Trigger>
+          <Tabs.Trigger value="activity">Our activity</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="overview">
           <div className={styles["tiles"]}>
@@ -106,10 +132,28 @@ export function ItemRecord({ id, source }: { id: number; source: string }) {
               <p className={styles["muted"]}>{item[key].reason}</p>
             </section>
           ))}
-          <details>
-            <summary>Summary evidence</summary>
-            <pre>{JSON.stringify(item.details, null, 2)}</pre>
-          </details>
+          <ItemGathering source={source} id={id} />
+        </Tabs.Content>
+        <Tabs.Content value="history">
+          <Suspense fallback={loadingCharts}>
+            <ItemCharts source={source} id={id} />
+          </Suspense>
+        </Tabs.Content>
+        <Tabs.Content value="listings">
+          <Suspense fallback={loadingCharts}>
+            <ItemCharts source={source} id={id} listings />
+          </Suspense>
+        </Tabs.Content>
+        <Tabs.Content value="chain">
+          <p>
+            Catalog routes describe the base item. Variant quotes never enter
+            these calculations.
+          </p>
+          <ItemChain source={source} id={id} />
+        </Tabs.Content>
+        <Tabs.Content value="activity">
+          <p>Base-item holdings and own journal outcomes.</p>
+          <ItemActivity source={source} id={id} />
         </Tabs.Content>
       </Tabs.Root>
       <footer className={styles["evidence"]}>
@@ -142,6 +186,10 @@ export function ItemRecord({ id, source }: { id: number; source: string }) {
               : "Price age unknown · collection time only"}
           </p>
         )}
+        <details>
+          <summary>Identity and evidence</summary>
+          <Evidence data={item.details} />
+        </details>
         <p>
           {source}
           <br />

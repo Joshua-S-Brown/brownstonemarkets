@@ -3,12 +3,12 @@ from datetime import UTC, datetime
 
 import duckdb
 
-from . import analysis, farming, flood_signals, removed_listings, sales, scan_changes
+from . import analysis, farming, flood_signals, item_history, removed_listings, sales, scan_changes
 from .action_board import catalog_identity, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices, evaluate_recipe
 from .freshness import assess
 from .metrics import read_scan_metrics
-from .recipe_graph import RecipeGraph, label_routes, route_catalog
+from .recipe_graph import RecipeGraph, label_routes, made_by_label, route_catalog
 from .recipe_import import GAME_PATHS
 from .session_options import base_signal
 from .skillups import build_skillups
@@ -29,6 +29,7 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
               'movement': {'note': 'No earlier scan', 'rows': [], 'comparison': None},
               'removals': {'pair': None, 'rows': [], 'note': 'Fewer than two eligible scans.'}}
     if manifest is None:
+        result["market"] = market_page(result, {})
         return result
     snapshot = arguments['snapshot']
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
@@ -37,6 +38,7 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
         metrics = read_scan_metrics(db, config, snapshot['snapshot_id']) or []
         roles = flood_signals.catalog_roles(selected)
         floods = flood_signals.top_lists(flood_signals.signals(db, config, sorted(roles), now), roles)
+        histories = item_history.histories(db, config, sorted(roles))
         movement = scan_movement(db, config, selected, now)
         removals = removed_listings.top_removals(db, config, sorted(
             {item for catalog in selected for item in catalog['items_by_id']}))
@@ -48,6 +50,7 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
                   vendors=arguments['vendor_prices'], freshness=assess(snapshot, now, config['max_age_hours']),
                   recipes=recipe_rows(selected, arguments, characters),
                   demand=skill_demand(selected))
+    result["market"] = market_page(result, histories)
     return result
 
 
@@ -202,6 +205,7 @@ def item_farming(config, result, item_id, floods):
                              'spots': [s for s in history['spots']
                                        if any(i['item_id'] == item_id for i in s['items'])]}
         if history['rows'] or history['spots']:
+            history['spots'] = [farming_spot(s, history.get('npc_names', {})) for s in history['spots']]
             characters.append({'character': identity, 'farming': history})
     return characters
 
@@ -243,3 +247,99 @@ def captured_qualities(db, config, snapshot_id):
         FROM scan_listings WHERE {predicate} AND snapshot_id=?
         GROUP BY item_id, variant_id, variant_state""", [*scope, snapshot_id]).fetchall()
     return {(item, variant, state): value for item, variant, state, value in rows}
+
+
+def identity(row):
+    return row['item_id'], row.get('variant_id'), row.get('variant_state')
+
+
+def grid_rows(result, histories):
+    """Snapshot identities, catalog roles and stored history; missing evidence stays null."""
+    roles = flood_signals.catalog_roles(result['catalogs'])
+    signals = {identity(r): r for r in result.get('floods', {}).get('rows', [])}
+    metrics = {identity(r): r for r in result['metrics']}
+    rows = []
+    for observed in result['items']:
+        key = identity(observed)
+        signal, metric = signals.get(key), metrics.get(key, {})
+        typical = signal['overshoot']['typical_copper'] if signal else None
+        price = observed['min_buyout']
+        points = histories.get(observed['item_id'], {}).get('series', {}).get(key, [])
+        spark = [p['min_buyout'] if p else None for p in points]
+        role = roles.get(observed['item_id'], '')
+        rows.append({'item_id': observed['item_id'], 'name': observed['item_name'],
+                     'variant_id': key[1], 'variant_state': key[2], 'quality': observed.get('quality'),
+                     'price_copper': price, 'typical_copper': typical,
+                     'gap_copper': price - typical if price and typical else None,
+                     'gap_percent': (price - typical) * 100 / typical if price and typical else None,
+                     'roles': (['materials'] if 'material' in role else []) +
+                              (['crafts'] if 'output' in role else []) +
+                              (['intermediates'] if 'material' in role and 'output' in role else []),
+                     'listings': metric.get('listings'), 'units': metric.get('units'),
+                     'signal': signal, 'sparkline': spark})
+    return rows
+
+
+def market_page(result, histories):
+    floods = result.get('floods', {})
+    overshoots = floods.get('overshoots', [])
+    return {'rows': grid_rows(result, histories),
+            'pulse': {'cheap': [r for r in overshoots if r['overshoot']['label'] == 'cheap'],
+                      'high': [r for r in overshoots if r['overshoot']['label'] == 'high'],
+                      'early': result['removals']['rows']},
+            'removals': result['removals'], 'movement': result['movement'],
+            'floods': {k: floods.get(k) for k in ('settings', 'scan', 'freshness', 'note')},
+            'chain_count': len(flood_signals.catalog_roles(result['catalogs'])),
+            'warning': result['warning'], 'note': '' if result['snapshot'] else
+            'No saved snapshot. Use Data to import complete priced scans.'}
+
+
+def chain_recipe(row, item_id):
+    """UI-09 facts formerly assembled only in the NiceGUI crafting panel."""
+    recipe, value, catalog = row['recipe'], row['value'], row['catalog']
+    output = recipe['output_item_id']
+    return {'item_id': output, 'name': catalog['items_by_id'][output]['name'],
+            'output_quantity': recipe['output_quantity'], 'profession': catalog['profession'],
+            'quantity': sum(i['quantity'] for i in recipe['inputs'] if i['item_id'] == item_id),
+            'profit_copper': value['profit_copper'], 'reason': value['action'],
+            'materials': [m | {'maker': made_by_label(m) if m.get('profession') else ''}
+                          for m in row['materials']], 'characters': row['characters'],
+            'status': row['status'], 'warnings': value.get('catalog_warnings', []),
+            'vendor_capped': value.get('vendor_capped', False),
+            'vendor_price_cap_copper': value.get('vendor_price_cap_copper'),
+            'expanded': [{'item_id': i, 'name': catalog['items_by_id'][i]['name'], 'quantity': n}
+                         for i, n in value.get('expanded_materials', {}).items()]}
+
+
+def item_chain(result, item_id):
+    page = item_page(result, item_id)
+    return {'in_chain': page['in_chain'], 'demand': page['demand'],
+            **{key: [chain_recipe(r, item_id) for r in page[key]] for key in ('made_from', 'used_in')}}
+
+
+def item_activity(config, result, item_id, now):
+    summary = item_summary(config, result, item_page(result, item_id), now)
+    return {key: summary[key] for key in ('your_sales', 'unidentified_sales', 'sales_error', 'held',
+            'at_least', 'captures', 'holdings', 'holdings_warning', 'farming', 'wowhead_url')}
+
+
+def chosen_identity(page, summary, variant):
+    """An explicitly selected snapshot identity never borrows base prices, supply or quality."""
+    if variant is None:
+        return summary['observed'] or {}, summary['signal'] or {}, summary['metrics']
+    state, variant_id = variant
+    def match(row):
+        return row.get('variant_state') == state and row.get('variant_id') == variant_id
+    return (next((r for r in page['observed'] if match(r)), {}),
+            next((r for r in summary['floods']['rows'] if match(r)), {}),
+            next((r for r in page['metrics'] if match(r)), {}))
+
+
+def farming_spot(spot, names):
+    """Display names and position formerly confined to the native item farming panel."""
+    def mob(npc):
+        return (f'{names[npc]} (NPC {npc})' if npc in names else f'NPC {npc}') if npc else 'Gathering · zone only'
+    cell = spot.get('cell')
+    half = spot['cell_percent'] // 2
+    return spot | {'mob': mob(spot['npc_id']), 'also_looted_labels': [mob(n) for n in spot['also_looted']],
+                   'position': f'around {cell[0] + half}, {cell[1] + half}' if cell else '—'}

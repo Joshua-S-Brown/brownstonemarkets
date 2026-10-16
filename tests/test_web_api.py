@@ -205,3 +205,218 @@ def test_search_ranks_exact_id_and_prefix_first_and_caps_hits(client, monkeypatc
     assert names[0] == 'Linen Cloth'  # Prefix before "Bolt of Linen Cloth".
     monkeypatch.setattr(market, 'SEARCH_LIMIT', 1)
     assert len(browser.get('/api/search?q=linen').json()) == 1
+
+
+def test_market_grid_catalog_roles_prices_sparkline_and_lazy_item_reads(client, monkeypatch):
+    from brownstone import item_history as ih
+    from brownstone import market_explorer as me
+    browser, _ = client
+    def forbidden(*args):
+        raise AssertionError('Item-only history/holdings must not load on Market home')
+    monkeypatch.setattr(ih, 'load_history', forbidden)
+    monkeypatch.setattr(me, 'item_summary', forbidden)
+    page = browser.get('/api/market').json()
+    rows = {r['item_id']: r for r in page['rows']}
+    assert rows[2589]['price_copper'] == 11
+    assert rows[2589]['sparkline'] == [10, 11]
+    assert rows[2589]['roles'] == ['materials']
+    assert rows[2996]['roles'] == ['materials', 'crafts', 'intermediates']
+    assert rows[2576]['roles'] == ['crafts']
+    assert rows[99999]['price_copper'] is None and rows[99999]['roles'] == []
+    assert rows[99999]['gap_copper'] is None
+    assert page['movement']['rows'][0]['change']['min_buyout'] == 1
+    assert page['evidence']['source_id']
+
+
+def test_history_ladder_picker_gaps_no_buyout_errors_and_chain_routes(client, monkeypatch):
+    from brownstone import item_history as ih
+    browser, _ = client
+    history = browser.get('/api/items/2589/history').json()
+    assert [p['metrics']['min_buyout'] for p in history['points']] == [10, 11]
+    assert history['points'][0]['finished_at'].endswith('+00:00')
+    assert history['removals']['pairs'] and history['removals_error'] is None
+    newest = browser.get('/api/items/2589/ladder').json()
+    assert newest['rows'] == [dict(price_copper=11, listings=1, units=11, cumulative_units=11)]
+    assert newest['zoom_copper'] == 11
+    assert browser.get('/api/items/2589/ladder?scan=scan-0').json()['rows'][0]['units'] == 10
+    assert browser.get('/api/items/2589/ladder?scan=foreign').status_code == 400
+    unpriced = browser.get('/api/items/99999/ladder').json()
+    assert unpriced['no_buyout_listings'] == 1 and unpriced['no_buyout_units'] == 1
+    assert unpriced['rows'] == [] and unpriced['zoom_copper'] is None
+    assert all(p['metrics'] is None for p in browser.get('/api/items/123456/history').json()['points'])
+    shirt = browser.get('/api/items/2576/chain').json()
+    assert [r['item_id'] for r in shirt['made_from'][0]['materials']] == [2996, 2589, 2320, 2324]
+    assert shirt['made_from'][0]['materials'][1]['quantity'] == 2
+    assert shirt['made_from'][0]['materials'][1]['depth'] == 1
+    bolt = browser.get('/api/items/2996/chain').json()
+    assert bolt['made_from'][0]['profit_copper'] is None
+    assert 'Intermediate' in bolt['made_from'][0]['reason']
+    assert bolt['used_in'][0]['quantity'] == 1 and bolt['demand']
+    assert bolt['used_in'][0]['characters'][0]['craft_status'] == 'Unknown'
+    assert not browser.get('/api/items/99999/chain').json()['in_chain']
+    def broken(*args):
+        raise OSError('locked fixture')
+    monkeypatch.setattr(ih, 'load_ladder', broken)
+    assert browser.get('/api/items/2589/ladder').status_code == 503
+    monkeypatch.setattr(ih, 'load_history', broken)
+    assert 'Use Data' in browser.get('/api/items/2589/history').json()['detail']
+    assert browser.get('/api/items/2589').status_code == 200
+
+
+@pytest.mark.parametrize('key', ['source_id', *MARKET_KEYS])
+def test_new_market_endpoints_never_cross_scope(client, monkeypatch, key):
+    browser, source = client
+    monkeypatch.setattr(context, 'enabled', lambda: [source | {key: 'foreign'}])
+    assert browser.get('/api/market').json()['rows'] == []
+    assert browser.get('/api/items/2589/history').json()['points'] == []
+    assert browser.get('/api/items/2589/ladder').status_code == 400
+    activity = browser.get('/api/items/2589/activity').json()
+    assert activity['held'] is None and activity['your_sales'] == [] and activity['farming'] == []
+
+
+def test_selected_variant_prices_units_quality_and_refresh_never_use_base(client, tmp_path):
+    from test_scan_v3 import rich
+    from test_scans import FINISHED, NOW, write_scans
+
+    from brownstone.pipeline import import_scans
+    browser, source = client
+    import_scans(source, write_scans(tmp_path / 'variants.lua', rich(finished=FINISHED + 60)), now=NOW)
+    hits = browser.get('/api/search?q=6538').json()
+    values = []
+    for hit in hits:
+        identity = json.dumps([hit['variant_state'], hit['variant_id']])
+        item = browser.get('/api/items/6538', params={'variant': identity}).json()
+        row = next(r for r in browser.get('/api/market').json()['rows']
+                   if r['item_id'] == 6538 and r['variant_id'] == hit['variant_id'] and
+                   r['variant_state'] == hit['variant_state'])
+        assert (item['price_copper'], item['units'], item['quality']) == (
+            row['price_copper'], row['units'], row['quality'])
+        values.append(item['price_copper'])
+    assert len(set(values)) > 1
+    assert browser.get('/api/items/6538', params={'variant': '["variant", "not-observed"]'}).json()[
+        'price_copper'] is None
+    for invalid in ['invalid', '{}', 'null', '["unsupported", null]', '["base", 1]']:
+        assert browser.get('/api/items/6538', params={'variant': invalid}).status_code == 400
+
+
+def test_activity_sales_holdings_failures_and_farming_preserve_other_evidence(client, monkeypatch):
+    from test_farming import loot
+    from test_sales import invoice, posted, returned
+
+    from brownstone import market_explorer as me
+    from brownstone import sales
+    browser, source = client
+    result = context.explorer(source)
+    result['characters'] = {('Alpha', 'Realm', 'Alliance'): {'observations':
+        loot(0, item=2589) + loot(150, item=2589) + loot(300, item=2589)}}
+    data = sales.project([*posted(), invoice(), returned(at=2200), invoice(name='Unknown', at=2300)],
+                         {2589: {'Linen Cloth'}})
+    monkeypatch.setattr(me.sales, 'load', lambda c: data)
+    activity = browser.get('/api/items/2589/activity').json()
+    assert activity['your_sales'][0]['sold'] == 5 and activity['your_sales'][0]['expired'] == 1
+    assert activity['unidentified_sales'] == 1
+    assert activity['farming'][0]['farming']['rows'][0]['units_per_hour'] == 36
+    assert activity['wowhead_url'] == 'https://www.wowhead.com/forever/item=2589'
+    def broken(*args):
+        raise OSError('busy fixture')
+    monkeypatch.setattr(me.sales, 'load', broken)
+    monkeypatch.setattr(me, 'item_floods', broken)
+    item = browser.get('/api/items/2589').json()
+    assert item['price_copper'] == 11 and 'busy fixture' in item['details']['floods_error']
+    assert 'busy fixture' in browser.get('/api/items/2589/activity').json()['sales_error']
+    monkeypatch.setattr(me, 'item_removals', broken)
+    h = browser.get('/api/items/2589/history').json()
+    assert 'busy fixture' in h['removals_error'] and len(h['points']) == 2
+
+
+def test_market_pulse_matches_shared_lists_and_reads_batch_once(tmp_path, monkeypatch):
+    import duckdb
+    from test_scans import NOW
+
+    from brownstone import item_history as ih
+    from brownstone import market_explorer as me
+    source, catalog = explorer_fixture(tmp_path, count=6)
+    source['flood_min_days'] = 1
+    with duckdb.connect(str(source['data_dir'] / 'brownstone.duckdb')) as db:
+        db.execute("UPDATE scan_metrics SET listings=10,min_buyout=6 WHERE scan_id='scan-5' AND item_id=2589")
+        db.execute("UPDATE scan_metrics SET listings=3,min_buyout=200 WHERE scan_id='scan-5' AND item_id=2996")
+        db.execute("UPDATE scan_listings SET time_left=4 WHERE scan_id='scan-4'")
+    calls = []
+    real = ih._metrics_by_scan
+    def tracked(*args):
+        calls.append(args[-1])
+        return real(*args)
+    monkeypatch.setattr(ih, '_metrics_by_scan', tracked)
+    r = me.load_explorer(source, [catalog], NOW)
+    assert len(calls) == 1 and set(calls[0]) == set(catalog['items_by_id'])
+    assert r['market']['pulse']['cheap'] + r['market']['pulse']['high'] == r['floods']['overshoots']
+    assert r['market']['pulse']['early'] == r['removals']['rows']
+    assert r['market']['pulse']['cheap'][0]['item_id'] == 2589
+    assert r['market']['pulse']['high'][0]['item_id'] == 2996
+    assert r['market']['pulse']['early'][0]['early']['units'] == 14
+    assert r['market']['movement']['comparison']['gap'].total_seconds() == 3600
+
+
+def test_summary_best_use_vendor_prices_and_holdings_keep_exact_base(client, monkeypatch):
+    from copy import deepcopy
+
+    from brownstone import market_explorer as me
+    browser, source = client
+    r = context.explorer(source)
+    r['vendors'][2589] = 5
+    r['catalogs'][0]['items_by_id'][2589]['vendor_price_copper'] = 8
+    for recipe in r['recipes']:
+        recipe['value']['profit_copper'] = 123 if recipe['recipe']['output_item_id'] == 2996 else 456
+    row = deepcopy(r['recipes'][0])
+    row['value'].update(profit_copper=None, action='missing prices')
+    r['recipes'].append(row)
+    for observed in r['items'] + r['metrics']:
+        if observed['item_id'] == 2589:
+            observed['variant_state'] = 'base'
+    variant = deepcopy(next(i for i in r['items'] if i['item_id'] == 2589))
+    variant.update(variant_id='suffix', variant_state='variant', min_buyout=99999)
+    r['items'].append(variant)
+    captures = [{'unknown': True, 'partial': True}]
+    monkeypatch.setattr(me, '_load_holdings', lambda *a: (({(2589, None, 'base'): 7,
+        (2589, 'suffix', 'variant'): 99}, {}, captures, []), None))
+    item = browser.get('/api/items/2589').json()
+    assert item['price_copper'] == 11 and item['held'] == 7 and item['at_least']
+    assert item['vendor_buy'] == [8] and item['vendor_sell'] == 5
+    assert item['used_in']['profit_copper'] == 123
+    assert len(item['details']['identities']) == 2
+    selected = browser.get('/api/items/2589', params={'variant': '["variant", "suffix"]'}).json()
+    assert selected['price_copper'] == 99999 and selected['held'] is None
+    assert selected['used_in']['profit_copper'] is None
+
+
+def test_web_tab_presence_follows_socket_lifetime_and_requires_source(client):
+    from fastapi import WebSocketDisconnect
+
+    from api import presence
+    browser, source = client
+    assert not presence.connected
+    with browser.websocket_connect('/api/presence?source=' + source['source_id']):
+        assert len(presence.connected) == 1
+    assert not presence.connected
+    with pytest.raises(WebSocketDisconnect), browser.websocket_connect('/api/presence?source=disabled'):
+        pass
+    assert not presence.connected
+
+
+def test_market_cache_rebuilds_on_config_file_and_source_setting_change(client, monkeypatch, tmp_path):
+    browser, source = client
+    monkeypatch.setattr(context, 'ROOT', tmp_path)
+    folder = tmp_path / 'config'
+    folder.mkdir()
+    builds = []
+    real = context.market_explorer.load_explorer
+    monkeypatch.setattr(context.market_explorer, 'load_explorer', lambda *a: builds.append(1) or real(*a))
+    browser.get('/api/market')
+    browser.get('/api/market')
+    assert len(builds) == 1
+    (folder / 'evidence.toml').write_text('changed = true')
+    browser.get('/api/market')
+    assert len(builds) == 2
+    source['flood_min_days'] = 1
+    browser.get('/api/market')
+    assert len(builds) == 3

@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Popover from "@radix-ui/react-popover";
 import { get, type Sources } from "../api/client";
+import { Market } from "../places/market/Market";
 import { Inspector } from "./Inspector";
 import { Palette, places, placeURL } from "./Palette";
 import { EmptyState, ErrorState, Pill, Tip } from "../ui/parts";
@@ -45,10 +46,32 @@ export function App() {
   });
   const waiting = inventory.data?.waiting,
     waitingError = inventory.data?.waiting_error;
+  useEffect(() => {
+    if (!source) return;
+    let socket: WebSocket | undefined;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+    const connect = () => {
+      const url = new URL("/api/presence", window.location.origin);
+      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      url.searchParams.set("source", source);
+      socket = new WebSocket(url);
+      socket.onclose = () => {
+        if (!stopped) retry = setTimeout(connect, 5000);
+      };
+    };
+    connect();
+    return () => {
+      stopped = true;
+      clearTimeout(retry);
+      socket?.close();
+    };
+  }, [source]);
   function choose(id: string) {
     const next = new URLSearchParams(params);
     next.set("source", id);
     next.delete("inspect");
+    next.delete("variant");
     setParams(next);
   }
   return (
@@ -144,11 +167,17 @@ export function App() {
             <Theme />
           </header>
           <main className={styles["workspace"]}>
-            <p className={styles["eyebrow"]}>Your saved market</p>
-            <h1>Brownstone workspace</h1>
-            <p className={styles["muted"]}>
-              What should I do today to make gold?
-            </p>
+            {window.location.pathname !== "/app/market" && (
+              <p className={styles["eyebrow"]}>Your saved market</p>
+            )}
+            {window.location.pathname !== "/app/market" && (
+              <h1>Brownstone workspace</h1>
+            )}
+            {window.location.pathname !== "/app/market" && (
+              <p className={styles["muted"]}>
+                What should I do today to make gold?
+              </p>
+            )}
             {query.error ? (
               <ErrorState
                 source={source}
@@ -165,6 +194,8 @@ export function App() {
                   ? "Several sources are enabled. Choose one above to browse its saved evidence."
                   : "No sources are enabled. Enable a source in your local configuration, then reload."}
               </EmptyState>
+            ) : window.location.pathname === "/app/market" ? (
+              <Market source={source} />
             ) : (
               <EmptyState title="Find an item. Follow the evidence.">
                 Search for an item or character with ⌘K. Each place opens its

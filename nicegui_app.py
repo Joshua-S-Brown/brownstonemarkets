@@ -10,14 +10,14 @@ from urllib.parse import urlencode
 from nicegui import Client, app, ui
 
 from api import install as install_web
+from api.presence import connected as web_tabs
 from brownstone import config as configuration
 from brownstone import pipeline, recipe_catalogs
 from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences, source_label
 from brownstone.today_loading import load_today_characters
 from views import nicegui_theme as theme
 from views.nicegui_import import render as render_import
-from views.nicegui_market import render as render_market
-from views.nicegui_navigation import back_link, read_origin
+from views.nicegui_navigation import back_link, market_url, read_origin
 from views.nicegui_stock import render as render_stock
 from views.nicegui_team import render as render_team
 from views.nicegui_today import render
@@ -63,7 +63,10 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
         return
     ui.context.client.content.classes('bs-main')
     origin = read_origin(origin_place, origin_tab, origin_view, origin_item, origin_name)
-    back_link(chosen, origin if place in ('Market', 'Team') else {})
+    if place == 'Market':
+        ui.navigate.to(market_url(chosen, item, origin))
+        return
+    back_link(chosen, origin if place == 'Team' else {})
     with ui.column().classes('gap-1'):
         ui.label(place).classes('bs-title')
         ui.label(QUESTIONS[place]).classes('bs-question')
@@ -84,9 +87,6 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
     if place == 'Stock':
         render_stock(chosen, read_catalogs())
         return
-    if place == 'Market':
-        render_market(chosen, read_catalogs(), item, origin)
-        return
     character_data, warning = load_today_characters(chosen)
     if warning:
         ui.label(warning)
@@ -104,7 +104,8 @@ def header(sources, game, source, place, tab):
         if chosen and 'source' not in changes:  # a new source keeps its own saved view
             values['view'] = app.storage.tab.get('today-plan-' + chosen['source_id'], {}).get('view', 'Today plan')
         values.update(changes)
-        ui.navigate.to('/?' + urlencode(values))
+        ui.navigate.to(market_url(chosen) if values['place'] == 'Market' and chosen
+                       else '/?' + urlencode(values))
 
     with ui.header().classes('p-0'), ui.row().classes('bs-bar'):
         ui.label('Brownstone').classes('bs-brand')
@@ -203,7 +204,7 @@ class BrowserIdle:
         self.disconnected_since = time.monotonic()
 
     def check(self):
-        if any(client.has_socket_connection for client in Client.instances.values()):
+        if web_tabs or any(client.has_socket_connection for client in Client.instances.values()):
             self.disconnected_since = None
         elif self.disconnected_since is None:
             self.disconnected_since = time.monotonic()

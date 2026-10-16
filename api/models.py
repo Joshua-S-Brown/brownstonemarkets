@@ -61,3 +61,84 @@ class Item(BaseModel):
     made_from: BestUse
     evidence: Evidence
     details: dict[str, Any]
+
+
+class MarketRow(BaseModel):
+    item_id: int
+    name: str
+    variant_id: str | None
+    variant_state: str | None
+    quality: int | None
+    price_copper: int | None
+    typical_copper: int | None
+    gap_copper: int | None
+    gap_percent: float | None
+    roles: list[str]
+    listings: int | None
+    units: int | None
+    signal: dict[str, Any] | None
+    sparkline: list[int | None]
+
+
+class Market(BaseModel):
+    rows: list[MarketRow]
+    pulse: dict[str, list[dict[str, Any]]]
+    removals: dict[str, Any]
+    movement: dict[str, Any]
+    floods: dict[str, Any]
+    chain_count: int
+    warning: str | None
+    note: str
+    evidence: Evidence
+
+
+class HistoryPoint(BaseModel):
+    scan_id: str
+    finished_at: str
+    metrics: dict[str, Any] | None
+
+
+class History(BaseModel):
+    removals: dict[str, Any]
+    removals_error: str | None
+    scans: list[dict[str, Any]]
+    points: list[HistoryPoint]
+    other_identities: int
+    note: str
+
+
+class LadderRow(BaseModel):
+    price_copper: int
+    listings: int
+    units: int
+    cumulative_units: int
+
+
+class Ladder(BaseModel):
+    scan: dict[str, Any]
+    rows: list[LadderRow]
+    no_buyout_listings: int
+    no_buyout_units: int
+    note: str
+    freshness: dict[str, Any]
+    zoom_copper: int | None
+
+
+class Chain(BaseModel):
+    in_chain: bool
+    demand: list[dict[str, Any]]
+    made_from: list[dict[str, Any]]
+    used_in: list[dict[str, Any]]
+
+
+class Activity(BaseModel):
+    your_sales: list[dict[str, Any]]
+    unidentified_sales: int
+    sales_error: str | None
+    held: int | None
+    at_least: bool
+    captures: list[dict[str, Any]]
+    holdings: list[dict[str, Any]]
+    holdings_warning: str | None
+    farming: list[dict[str, Any]]
+    wowhead_url: str

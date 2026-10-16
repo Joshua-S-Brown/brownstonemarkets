@@ -9,6 +9,20 @@ afterEach(() => {
   localStorage.clear();
 });
 it("requires explicit source choice, preserves it in place links and remembers the theme", async () => {
+  const sockets: { url: URL; closed: boolean }[] = [];
+  vi.stubGlobal(
+    "WebSocket",
+    class {
+      entry: { url: URL; closed: boolean };
+      constructor(url: URL) {
+        this.entry = { url, closed: false };
+        sockets.push(this.entry);
+      }
+      close() {
+        this.entry.closed = true;
+      }
+    },
+  );
   const user = userEvent.setup();
   const option = {
     source_id: "one",
@@ -32,7 +46,7 @@ it("requires explicit source choice, preserves it in place links and remembers t
       }),
     })),
   );
-  render(
+  const rendered = render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter>
         <App />
@@ -54,4 +68,7 @@ it("requires explicit source choice, preserves it in place links and remembers t
   await user.selectOptions(screen.getByLabelText("Theme"), "light");
   expect(localStorage.getItem("brownstone-theme")).toBe("light");
   expect(document.documentElement.dataset.theme).toBe("light");
+  expect(sockets[0]?.url.searchParams.get("source")).toBe("one");
+  rendered.unmount();
+  expect(sockets.every((s) => s.closed)).toBe(true);
 });

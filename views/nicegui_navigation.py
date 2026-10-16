@@ -51,3 +51,21 @@ def set_href(link, target):
 def today_config(config, tab, session):
     return {**config, '_origin': {'origin_place': 'Today', 'origin_tab': tab,
                                  'origin_view': session.get('view', 'Today plan')}, '_location_updates': []}
+
+
+def market_url(config, item_id=None, origin=None):
+    return '/app/market?' + urlencode({'source': config['source_id'],
+        **({'inspect': item_id} if item_id is not None else {}),
+        **(origin if origin is not None else config.get('_origin', {}))})
+
+
+def item_url(config, item_id, origin=None):
+    return market_url(config, item_id, origin)
+
+
+def item_link(config, item_id, name, origin=None):
+    link = ui.link(name, item_url(config, item_id, origin)).classes(
+        'min-h-[44px] inline-flex items-center underline').style('color:var(--brand)')
+    if '_location_updates' in config:
+        config['_location_updates'].append(lambda: set_href(link, item_url(config, item_id, origin)))
+    return link

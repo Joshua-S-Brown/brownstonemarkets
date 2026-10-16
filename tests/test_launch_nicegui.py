@@ -215,3 +215,28 @@ def test_fingerprint_covers_surviving_code_without_old_entry(monkeypatch, tmp_pa
         moved = tmp_path / (name + '.moved.py')
         (tmp_path / name).rename(moved)
         assert launch_nicegui.code_fingerprint() != before
+
+
+def test_web_socket_keeps_browser_fallback_alive(monkeypatch):
+    import nicegui_app
+    from api import presence
+    clock = [0]
+    stopped = []
+    monkeypatch.setattr(nicegui_app.time, 'monotonic', lambda: clock[0])
+    monkeypatch.setattr(nicegui_app.Client, 'instances', {})
+    monkeypatch.setattr(nicegui_app.app, 'shutdown', lambda: stopped.append(True))
+    tabs = {object()}
+    monkeypatch.setattr(nicegui_app, 'web_tabs', tabs)
+    assert not presence.connected
+    idle = nicegui_app.BrowserIdle()
+    clock[0] = 600
+    idle.check()
+    assert not stopped
+    tabs.clear()
+    idle.check()
+    clock[0] = 899
+    idle.check()
+    assert not stopped
+    clock[0] = 900
+    idle.check()
+    assert stopped

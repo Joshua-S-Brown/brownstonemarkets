@@ -14,6 +14,8 @@ export const places = [
   "Ledger",
 ] as const;
 export function placeURL(place: string, source: string) {
+  if (place === "Market")
+    return "/app/market?" + new URLSearchParams({ source });
   return (
     "/?" +
     new URLSearchParams({
@@ -117,7 +119,13 @@ export function Palette({ source }: { source: string }) {
                       onSelect={() => {
                         inspect(
                           hit.item_id
-                            ? { item: hit.item_id }
+                            ? {
+                                item: hit.item_id,
+                                variant: JSON.stringify([
+                                  hit.variant_state,
+                                  hit.variant_id,
+                                ]),
+                              }
                             : { character: hit.name },
                         );
                         setOpen(false);

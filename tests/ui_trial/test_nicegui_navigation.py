@@ -1,11 +1,10 @@
 """STORY-076: URL return paths through the offline app harness."""
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from nicegui import app, ui
 from test_farming import loot
 
-from .test_nicegui_market import market_app
 from .test_nicegui_team import team_app
 
 pytestmark = pytest.mark.asyncio
@@ -33,25 +32,8 @@ async def test_session_farming_back_chain_refresh_loaded(user, tmp_path, monkeyp
     assert query['origin_view'] == ['This session']
     assert query['origin_tab'] == ['Shopping list']
     assert query['source'] == [config['source_id']]
-    await user.open(target)
-    await user.should_see('← Back to Today · This session')
-    await user.open(target)  # refresh
-    await user.should_see('← Back to Today · This session')
-    await user.should_see('Find an item')
-    user.find(marker='market-search').type('3')
-    await user.should_see('matches')
-    chain = next(e._props['href'] for e in user.find(ui.link).elements if 'item=3&' in e._props['href'])
-    await user.open(chain)
-    await user.should_see('← Back to Today · This session')
-    back = href(user)
-    assert parse_qs(urlsplit(back).query)['tab'] == ['Shopping list']
-    await user.open(back)
-    await user.should_see('units/hour')
-    await user.should_see('Details for')
-    await user.open(back)
-    await user.should_see('units/hour')
-    assert user.find(marker='session-view').elements.pop().value == 'This session'
-    assert not any('back-link' in e._markers for e in user.client.elements.values())
+    assert urlsplit(target).path == '/app/market'
+    assert query['inspect'] == ['1']
 
 
 async def test_session_team_back_preserves_character_choices(user, tmp_path, monkeypatch):
@@ -92,46 +74,8 @@ async def test_plan_table_card_tab_view_changes_and_back(user, tmp_path, monkeyp
     await user.should_see('Details for')
     assert parse_qs(urlsplit(sell.rows[0]['_item_url']).query)['origin_view'] == ['This session']
     user.find(marker='session-view').elements.pop().set_value('Today plan')
-    await user.open(widget.rows[0]['_item_url'])
-    await user.should_see('← Back to Today · Sell')
-    await user.open(href(user))
-    await user.should_see('This session')
-    assert user.find(marker='session-view').elements.pop().value == 'Today plan'
-    assert next(iter(user.find(ui.tabs).elements)).value == 'Sell'
-
-
-async def test_market_item_chain_returns_to_first_item(user, tmp_path, monkeypatch):
-    market_app(tmp_path, monkeypatch)
-    await user.open('/?place=Market&item=2996')
-    await user.should_see('Made from')
-    assert not any('back-link' in e._markers for e in user.client.elements.values())
-    await user.open(href(user, 'Linen Cloth'))
-    await user.should_see('← Back to Market · Bolt of Linen Cloth')
-    await user.should_see('Used in')
-    await user.open(href(user, 'Bolt of Linen Cloth'))
-    await user.should_see('← Back to Market · Bolt of Linen Cloth')
-    back = href(user)
-    assert parse_qs(urlsplit(back).query)['item'] == ['2996']
-    await user.open(back)
-    await user.should_see('Made from')
-    assert not any('back-link' in e._markers for e in user.client.elements.values())
-
-
-@pytest.mark.parametrize('origin', [dict(origin_place='Elsewhere'),
-    dict(origin_place='Today', origin_tab='Bad', origin_view='This session'),
-    dict(origin_place='Today', origin_tab='Plan', origin_view='Bad'),
-    dict(origin_place='Market', origin_item='oops', origin_name='Bad'),
-    dict(origin_place='Market', origin_item='9' * 4400, origin_name='Bad'), {}])
-async def test_invalid_direct_and_place_tab_clear_origin(user, tmp_path, monkeypatch, origin):
-    team_app(tmp_path, monkeypatch)
-    await user.open('/?' + urlencode(dict(place='Market', item=1, **origin)))
-    await user.should_see('Find an item')
-    assert not any('back-link' in e._markers for e in user.client.elements.values())
-    await user.open('/?place=Team&origin_place=Today&origin_tab=Plan&origin_view=This+session')
-    await user.should_see('← Back to Today · This session')
-    user.find(marker='place-Market').click()
-    await user.should_see('Find an item')
-    assert not any('back-link' in e._markers for e in user.client.elements.values())
+    assert urlsplit(widget.rows[0]['_item_url']).path == '/app/market'
+    assert parse_qs(urlsplit(target).query)['inspect']
 
 
 async def test_toggle_replaces_url_and_refresh_loads_view(user, tmp_path, monkeypatch):
@@ -161,7 +105,8 @@ async def test_source_switch_keeps_each_source_view(user, tmp_path, monkeypatch)
     targets = []
     monkeypatch.setattr(ui.navigate, 'to', targets.append)
     user.find(marker='place-Market').click()
-    assert parse_qs(urlsplit(targets[-1]).query)['view'] == ['This session']
+    assert urlsplit(targets[-1]).path == '/app/market'
+    assert parse_qs(urlsplit(targets[-1]).query)['source'] == [config['source_id']]
     next(e for e in user.find(ui.select).elements if e.props.get('label') == 'Data source').set_value('other')
     query = parse_qs(urlsplit(targets[-1]).query)
     assert query['source'] == ['other'] and 'view' not in query

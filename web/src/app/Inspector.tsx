@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
 import { InspectorContext, type RecordRef } from "./InspectorContext";
+import { Origin } from "./Origin";
 import { ItemRecord } from "../records/ItemRecord";
 export function Inspector({
   source,
@@ -18,13 +19,19 @@ export function Inspector({
   const current: RecordRef | null = character
     ? { character }
     : Number.isSafeInteger(id) && id > 0
-      ? { item: id }
+      ? {
+          item: id,
+          ...(params.get("variant") ? { variant: params.get("variant")! } : {}),
+        }
       : null;
   function show(record: RecordRef | null) {
     setCharacter(record && "character" in record ? record.character : null);
     const next = new URLSearchParams(params);
     if (record && "item" in record) next.set("inspect", String(record.item));
     else next.delete("inspect");
+    if (record && "item" in record && record.variant)
+      next.set("variant", record.variant);
+    else next.delete("variant");
     setParams(next, { replace: true });
   }
   function open(record: RecordRef) {
@@ -58,14 +65,16 @@ export function Inspector({
               Record inspector
             </Dialog.Title>
             <div className={styles["record-actions"]}>
+              {stack.length === 0 && <Origin source={source} />}
               {stack.length > 0 && <button onClick={back}>← Back</button>}
               <Dialog.Close>Close ✕</Dialog.Close>
             </div>
             {current &&
               ("item" in current ? (
                 <ItemRecord
-                  key={source + current.item}
+                  key={source + current.item + current.variant}
                   id={current.item}
+                  variant={current.variant}
                   source={source}
                 />
               ) : (

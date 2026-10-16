@@ -29,8 +29,7 @@ from brownstone.today_warnings import REMOVAL_EVIDENCE
 from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
 from views import nicegui_theme as theme
 from views import today_rows as tr
-from views.nicegui_market import item_link, item_url
-from views.nicegui_navigation import VIEWS, set_href, today_config, today_location
+from views.nicegui_navigation import VIEWS, item_link, item_url, set_href, today_config, today_location
 from views.today_rows import vendor_cap_label, vendor_cap_suffix
 
 TABS = ['Plan', 'Shopping list', 'Sell', 'Queue', 'Extras']

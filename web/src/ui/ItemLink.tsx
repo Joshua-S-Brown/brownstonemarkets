@@ -4,10 +4,12 @@ export function ItemLink({
   id,
   name,
   quality = null,
+  variant,
 }: {
   id: number;
   name: string;
   quality?: number | null;
+  variant?: string;
 }) {
   const inspect = useInspector();
   return (
@@ -18,7 +20,7 @@ export function ItemLink({
           ? { color: `var(--q-${quality})` }
           : undefined
       }
-      onClick={() => inspect({ item: id })}
+      onClick={() => inspect(variant ? { item: id, variant } : { item: id })}
     >
       {name}
     </button>

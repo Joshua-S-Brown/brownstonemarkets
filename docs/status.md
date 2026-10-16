@@ -15,18 +15,28 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   scan inventory. Light/dark/system themes and bundled fonts work offline; narrow screens use bottom tabs.
   The launcher builds changed web sources, with a recoverable banner on failure or missing Node 24.
   `web/README.md` covers build/schema commands. Gates include the web checks on macOS; Windows
-  reports an explicit skip. No NiceGUI page has been removed.
+  reports an explicit skip. Market now lives in the web app (STORY-082).
 
-- **Item charts (STORY-021):** item Market tab adds stored price/supply history and an
-  eligible-scan listing ladder with cumulative-unit steps, sortable prices and separate no-buyout
-  counts. Rules: [UI-17](requirements.md#ui-17-item-price-history-and-listing-ladder-story-021);
-  contracts: design → Item charts. Offline tests: `tests/test_item_history.py` and
-  `tests/ui_trial/test_nicegui_item_history.py`. Forever beta currently has 28 points each for
-  Linen Cloth and Bolt of Linen Cloth; newest ladders match 333/7,416/25 and 175/3,080/17
-  listings/units/price levels respectively, with no no-buyout listings. Desktop (1280 px) and
-  narrow (390 px) Market tabs checked against copied data; charts fit without page overflow.
-  The ladder opens zoomed to the cheapest 95% of units, so outlier asks don't flatten it; the
-  slider and table still reach every level.
+- **Web Market (STORY-082):** `/app/market?source=` shows the three pulse lists and a sortable,
+  paginated catalog grid; search reaches every snapshot identity. Catalog-role chips, stored-lowest
+  sparklines and signal evidence keep identities separate. URL-backed records have Overview, Price
+  history, Listings, Made from and used in, and Our activity tabs. Selected identities carry `variant`
+  beside `inspect`; history/ladders and catalog routes explicitly describe base/compatible legacy.
+  Item links retain validated Today/Market origins; the NiceGUI Market place redirects to the web page.
+  The two NiceGUI Market/chart views are retired after comparison against copied Forever beta data.
+  `/api/market` shares the explorer cache and batches stored grid histories in one metrics read;
+  the item history, ladder, chain and activity routes read scoped evidence on demand. A web presence
+  socket keeps browser fallback alive while a React tab is connected. The header counts distinct
+  chain items listed now against all catalog-chain items. Evidence disclosures render as labelled
+  lists and tables (`web/src/ui/Evidence.tsx`), never raw JSON; Recharts loads with the first chart tab.
+  Offline checks: `tests/test_web_api.py`, `tests/test_market_explorer.py`, `tests/test_item_history.py`,
+  `tests/test_flood_signals.py`, `tests/test_removed_listings.py` and Market/record Vitest tests.
+  Beta scan `20261016T113727Z-eb77d0`: Linen Cloth and Bolt of Linen Cloth have 30 eligible points each;
+  newest base ladders match the former page at 219/5,538/17 and 70/947/14 listings/units/levels.
+  Neither ladder has no-buyout listings; 95% zoom ends are 30c and 100c. Pulse identities/order/values
+  match Market home's 5 cheap, 5 high and 10 early-removal rows. Checked at 1280 and 390 px without
+  page overflow; the grid/table scroll locally. Screenshots and comparison baseline remain ignored
+  under `work/story-082/`. No collection or imports were run.
 
 - **Item movements (STORY-034b):** Stock's Items area below Gold shows cached category totals,
   own-character mail, snapshot residuals and expandable entry provenance, using Stock's search.
@@ -50,7 +60,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   October 8, so ADDON-11/UI-15 excludes it; first readable capture is October 9 at 52c.
   Quests/flights remain other; timing attribution is evidence, not proof of hook success.
 
-- **App:** NiceGUI Today, Team, Market, Stock and Data → Import, with shared light theme,
+- **App:** NiceGUI Today, Team, Stock and Data → Import, with shared light theme,
   URL-only back links for Today item/Team links and Market item chains (STORY-076, UI-07);
   Today tab/view refresh persistence with This session loaded on URL entry,
   wrapping navigation, page information and Save-only Today settings (UI-07/08).
@@ -106,7 +116,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
   Item pages lead with a base-item decision summary, scoped holdings and own item farming evidence;
-  Summary/Crafting/Market/Identity and evidence tabs retain details. Three removal gaps lead,
+  Web record tabs and the evidence footer retain details. Three removal gaps lead,
   the remainder expand, skipped gaps are counted; market-wide lists stay on home (STORY-078, UI-09).
   UI-11 typical prices use equal-weight UTC daily medians, with days/scans evidence and
   `flood_min_days` history validation (STORY-072; rules in requirements → UI-11).

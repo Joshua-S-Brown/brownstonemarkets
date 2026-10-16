@@ -168,13 +168,11 @@ async def test_why_summary_order_and_details_retain_ids(user):
         assert value in text
 
 
-@pytest.mark.parametrize('market', [False, True])
-async def test_farming_caveat_once_from_both_page_callers(user, monkeypatch, market):
+async def test_farming_caveat_once_for_session(user, monkeypatch):
     from test_farming import loot
 
     from brownstone import farming, tier_levels
     from brownstone.freshness import assess
-    from views.nicegui_market import where_to_get
 
     history = farming.valued(farming.history(loot(1) + loot(151) + loot(301)), {}, [], .05)
     characters = [{'character': (name, 'Beta', 'Alliance'), 'farming': deepcopy(history)}
@@ -185,14 +183,11 @@ async def test_farming_caveat_once_from_both_page_callers(user, monkeypatch, mar
 
     @ui.page('/caveats')
     def page():
-        if market:
-            where_to_get(MARKET, {'farming': characters, 'wowhead_url': 'https://www.wowhead.com/classic/item=2770'})
-        else:
-            view.session_options({'characters': characters,
-                                  'tier_explanation': tier_levels.explanation({}, MARKET['game_version']),
-                                  'freshness': assess({'collected_at': NOW.isoformat()}, NOW, 24),
-                                  'signals': {'note': '', 'scan': None}, 'window': 25,
-                                  'snapshot': {'snapshot_id': 'fixture'}}, MARKET | {'max_age_hours': 24})
+        view.session_options({'characters': characters,
+                              'tier_explanation': tier_levels.explanation({}, MARKET['game_version']),
+                              'freshness': assess({'collected_at': NOW.isoformat()}, NOW, 24),
+                              'signals': {'note': '', 'scan': None}, 'window': 25,
+                              'snapshot': {'snapshot_id': 'fixture'}}, MARKET | {'max_age_hours': 24})
 
     await user.open('/caveats')
     labels = [e.text for e in user.find(ui.label).elements]

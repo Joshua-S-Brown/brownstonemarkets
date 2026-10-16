@@ -53,7 +53,7 @@ async def test_toggle_team_window_labels_links_and_plan_retained(user, tmp_path,
     await user.should_see('Recipe 33')
     await user.should_not_see('Recipe 31')
     links = user.find(ui.link).elements
-    assert any('place=Market' in e._props['href'] and 'item=3' in e._props['href'] for e in links)
+    assert any('/app/market?' in e._props['href'] and 'inspect=3' in e._props['href'] for e in links)
     assert any('place=Team' in e._props['href'] for e in links)
     user.find(marker='session-view').elements.pop().set_value('Today plan')
     assert [e.rows for e in user.find(kind=ui.table, marker='Craft').elements] == original

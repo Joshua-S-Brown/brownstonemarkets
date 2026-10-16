@@ -138,3 +138,11 @@ def test_read_only_wrappers_empty_tsm_and_unchanged_item_today_outputs(tmp_path)
     with duckdb.connect(str(database), read_only=True) as db:
         assert 'TSM' in ih.history(db, config | {'provider': 'tsm'}, 2996)['note']
         assert 'No eligible' in ih.history(db, config | {'source_id': 'other'}, 2996)['note']
+
+
+def test_zoom_cheapest_95_percent_keeps_table_outliers():
+    rows = [dict(price_copper=p, cumulative_units=c) for p, c in [(20, 90), (25, 96), (500000, 100)]]
+    assert ih.zoom_end(rows) == 25
+    assert ih.zoom_end(rows, 100) == 500000
+    assert ih.zoom_end([]) is None
+    assert len(rows) == 3
