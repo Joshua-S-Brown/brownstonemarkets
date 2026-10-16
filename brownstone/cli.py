@@ -49,6 +49,9 @@ def main() -> None:
     if sys.argv[1:2] == ["beta-report"]:
         beta_report_main(sys.argv[2:])
         return
+    if sys.argv[1:2] == ["after-play"]:
+        after_play_main(sys.argv[2:])
+        return
     parser = argparse.ArgumentParser(description="Collect TSM snapshots or import BrownstoneScan addon scans")
     parser.add_argument("--config", type=Path, default=ROOT / "config/market.toml")
     parser.add_argument("--input", type=Path,
@@ -94,6 +97,24 @@ def beta_report_main(argv: list[str]) -> None:
     folder, report, code = create_report(args.file, matches[0], ROOT / "work/beta-reports", args.previous)
     print(folder)
     print(", ".join(f"{report['totals'][status]} {status}" for status in ("pass", "warn", "fail")))
+    sys.exit(code)
+
+
+def after_play_main(argv: list[str]) -> None:
+    """After a play session: import new drops, report each changed latest drop, print only what changed."""
+    from .after_play import run
+    parser = argparse.ArgumentParser(prog="brownstone after-play", description=after_play_main.__doc__)
+    parser.add_argument("--config", type=Path, default=ROOT / "config/market.toml")
+    parser.add_argument("--source", help="Addon source with a drop folder (defaults to the enabled one)")
+    args = parser.parse_args(argv)
+    sources = read_sources(args.config, args.config.with_name(LOCAL_OVERRIDES))
+    matches = [s for s in sources if s["provider"] == ADDON_PROVIDER and s.get("drop_folder") and
+               (s["source_id"] == args.source if args.source else s["enabled"])]
+    if len(matches) != 1:
+        parser.error("Select one configured addon source that has a drop_folder with --source")
+    readme = (ROOT / "addon/README.md").read_text(encoding="utf-8")
+    lines, code = run(matches[0], ROOT / "work/after-play/state.json", ROOT / "work/beta-reports", readme)
+    print("\n".join(lines))
     sys.exit(code)
 
 

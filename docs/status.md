@@ -102,7 +102,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   targets and whole-stack buy/wait/unlisted estimates (Stock rules). Unknown bank is explicit.
 - **Data/CLI:** TSM ingestion and addon formats 1–4 within account format 6, snapshots/journal,
   bounded read-only preview, reviewed import, exact gzip archive and per-file drops.
-  CLI supports collect/import, --preview/--input/--scan, recipes and beta-report.
+  CLI supports collect/import, --preview/--input/--scan, recipes, beta-report and after-play.
   TSM and recipe refresh use the CLI. Watchlist engine/local files and Today/Import hits remain.
 - **Storage:** schema 11, metrics version 1, backed-up idempotent migrations. Sources retain
   full market/environment identity and never mix implicitly (DATA-03/08).
@@ -194,9 +194,23 @@ for all rates, object IDs and excluded stretches. Inspect stale/unknown labels, 
 evidence; preview never writes. A browser check
 uses `nicegui_app.py --data-dir /path/to/copied-data --port 8081`.
 
+### After a play session
+
+Once the drop has arrived, one command imports new drops through the normal import, runs the beta
+report on each machine's latest drop (and the local file) that changed, and prints only what is new,
+resolved or failing since the previous run, then eligible scans and the pending in-game checks from
+the addon README:
+
+```bash
+.venv/bin/python -m brownstone after-play
+```
+
+The previous run's state is `work/after-play/state.json`; delete it to see everything again. Exit 1
+means a failed check or import. Reports land in `work/beta-reports` as below.
+
 ### Beta report
 
-After logout/reload finishes writing:
+For one file, after logout/reload finishes writing:
 
 ```bash
 .venv/bin/python -m brownstone beta-report "/path/to/BrownstoneScan.lua" --source forever-us-normal-alliance-addon
