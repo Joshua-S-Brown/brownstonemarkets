@@ -7,7 +7,7 @@ Implement STORY-XXX from docs/backlog.md in this repo.
 
 Read AGENTS.md first and follow it. Then print the story with `python -m brownstone rules --story STORY-XXX`. Don't read docs/backlog.md, docs/requirements.md or docs/design.md whole: print the rules and design sections the story names with `python -m brownstone rules <RULE_ID>... --design "<heading>"` (`--list` shows every rule ID and heading). Look up any other rule you touch the same way. Don't restate or change rules beyond what the story asks; record new rules where the story says.
 
-Add the offline tests the story lists. Finish with `.venv/bin/python -m brownstone gates` passing (ruff, mypy, parallel pytest with coverage at or above the floor), with no new noqa comments. Don't commit.
+Add the offline tests the story lists. Finish with `.venv/bin/python -m brownstone gates` passing (ruff, mypy, parallel pytest with coverage at or above the floor), with no new noqa comments. Leave the story's section in docs/backlog.md: the review closes it. Don't commit.
 
 Report back with the whole report inside one fenced block opened with four backticks and `text` (````text … ````), so it copies in one click and code blocks inside it don't end it. The report covers:
 1. Summary of the change
