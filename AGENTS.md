@@ -17,8 +17,8 @@ Explicit user instructions take precedence. When a decision or implementation ch
 - Calculate in integer copper. Display gold using `brownstone/money.py`.
 - `brownstone/` must not import NiceGUI or download inside calculations. Display code goes in `views/`.
 - Never infer categories from names or commodity status. Never treat missing or zero prices as free.
-- Tests stay offline. Cover scope, units, freshness, deduplication and recipe quantities. Finish with `pytest --cov` (at or above the coverage floor), `ruff check .` and `mypy` passing. New functions stay within Ruff's complexity limit; never add a `# noqa: C901`.
-- Reusable session prompts (handing off a story, closing a story, full audit, backlog grooming) are in `docs/prompts/`.
+- Tests stay offline. Cover scope, units, freshness, deduplication and recipe quantities. Finish with `.venv/bin/python -m brownstone gates` passing: ruff, mypy, then `pytest -n auto --cov` at or above the coverage floor. Tests run in parallel, so keep them independent (own `tmp_path`, no fixed ports or shared files). New functions stay within Ruff's complexity limit; never add a `# noqa: C901`.
+- Reusable session prompts (handing off a story, reviewing and closing a story, full audit, backlog grooming) are in `docs/prompts/`.
 - Schema changes go through a new numbered migration in `storage.py`. Catalog value changes need source evidence.
 - Never `pip install` a package ad hoc. Declare it in `pyproject.toml` and pin it in `requirements.lock.txt`: CI installs only from the lock file, so an undeclared package passes locally and fails in CI.
 - The user commits and pushes manually. Leave changes uncommitted unless asked.

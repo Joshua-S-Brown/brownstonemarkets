@@ -53,7 +53,7 @@ def test_source_policy_rejects_partially_missing_upstream_time():
         normalize(raw, "classic-test", "snapshot", NOW, 24, allow_missing_updated_at=True)
 
 
-@pytest.mark.parametrize("raw,match", [
+BAD_DATA = [
     (b"wrong,column\n1,2", "Missing"),
     (HEADER.encode(), "no rows"),
     (csv([(1, 100, 50, 100, 100, NOW.isoformat())] * 2), "Duplicate"),
@@ -62,7 +62,11 @@ def test_source_policy_rejects_partially_missing_upstream_time():
     (csv([(1, 100, 50, 100, 100, (NOW-timedelta(days=2)).isoformat())]), "stale"),
     (csv([(1, 100, 50, 100, 100, (NOW+timedelta(hours=1)).isoformat())]), "future"),
     (csv([(1, "", 50, 100, 100, NOW.isoformat())]), "null"),
-])
+]
+
+
+# Name cases by the expected error, not the time-stamped CSV, so xdist workers collect the same IDs.
+@pytest.mark.parametrize("raw,match", BAD_DATA, ids=[match for _, match in BAD_DATA])
 def test_bad_data(raw, match):
     with pytest.raises(ValueError, match=match):
         norm(raw)

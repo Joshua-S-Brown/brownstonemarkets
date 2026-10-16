@@ -20,6 +20,6 @@ Rules:
 - Fix only clear, low-risk findings. List everything else for me with file:line, the impact and a suggested fix.
 - No behaviour or scope changes without asking. There is one app (UI-07 in docs/requirements.md); don't remove or add places, list any you think should change as a finding for me to decide.
 - Run anything touching real data against copies only.
-- At the end: pytest --cov at or above the floor, ruff check . and mypy must pass, and the docs must be updated.
+- At the end: `.venv/bin/python -m brownstone gates` must pass and the docs must be updated.
 - Leave everything uncommitted. Give me a summary, the before/after line counts, the list of open findings, a suggested commit message, and the tag to create after I commit: `git tag audit-<YYYY-MM-DD>`.
 ```

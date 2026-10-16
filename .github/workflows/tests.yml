@@ -20,4 +20,4 @@ jobs:
       - run: python -m mypy
       # NiceGUI user simulation stays offline.
       # Coverage report; fails below the fail_under floor in pyproject.toml.
-      - run: python -m pytest -p no:cacheprovider --cov -ra
+      - run: python -m pytest -p no:cacheprovider -n auto --cov -ra

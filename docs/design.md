@@ -66,7 +66,7 @@ frameworks/views. Calculation modules take supplied data/clock and do not downlo
 | today*, stock, watchlist | Funded plan/loading/evidence/settings, holdings/targets, retained hit engine |
 | freshness, money, navigation | Freshness, copper display, questions/experience order |
 | beta_report, beta_evidence, beta_markdown | Isolated evidence checks and private report |
-| cli, doc_sections | `python -m brownstone`: import, recipes, beta-report, rules lookup |
+| cli, doc_sections, backlog_close | `python -m brownstone`: import, recipes, beta-report, rules, close-story |
 
 ## Data contracts
 

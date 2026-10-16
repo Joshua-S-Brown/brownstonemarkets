@@ -43,17 +43,8 @@ def recipes_main(argv: list[str]) -> None:
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    if sys.argv[1:2] == ["recipes"]:
-        recipes_main(sys.argv[2:])
-        return
-    if sys.argv[1:2] == ["beta-report"]:
-        beta_report_main(sys.argv[2:])
-        return
-    if sys.argv[1:2] == ["after-play"]:
-        after_play_main(sys.argv[2:])
-        return
-    if sys.argv[1:2] == ["rules"]:
-        rules_main(sys.argv[2:])
+    if (command := SUBCOMMANDS.get(sys.argv[1] if len(sys.argv) > 1 else "")) is not None:
+        command(sys.argv[2:])
         return
     parser = argparse.ArgumentParser(description="Collect TSM snapshots or import BrownstoneScan addon scans")
     parser.add_argument("--config", type=Path, default=ROOT / "config/market.toml")
@@ -146,6 +137,36 @@ def rules_main(argv: list[str]) -> None:
         print(f"{error}\nRun `python -m brownstone rules --list` for the rule IDs and headings.", file=sys.stderr)
         sys.exit(1)
     print("\n\n".join(blocks))
+
+
+def gates_main(argv: list[str]) -> None:
+    """Run ruff, mypy and the parallel tests with coverage; stop at the first failure and summarise."""
+    from .gates import run_gates
+    parser = argparse.ArgumentParser(prog="python -m brownstone gates", description=gates_main.__doc__)
+    parser.add_argument("--lint-only", action="store_true", help="Only ruff and mypy (the pre-commit hook)")
+    args = parser.parse_args(argv)
+    lines, code = run_gates(args.lint_only)
+    print("\n".join(lines))
+    sys.exit(code)
+
+
+def close_story_main(argv: list[str]) -> None:
+    """Remove a finished story from docs/backlog.md, add it to Done and renumber Order."""
+    from . import backlog_close, doc_sections
+    parser = argparse.ArgumentParser(prog="python -m brownstone close-story", description=close_story_main.__doc__)
+    parser.add_argument("story_id", metavar="STORY_ID", help="A docs/backlog.md story such as STORY-062 or 062")
+    parser.add_argument("--docs", type=Path, default=doc_sections.DOCS, help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    try:
+        changes = backlog_close.close_story_file(args.story_id, args.docs)
+    except (LookupError, ValueError) as error:
+        print(f"Nothing changed: {error}", file=sys.stderr)
+        sys.exit(1)
+    print("\n".join(changes))
+
+
+SUBCOMMANDS = {"recipes": recipes_main, "beta-report": beta_report_main, "after-play": after_play_main,
+               "rules": rules_main, "gates": gates_main, "close-story": close_story_main}
 
 
 def _select_source(args: argparse.Namespace) -> Source:

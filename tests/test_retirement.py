@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from brownstone.gates import DOC_SIZE_LIMITS
+
 ROOT = Path(__file__).resolve().parents[1]
 BLOCK_STREAMLIT = '''
 import importlib.abc
@@ -32,7 +34,7 @@ assert not any(n.split('.')[0] == 'streamlit' for n in sys.modules)
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize('command', [[], ['recipes'], ['beta-report']])
+@pytest.mark.parametrize('command', [[], ['recipes'], ['beta-report'], ['close-story']])
 def test_module_cli_commands_without_streamlit(command):
     code = (BLOCK_STREAMLIT + "sys.argv = ['brownstone', *sys.argv[1:]]\n"
             "runpy.run_module('brownstone', run_name='__main__')")
@@ -55,9 +57,9 @@ def test_retired_artifacts_and_dependency_are_absent():
 
 def test_document_size_and_rule_id_inventory():
     requirements = ROOT / 'docs/requirements.md'
-    # Allow only UI-17's concise addition; rounded up to the next 100 bytes.
-    assert requirements.stat().st_size <= 120_900
-    assert (ROOT / 'docs/design.md').stat().st_size <= 56_000
+    # The ceilings live in brownstone/gates.py, which also prints the headroom left under them.
+    for name, limit in DOC_SIZE_LIMITS.items():
+        assert (ROOT / name).stat().st_size <= limit, name
     expected = {f'{prefix}-{i:02}' for prefix, numbers in {
         'DATA': [1, 2, 3, 4, 5, 8], 'ADDON': range(1, 14), 'CRAFT': range(1, 14),
         'MONEY': [1, 2], 'OPS': [1, 2, 3], 'UI': range(1, 18),

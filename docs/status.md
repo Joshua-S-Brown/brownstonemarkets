@@ -102,7 +102,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   targets and whole-stack buy/wait/unlisted estimates (Stock rules). Unknown bank is explicit.
 - **Data/CLI:** TSM ingestion and addon formats 1–4 within account format 6, snapshots/journal,
   bounded read-only preview, reviewed import, exact gzip archive and per-file drops.
-  CLI supports collect/import, --preview/--input/--scan, recipes, beta-report, after-play and rules
+  CLI supports collect/import, --preview/--input/--scan, recipes, beta-report, after-play, rules and close-story
   (prints named backlog stories and requirements/design sections; AGENTS.md).
   TSM and recipe refresh use the CLI. Watchlist engine/local files and Today/Import hits remain.
 - **Storage:** schema 11, metrics version 1, backed-up idempotent migrations. Sources retain
@@ -170,11 +170,13 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 ## Verify
 
 ```bash
-.venv/bin/python -m pytest --cov
-.venv/bin/python -m ruff check .
-.venv/bin/python -m mypy
+.venv/bin/python -m brownstone gates
 git diff --check
 ```
+
+`gates` runs ruff, mypy, then `pytest -n auto --cov` (pytest-xdist), stops at the first failure and prints
+tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
+mypy only): `git config core.hooksPath tools/git-hooks`.
 
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
