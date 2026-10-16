@@ -71,8 +71,8 @@ def test_clean_facts_sizes_sessions_characters_and_round_trip(tmp_path):
     assert character["snapshots"][0]["level"] == 20
     assert character["latest_known_recipes"][0]["listed_recipes"] == 1
     assert character["journal"][0]["first_utc"]
-    assert json.loads((folder / "report.json").read_text()) == report
-    assert '"residual_copper": 0' in (folder / "report.md").read_text()
+    assert json.loads((folder / "report.json").read_text(encoding="utf-8")) == report
+    assert '"residual_copper": 0' in (folder / "report.md").read_text(encoding="utf-8")
     assert not config["data_dir"].exists()
 
 
@@ -219,7 +219,7 @@ def test_seller_names_excluded_and_owned_numeric_projection(tmp_path):
     assert code == 0
     assert report["characters"][0]["latest_owned_auctions"]["auctions"] == [{"auctionID": 123, "buyoutAmount": 100}]
     for file in folder.iterdir():
-        text = file.read_text()
+        text = file.read_text(encoding="utf-8")
         assert "PRIVATE_SELLER" not in text and "PRIVATE_BIDDER" not in text
     assert set(report["scans"][0]) == {"scan_id", "started_at", "finished_at", "listing_count"}
 
@@ -253,7 +253,7 @@ def test_cli_exit_codes_parse_report_write_isolation(tmp_path, monkeypatch, caps
             assert file in before or file.is_relative_to(folder)
     assert all(p.read_bytes() == raw for p, raw in before.items())
     if case == "parse":
-        report = json.loads(next(folder.rglob("report.json")).read_text())
+        report = json.loads(next(folder.rglob("report.json")).read_text(encoding="utf-8"))
         assert len(report["checks"]) == 1 and report["file"]["bytes"] == 10
 
 
@@ -551,7 +551,7 @@ def test_vendor_section_is_added_to_created_report_without_catalog_mutation(tmp_
     assert row["vendor_npc_id"] == 1234 and row["zone"] == {"zone": "Elwynn Forest"}
     assert row["quantity"] == 2 and row["stock"] == 3
     assert "extended or unknown cost" in row["comparisons"][0]["result"]
-    text = (folder / "report.md").read_text()
+    text = (folder / "report.md").read_text(encoding="utf-8")
     assert "## Vendor prices" in text and "cost evidence only" in text
     assert "No vendor price lists captured." in "\n".join(_vendor_prices({}))
     assert not config["data_dir"].exists()
@@ -578,14 +578,16 @@ def test_report_includes_farming_capture_in_json_and_markdown(tmp_path):
     db['journal'].append(row)
     source = addon_source(tmp_path / 'data', write(tmp_path, db))
     folder, report, _ = beta_report.create_report(source['scan_path'], source, tmp_path / 'reports', now=NOW)
+    text = (folder / 'report.md').read_text(encoding='utf-8')
     assert report['farming_capture']['windows_with_names'] == 0
-    assert 'With captured names: 0.' in (folder / 'report.md').read_text()
-    assert 'NPC IDs still unnamed: none.' in (folder / 'report.md').read_text()
+    assert 'With captured names: 0.' in text
+    assert 'NPC IDs still unnamed: none.' in text
     assert report['farming_capture']['windows_with_positions'] == 1
     assert report['farming_capture']['windows_with_coin_slots'] == 1
     assert report['farming_capture']['windows_with_vendor_prices'] == 1
-    assert 'with positions: 1; with coin slots: 1; with vendor prices: 1' in (folder / 'report.md').read_text()
-    assert json.loads((folder / 'report.json').read_text())['farming_capture'] == report['farming_capture']
+    assert 'with positions: 1; with coin slots: 1; with vendor prices: 1' in text
+    saved = json.loads((folder / 'report.json').read_text(encoding='utf-8'))
+    assert saved['farming_capture'] == report['farming_capture']
 
 
 def test_farming_capture_names_counts_and_unnamed_all_source_guids():
@@ -645,7 +647,7 @@ def test_trainer_tier_report_values_provenance_scope_and_markdown(tmp_path):
                and r['captured_utc'] for r in section['observations'])
     folder, report, _ = beta_report.create_report(path, config, tmp_path / 'reports', now=NOW)
     assert report['trainer_tiers'] == section
-    text = (folder / 'report.md').read_text()
+    text = (folder / 'report.md').read_text(encoding='utf-8')
     assert '## Trainer tiers' in text and '| Cooking | Journeyman | 0 | 50 | 100 |' in text
     from brownstone.beta_markdown import _trainer_tiers
     assert 'No tier services captured.' in '\n'.join(_trainer_tiers({}))

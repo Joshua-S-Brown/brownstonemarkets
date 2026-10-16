@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from brownstone.gates import DOC_SIZE_LIMITS
+from brownstone.gates import DOC_SIZE_LIMITS, doc_size
 
 ROOT = Path(__file__).resolve().parents[1]
 BLOCK_STREAMLIT = '''
@@ -50,19 +50,19 @@ def test_retired_artifacts_and_dependency_are_absent():
     assert not list(ROOT.glob('Open Old Streamlit App.*'))
     sources = [ROOT / 'nicegui_app.py', ROOT / 'launch_nicegui.py',
                *ROOT.glob('brownstone/*.py'), *ROOT.glob('views/*.py')]
-    assert all('streamlit' not in p.read_text().lower() for p in sources)
-    assert 'streamlit' not in (ROOT / 'pyproject.toml').read_text().lower()
-    assert 'streamlit==' not in (ROOT / 'requirements.lock.txt').read_text().lower()
+    assert all('streamlit' not in p.read_text(encoding='utf-8').lower() for p in sources)
+    assert 'streamlit' not in (ROOT / 'pyproject.toml').read_text(encoding='utf-8').lower()
+    assert 'streamlit==' not in (ROOT / 'requirements.lock.txt').read_text(encoding='utf-8').lower()
 
 
 def test_document_size_and_rule_id_inventory():
     requirements = ROOT / 'docs/requirements.md'
     # The ceilings live in brownstone/gates.py, which also prints the headroom left under them.
     for name, limit in DOC_SIZE_LIMITS.items():
-        assert (ROOT / name).stat().st_size <= limit, name
+        assert doc_size(ROOT / name) <= limit, name
     expected = {f'{prefix}-{i:02}' for prefix, numbers in {
         'DATA': [1, 2, 3, 4, 5, 8], 'ADDON': range(1, 14), 'CRAFT': range(1, 14),
         'MONEY': [1, 2], 'OPS': [1, 2, 3], 'UI': range(1, 18),
     }.items() for i in numbers}
-    actual = set(re.findall(r'\b(?:DATA|ADDON|CRAFT|MONEY|UI|OPS)-\d+\b', requirements.read_text()))
+    actual = set(re.findall(r'\b(?:DATA|ADDON|CRAFT|MONEY|UI|OPS)-\d+\b', requirements.read_text(encoding='utf-8')))
     assert actual == expected

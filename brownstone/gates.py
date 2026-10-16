@@ -26,11 +26,16 @@ def _run(command: Sequence[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
+def doc_size(path: Path) -> int:
+    """Bytes as committed: a Windows checkout's CRLF line endings don't count against the ceiling."""
+    return len(path.read_bytes().replace(b"\r\n", b"\n"))
+
+
 def doc_headroom(root: Path = ROOT) -> list[str]:
     """One line per size-guarded document: bytes used, ceiling and what is left."""
     lines = []
     for name, limit in DOC_SIZE_LIMITS.items():
-        size = (root / name).stat().st_size
+        size = doc_size(root / name)
         lines.append(f"{Path(name).name}: {size:,} of {limit:,} bytes ({limit - size:,} left)")
     return lines
 

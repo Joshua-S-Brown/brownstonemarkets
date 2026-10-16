@@ -52,7 +52,7 @@ def test_suite_summary_reads_counts_and_coverage():
 def test_doc_headroom_reports_bytes_left(tmp_path, monkeypatch):
     for name in gates.DOC_SIZE_LIMITS:
         (tmp_path / name).parent.mkdir(exist_ok=True)
-        (tmp_path / name).write_bytes(b"x" * 100)
+        (tmp_path / name).write_bytes(b"x\r\n" * 50)  # A Windows checkout: CRLF counts as the committed LF.
     monkeypatch.setattr(gates, "DOC_SIZE_LIMITS", {"docs/requirements.md": 1_100})
     assert gates.doc_headroom(tmp_path) == ["requirements.md: 100 of 1,100 bytes (1,000 left)"]
 

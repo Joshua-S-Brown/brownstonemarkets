@@ -21,7 +21,7 @@ KEY = ('Fixture', 'Fixture Realm', 'Alliance')
 
 
 def fixture(name):
-    return json.loads((FIXTURES / f'{name}.json').read_text())
+    return json.loads((FIXTURES / f'{name}.json').read_text(encoding='utf-8'))
 
 
 def posted(item=2589, quantity=5, price=23, at=1000, login=1):
@@ -264,7 +264,7 @@ def test_beta_report_uses_same_projection_and_scan_names(tmp_path):
     assert section['posts'][0]['confirmed']
     assert section['unidentified'] == 0
     assert section['items'][0]['sold'] == 5 and section['items'][0]['expired'] == 1
-    text = (folder / 'report.md').read_text()
+    text = (folder / 'report.md').read_text(encoding='utf-8')
     assert '## Your sales' in text and 'confirmed · item 2589' in text
     assert 'Gross 115c · cut 5c · deposit 100c' in text
     assert 'sold · 5 units · item 2589' in text and 'expired · 1 units · item 2589' in text
