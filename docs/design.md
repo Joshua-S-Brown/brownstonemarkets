@@ -419,7 +419,7 @@ NiceGUI Today/Import render hits without changing host calculations; no standalo
 
 ## Today contracts
 
-Rules live in `requirements.md` → Today. Calculations are framework-free.
+Rules: `requirements.md` → Today. Framework-free calculations.
 
 - **Loading.** `today_loading.load_today` picks the latest scoped snapshot, opens the database
   read-only, resolves funds and returns the `build_today` arguments with the caller's clock;
@@ -461,9 +461,9 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
   per-recipe SQL. Craft rows keep board routes, `purchases`, `intermediate_steps` (chosen craft
   branches only), `plan_order` and `feasible_size`. `today_confidence.confidence` labels the funded
   plan afterwards. Today passes optional sell-price caps through `rank_catalogs`/`rank_recipes`'s
-  cautious sell map; their buy map is unchanged. `evaluate_recipe` applies the catalog-local vendor sale ceiling (CRAFT-04), retaining `vendor_price_cap_copper` and `vendor_capped` (the ceiling lowered the value) for presentation; Today v13 also caps the post price. Today v14 splits at `Ladder.units_at_or_below`; `_capped_quote` may swap a part-used last listing for the vendor. Peaks add capped segments' first sizes. `today_warnings`
-  selects base/legacy signals and carries caps/evidence into Sell and Queue posts. The NiceGUI view
-  reuses `session_signal`/`CROWDING`/`OVERSHOOT` badges with on-demand removal evidence.
+  cautious sell map; their buy map is unchanged. `evaluate_recipe` applies the catalog-local vendor sale ceiling (CRAFT-04), retaining `vendor_price_cap_copper` and `vendor_capped` (the ceiling lowered the value) for presentation; Today caps posts too; vendor top-ups split `Ladder` at the vendor price (requirements → Today). `today_warnings`
+  selects base/legacy signals and carries caps/evidence into Sell and Queue posts. The web Today view
+  uses `today_rows.warning_text` and on-demand evidence.
   `craft_details(row)` projects held/purchased materials and the batch's retained `reserved_steps`
   (or scales original steps when holdings are absent). Sell retains owners and separate held value.
   After held-output allocation, `deposits.auction_deposit` adds Sell's nullable `deposit_copper` and
@@ -478,6 +478,12 @@ Rules live in `requirements.md` → Today. Calculations are framework-free.
   choices and ticks. `today_session.queue_with_gold` projects the Queue with transfers using
   `today_funds.recorded_balances` and reserved `craft_details` purchases; `build_today` is untouched.
   Queue tick identity includes these presentation lines, excluding confidence labels (`stable_queue`).
+  `session_plan(arguments,state)` returns result, copied state and reset note; adapters load removals.
+  `queue_state` checks identity; `route_stops` groups adjacent Queue lines. The web keeps
+  tab/source state in sessionStorage. `api/today.py` caches inputs like `context.explorer`, plus
+  settings and state minus ticks/Hide Low; Level up is lazy. Our move reuses Today's query.
+  Legacy URLs: `nicegui_navigation.today_url`.
+
 
 ### This session (STORY-063)
 
@@ -498,9 +504,9 @@ snapshot/freshness and separate signal provenance; the view turns steps into lin
 Hiring loads the same table once in `prepare` and uses the lookup in `detail`.
 `merge_tier_steps` combines equal character-level/tier/source requirements. The input plan/arguments and Today version
 are untouched.
-`views/nicegui_today.py` places the toggle above the plan status so it stays put, composes lazily
-when **This session** opens, reads Team's per-tab/source
-reach window, uses the shared theme and links to Market items and the selected Team character.
+`web/src/places/today/` loads **Level up** on selection. `api/today.py` reuses the loaded Today
+arguments and reserved plan, composing `build_options` once. `views/today_rows.session_display`
+adds shared option prose, catalog skill-up bands and farming labels without new price reads.
 
 ### Farming (STORY-065, STORY-074, STORY-075, STORY-077)
 
@@ -510,7 +516,7 @@ and transaction hooks invalidate pending windows. `history` retains qualifying a
 object IDs, integer units/hour and evidence seconds. `valued` uses Today's cautious sell-side prices
 and the existing union flood read's base/legacy typical unit price and loaded item label; missing prices
 stay unknown. `session_options` adds farming copies to character cards without changing the plan.
-`nicegui_today.session_farming` shows the top three, with all rates and stretch provenance in evidence.
+`web/src/places/today/LevelUp.tsx` shows the top three, with all rates and stretch provenance in evidence.
 `source` retains Creature NPC IDs separately from object IDs; gathered evidence retains the matched
 window identity. `stretches` assigns the dominant NPC by distinct windows and `history` adds spot
 aggregates alongside the unchanged item rows. `valued` accepts the newest scan vendor prices as data
@@ -522,15 +528,12 @@ and median raw fractions to derive the optional lower-edge `(x, y)` percent cell
 `cell_percent` from the source config and groups spots by map/NPC/cell, preserving item rows.
 `coin_windows` matches explicit type-2 slots to guarded same-machine/login money deltas under UI-13;
 spot aggregation counts each matched window once. Missing coin remains nullable.
-`session_farming` adds position-centre and coin-share columns and vendor disagreement evidence to the
-spot table with the shared theme and Classic NPC links. The addon 0.12.4 shared `journal.zone()`
-adds nullable raw x/y (including shared vendor context); `journal.lootSources()` adds type, quantity
-and cached positive vendor copper. `beta_report.farming_capture` counts capture coverage in JSON
-and Markdown. Addon 0.12.6 `journal.lootTarget` matches the guarded target Creature GUID
-against odd positions in the saved slot sources and attaches the guarded name/GUID once to the window.
+`LevelUp` adds position-centre and coin-share columns and vendor disagreement evidence to the
+spot table with the shared theme and Classic NPC links. Addon `journal.zone()` captures x/y; `journal.lootSources()` captures slot types/quantities/vendor values.
+`beta_report.farming_capture` reports coverage. `journal.lootTarget` captures the matching target name/GUID per loot window.
 `farming.npc_names` derives a display-only NPC-ID map from the same scoped observations,
 newest capture/sequence winning; `history` returns it beside unchanged rate/spot evidence.
-`nicegui_today.mob_label` uses it for Mob, Also looted and Spot item values with ID fallbacks;
+`today_rows.mob_label` uses it for Mob, Also looted and Spot item values with ID fallbacks;
 the Mob column retains its Classic Wowhead link. The beta capture section counts named windows
 and lists observed NPC IDs without any captured name. No storage migration, new price query or network work.
 

@@ -1,10 +1,13 @@
 """Explicit, read-only addon review and import in the main app."""
+from datetime import UTC, datetime
+
+import duckdb
 from nicegui import app, ui
 
 from brownstone import import_review as review
 from brownstone import pipeline, scan_inputs
+from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
 from views import nicegui_theme as theme
-from views.nicegui_today import watchlist_hits
 
 
 def rows_table(rows, label):
@@ -190,3 +193,20 @@ def input_review(preview, state, collect, selection, messages):
         if choices:
             ui.select(choices, value=selected, multiple=True, label='Files to import (each archived separately)',
                       on_change=selection).classes('w-full')
+
+
+def watchlist_hits(config, catalogs):
+    try:
+        entries = load_entries(watchlist_path(config['data_dir'], config['source_id']))
+        if not entries:
+            return
+        with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
+            result = read_watchlist(db, config, entries, datetime.now(UTC))
+            names = known_names(db, config, catalogs)
+        hits = [r for r in result['rows'] if r['buy_hit'] or r['sell_hit']]
+        if hits:
+            with ui.expansion(f'Watchlist hits ({len(hits)})', value=True):
+                for row in hits:
+                    ui.label(hit_text(row, names))
+    except Exception as error:
+        ui.label(f'Watchlist evidence unavailable: {error}')

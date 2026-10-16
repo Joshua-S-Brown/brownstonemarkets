@@ -6,9 +6,7 @@ it("keeps validated Today tab/view and source, excludes invalid origins and char
     origin_tab: "Sell",
     origin_view: "This session",
   });
-  expect(originLink(p, "one")?.url).toBe(
-    "/?place=Today&source=one&tab=Sell&view=This+session",
-  );
+  expect(originLink(p, "one")?.url).toBe("/app/today?source=one&view=level-up");
   p.set("origin_tab", "Unknown");
   expect(originLink(p, "one")).toBeNull();
   expect(

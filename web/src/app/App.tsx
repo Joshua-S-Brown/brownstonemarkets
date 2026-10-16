@@ -1,5 +1,5 @@
 import styles from "../theme/app.module.css";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -9,6 +9,9 @@ import { Market } from "../places/market/Market";
 import { Inspector } from "./Inspector";
 import { Palette, places, placeURL } from "./Palette";
 import { EmptyState, ErrorState, Pill, Tip } from "../ui/parts";
+const Today = lazy(() =>
+  import("../places/today/Today").then((m) => ({ default: m.Today })),
+);
 function Theme() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem("brownstone-theme") || "system",
@@ -167,13 +170,15 @@ export function App() {
             <Theme />
           </header>
           <main className={styles["workspace"]}>
-            {window.location.pathname !== "/app/market" && (
-              <p className={styles["eyebrow"]}>Your saved market</p>
-            )}
-            {window.location.pathname !== "/app/market" && (
-              <h1>Brownstone workspace</h1>
-            )}
-            {window.location.pathname !== "/app/market" && (
+            {!["/app/market", "/app/today"].includes(
+              window.location.pathname,
+            ) && <p className={styles["eyebrow"]}>Your saved market</p>}
+            {!["/app/market", "/app/today"].includes(
+              window.location.pathname,
+            ) && <h1>Brownstone workspace</h1>}
+            {!["/app/market", "/app/today"].includes(
+              window.location.pathname,
+            ) && (
               <p className={styles["muted"]}>
                 What should I do today to make gold?
               </p>
@@ -194,6 +199,10 @@ export function App() {
                   ? "Several sources are enabled. Choose one above to browse its saved evidence."
                   : "No sources are enabled. Enable a source in your local configuration, then reload."}
               </EmptyState>
+            ) : window.location.pathname === "/app/today" ? (
+              <Suspense fallback={<p role="status">Loading Today…</p>}>
+                <Today key={source} source={source} waiting={waiting} />
+              </Suspense>
             ) : window.location.pathname === "/app/market" ? (
               <Market source={source} />
             ) : (

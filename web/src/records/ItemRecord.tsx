@@ -6,6 +6,7 @@ import { get, type Item } from "../api/client";
 import { Money } from "../ui/Money";
 import { ItemLink } from "../ui/ItemLink";
 import { ErrorState, Pill } from "../ui/parts";
+import { OurMove } from "../places/today/OurMove";
 import { Evidence } from "../ui/Evidence";
 import { ItemChain, ItemActivity, ItemGathering } from "./ItemDetails";
 // Recharts loads only when a chart tab opens, keeping it out of the shell's first bundle.
@@ -132,6 +133,9 @@ export function ItemRecord({
               <p className={styles["muted"]}>{item[key].reason}</p>
             </section>
           ))}
+          {(!variant || ["base", null].includes(JSON.parse(variant)[0])) && (
+            <OurMove source={source} id={id} />
+          )}
           <ItemGathering source={source} id={id} />
         </Tabs.Content>
         <Tabs.Content value="history">

@@ -13,7 +13,16 @@ export function originLink(params: URLSearchParams, source: string) {
     return {
       label: `← Back to Today · ${view === "This session" ? view : tab}`,
       url:
-        "/?" + new URLSearchParams({ place, source, tab: tab!, view: view! }),
+        "/app/today?" +
+        new URLSearchParams({
+          source,
+          view:
+            view === "This session"
+              ? "level-up"
+              : tab === "Plan"
+                ? "opportunities"
+                : "route",
+        }),
     };
   if (
     place === "Market" &&

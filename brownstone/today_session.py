@@ -1,10 +1,12 @@
 """Shared session identity and queue prose; no framework state or calculations."""
 import hashlib
 import json
+from copy import deepcopy
 
 from brownstone.money import format_money
 from brownstone.recipe_graph import made_by_label
-from brownstone.today import TODAY_VERSION, craft_details
+from brownstone.today import TODAY_VERSION, build_today, craft_details
+from brownstone.today_characters import recipe_rank
 from brownstone.today_funds import recorded_balances
 
 
@@ -128,3 +130,75 @@ def queue_with_gold(result, character_data, funds):
     lines = queue['lines']
     index = next((i for i, line in enumerate(lines) if line['stage'] not in ('take', 'mail')), len(lines))
     return queue | {'lines': lines[:index] + gold_mail_lines(result, character_data, funds) + lines[index:]}
+
+
+PLAN_RESET = ("Scan, settings or catalog evidence changed: session choices and queue ticks reset. "
+              "Previous choices were dropped, not resized; a fresh default plan is shown.")
+
+
+def session_plan(arguments, state):
+    """Pure session merge shared by both presentations; never mutate caller state."""
+    state = deepcopy(state)
+    context = plan_context(arguments)
+    note = ''
+    if state.get('context') != context:
+        note = PLAN_RESET if state else ''
+        state = dict(context=context, choices=None, refill=True, rows=[], ticks={})
+    result = build_today(**arguments, choices=state['choices'], refill=state['refill'])
+    dropped = {(d['catalog_id'], d['recipe_id']) for d in result['dropped_choices']}
+    for choice in state['choices'] or []:
+        if (choice['catalog_id'], choice['recipe_id']) in dropped:
+            choice['batch_size'] = None
+    known = {(r['catalog_id'], r['recipe_id']) for r in state['rows']}
+    new = [r for r in sorted(result['craft'], key=lambda r: r['plan_order'])
+           if (r['catalog_id'], r['recipe_id']) not in known]
+    state['rows'].extend(new)
+    if state['choices'] is not None:
+        state['choices'].extend({k: r[k] for k in ('catalog_id', 'recipe_id', 'batch_size')} for r in new)
+    return result, state, note
+
+
+def queue_state(queue, state):
+    """Ticks identify the complete displayed queue plus plan context, excluding confidence."""
+    state = deepcopy(state)
+    identity = digest({'queue': stable_queue(queue), 'context': state.get('context')})
+    if state.get('queue_identity') != identity:
+        state.update(queue_identity=identity, ticks={})
+    return state
+
+
+def route_stops(queue, crafts, character_data):
+    """Consecutive stage/character/place groups retain every Queue line and its index."""
+    stops = []
+    posts = iter(crafts)
+    for index, line in enumerate(queue['lines']):
+        character, place = route_place(line, crafts, character_data, next(posts) if line['stage'] == 'post' else None)
+        key = (line['stage'], character, place)
+        if not stops or stops[-1]['key'] != key:
+            stops.append(dict(key=key, stage=line['stage'], character=character, place=place, lines=[]))
+        stops[-1]['lines'].append(dict(index=index, text=queue_line(line), evidence=line))
+    return stops
+
+
+def route_place(line, crafts, character_data, post=None):
+    stage = line['stage']
+    character = line.get('character') or line.get('made_by')
+    if stage == 'post':
+        character = post.get('made_by') if post else None
+    if stage == 'gold unknown':
+        character = line['name']
+    if stage in ('auction house', 'vendor'):
+        makers = sorted({r['made_by'] for r in crafts if r.get('made_by') and any(
+            p['item_id'] == line['item_id'] and (p['method'] == 'vendor') == (stage == 'vendor')
+            for p in r['purchases'])})
+        character = ', '.join(makers) or character
+    character = character or 'Our team'
+    places = {'take': line.get('kind', 'bags'), 'mail': 'mailbox', 'gold mail': 'mailbox',
+              'gold unknown': 'mailbox', 'auction house': 'auction house', 'vendor': 'vendor',
+              'post': f"auction house · {line.get('post_duration_hours', 24)}h posts"}
+    if stage != 'craft':
+        return character, places[stage]
+    profession = line.get('profession') or 'profession unknown'
+    state = next((data for c, data in character_data.items() if c[0] == character), None)
+    rank = recipe_rank(state, line['recipe_id']) if state else None
+    return character, f"{profession} · rank {rank if rank is not None else 'unknown'}"

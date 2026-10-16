@@ -135,6 +135,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/today/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Plan */
+        post: operations["plan_api_today_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/today/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Settings */
+        post: operations["settings_api_today_settings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -379,6 +413,46 @@ export interface components {
             /** Variant State */
             variant_state: string | null;
         };
+        /** PlanRequest */
+        PlanRequest: {
+            /** State */
+            state?: {
+                [key: string]: unknown;
+            };
+            /**
+             * View
+             * @default route
+             * @enum {string}
+             */
+            view: "route" | "opportunities" | "level-up";
+        };
+        /** RouteLine */
+        RouteLine: {
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Index */
+            index: number;
+            /** Text */
+            text: string;
+            /**
+             * Warnings
+             * @default
+             */
+            warnings: string;
+        };
+        /** RouteStop */
+        RouteStop: {
+            /** Character */
+            character: string;
+            /** Lines */
+            lines: components["schemas"]["RouteLine"][];
+            /** Place */
+            place: string;
+            /** Stage */
+            stage: string;
+        };
         /** SearchHit */
         SearchHit: {
             /** Item Id */
@@ -393,6 +467,13 @@ export interface components {
             variant_id?: string | null;
             /** Variant State */
             variant_state?: string | null;
+        };
+        /** SettingsRequest */
+        SettingsRequest: {
+            /** Settings */
+            settings: {
+                [key: string]: unknown;
+            };
         };
         /** SourceOption */
         SourceOption: {
@@ -417,6 +498,48 @@ export interface components {
             waiting: number | null;
             /** Waiting Error */
             waiting_error?: string | null;
+        };
+        /** TodayPlan */
+        TodayPlan: {
+            /** Characters */
+            characters: string[][];
+            /** Copy Text */
+            copy_text: string;
+            /**
+             * Empty Reason
+             * @default
+             */
+            empty_reason: string;
+            /** Evidence */
+            evidence?: {
+                [key: string]: unknown;
+            };
+            /** Funds Copper */
+            funds_copper: number;
+            /** Funds Label */
+            funds_label: string;
+            /** Notes */
+            notes: string[];
+            /** Plan */
+            plan: {
+                [key: string]: unknown;
+            };
+            /** Reset Note */
+            reset_note: string;
+            /** Session */
+            session?: {
+                [key: string]: unknown;
+            } | null;
+            /** Settings */
+            settings: {
+                [key: string]: unknown;
+            };
+            /** State */
+            state: {
+                [key: string]: unknown;
+            };
+            /** Stops */
+            stops: components["schemas"]["RouteStop"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -689,6 +812,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Sources"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_api_today_plan_post: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settings_api_today_settings_post: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

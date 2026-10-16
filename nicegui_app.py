@@ -14,13 +14,11 @@ from api.presence import connected as web_tabs
 from brownstone import config as configuration
 from brownstone import pipeline, recipe_catalogs
 from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences, source_label
-from brownstone.today_loading import load_today_characters
 from views import nicegui_theme as theme
 from views.nicegui_import import render as render_import
-from views.nicegui_navigation import back_link, market_url, read_origin
+from views.nicegui_navigation import back_link, market_url, read_origin, today_url
 from views.nicegui_stock import render as render_stock
 from views.nicegui_team import render as render_team
-from views.nicegui_today import render
 
 ROOT = Path(__file__).resolve().parent
 install_web(app, ROOT / "web/dist")
@@ -66,6 +64,9 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
     if place == 'Market':
         ui.navigate.to(market_url(chosen, item, origin))
         return
+    if place == 'Today':
+        ui.navigate.to(today_url(chosen, view, tab))
+        return
     back_link(chosen, origin if place == 'Team' else {})
     with ui.column().classes('gap-1'):
         ui.label(place).classes('bs-title')
@@ -87,10 +88,6 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
     if place == 'Stock':
         render_stock(chosen, read_catalogs())
         return
-    character_data, warning = load_today_characters(chosen)
-    if warning:
-        ui.label(warning)
-    render(chosen, read_catalogs(), character_data, tab, view)
 
 
 def header(sources, game, source, place, tab):
@@ -101,11 +98,11 @@ def header(sources, game, source, place, tab):
     def navigate(**changes):
         values = {'game': selected_game, 'source': chosen['source_id'] if chosen else '',
                   'place': place, 'tab': app.storage.tab.get('today-active-tab', tab)}
-        if chosen and 'source' not in changes:  # a new source keeps its own saved view
-            values['view'] = app.storage.tab.get('today-plan-' + chosen['source_id'], {}).get('view', 'Today plan')
         values.update(changes)
-        ui.navigate.to(market_url(chosen) if values['place'] == 'Market' and chosen
-                       else '/?' + urlencode(values))
+        if chosen and values['place'] in ('Today', 'Market'):
+            ui.navigate.to(today_url(chosen) if values['place'] == 'Today' else market_url(chosen))
+        else:
+            ui.navigate.to('/?' + urlencode(values))
 
     with ui.header().classes('p-0'), ui.row().classes('bs-bar'):
         ui.label('Brownstone').classes('bs-brand')

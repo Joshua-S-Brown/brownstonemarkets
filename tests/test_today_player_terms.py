@@ -109,7 +109,7 @@ def test_money_projections_and_unknowns():
 
 def test_merge_level_and_train_require_same_tier_and_kind():
     from brownstone.session_options import merge_tier_steps
-    from views.nicegui_today import step_text
+    from views.today_rows import step_text
 
     tier = {'name': 'Journeyman', 'required_level': 10}
     steps = [{'kind': kind, 'tier': tier, 'group': {'profession': profession}}

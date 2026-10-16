@@ -26,7 +26,9 @@ def back_link(config, origin):
     else:
         values['item'] = origin['origin_item']
         label = origin['origin_name']
-    ui.link(f"← Back to {values['place']} · {label}", '/?' + urlencode(values)).classes(
+    ui.link(f"← Back to {values['place']} · {label}",
+            today_url(config, values.get('view', ''), values.get('tab', ''))
+            if values['place'] == 'Today' else '/?' + urlencode(values)).classes(
         'min-h-[44px] inline-flex items-center underline').mark('back-link')
 
 
@@ -69,3 +71,10 @@ def item_link(config, item_id, name, origin=None):
     if '_location_updates' in config:
         config['_location_updates'].append(lambda: set_href(link, item_url(config, item_id, origin)))
     return link
+
+
+def today_url(config, view='', tab=''):
+    selected = view if view in ('route', 'opportunities', 'level-up') else (
+        'level-up' if view == 'This session' else 'opportunities' if view == 'Today plan' and tab in ('Craft', 'Plan')
+        else 'route')
+    return '/app/today?' + urlencode({'source': config['source_id'], 'view': selected})

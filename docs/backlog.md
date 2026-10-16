@@ -49,44 +49,20 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-083 Today in the web app
-2. STORY-084 Team in the web app
-3. STORY-085 Ledger and Data in the web app
-4. STORY-086 Supply chains
-5. STORY-087 retire NiceGUI
-6. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-7. STORY-026 scan coverage and rhythm
-8. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-9. STORY-006 replay
+1. STORY-084 Team in the web app
+2. STORY-085 Ledger and Data in the web app
+3. STORY-086 Supply chains
+4. STORY-087 retire NiceGUI
+5. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+6. STORY-026 scan coverage and rhythm
+7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+8. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082 and SPIKE-009/009b.
-
-### STORY-083 — Today in the web app
-
-Added 2026-10-16; refined 2026-10-16 after the STORY-082 review. Today's calculation is unchanged; this changes how the plan is shown and walked.
-
-As a gold maker, I want tonight's plan as one ordered route through the game, so that I can follow it stop by stop instead of moving between Plan, Shopping list, Sell and Queue.
-
-Acceptance:
-- **Page:** `/app/today?source=&view=` with views `route` (default), `opportunities` and `level-up` in the URL; the rail's Today opens it. Level up loads only when chosen, as This session does now.
-- **Route:** the complete Queue (`today.session_queue` with `today_session.queue_with_gold`) grouped into stops by stage and character in Queue order: take and mail, auction purchases, vendor purchases, crafts, posts. Each stop names its character (an inspector link) and where it happens (bank or mailbox, auction house, vendor, the profession and rank, post duration). Each line keeps the quantities, prices, deposits, postage, warnings and confidence the Queue shows today. Ticks keep the Queue's identity rule (`today_session.digest` of `stable_queue` plus the plan context): a changed identity clears them. *Copy as text* gives today's Queue text, with `queue_total`.
-- **Summary strip:** planned profit (Queue expected profit), gold to spend against funds (Today's resolved funds, with the character or team label), steps done, and data age with the waiting-scan count.
-- **Our move** (moved from STORY-082): when Today ranks the item, its record's Overview shows an *Our move* panel with Today's reserved profit and confidence reasons; the panel is absent, not empty, when Today doesn't rank it, or when no Today plan is loaded for the source. It reads the same Today query the page uses, so opening a record never builds a second plan.
-- **Opportunities:** the ranked crafts with profit per craft, confidence pill with its reasons in a Tip, batch and who makes it; each opens the item record. Adjusting crafts (choices, batch size, refill) moves from *Adjust crafts* into the *Our move* panel and changes the plan through the same choices the NiceGUI view sends; dropped choices are unticked exactly as `session_plan` does.
-- **Level up:** This session (UI-12) per character: next options, tier steps, the CRAFT-10 skill-up colour bands of the recipe at the character's rank, costs and UI-13 farming spots. Nothing invented: unknown bands or costs say why.
-- **Settings:** the gear opens Today settings in a dialog; Save-only, the same file and validation (`today_settings.save_settings`), via `POST /api/today/settings`. Saving changes the plan context, so choices and ticks reset with the existing `PLAN_RESET` note.
-- **Session state (decided 2026-10-16):** NiceGUI keeps choices, refill, shown rows, ticks, context and queue identity in `app.storage.tab`. The web keeps the same state per tab and source in `sessionStorage` (refresh keeps it, a new tab starts fresh, nothing on disk), and sends it with each plan request. Move `session_plan`'s merge (context reset, dropped choices, new rows appended to choices) out of `views/nicegui_today.py` into `brownstone/today_session.py` as a pure function of (arguments, state) returning (result, new state, reset note), tested offline; both views use it until the NiceGUI view goes.
-- **API:** `POST /api/today/plan?source=` with body `{view, state}` returns the plan, Route stops, the new state and the reset note; `level-up` also returns This session. It loads through `today_loading` and `build_today` exactly as the NiceGUI page does (one load per request; `flood=True`, `holdings=True`). POST because the body carries the state; it carries the launch token like every `/api` POST. Repeated identical requests reuse one build per source until the database, config, settings file, state or hourly clock bucket changes (as `api.context.explorer` does). No new calculation: stops are a projection of Queue lines in `brownstone/today_session.py`.
-- **Retire:** after the side-by-side check, `views/nicegui_today.py` and `tests/ui_trial/test_nicegui_today*.py` go. NiceGUI's Today place, its `/` default, and Team's links to Today redirect to `/app/today` with the same source and view (as STORY-082 did for Market, `views/nicegui_navigation.market_url`); `web/src/app/Origin.tsx`'s Today origin returns to `/app/today`. `views/today_rows.py` stays as the shared projection or moves into `brownstone/`. `today_version` is unchanged. Nothing is removed 28 October–5 November unless the web page was used in a real play session (UI-18).
-- **Web conventions (from STORY-082):** evidence disclosures use `web/src/ui/Evidence.tsx`, never raw JSON; money through `Money`; the Today place is lazy-loaded like `ItemCharts`, so `npm run build` stays without the chunk-size warning. Types come from the regenerated `schema.d.ts`.
-- **Docs:** `requirements.md` has only 2 bytes under its size guard. Any rule wording this story needs (UI-07's NiceGUI Today URL text becomes UI-18's) must trim at least as much elsewhere in the same section; `gates` prints the budget.
-- **Offline tests:** stop grouping for every stage, including held-item take and mail lines and gold-mail suggestions (STORY-069); tick reset on a changed context or queue identity; the moved `session_plan` merge (reset, dropped choices, appended rows); settings save and refusal; the POST token; each existing Today view test that tests a rule moves to an API or Vitest test (moved, not dropped).
-- **Real data:** on the beta source, with the same scan and settings, the Route matches the NiceGUI Queue line for line (count, quantities, copper totals, deposits, postage) and Level up matches NiceGUI This session for every character; compare against the NiceGUI page before removing it, on a copy of `data/`. Note any change from `status.md` → *Team*'s Arille and Basilly figures (recorded on scan `20261015T124940Z-2ef70d`) and why. Screenshots at 1280 and 390 px.
-- Depends on STORY-082 (inspector tabs). Rules: the Today section, UI-07, UI-11, UI-12, UI-13, UI-14, UI-18, CRAFT-10, CRAFT-11. Design: *Today contracts*, *This session (STORY-063)*, *Farming*, *Web app (UI-18)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083 and SPIKE-009/009b.
 
 ### STORY-084 — Team in the web app
 

@@ -97,6 +97,15 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Beta reports list captured Apprentice/Journeyman/Expert/Artisan services with level, skill,
   copper cost and provenance for review. Offline checks cover zero/positive/unknown levels,
   Classic scope, source-aware merging, hiring, malformed tables and report output.
+- **Today web (STORY-083):** `/app/today` offers Route, Opportunities and lazy Level up.
+  The complete Queue supplies stop lines, copy/totals and tick identity; choices and ticks persist
+  per tab/source in sessionStorage. Item Overview's Our move shares the Today query and adjusts
+  crafts/refill, including crafts excluded earlier in the session. Settings save through the token boundary to the existing source file.
+  Native Today URLs and Team return links redirect to the web page; the old Today renderer is retired.
+  Offline coverage moved to `test_today_web*.py`, `test_today_session_words.py` and Today Vitest tests.
+  On copied beta data, scan `20261016T113727Z-eb77d0`: 13 Queue lines match NiceGUI verbatim,
+  including quantities, gold mail, deposits and copy text. Shopping 1,825c, deposits 411c,
+  expected profit 2,583c, captured team funds 1,939c. All five characters' This session options match.
 - **Team:** captured roster/history, recipe evidence, reach estimates and hiring comparison
   (CRAFT-11/13). One board shared across characters/hiring; detail loads on demand.
   STORY-070 chooses a profitable learnable next recipe before other sources and shows the other
@@ -107,12 +116,12 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Team and hire cost steps and Team profit columns display money with copper sorting. Offline checks are in
   `test_progression.py`, `test_session_options.py` and the Team/hiring NiceGUI tests;
   `fixtures/today_story070.json` preserves the full Today regression fixture; only its version fields track Today changes.
-  On the imported Forever beta scan `20261015T124940Z-2ef70d`, Arille's Cooking best stays
-  Tasty Raptor Bites (drop, 194c) with *Or learn now* Spiced Wolf Meat (trainer, −45c); Basilly's
-  Tailoring best is Blue Linen Vest (vendor, 479c) with *Pattern worth hunting* Red Linen Robe
-  (unverified codes 16/21, 894c). Training costs are unknown. Arille's Fishing and Keenagen's
-  Mining show gathering sentences; all nine hire estimates to 300 are incomplete. Checked through
-  the native NiceGUI test user against a copy of `data/`; no new evidence imported.
+  On imported Forever beta scan `20261016T113727Z-eb77d0`, Arille's Cooking best is
+  Kaldorei Spider Kabob (quest, 21c), with Peace Tea (drop, 228c) as the alternative;
+  Tasty Raptor Bites is 216c and Spiced Wolf Meat −106c. Basilly's Tailoring best is
+  Blue Linen Vest (vendor, 289c); Red Linen Robe lacks a complete price and supplies no alternative.
+  Training costs remain unknown. Arille's Fishing and Keenagen's Mining retain gathering options.
+  Checked against NiceGUI on copied data; this migration imports no new evidence.
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
   Item pages lead with a base-item decision summary, scoped holdings and own item farming evidence;

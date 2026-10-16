@@ -3,7 +3,9 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from conftest import make_source
+from test_progression import evidence, progression_catalog
 from test_today import catalog
+from test_today_characters import CHARACTER
 
 from brownstone.config import read_sources
 from brownstone.pipeline import run
@@ -69,3 +71,26 @@ def preview_addon(tmp_path, monkeypatch, records=None, sources_count=1):
         sources.append({**addon, "source_id": "other", "label": "Other observer"})
     monkeypatch.setattr("brownstone.config.read_sources", lambda *args: sources)
     return None, addon
+
+
+def team_app(tmp_path, monkeypatch):
+    _, source, _ = app(tmp_path, monkeypatch)
+    c = progression_catalog()
+    from brownstone.pipeline import run
+    csv = tmp_path / 'progression.csv'
+    csv.write_text('itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n'
+                   '1,Material,20,10,0,0,\n3,Known,2000,2000,0,0,\n'
+                   '131,Next,3000,3000,0,0,\n132,Farther,2000,2000,0,0,\n133,Near,2000,2000,0,0,\n')
+    run(source, csv)
+    other = ('Keenagen', 'Beta', 'Alliance')
+    data = {CHARACTER: evidence(c), other: evidence(c, rank=3)}
+    for identity, state in data.items():
+        state.update(history=[], observations=[({'captured_at': 100, 'sequence': 2}, 'fixture-machine')])
+        state['bags'] = {'captured_at': 100, 'level': 5 if identity == CHARACTER else None, 'gold_copper': 255,
+                         'skills': {'modern': {'rows': [{'name': 'Arbitrary title', 'skill_id': 197,
+                                                        'rank': 8 if identity == CHARACTER else 3, 'max_rank': 75}]}}}
+    data[CHARACTER]['history'] = [{'captured_at': 100, 'sequence': 2, 'level': 5}]
+    monkeypatch.setattr('brownstone.professions.latest_data',
+                        lambda config: data if config['source_id'] == 'test' else {})
+    monkeypatch.setattr('brownstone.recipe_catalogs.find_catalogs', lambda *args: [{'name': 'fixture', 'catalog': c}])
+    return source, c, data

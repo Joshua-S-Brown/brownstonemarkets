@@ -90,6 +90,12 @@ def _rank(state: dict, record: dict) -> int | None:
     return profession_rank(state, record)[0]
 
 
+def recipe_rank(state: dict, recipe_id: int) -> int | None:
+    """Rank of the profession list that knows this recipe, or None when no list does."""
+    record = _match(state, recipe_id)[0]
+    return _rank(state, record) if record else None
+
+
 def recipe_status(recipe: dict, state: dict, *, planned_rank: int | None = None) -> dict:
     """Resolve exact-ID status; planned_rank changes only the rank check for progression steps."""
     record, row = _match(state, recipe["recipe_id"])

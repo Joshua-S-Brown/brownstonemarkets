@@ -14,7 +14,7 @@ from brownstone.today_characters import available_characters
 from brownstone.today_loading import load_today, load_today_characters
 from brownstone.today_settings import TodaySettings
 from views import nicegui_theme as theme
-from views.nicegui_today import freshness_caption, table
+from views.nicegui_common import freshness_caption, table
 from views.today_rows import vendor_cap_label, vendor_cap_suffix
 
 HONESTY = ('Cost to reach is an estimate, with no credit for selling results. Current-scan profit, not a forecast; '

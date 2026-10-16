@@ -2,6 +2,8 @@
 from datetime import UTC, datetime
 
 from brownstone.money import format_money
+from brownstone.tier_levels import fallback_label
+from brownstone.today_session import PLAN_RESET as PLAN_RESET
 from brownstone.today_session import headline_profit
 from brownstone.today_warnings import warning_fields
 
@@ -12,8 +14,7 @@ ZERO_GOLD_HINT = "Enter the gold you have available to size the plan. Use explic
 NO_SNAPSHOT = "Refresh or import a scan for this market to inspect Today."
 NO_LISTINGS = ("Individual listings, thin markets, cheap now, undercuts and below-vendor listings: "
                "not available for this source. Batches use funds and the per-item cap; costs are aggregate estimates.")
-PLAN_RESET = ("Scan, settings or catalog evidence changed: session choices and queue ticks reset. "
-              "Previous choices were dropped, not resized; a fresh default plan is shown.")
+
 VENDOR_ASIDE = "Independent aside, not part of the craft budget."
 
 
@@ -310,3 +311,129 @@ def vendor_cap_label(*rows):
 def vendor_cap_suffix(*rows):
     label = vendor_cap_label(*rows)
     return f" · {label}" if label else ""
+
+
+def cheap_share(estimate):
+    cheap, cost = estimate['cheap_cost_copper'], estimate['cost_copper']
+    if cheap is None:
+        return 'cheap auction materials unknown'
+    if cheap == cost and cost:
+        return 'all on materials that are cheap right now'
+    return f'{format_money(cheap)} of it on cheap auction materials' if cheap else 'no cheap auction materials'
+
+
+def step_text(step, character, window):
+    """One plain line per option; the figures are the ones in the details below."""
+    name = character['character'][0]
+    kind = step['kind']
+    if kind == 'craft':
+        rows = ', '.join(f"{r['batch_size']} {r['output_name']}" for r in character['crafts'])
+        return (f"Craft {rows} · planned profit {format_money(character['craft_profit_copper'])}"
+                f"{session_profit_basis(character)}")
+    if kind == 'nothing':
+        return (f'Nothing to craft or level within {window} points. '
+                'Gathering is an option here.')
+    if kind == 'evidence':
+        return 'No professions seen yet: open each profession window next login so Brownstone can read them.'
+    group = step['group']
+    profession = group['profession']
+    if kind == 'level_profession':
+        recipe, estimate = step['recipe'], step['recipe']['estimate']
+        more = f" (+{step['more']} more on the way)" if step['more'] else ''
+        return (f"Level {profession} {group['rank']} → {recipe['required_skill']} for "
+                f"{format_money(estimate['cost_copper'])}, {cheap_share(estimate)} · unlocks {recipe['name']} "
+                f"at {format_money(recipe['profit_copper'])} per craft{more}{vendor_cap_suffix(recipe)}")
+    tier = step['tier']
+    if len(step.get('groups', [])) > 1:
+        return merged_tier_text(step, character)
+    if kind == 'train':
+        return (f"{profession} is capped at {tier['cap']}: train {tier['name']} {profession} at a trainer"
+                f"{fallback_label(tier)}")
+    level = character['level']
+    reach = (f"{profession} is capped at {tier['cap']}" if group['capped']
+             else f"Before {profession} reaches {tier['cap']}")
+    now = f"{level} → {tier['required_level']}" if level is not None else f"to {tier['required_level']} (level unknown)"
+    return f"{reach}: level {name} {now} to train {tier['name']}{fallback_label(tier)}"
+
+
+def merged_tier_text(step, character):
+    professions = [g['profession'] for g in step['groups']]
+    names = ', '.join(professions[:-1]) + ' and ' + professions[-1]
+    tier = step['tier']
+    if step['kind'] == 'train':
+        return f"Train {tier['name']} at a trainer: {names}{fallback_label(tier)}"
+    level = character['level']
+    now = f"{level} → {tier['required_level']}" if level is not None else f"to {tier['required_level']} (level unknown)"
+    return f"Level {character['character'][0]} {now} to train {tier['name']} {names}{fallback_label(tier)}"
+
+
+def mob_label(npc, names):
+    if npc is None:
+        return 'Gathering · zone only'
+    return f'{names[npc]} (NPC {npc})' if npc in names else f'NPC {npc}'
+
+
+def spot_position(spot):
+    cell = spot.get('cell')
+    if cell is None:
+        return '—'
+    half = spot['cell_percent'] // 2
+    return f'around {cell[0] + half}, {cell[1] + half}'
+
+
+def spot_coin_share(spot):
+    coin, total = spot['coin_copper'], spot['value_copper']
+    if coin is None:
+        return 'Coin unavailable'
+    return f'Coin {coin * 100 // total}%' if total else 'Coin unknown'
+
+
+def session_profit_basis(character):
+    bases = [r.get('profit_basis') for r in character['crafts']]
+    if bases and all(bases):
+        return ' at cautious sale price'
+    return ' (includes crafts at cautious sale price)' if any(bases) else ''
+
+
+def session_display(options, arguments):
+    """Readable session projection retaining all evidence; no extra loads or estimates."""
+    characters = []
+    for character in options['characters']:
+        groups = []
+        for group in character['professions']:
+            recipes = [r | {'skillup_band': recipe_band(r, group['rank'], arguments['catalogs'])}
+                       for r in group['recipes']]
+            groups.append(group | {'recipes': recipes, 'milestones': [
+                m | {'recipes': [r for r in recipes if r['required_skill'] == m['skill']]}
+                for m in group['milestones']]})
+        farming = character['farming']
+        spots = [spot | {'mob': mob_label(spot['npc_id'], farming.get('npc_names', {})),
+                          'position': spot_position(spot), 'coin_share': spot_coin_share(spot)}
+                 for spot in farming['spots']]
+        characters.append(character | {'professions': groups, 'farming': farming | {'spots': spots},
+                                       'options_text': [step_text(step, character, options['window'])
+                                                        for step in character['next_steps']]})
+    return options | {'characters': characters}
+
+
+def recipe_band(row, rank, catalogs):
+    recipe = next((c['recipes_by_id'].get(row['recipe_id']) for c in catalogs
+                   if c['catalog_id'] == row['catalog_id']), None)
+    colors = recipe.get('skillup_colors') if recipe else None
+    if not colors:
+        return 'skill-up range unknown: catalog has no colour bands'
+    if rank is None:
+        return 'skill-up colour unknown: character rank unknown'
+    orange, yellow, green, grey = colors
+    color = band_colour(rank, colors)
+    return f'{color} at rank {rank} · orange {orange}, yellow {yellow}, green {green}, grey {grey}'
+
+
+def band_colour(rank, colors):
+    orange, yellow, green, grey = colors
+    if rank < orange:
+        return 'not yet'
+    if orange == green:
+        return 'no reliable skill-ups'
+    return next((label for threshold, label in ((yellow, 'orange'), (green, 'yellow'), (grey, 'green'))
+                 if rank < threshold), 'grey')

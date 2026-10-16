@@ -14,6 +14,7 @@ export const places = [
   "Ledger",
 ] as const;
 export function placeURL(place: string, source: string) {
+  if (place === "Today") return "/app/today?" + new URLSearchParams({ source });
   if (place === "Market")
     return "/app/market?" + new URLSearchParams({ source });
   return (
