@@ -7,6 +7,8 @@ Read the document that fits the task instead of loading all of them:
 - `docs/backlog.md`: priority and user stories.
 - `docs/status.md`: current state, limitations and how to verify. Describe *now*; history belongs in Git.
 
+For a story, don't read `backlog.md`, `requirements.md` or `design.md` whole: print just the story and the rules and design sections it names with `python -m brownstone rules --story STORY-062 UI-17 ADDON-08 --design "Item charts"` (`--section` for a requirements heading, `--list` for every rule ID and heading). The files stay the source; edit rules there.
+
 Explicit user instructions take precedence. When a decision or implementation changes a document, update it there and link from elsewhere rather than restating it.
 
 - WoW Forever is the target. Classic Era Mankrik Alliance is a development stand-in. Retail is regression-only; don't build features for it.

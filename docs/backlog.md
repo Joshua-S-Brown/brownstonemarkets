@@ -6,6 +6,8 @@ Planned product work, in priority order. Rules live in `requirements.md`, archit
 - **Next:** ordered and ready to start (story plus acceptance criteria).
 - **Later:** valuable but unscheduled, often waiting on an item above.
 
+A story ready for handoff names the rule IDs and `design.md` headings it depends on and carries its own implementation notes (code pointers, decisions, expected real-data numbers), so a session needs only the story ID (`docs/prompts/story-handoff.md`) and prints it and the rest with `python -m brownstone rules --story <STORY_ID>`.
+
 ## Direction (groomed 2026-10-04)
 
 WoW Forever launches **4 November 2026**; **21 October is the last full beta testing day** (official dates linked in `requirements.md` → *Product direction*). As of 2026-10-04 (sources in `requirements.md`):

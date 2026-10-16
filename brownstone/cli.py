@@ -52,6 +52,9 @@ def main() -> None:
     if sys.argv[1:2] == ["after-play"]:
         after_play_main(sys.argv[2:])
         return
+    if sys.argv[1:2] == ["rules"]:
+        rules_main(sys.argv[2:])
+        return
     parser = argparse.ArgumentParser(description="Collect TSM snapshots or import BrownstoneScan addon scans")
     parser.add_argument("--config", type=Path, default=ROOT / "config/market.toml")
     parser.add_argument("--input", type=Path,
@@ -116,6 +119,33 @@ def after_play_main(argv: list[str]) -> None:
     lines, code = run(matches[0], ROOT / "work/after-play/state.json", ROOT / "work/beta-reports", readme)
     print("\n".join(lines))
     sys.exit(code)
+
+
+def rules_main(argv: list[str]) -> None:
+    """Print only the named backlog stories, rules and sections of docs/ (read-only)."""
+    from . import doc_sections
+    parser = argparse.ArgumentParser(prog="python -m brownstone rules", description=rules_main.__doc__)
+    parser.add_argument("rule_ids", nargs="*", metavar="RULE_ID", help="Rule IDs such as UI-17 ADDON-08")
+    parser.add_argument("--story", action="append", default=[], metavar="STORY_ID",
+                        help="A docs/backlog.md story such as STORY-062 or 062 (repeatable)")
+    parser.add_argument("--section", action="append", default=[], metavar="HEADING",
+                        help="A requirements.md heading, e.g. 'Team character cards' (repeatable)")
+    parser.add_argument("--design", action="append", default=[], metavar="HEADING",
+                        help="A design.md heading, e.g. 'Item charts' (repeatable)")
+    parser.add_argument("--list", action="store_true", help="List rule IDs, headings and stories")
+    parser.add_argument("--docs", type=Path, default=doc_sections.DOCS, help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    if args.list:
+        print("\n".join(doc_sections.contents(args.docs)))
+        return
+    if not (args.rule_ids or args.story or args.section or args.design):
+        parser.error("name at least one rule ID, --story, --section or --design (or --list)")
+    try:
+        blocks = doc_sections.lookup(args.rule_ids, args.section, args.design, args.docs, args.story)
+    except LookupError as error:
+        print(f"{error}\nRun `python -m brownstone rules --list` for the rule IDs and headings.", file=sys.stderr)
+        sys.exit(1)
+    print("\n\n".join(blocks))
 
 
 def _select_source(args: argparse.Namespace) -> Source:

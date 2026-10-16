@@ -3,8 +3,10 @@
 Use this between stories, when the backlog's Next list is thin or the direction may have shifted (after a launch, a new data source, or a run of feedback). Start a **new session**, commit everything first, and expect a conversation: the session proposes, you decide, and only then does it edit `docs/backlog.md`. It writes no code.
 
 ```text
-Read AGENTS.md, then docs/requirements.md, docs/backlog.md, docs/status.md and docs/design.md. Also look at
-the app (nicegui_app.py and views/nicegui_*.py) so suggestions fit what the interface does today. Don't write code.
+Read AGENTS.md, then docs/backlog.md and docs/status.md. For docs/requirements.md and docs/design.md, start
+from `python -m brownstone rules --list` and print only the rules and sections a story touches with
+`python -m brownstone rules <RULE_ID>... --section "<heading>" --design "<heading>"`. Also look at the app
+(nicegui_app.py and views/nicegui_*.py) so suggestions fit what the interface does today. Don't write code.
 
 Context to keep in mind:
 - WoW Forever is the target. The beta closes on 4 November 2026 and the game launches that day. Classic Era
@@ -37,7 +39,8 @@ Work through these steps, pausing for my answers where marked:
    Pause for my picks.
 
 4. Update the docs for what I picked. New stories go in backlog.md in the existing format (user story,
-   acceptance criteria, dependencies); ideas I like but don't want scheduled go under Later. Rules or decisions
+   acceptance criteria, dependencies, and the rule IDs and design.md headings it relies on, so a handoff
+   needs only the story ID); ideas I like but don't want scheduled go under Later. Rules or decisions
    go in requirements.md, linked rather than repeated. Don't touch other stories beyond what we agreed.
 
 5. Hand-off: a short summary of what changed, the recommended next story, and a suggested commit message.

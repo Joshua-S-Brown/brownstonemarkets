@@ -102,7 +102,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   targets and whole-stack buy/wait/unlisted estimates (Stock rules). Unknown bank is explicit.
 - **Data/CLI:** TSM ingestion and addon formats 1–4 within account format 6, snapshots/journal,
   bounded read-only preview, reviewed import, exact gzip archive and per-file drops.
-  CLI supports collect/import, --preview/--input/--scan, recipes, beta-report and after-play.
+  CLI supports collect/import, --preview/--input/--scan, recipes, beta-report, after-play and rules
+  (prints named backlog stories and requirements/design sections; AGENTS.md).
   TSM and recipe refresh use the CLI. Watchlist engine/local files and Today/Import hits remain.
 - **Storage:** schema 11, metrics version 1, backed-up idempotent migrations. Sources retain
   full market/environment identity and never mix implicitly (DATA-03/08).
