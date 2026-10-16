@@ -1,0 +1,834 @@
+<title>Brownstone Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a fixed app shell. Left rail for places, a top bar for search, source and freshness,
+   one scrolling work area, and a right-hand inspector that opens any item or character in place. */
+:root{
+  --bg:#eef2f1; --surface:#ffffff; --surface-2:#f4f7f6; --sunken:#e4eae8; --line:#d6dedb; --line-strong:#bccac5;
+  --fg:#15201d; --muted:#5a6a65; --faint:#8a9893;
+  --accent:#1b6a62; --accent-fg:#ffffff; --accent-soft:#d8ebe7; --accent-line:#9fcbc3;
+  --good:#2c7a39; --good-soft:#e1f1e3; --warn:#9a6200; --warn-soft:#fbefd6; --bad:#b0342b; --bad-soft:#f8e2df;
+  --gold:#a87a06; --silver:#7d878d; --copper:#a7602f;
+  --q-poor:#8b8f8d; --q-common:#2b302e; --q-uncommon:#1c8a2a; --q-rare:#1a5fb4; --q-epic:#7a3cb0;
+  --sk-orange:#d0650e; --sk-yellow:#c9a400; --sk-green:#3b9a3f; --sk-grey:#9aa29f;
+  --shadow:0 1px 2px rgba(20,40,35,.06),0 8px 24px rgba(20,40,35,.08);
+  --shadow-lg:0 12px 48px rgba(15,30,26,.22);
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:10px; --r-sm:7px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0c1110; --surface:#131a18; --surface-2:#18211f; --sunken:#0f1513; --line:#25302d; --line-strong:#344340;
+  --fg:#e3ebe8; --muted:#97a7a1; --faint:#6b7b76;
+  --accent:#4cb5a9; --accent-fg:#06201c; --accent-soft:#16312d; --accent-line:#2b5e57;
+  --good:#5cc46b; --good-soft:#15301a; --warn:#e5a83c; --warn-soft:#33270f; --bad:#ee6c5f; --bad-soft:#3a1714;
+  --gold:#e6b844; --silver:#b8c2c7; --copper:#da8b56;
+  --q-poor:#9d9d9d; --q-common:#ececec; --q-uncommon:#3fdc4f; --q-rare:#4f9ff2; --q-epic:#b780f2;
+  --sk-orange:#ff8a2a; --sk-yellow:#f2d33a; --sk-green:#52c45a; --sk-grey:#7f8784;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); --shadow-lg:0 12px 48px rgba(0,0,0,.55);
+  color-scheme:dark; }}
+:root[data-theme="dark"]{
+  --bg:#0c1110; --surface:#131a18; --surface-2:#18211f; --sunken:#0f1513; --line:#25302d; --line-strong:#344340;
+  --fg:#e3ebe8; --muted:#97a7a1; --faint:#6b7b76;
+  --accent:#4cb5a9; --accent-fg:#06201c; --accent-soft:#16312d; --accent-line:#2b5e57;
+  --good:#5cc46b; --good-soft:#15301a; --warn:#e5a83c; --warn-soft:#33270f; --bad:#ee6c5f; --bad-soft:#3a1714;
+  --gold:#e6b844; --silver:#b8c2c7; --copper:#da8b56;
+  --q-poor:#9d9d9d; --q-common:#ececec; --q-uncommon:#3fdc4f; --q-rare:#4f9ff2; --q-epic:#b780f2;
+  --sk-orange:#ff8a2a; --sk-yellow:#f2d33a; --sk-green:#52c45a; --sk-grey:#7f8784;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); --shadow-lg:0 12px 48px rgba(0,0,0,.55);
+  color-scheme:dark; }
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45;overflow:hidden}
+*{box-sizing:border-box}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--f-mono);font-size:12px}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:28px;font-weight:800} h2{font-size:17px;font-weight:700} h3{font-size:14px;font-weight:700}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* shell */
+#root{height:100%}
+.shell{display:grid;grid-template-columns:228px minmax(0,1fr);height:100%}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 10px;gap:4px;min-height:0}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
+.brand-mark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:16px}
+.brand-name{font-family:var(--f-display);font-weight:800;font-size:16px;line-height:1.1}
+.brand-sub{font-size:11px;color:var(--muted)}
+.nav-btn{display:flex;align-items:center;gap:11px;width:100%;border:0;background:transparent;padding:9px 10px;border-radius:8px;text-align:left;color:var(--muted);font-weight:500;min-height:40px}
+.nav-btn:hover{background:var(--surface-2);color:var(--fg)}
+.nav-btn[aria-current="page"]{background:var(--accent-soft);color:var(--fg)}
+.nav-btn[aria-current="page"] svg{color:var(--accent)}
+.nav-btn .q{display:block;font-size:11px;font-weight:400;color:var(--faint);line-height:1.2}
+.nav-sep{height:1px;background:var(--line);margin:10px 6px}
+.rail-foot{margin-top:auto;display:flex;flex-direction:column;gap:6px}
+.badge{margin-left:auto;background:var(--accent);color:var(--accent-fg);border-radius:999px;font-size:11px;font-weight:600;padding:1px 7px}
+
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--surface);min-height:58px}
+.search-btn{flex:1;max-width:460px;display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface-2);border-radius:9px;padding:8px 12px;color:var(--muted);text-align:left;min-height:40px}
+.search-btn:hover{border-color:var(--line-strong)}
+.kbd{margin-left:auto;font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:var(--surface)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:12.5px;white-space:nowrap;min-height:32px}
+button.chip:hover{border-color:var(--line-strong)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent-line);color:var(--fg)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good);flex:none}
+.dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.tb-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;width:40px;height:40px;display:grid;place-items:center;color:var(--muted)}
+.icon-btn:hover{color:var(--fg);border-color:var(--line-strong)}
+.scroll{flex:1;overflow:auto;min-height:0}
+.page{padding:24px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+@media (min-width:900px){.page{padding-left:28px;padding-right:28px}}
+.page-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.page-head .sub{color:var(--muted);margin-top:4px}
+.seg{display:inline-flex;background:var(--sunken);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:7px 14px;border-radius:8px;color:var(--muted);font-weight:500;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.panel-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel-h .act{margin-left:auto}
+.panel-b{padding:16px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.kpi .v{font-family:var(--f-display);font-size:24px;font-weight:700;line-height:1.1}
+.kpi .h{font-size:12px;color:var(--muted)}
+.bar{height:6px;border-radius:99px;background:var(--sunken);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 13px;font-weight:500;min-height:36px;white-space:nowrap}
+.btn:hover{border-color:var(--line-strong);background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--fg);background:var(--surface-2)}
+.btn.sm{min-height:30px;padding:4px 10px;font-size:12.5px}
+
+/* money */
+.money{display:inline-flex;gap:.32em;align-items:baseline;white-space:nowrap;font-variant-numeric:tabular-nums}
+.money .u{font-size:.78em;font-weight:600;margin-left:1px}
+.money .u.g{color:var(--gold)} .money .u.s{color:var(--silver)} .money .u.c{color:var(--copper)}
+.money.neg{color:var(--bad)}
+.money.pos-sign::before{content:"+";color:var(--good);margin-right:-.15em}
+
+/* items */
+.item{border:0;background:none;padding:0;font-weight:600;text-align:left;display:inline-flex;align-items:center;gap:8px;max-width:100%}
+.item:hover .nm{text-decoration:underline;text-underline-offset:3px}
+.item .ic{width:24px;height:24px;border-radius:6px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:700;border:1.5px solid currentColor;background:var(--surface-2)}
+.item .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q0{color:var(--q-poor)} .q1{color:var(--q-common)} .q2{color:var(--q-uncommon)} .q3{color:var(--q-rare)} .q4{color:var(--q-epic)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.pill.good{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.neutral{background:var(--sunken);color:var(--muted)}
+.pill.accent{background:var(--accent-soft);color:var(--accent)}
+.tip{position:relative;display:inline-flex}
+.tip-body{position:fixed;z-index:80;background:var(--fg);color:var(--bg);border-radius:8px;padding:10px 12px;font-size:12px;font-weight:400;line-height:1.45;box-shadow:var(--shadow-lg);pointer-events:none;animation:fade .1s}
+.tip-body b{display:block;margin-bottom:4px}
+
+/* tables */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface);position:sticky;top:0}
+th.r,td.r{text-align:right}
+th button{border:0;background:none;padding:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;display:inline-flex;gap:4px;align-items:center}
+td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+tbody tr{cursor:pointer;transition:background .1s}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr.sel{background:var(--accent-soft)}
+tbody tr:last-child td{border-bottom:0}
+
+/* today */
+.today-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:20px;align-items:start}
+.stop{display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 12px;position:relative}
+.stop+.stop{margin-top:4px}
+.stop-n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;background:var(--sunken);color:var(--muted);border:2px solid var(--surface);z-index:1}
+.stop.done .stop-n{background:var(--accent);color:var(--accent-fg)}
+.stop-line{position:absolute;left:16px;top:34px;bottom:-4px;width:2px;background:var(--line)}
+.stop:last-child .stop-line{display:none}
+.stop-body{padding:5px 0 18px;min-width:0}
+.stop-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stop-title h3{font-size:15px}
+.steps{margin-top:8px;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface)}
+.step{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+.step:first-child{border-top:0}
+.step.done .step-what{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--line-strong)}
+.check{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line-strong);background:var(--surface);display:grid;place-items:center;padding:0}
+.check[aria-checked="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.step-what{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.step-meta{font-size:12px;color:var(--muted);text-align:right}
+.opp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:14px 16px;border-top:1px solid var(--line);cursor:pointer}
+.opp:first-child{border-top:0}
+.opp:hover{background:var(--surface-2)}
+.opp .why{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.opp .big{font-family:var(--f-display);font-weight:700;font-size:17px;text-align:right}
+.rank{font-family:var(--f-display);font-weight:800;color:var(--faint);font-size:13px;width:18px;display:inline-block}
+
+/* level */
+.lvl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.skillbar{position:relative;height:10px;border-radius:99px;background:var(--sunken);overflow:hidden}
+.skillbar>i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:99px}
+.skillbar>b{position:absolute;top:0;bottom:0;width:2px;background:var(--fg);opacity:.35}
+.band{display:flex;height:8px;border-radius:99px;overflow:hidden}
+.band span{display:block;height:100%}
+
+/* market */
+.pulse{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pulse-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.pulse-row{display:flex;align-items:center;gap:10px;justify-content:space-between;min-width:0}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.text-in{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 11px;min-height:36px;min-width:0}
+.delta-up{color:var(--bad)} .delta-down{color:var(--good)}
+
+/* chains */
+.chain-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.graph-wrap{overflow:auto;padding:8px 4px 4px}
+.graph{position:relative}
+.graph svg{position:absolute;inset:0;overflow:visible}
+.node{position:absolute;width:210px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+.node.root{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),var(--shadow)}
+.node .route{display:flex;gap:4px}
+.node .route button{flex:1;border:1px solid var(--line);background:var(--surface-2);border-radius:6px;font-size:11.5px;padding:3px 0;color:var(--muted);min-height:26px}
+.node .route button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--fg);font-weight:600}
+.edge{fill:none;stroke:var(--line-strong);stroke-width:2}
+.edge.flow{stroke:var(--accent);stroke-dasharray:4 7;animation:flow 1.1s linear infinite;opacity:.9}
+@keyframes flow{to{stroke-dashoffset:-22}}
+.edge-label{font-size:11px;font-weight:600;fill:var(--muted);font-family:var(--f-body)}
+.wf{display:flex;flex-direction:column;gap:2px}
+.wf-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);align-items:center}
+.wf-row.total{border-bottom:0;border-top:2px solid var(--fg);margin-top:4px;padding-top:10px;font-weight:700}
+input[type=range]{width:100%;accent-color:var(--accent);min-height:28px}
+
+/* team */
+.roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.char{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;cursor:pointer;text-align:left;transition:border-color .12s,transform .12s}
+.char:hover{border-color:var(--accent-line);transform:translateY(-1px)}
+.avatar{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:17px;color:#fff;flex:none}
+.matrix td,.matrix th{text-align:center} .matrix td:first-child,.matrix th:first-child{text-align:left}
+.cell{display:inline-grid;place-items:center;min-width:56px;padding:4px 8px;border-radius:6px;font-weight:600;font-size:12.5px}
+
+/* ledger */
+.ledger-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;align-items:start}
+
+/* inspector */
+.scrim{position:fixed;inset:0;background:rgba(10,20,18,.28);z-index:40;animation:fade .15s}
+.inspector{position:fixed;top:0;right:0;bottom:0;width:min(500px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:41;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:slide .2s ease;padding-bottom:env(safe-area-inset-bottom,0px);padding-top:env(safe-area-inset-top,0px);padding-right:env(safe-area-inset-right,0px)}
+@keyframes slide{from{transform:translateX(40px);opacity:0}}
+@keyframes fade{from{opacity:0}}
+.insp-top{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.insp-head{padding:18px 20px 0;display:flex;flex-direction:column;gap:12px}
+.insp-title{display:flex;gap:12px;align-items:center}
+.insp-title .ic-lg{width:44px;height:44px;border-radius:10px;border:2px solid currentColor;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:18px;background:var(--surface-2);flex:none}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.fact{background:var(--surface);padding:9px 11px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.fact .l{font-size:11px;color:var(--muted)}
+.fact .v{font-weight:600;font-size:15px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 14px;margin-top:4px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:11px 9px;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;min-height:44px}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.insp-body{flex:1;overflow:auto;padding:18px 20px 28px;display:flex;flex-direction:column;gap:18px}
+.evidence{border-top:1px solid var(--line);padding-top:12px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.list>*{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:9px 12px;border-top:1px solid var(--line)}
+.list>*:first-child{border-top:0}
+
+/* palette, sheets, toast */
+.palette{position:fixed;z-index:60;top:12vh;left:50%;transform:translateX(-50%);width:min(620px,calc(100% - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden;animation:fade .12s}
+.palette input{width:100%;border:0;border-bottom:1px solid var(--line);padding:16px 18px;font-size:16px;background:transparent;outline:none}
+.pal-list{max-height:52vh;overflow:auto;padding:6px}
+.pal-group{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:10px 12px 4px;font-weight:600}
+.pal-item{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:9px 12px;border-radius:8px;text-align:left;min-height:40px}
+.pal-item.act{background:var(--accent-soft)}
+.sheet{position:fixed;z-index:60;top:50%;left:50%;transform:translate(-50%,-50%);width:min(640px,calc(100% - 32px));max-height:min(86vh,760px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);animation:fade .15s}
+.sheet-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+.sheet-b{padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.notes p{margin:0;max-width:65ch} .notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
+.toast{position:fixed;z-index:70;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;box-shadow:var(--shadow-lg);font-weight:500;animation:fade .15s;max-width:calc(100% - 32px)}
+.sample{display:flex;gap:10px;align-items:center;background:var(--warn-soft);color:var(--warn);border-radius:9px;padding:8px 12px;font-size:12.5px}
+.chart text{font-size:10.5px;fill:var(--muted);font-family:var(--f-body)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+
+.bottom-nav{display:none}
+@media (max-width:1080px){
+  .today-grid,.ledger-grid,.chain-layout{grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{display:none}
+  .main{padding-bottom:calc(62px + env(safe-area-inset-bottom,0px))}
+  .bottom-nav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--surface);border-top:1px solid var(--line);padding:4px max(6px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+  .bottom-nav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);padding:6px 0;min-height:52px}
+  .bottom-nav button[aria-current="page"]{color:var(--accent);font-weight:600}
+  .topbar{padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px))}
+  .topbar .hide-sm{display:none}
+  .pulse{grid-template-columns:minmax(0,1fr)}
+  h1{font-size:23px}
+}
+@media (max-width:600px){ .step{grid-template-columns:28px minmax(0,1fr)} .step-meta{grid-column:2;text-align:left} }
+@media (max-width:480px){ .facts{grid-template-columns:repeat(2,minmax(0,1fr))} .kpi .v{font-size:20px} }
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+
+<div id="root"><div style="padding:40px;font-family:system-ui;color:#5a6a65">Loading the Brownstone prototype…</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useMemo,useRef,useCallback,Fragment} = React;
+
+/* ---------------- Example data (copper throughout) ---------------- */
+const CUT = 0.05;
+const ITEMS = {
+  2589:{id:2589,name:'Linen Cloth',q:1,kind:'Material',low:18,typ:21,listings:333,units:7416,levels:25,vendorSell:1,signal:'flood',src:'Humanoid drops'},
+  2996:{id:2996,name:'Bolt of Linen Cloth',q:1,kind:'Intermediate',low:52,typ:55,listings:175,units:3080,levels:17,vendorSell:10},
+  2320:{id:2320,name:'Coarse Thread',q:1,kind:'Vendor',vendor:10,src:'Tailoring supplies vendor'},
+  6260:{id:6260,name:'Blue Dye',q:1,kind:'Vendor',vendor:50,src:'Tailoring supplies vendor'},
+  2604:{id:2604,name:'Red Dye',q:1,kind:'Vendor',vendor:50,src:'Tailoring supplies vendor'},
+  4238:{id:4238,name:'Linen Bag',q:1,kind:'Craft',low:320,typ:360,listings:14,units:14,levels:9,vendorSell:62,signal:'removed'},
+  6240:{id:6240,name:'Blue Linen Vest',q:2,kind:'Craft',low:681,typ:690,listings:6,units:6,levels:5,vendorSell:87},
+  2572:{id:2572,name:'Red Linen Robe',q:2,kind:'Craft',low:1181,typ:1240,listings:4,units:4,levels:4,vendorSell:120},
+  2592:{id:2592,name:'Wool Cloth',q:1,kind:'Material',low:46,typ:38,listings:121,units:1904,levels:14,vendorSell:8,signal:'rising',src:'Humanoid drops'},
+  2997:{id:2997,name:'Bolt of Woolen Cloth',q:1,kind:'Intermediate',low:170,typ:176,listings:58,units:690,levels:11,vendorSell:30,signal:'crowded'},
+  2770:{id:2770,name:'Copper Ore',q:1,kind:'Material',low:31,typ:33,listings:96,units:1210,levels:12,vendorSell:5,src:'Mining'},
+  2840:{id:2840,name:'Copper Bar',q:1,kind:'Intermediate',low:38,typ:41,listings:88,units:960,levels:10,vendorSell:10},
+  2835:{id:2835,name:'Rough Stone',q:1,kind:'Material',low:6,typ:7,listings:40,units:880,levels:6,vendorSell:2,src:'Mining'},
+  2680:{id:2680,name:'Spiced Wolf Meat',q:1,kind:'Craft',low:24,typ:28,listings:22,units:150,levels:8,vendorSell:6},
+  2672:{id:2672,name:'Stringy Wolf Meat',q:1,kind:'Material',low:14,typ:15,listings:30,units:410,levels:7,vendorSell:4,src:'Wolves'},
+  2862:{id:2862,name:'Rough Sharpening Stone',q:1,kind:'Craft',low:9,typ:10,listings:18,units:120,levels:5,vendorSell:2},
+  2678:{id:2678,name:'Mild Spices',q:1,kind:'Vendor',vendor:10,src:'Cooking supplies vendor'},
+};
+const RECIPES = {
+  2996:{yields:1,by:'Basilly',prof:'Tailoring',skill:1,mats:[[2589,2]]},
+  4238:{yields:1,by:'Basilly',prof:'Tailoring',skill:45,mats:[[2996,3],[2320,3]]},
+  6240:{yields:1,by:'Basilly',prof:'Tailoring',skill:70,mats:[[2996,3],[6260,1],[2320,2]]},
+  2572:{yields:1,by:null,prof:'Tailoring',skill:70,mats:[[2996,3],[2604,2],[2320,1]],pattern:'Drop · source unverified'},
+  2997:{yields:1,by:null,prof:'Tailoring',skill:75,mats:[[2592,3]]},
+  2840:{yields:1,by:'Keenagen',prof:'Mining',skill:1,mats:[[2770,1]]},
+  2862:{yields:1,by:'Keenagen',prof:'Blacksmithing',skill:1,mats:[[2835,1]]},
+  2680:{yields:1,by:'Arille',prof:'Cooking',skill:10,mats:[[2672,1],[2678,1]]},
+};
+const CHARS = [
+  {name:'Basilly',cls:'Priest',level:17,color:'#5b7fb8',gold:11982,profs:[{p:'Tailoring',skill:72,cap:150},{p:'Enchanting',skill:31,cap:75}],next:'Craft 6 Blue Linen Vest to reach 78 (orange until 95)',seen:'2h ago'},
+  {name:'Keenagen',cls:'Warrior',level:15,color:'#9a6a3c',gold:4410,profs:[{p:'Mining',skill:54,cap:75},{p:'Blacksmithing',skill:22,cap:75}],next:'Make 4 Rough Sharpening Stone to reach 26 in Blacksmithing',seen:'5h ago'},
+  {name:'Arille',cls:'Hunter',level:13,color:'#4e8f52',gold:2260,profs:[{p:'Cooking',skill:31,cap:75},{p:'Fishing',skill:40,cap:75}],next:'Cook 8 Spiced Wolf Meat to reach about 37',seen:'1d ago'},
+  {name:'Cicelyna',cls:'Druid',level:11,color:'#b0702a',gold:1873,profs:[{p:'Herbalism',skill:15,cap:75}],next:'Gather around Lakeshire to reach 50',seen:'2d ago'},
+];
+const SCANS = [{id:'20261016T013929Z-6005ec',when:'Today 01:39 UTC',items:1909,listings:9612,state:'Imported'},
+  {id:'20261016T184210Z-7a21f0',when:'Today 18:42 UTC',items:1931,listings:9870,state:'New'},
+  {id:'20261016T201455Z-913cd4',when:'Today 20:14 UTC',items:1926,listings:9801,state:'New'}];
+
+/* deterministic series */
+function series(seed,n,base,vol){let x=seed,out=[];let v=base;for(let i=0;i<n;i++){x=(x*9301+49297)%233280;const r=x/233280-.5;v=Math.max(1,Math.round(v+r*vol+(base-v)*.18));out.push(v)}return out}
+const HIST = {};
+Object.values(ITEMS).forEach(it=>{ if(it.low){ const s=series(it.id,28,it.typ,it.typ*.18); s[s.length-1]=it.low; HIST[it.id]=s; }});
+const UNITS_HIST = {}; Object.values(ITEMS).forEach(it=>{ if(it.units){ const s=series(it.id+7,28,it.units*.85,it.units*.25); s[s.length-1]=it.units; UNITS_HIST[it.id]=s; }});
+
+/* ---------------- money and costing ---------------- */
+function split(c){const a=Math.abs(c);return {g:Math.floor(a/10000),s:Math.floor(a%10000/100),c:a%100}}
+function Money({c,sign,dim}){
+  if(c==null) return <span className="faint">—</span>;
+  const p=split(c),parts=[];
+  if(p.g) parts.push(<span key="g">{p.g.toLocaleString()}<span className="u g">g</span></span>);
+  if(p.s||p.g) parts.push(<span key="s">{p.s}<span className="u s">s</span></span>);
+  if(!p.g) parts.push(<span key="c">{p.c}<span className="u c">c</span></span>);
+  return <span className={'money'+(c<0?' neg':'')+(sign&&c>0?' pos-sign':'')} title={c.toLocaleString()+' copper'}>{c<0?'−':''}{parts}</span>;
+}
+function unitCost(id,routes={}){
+  const it=ITEMS[id]; if(it.vendor) return it.vendor;
+  const r=RECIPES[id]; const choice=routes[id];
+  const craft=r && r.mats.reduce((a,[m,q])=>a+unitCost(m,routes)*q,0)/r.yields;
+  if(r && choice==='craft') return craft;
+  if(choice==='buy' || !r) return it.low;
+  return Math.min(craft,it.low);
+}
+function routeOf(id,routes={}){const it=ITEMS[id]; if(it.vendor) return 'vendor'; const r=RECIPES[id]; if(!r) return 'buy';
+  if(routes[id]) return routes[id]; const craft=r.mats.reduce((a,[m,q])=>a+unitCost(m,routes)*q,0); return craft<=it.low?'craft':'buy'}
+function sellPrice(id){return ITEMS[id].low-1}
+function econ(id,routes={}){const sp=sellPrice(id),cut=Math.floor(sp*CUT),r=RECIPES[id];
+  const mats=r.mats.reduce((a,[m,q])=>a+unitCost(m,routes)*q,0);return {sell:sp,cut,mats,profit:sp-cut-mats}}
+function deposit(id,qty,hours=24){return Math.floor((ITEMS[id].vendorSell||0)*qty*0.05*hours/2)}
+
+const OPPS = [
+  {id:4238,conf:'Medium',reasons:['Lowest is 11% below the typical earlier price','14 listings, thin depth'],batch:8,who:'Basilly'},
+  {id:6240,conf:'High',reasons:['Price steady across 9 days','Material route fully known'],batch:3,who:'Basilly'},
+  {id:2572,conf:'Low',reasons:['Pattern not learned · source unverified','Only 4 listings'],batch:0,who:'Pattern worth hunting'},
+  {id:2997,conf:'Low',reasons:['Crowded: 23 listings within 1c of lowest','Wool Cloth up 21% vs typical'],batch:0,who:'Needs Tailoring 75'},
+  {id:2840,conf:'Medium',reasons:['Margin under 10%','Levels Mining on the way'],batch:20,who:'Keenagen'},
+];
+
+/* ---------------- icons ---------------- */
+const P={today:'M4 5h16M4 12h10M4 19h7M17 15l2 2 4-4',market:'M3 17l5-6 4 3 5-7 4 4M3 21h18',chain:'M5 6h4v4H5zM15 14h4v4h-4zM9 8h3a2 2 0 012 2v4a2 2 0 002 2',team:'M8 11a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 6-5s6 2 6 5M16 11a3 3 0 100-6M18 15c2.5.5 4 2.3 4 5',ledger:'M4 4h16v16H4zM4 9h16M9 9v11',data:'M12 3c5 0 8 1.3 8 3s-3 3-8 3-8-1.3-8-3 3-3 8-3zM4 6v6c0 1.7 3 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3 3 8 3s8-1.3 8-3v-6',search:'M11 18a7 7 0 110-14 7 7 0 010 14zM21 21l-5-5',x:'M6 6l12 12M18 6L6 18',back:'M15 18l-6-6 6-6',moon:'M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z',info:'M12 8h.01M11 12h1v5h1M12 21a9 9 0 110-18 9 9 0 010 18z',check:'M5 12l5 5 9-10',plus:'M12 5v14M5 12h14',arrow:'M5 12h14M13 6l6 6-6 6',up:'M6 15l6-6 6 6',down:'M6 9l6 6 6-6'};
+function Icon({n,s=18,w=1.8}){return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={P[n]}/></svg>}
+
+const PLACES=[
+  {k:'today',label:'Today',q:'What should we do tonight?',icon:'today'},
+  {k:'market',label:'Market',q:'What is the market telling us?',icon:'market'},
+  {k:'chains',label:'Supply chains',q:'Where does the margin come from?',icon:'chain'},
+  {k:'team',label:'Team',q:'How do we grow our crafters?',icon:'team'},
+  {k:'ledger',label:'Ledger',q:'Where did our gold and goods go?',icon:'ledger'},
+];
+
+/* ---------------- small components ---------------- */
+function Item({id,open,short}){const it=ITEMS[id];
+  return <button className={'item q'+it.q} onClick={e=>{e.stopPropagation();open({t:'item',id})}}>
+    <span className="ic">{it.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</span>
+    <span className="nm">{it.name}</span></button>}
+function Tip({trigger,title,children}){const [box,setBox]=useState(null);const ref=useRef();
+  const show=()=>{const b=ref.current.getBoundingClientRect();setBox(b)};const hide=()=>setBox(null);
+  let st=null;if(box){const w=260,left=Math.min(Math.max(8,box.left+box.width/2-w/2),innerWidth-w-8);const below=box.top<140;st={left,width:w,...(below?{top:box.bottom+8}:{bottom:innerHeight-box.top+8})}}
+  return <span className="tip" ref={ref} tabIndex={0} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide} onClick={e=>e.stopPropagation()}>{trigger}
+    {box&&ReactDOM.createPortal(<span className="tip-body" role="tooltip" style={st}><b>{title}</b>{children}</span>,document.body)}</span>}
+function Conf({level,reasons}){const cls=level==='High'?'good':level==='Medium'?'warn':'bad';
+  return <Tip trigger={<span className={'pill '+cls}>{level}</span>} title={level+' confidence'}>{reasons.map((r,i)=><div key={i}>· {r}</div>)}</Tip>}
+function Signal({s}){ if(!s) return <span className="pill neutral">Steady</span>;
+  const m={flood:['warn','Flooded','Units 38% above typical; lowest 14% below.'],removed:['accent','Removed early','9 units left early across 3 scan gaps. Upper bound on purchases.'],rising:['bad','Rising','Lowest 21% above the typical earlier price.'],crowded:['warn','Crowded','23 listings within 1c of the lowest.']}[s];
+  return <Tip trigger={<span className={'pill '+m[0]}>{m[1]}</span>} title={m[1]}>{m[2]}</Tip>}
+function Spark({data,w=96,h=28,color='var(--accent)'}){ if(!data) return null;
+  const mn=Math.min(...data),mx=Math.max(...data),r=mx-mn||1;
+  const pts=data.map((v,i)=>[i/(data.length-1)*(w-4)+2,h-3-(v-mn)/r*(h-6)]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const last=pts[pts.length-1];
+  return <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true"><path d={d+` L${w-2} ${h} L2 ${h} Z`} fill={color} opacity=".1"/><path d={d} fill="none" stroke={color} strokeWidth="1.6"/><circle cx={last[0]} cy={last[1]} r="2.6" fill={color}/></svg>}
+function pct(a,b){return Math.round((a-b)/b*100)}
+function Delta({id}){const it=ITEMS[id]; if(!it.low) return <span className="faint">—</span>; const d=pct(it.low,it.typ);
+  return <span className={'num '+(d>0?'delta-up':d<0?'delta-down':'muted')}>{d>0?'+':''}{d}%</span>}
+
+/* ---------------- Today ---------------- */
+const RUN = [
+  {stop:'Bank and mailbox',who:'Keenagen',where:'Stormwind · Mailbox',steps:[
+    {k:'b1',what:<>Take <b>14</b> <I id={2589}/> from the bank</>,meta:'Bank · captured 5h ago'},
+    {k:'b2',what:<>Mail <b>14</b> <I id={2589}/> to Basilly</>,meta:<>Postage <Money c={30}/></>}]},
+  {stop:'Auction House',who:'Basilly',where:'Stormwind · Trade District',steps:[
+    {k:'a1',what:<>Buy <b>20</b> <I id={2589}/> at <Money c={18}/></>,meta:<>1 listing · <Money c={360}/></>},
+    {k:'a2',what:<>Buy <b>10</b> <I id={2589}/> at <Money c={19}/></>,meta:<>1 listing · <Money c={190}/></>}]},
+  {stop:'Tailoring supplies',who:'Basilly',where:'Stormwind · The Canals',steps:[
+    {k:'v1',what:<>Buy <b>30</b> <I id={2320}/></>,meta:<><Money c={300}/></>},
+    {k:'v2',what:<>Buy <b>3</b> <I id={6260}/></>,meta:<><Money c={150}/></>}]},
+  {stop:'Craft',who:'Basilly',where:'Tailoring 72 / 150',steps:[
+    {k:'c1',what:<>Make <b>33</b> <I id={2996}/></>,meta:'Uses 66 Linen Cloth'},
+    {k:'c2',what:<>Make <b>8</b> <I id={4238}/></>,meta:'Green · few skill-ups'},
+    {k:'c3',what:<>Make <b>3</b> <I id={6240}/></>,meta:'Orange · +3 skill'}]},
+  {stop:'Post',who:'Basilly',where:'Auction House · 24 hours',steps:[
+    {k:'p1',what:<>Post <b>8</b> <I id={4238}/> at <Money c={319}/> each</>,meta:<>Deposit <Money c={deposit(4238,8)}/> back on sale</>},
+    {k:'p2',what:<>Post <b>3</b> <I id={6240}/> at <Money c={680}/> each</>,meta:<>Deposit <Money c={deposit(6240,3)}/> back on sale</>}]},
+];
+let OPEN_REF={current:()=>{}};
+function I({id}){return <Item id={id} open={(x)=>OPEN_REF.current(x)}/>}
+
+function Today({open,toast,pending}){
+  const [mode,setMode]=useState('gold');
+  const [done,setDone]=useState(()=>new Set(['b1']));
+  const all=RUN.flatMap(s=>s.steps.map(x=>x.k));
+  const toggle=k=>setDone(d=>{const n=new Set(d);n.has(k)?n.delete(k):n.add(k);return n});
+  const profit=OPPS[0].batch*econ(4238).profit+OPPS[1].batch*econ(6240).profit;
+  const spend=360+190+300+150+30, onHand=CHARS[0].gold;
+  return <div className="page">
+    <div className="page-head">
+      <div><div className="eyebrow">Thursday 16 October · Forever beta · Normal Alliance</div><h1>Tonight's run</h1>
+        <div className="sub">One route through the evening: what to buy, make and post, in the order you'll do it.</div></div>
+      <div style={{marginLeft:'auto'}} className="seg" role="group" aria-label="Plan">
+        <button aria-pressed={mode==='gold'} onClick={()=>setMode('gold')}>Make gold</button>
+        <button aria-pressed={mode==='level'} onClick={()=>setMode('level')}>Level up</button></div>
+    </div>
+    {mode==='gold'?<>
+    <div className="kpis">
+      <div className="kpi"><span className="eyebrow">Planned profit</span><span className="v"><Money c={profit}/></span><span className="h">At cautious sale prices, after the 5% cut</span></div>
+      <div className="kpi"><span className="eyebrow">Gold to spend</span><span className="v"><Money c={spend}/></span>
+        <div className="bar"><i style={{width:Math.round(spend/onHand*100)+'%'}}/></div><span className="h">{Math.round(spend/onHand*100)}% of Basilly's <Money c={onHand}/></span></div>
+      <div className="kpi"><span className="eyebrow">Progress</span><span className="v num">{done.size} <span className="muted" style={{fontSize:16}}>of {all.length} steps</span></span>
+        <div className="bar"><i style={{width:done.size/all.length*100+'%'}}/></div><span className="h">Ticks stay on this Mac until the next scan</span></div>
+      <div className="kpi"><span className="eyebrow">Market data</span><span className="v" style={{display:'flex',gap:8,alignItems:'center'}}><span className="dot"/>2h 14m old</span><span className="h">{pending?`${pending} newer scans waiting to import`:'Newest scans imported'}</span></div>
+    </div>
+    <div className="today-grid">
+      <section className="panel">
+        <div className="panel-h"><h2>Route</h2><span className="muted">5 stops · about 25 minutes in game</span>
+          <button className="btn sm act" onClick={()=>toast('Copied the route as text for an in-game note')}>Copy as text</button></div>
+        <div className="panel-b">{RUN.map((s,i)=>{const sd=s.steps.every(x=>done.has(x.k));
+          return <div className={'stop'+(sd?' done':'')} key={i}><div className="stop-n">{sd?<Icon n="check" s={16} w={2.6}/>:i+1}</div><div className="stop-line"/>
+            <div className="stop-body"><div className="stop-title"><h3>{s.stop}</h3><button className="pill neutral" style={{border:0,cursor:'pointer'}} onClick={()=>open({t:'char',id:s.who})}>{s.who}</button><span className="muted" style={{fontSize:12.5}}>{s.where}</span></div>
+              <div className="steps">{s.steps.map(x=>{const on=done.has(x.k);return <div className={'step'+(on?' done':'')} key={x.k}>
+                <button className="check" role="checkbox" aria-checked={on} aria-label="Mark step done" onClick={()=>toggle(x.k)}>{on&&<Icon n="check" s={14} w={3}/>}</button>
+                <span className="step-what">{x.what}</span><span className="step-meta">{x.meta}</span></div>})}</div></div></div>})}</div>
+      </section>
+      <section className="panel">
+        <div className="panel-h"><h2>Opportunities</h2><span className="muted">Ranked by profit you can act on</span></div>
+        <div>{OPPS.map((o,i)=>{const e=econ(o.id),it=ITEMS[o.id];return <div className="opp" key={o.id} onClick={()=>open({t:'item',id:o.id})}>
+          <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}><span className="rank">{i+1}</span><Item id={o.id} open={open}/></div>
+          <div className="big"><Money c={e.profit}/><div className="muted" style={{fontSize:11.5,fontFamily:'var(--f-body)',fontWeight:400}}>per craft</div></div>
+          <div className="why"><Conf level={o.conf} reasons={o.reasons}/><span>{o.batch?<>Batch of {o.batch} · {o.who}</>:o.who}</span>
+            <span style={{marginLeft:'auto'}}><Spark data={HIST[o.id]} w={80} h={22}/></span></div></div>})}</div>
+      </section>
+    </div></>:<LevelUp open={open}/>}
+  </div>}
+
+function bandFor(skill){ // orange → yellow → green → grey widths for a recipe learned at `skill`
+  return [[skill,skill+25,'--sk-orange'],[skill+25,skill+37,'--sk-yellow'],[skill+37,skill+50,'--sk-green'],[skill+50,skill+60,'--sk-grey']]}
+function LevelUp({open}){
+  const mk=(c,pi,recipe,count,note)=>{const e=econ(recipe);return {c,prof:c.profs[pi],recipe,learn:RECIPES[recipe].skill,count,cost:count*e.mats,gain:count*e.profit,note}};
+  const rows=[mk(CHARS[0],0,6240,6,'Sells for a profit while it levels'),mk(CHARS[1],1,2862,4,'Uses the Rough Stone Keenagen already holds'),mk(CHARS[2],0,2680,8,'Cheapest orange recipe left; a small loss')];
+  const gainOf=r=>{const oe=r.learn+25,o=Math.max(0,Math.min(r.count,oe-r.prof.skill));return o+Math.floor((r.count-o)*.5)};
+  return <div className="lvl-grid">{rows.map((r,i)=>{const sk=r.prof.skill;return <div className="panel" key={i}>
+    <div className="panel-h"><span className="avatar" style={{background:r.c.color,width:34,height:34,fontSize:14,borderRadius:10}}>{r.c.name[0]}</span>
+      <div><button className="item" onClick={()=>open({t:'char',id:r.c.name})}><span className="nm">{r.c.name}</span></button><div className="muted" style={{fontSize:12}}>{r.prof.p} {sk} / {r.prof.cap}</div></div>
+      <span className="act pill accent">about +{gainOf(r)} skill</span></div>
+    <div className="panel-b" style={{display:'flex',flexDirection:'column',gap:12}}>
+      <div style={{display:'flex',justifyContent:'space-between',gap:8,alignItems:'center'}}><span>Make <b>{r.count}</b></span><Item id={r.recipe} open={open}/></div>
+      <div><div className="band" aria-label="Skill-up colour bands">{bandFor(r.learn).map(([a,b,c],j)=><span key={j} style={{flex:b-a,background:`var(${c})`}}/>)}</div>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--muted)',marginTop:4}} className="num"><span>{r.learn}</span><span>you are at {sk}</span><span>{r.learn+60}</span></div></div>
+      <dl className="kv" style={{margin:0}}><dt>Materials</dt><dd><Money c={r.cost}/></dd><dt>Net after selling</dt><dd><Money c={r.gain} sign/></dd></dl>
+      <div className="muted" style={{fontSize:12.5}}>{r.note}</div></div></div>})}</div>}
+
+/* ---------------- Market ---------------- */
+function Market({open,sel}){
+  const [filter,setFilter]=useState('all'); const [q,setQ]=useState(''); const [sort,setSort]=useState(['delta',1]);
+  const rows=Object.values(ITEMS).filter(it=>it.low);
+  const fl={all:()=>true,materials:it=>it.kind==='Material',crafts:it=>it.kind!=='Material',signals:it=>!!it.signal}[filter];
+  const val={name:it=>it.name,low:it=>it.low,delta:it=>Math.abs(pct(it.low,it.typ)),units:it=>it.units,listings:it=>it.listings};
+  const shown=rows.filter(fl).filter(it=>!q||it.name.toLowerCase().includes(q.toLowerCase())||String(it.id)===q)
+    .sort((a,b)=>{const f=val[sort[0]];const x=f(a),y=f(b);return (x>y?1:x<y?-1:0)*(sort[1]?-1:1)});
+  const H=({k,children,r})=><th className={r?'r':''} aria-sort={sort[0]===k?(sort[1]?'descending':'ascending'):'none'}><button onClick={()=>setSort([k,sort[0]===k?1-sort[1]:1])}>{children}{sort[0]===k&&<Icon n={sort[1]?'down':'up'} s={12}/>}</button></th>;
+  return <div className="page">
+    <div className="page-head"><div><div className="eyebrow">Scan 20261016T013929Z · 1,909 items · 2h 14m old</div><h1>Market</h1>
+      <div className="sub">Supply and prices for the items in our chains. Listings are supply, not sales.</div></div></div>
+    <div className="pulse">
+      <div className="pulse-card"><div className="pulse-row"><h3>Cheaper than usual</h3><span className="muted" style={{fontSize:12}}>vs typical</span></div>
+        {[2589,4238,2840].map(id=><div className="pulse-row" key={id}><Item id={id} open={open}/><span style={{display:'flex',gap:10,alignItems:'center'}}><Spark data={HIST[id]} w={60} h={20} color="var(--good)"/><Delta id={id}/></span></div>)}</div>
+      <div className="pulse-card"><div className="pulse-row"><h3>Dearer than usual</h3><span className="muted" style={{fontSize:12}}>vs typical</span></div>
+        {[2592,2770,2680].map(id=><div className="pulse-row" key={id}><Item id={id} open={open}/><span style={{display:'flex',gap:10,alignItems:'center'}}><Spark data={HIST[id]} w={60} h={20} color="var(--bad)"/><Delta id={id}/></span></div>)}</div>
+      <div className="pulse-card"><div className="pulse-row"><h3>Left early</h3><span className="muted" style={{fontSize:12}}>last 3 gaps</span></div>
+        {[[4238,9],[6240,2],[2996,140]].map(([id,u])=><div className="pulse-row" key={id}><Item id={id} open={open}/><span className="num">{u} units</span></div>)}
+        <span className="faint" style={{fontSize:11.5}}>Bought or cancelled; an upper bound on sales.</span></div>
+    </div>
+    <section className="panel">
+      <div className="panel-h" style={{flexWrap:'wrap'}}><div className="filters">
+        {[['all','All in our chains'],['materials','Materials'],['crafts','Crafts and intermediates'],['signals','With a signal']].map(([k,l])=>
+          <button key={k} className={'chip'+(filter===k?' on':'')} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}</button>)}</div>
+        <input id="mkt-q" className="text-in act" placeholder="Filter by name or ID" value={q} onChange={e=>setQ(e.target.value)} aria-label="Filter items"/></div>
+      <div className="table-wrap"><table>
+        <thead><tr><H k="name">Item</H><H k="low" r>Lowest</H><th className="r">Typical</th><H k="delta" r>vs typical</H><th>28 scans</th><H k="listings" r>Listings</H><H k="units" r>Units</H><th>Signal</th></tr></thead>
+        <tbody>{shown.map(it=><tr key={it.id} className={sel===it.id?'sel':''} onClick={()=>open({t:'item',id:it.id})}>
+          <td><Item id={it.id} open={open}/></td><td className="r"><Money c={it.low}/></td><td className="r muted"><Money c={it.typ}/></td>
+          <td className="r"><Delta id={it.id}/></td><td><Spark data={HIST[it.id]} w={88} h={22}/></td>
+          <td className="r num">{it.listings.toLocaleString()}</td><td className="r num">{it.units.toLocaleString()}</td><td><Signal s={it.signal}/></td></tr>)}
+          {!shown.length&&<tr><td colSpan={8} className="muted" style={{padding:24,textAlign:'center'}}>No items match. Clear the filter or try an item ID.</td></tr>}</tbody></table></div>
+    </section>
+  </div>}
+
+/* ---------------- Supply chains ---------------- */
+function buildGraph(root){
+  const nodes={},edges=[];
+  function walk(id,depth){nodes[id]=Math.max(nodes[id]??0,depth);const r=RECIPES[id];if(r)r.mats.forEach(([m,q])=>{edges.push([m,id,q]);walk(m,depth+1)})}
+  walk(root,0);
+  const maxD=Math.max(...Object.values(nodes));const cols={};
+  Object.entries(nodes).forEach(([id,d])=>{(cols[d]=cols[d]||[]).push(+id)});
+  const W=290,NH=132,pos={};
+  Object.entries(cols).forEach(([d,ids])=>{ids.forEach((id,i)=>{pos[id]={x:(maxD-d)*W,y:i*NH+(Math.max(...Object.values(cols).map(c=>c.length))-ids.length)*NH/2}})});
+  const h=Math.max(...Object.values(cols).map(c=>c.length))*NH;
+  return {pos,edges,w:maxD*W+210,h};
+}
+function Chains({open,toast}){
+  const products=[4238,6240,2572,2997,2840,2680];
+  const [root,setRoot]=useState(4238); const [routes,setRoutes]=useState({}); const [batch,setBatch]=useState(8);
+  const g=useMemo(()=>buildGraph(root),[root]);
+  const e=econ(root,routes); const r=RECIPES[root];
+  const setRoute=(id,v)=>setRoutes(x=>({...x,[id]:v}));
+  const leaves={}; (function acc(id,mult){const rt=routeOf(id,routes);if(id!==root&&rt!=='craft'){leaves[id]=(leaves[id]||0)+mult;return}RECIPES[id].mats.forEach(([m,q])=>acc(m,mult*q))})(root,1);
+  return <div className="page">
+    <div className="page-head"><div><div className="eyebrow">Recipe routes · cheapest path chosen automatically</div><h1>Supply chains</h1>
+      <div className="sub">Follow a craft back to its raw materials. Switch any step between buying and crafting to see the margin move.</div></div></div>
+    <div className="filters">{products.map(id=><button key={id} className={'chip'+(root===id?' on':'')} aria-pressed={root===id} onClick={()=>{setRoot(id);setRoutes({})}}><span className={'q'+ITEMS[id].q} style={{fontWeight:600}}>{ITEMS[id].name}</span></button>)}</div>
+    <div className="chain-layout">
+      <section className="panel"><div className="panel-h"><h2>Route</h2><span className="muted">{r.prof} {r.skill} · {r.by?`made by ${r.by}`:'no one on the team knows this yet'}</span></div>
+        <div className="graph-wrap"><div className="graph" style={{width:g.w+20,height:g.h,margin:'8px 10px'}}>
+          <svg width={g.w} height={g.h} aria-hidden="true">{g.edges.map(([a,b,q],i)=>{const A=g.pos[a],B=g.pos[b];const x1=A.x+210,y1=A.y+52,x2=B.x,y2=B.y+52,mx=(x1+x2)/2;
+            const active=routeOf(b,routes)==='craft'||b===root;
+            return <g key={i}><path className={'edge'+(active?' flow':'')} d={`M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`} style={active?{}:{strokeDasharray:'2 5',opacity:.5}}/>
+              <text className="edge-label" x={mx} y={(y1+y2)/2-6} textAnchor="middle">×{q}</text></g>})}</svg>
+          {Object.entries(g.pos).map(([id,p])=>{id=+id;const it=ITEMS[id],rt=routeOf(id,routes),isRoot=id===root,rec=RECIPES[id];
+            return <div key={id} className={'node'+(isRoot?' root':'')} style={{left:p.x,top:p.y}}>
+              <Item id={id} open={open}/>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}><span className="muted" style={{fontSize:12}}>{isRoot?'Sells at':'Unit cost'}</span>
+                <b>{isRoot?<Money c={e.sell}/>:<Money c={unitCost(id,routes)}/>}</b></div>
+              {isRoot?<span className="pill accent" style={{alignSelf:'flex-start'}}>Output</span>
+               :it.vendor?<span className="muted" style={{fontSize:11.5}}>{it.src}</span>
+               :rec?<div className="route" role="group" aria-label={'Route for '+it.name}><button aria-pressed={rt==='buy'} onClick={()=>setRoute(id,'buy')}>Buy <Money c={it.low}/></button><button aria-pressed={rt==='craft'} onClick={()=>setRoute(id,'craft')}>Craft</button></div>
+               :<span className="muted" style={{fontSize:11.5}}>Auction House · {it.listings} listings</span>}
+            </div>})}
+        </div></div></section>
+      <aside style={{display:'flex',flexDirection:'column',gap:16}}>
+        <section className="panel"><div className="panel-h"><h2>Per craft</h2><Conf level={(OPPS.find(o=>o.id===root)||{conf:'Medium'}).conf} reasons={(OPPS.find(o=>o.id===root)||{reasons:['Example route']}).reasons}/></div>
+          <div className="panel-b wf">
+            <div className="wf-row"><span>Sale price, 1c under lowest</span><Money c={e.sell}/></div>
+            <div className="wf-row"><span>Auction cut, 5% rounded down</span><Money c={-e.cut}/></div>
+            {Object.entries(leaves).map(([id,q])=><div className="wf-row" key={id}><span>{q} × <span className={'q'+ITEMS[id].q} style={{fontWeight:600}}>{ITEMS[id].name}</span></span><Money c={-Math.round(unitCost(+id,routes)*q)}/></div>)}
+            <div className="wf-row total"><span>Profit</span><Money c={e.profit}/></div></div></section>
+        <section className="panel"><div className="panel-h"><h2>Batch</h2><span className="act num" style={{fontFamily:'var(--f-display)',fontWeight:700,fontSize:18}}>{batch}</span></div>
+          <div className="panel-b" style={{display:'flex',flexDirection:'column',gap:12}}>
+            <input id="batch" type="range" min="1" max="30" value={batch} onChange={e=>setBatch(+e.target.value)} aria-label="Batch size"/>
+            <dl className="kv" style={{margin:0}}>{Object.entries(leaves).map(([id,q])=><Fragment key={id}><dt>{ITEMS[id].name}</dt><dd className="num">{q*batch}</dd></Fragment>)}
+              <dt>Spend</dt><dd><Money c={Math.round(e.mats*batch)}/></dd><dt>Profit</dt><dd><b><Money c={e.profit*batch}/></b></dd></dl>
+            <button className="btn primary" onClick={()=>toast(`Added ${batch} ${ITEMS[root].name} to tonight's run`)}><Icon n="plus" s={16}/>Add to tonight's run</button></div></section>
+      </aside>
+    </div>
+  </div>}
+
+/* ---------------- Team ---------------- */
+const PROFS=['Tailoring','Enchanting','Mining','Blacksmithing','Cooking','Fishing','Herbalism','Alchemy','Leatherworking','Skinning'];
+function Team({open}){
+  return <div className="page">
+    <div className="page-head"><div><div className="eyebrow">4 characters · captured from the addon</div><h1>Team</h1>
+      <div className="sub">Who can make what, how far each crafter is from the next tier, and what a new hire would add.</div></div></div>
+    <div className="roster">{CHARS.map(c=><button className="char" key={c.name} onClick={()=>open({t:'char',id:c.name})}>
+      <div style={{display:'flex',gap:12,alignItems:'center'}}><span className="avatar" style={{background:c.color}}>{c.name[0]}</span>
+        <div style={{minWidth:0}}><h3 style={{fontSize:16}}>{c.name}</h3><div className="muted" style={{fontSize:12.5}}>Level {c.level} {c.cls} · seen {c.seen}</div></div>
+        <span style={{marginLeft:'auto'}}><Money c={c.gold}/></span></div>
+      {c.profs.map(p=><div key={p.p} style={{display:'flex',flexDirection:'column',gap:5}}>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:12.5}}><span>{p.p}</span><span className="num muted">{p.skill} / {p.cap}</span></div>
+        <div className="skillbar"><i style={{width:p.skill/300*100+'%'}}/><b style={{left:p.cap/300*100+'%'}}/></div></div>)}
+      <div style={{fontSize:12.5,borderTop:'1px solid var(--line)',paddingTop:10,display:'flex',gap:6}}><span style={{color:'var(--accent)'}}><Icon n="arrow" s={15}/></span><span>{c.next}</span></div>
+    </button>)}</div>
+    <section className="panel"><div className="panel-h"><h2>Profession coverage</h2><span className="muted">Gaps are links missing from our supply chains</span></div>
+      <div className="table-wrap"><table className="matrix"><thead><tr><th>Profession</th>{CHARS.map(c=><th key={c.name}>{c.name}</th>)}<th>Feeds</th></tr></thead>
+        <tbody>{PROFS.map(p=>{const feeds={Tailoring:'Bags, cloth armour',Enchanting:'Enchants, disenchanting',Mining:'Bars for smithing',Blacksmithing:'Mail armour, weapons',Cooking:'Food buffs',Fishing:'Cooking, alchemy oils',Herbalism:'Alchemy',Alchemy:'Potions',Leatherworking:'Leather armour, bags',Skinning:'Leatherworking'}[p];
+          return <tr key={p} style={{cursor:'default'}}><td><b>{p}</b></td>{CHARS.map(c=>{const pr=c.profs.find(x=>x.p===p);
+            return <td key={c.name}>{pr?<span className="cell" style={{background:'var(--accent-soft)',color:'var(--accent)'}}>{pr.skill}</span>:<span className="faint">·</span>}</td>})}
+            <td className="muted" style={{textAlign:'left'}}>{feeds}{['Alchemy','Leatherworking','Skinning'].includes(p)&&<span className="pill warn" style={{marginLeft:8}}>Not covered</span>}</td></tr>})}</tbody></table></div></section>
+    <section className="panel"><div className="panel-h"><h2>If we add a character</h2><span className="muted">Rank 1, no recipes · estimates to 300</span></div>
+      <div className="table-wrap"><table><thead><tr><th>Profession</th><th className="r">Cost to 300</th><th className="r">Best earner</th><th>Unlocks for the team</th><th>Estimate</th></tr></thead>
+        <tbody>{[['Leatherworking',31840,'Medium Leather',"Mail-wearers' bags; hunter armour",'Incomplete'],['Alchemy',27410,'Minor Healing Potion','Uses Cicelyna’s herbs','Complete'],['Engineering',40200,'Rough Blasting Powder','Uses Keenagen’s stone','Incomplete']].map(([p,c,b,u,s])=>
+          <tr key={p} style={{cursor:'default'}}><td><b>{p}</b></td><td className="r"><Money c={c}/></td><td className="r">{b}</td><td className="muted">{u}</td><td><span className={'pill '+(s==='Complete'?'good':'warn')}>{s}</span></td></tr>)}</tbody></table></div></section>
+  </div>}
+
+/* ---------------- Ledger ---------------- */
+const DAYS=['Oct 10','Oct 11','Oct 12','Oct 13','Oct 14','Oct 15','Oct 16'];
+const FLOW=[[420,180],[960,610],[1880,940],[1240,1310],[3110,1460],[2690,1820],[2140,1030]];
+function Ledger({open}){
+  const tin=FLOW.reduce((a,x)=>a+x[0],0),tout=FLOW.reduce((a,x)=>a+x[1],0),mx=Math.max(...FLOW.flat());
+  const W=560,H=200,bw=W/FLOW.length;
+  return <div className="page">
+    <div className="page-head"><div><div className="eyebrow">Team · last 7 UTC days</div><h1>Ledger</h1><div className="sub">Where our gold came from and went, and what we're holding.</div></div></div>
+    <div className="kpis">
+      <div className="kpi"><span className="eyebrow">Came in</span><span className="v"><Money c={tin}/></span><span className="h">Sales, vendor and loot</span></div>
+      <div className="kpi"><span className="eyebrow">Went out</span><span className="v"><Money c={tout}/></span><span className="h">Purchases, deposits, training</span></div>
+      <div className="kpi"><span className="eyebrow">Net</span><span className="v"><Money c={tin-tout} sign/></span><span className="h">67 of 70 bag snapshots reconcile</span></div>
+      <div className="kpi"><span className="eyebrow">Held stock</span><span className="v"><Money c={48620}/></span><span className="h">Cautious value of bags and bank</span></div>
+    </div>
+    <div className="ledger-grid">
+      <section className="panel"><div className="panel-h"><h2>Daily flow</h2><span className="act" style={{display:'flex',gap:12,fontSize:12}}><span><i style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--good)',marginRight:5}}/>In</span><span><i style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--bad)',marginRight:5}}/>Out</span></span></div>
+        <div className="panel-b" style={{overflowX:'auto'}}><svg className="chart" viewBox={`0 0 ${W+40} ${H*2+30}`} style={{width:'100%',minWidth:420,height:'auto'}} role="img" aria-label="Daily gold in and out">
+          {[0,.5,1].map(f=><g key={f}><line className="grid" x1="40" x2={W+40} y1={H-f*H+5} y2={H-f*H+5}/><line className="grid" x1="40" x2={W+40} y1={H+f*H+5} y2={H+f*H+5}/>
+            {f>0&&<text x="34" y={H-f*H+9} textAnchor="end">{Math.round(mx*f/100)}s</text>}</g>)}
+          {FLOW.map(([a,b],i)=><g key={i}><rect x={40+i*bw+bw*.22} width={bw*.56} y={H+5-a/mx*H} height={a/mx*H} rx="3" fill="var(--good)" opacity=".85"/>
+            <rect x={40+i*bw+bw*.22} width={bw*.56} y={H+5} height={b/mx*H} rx="3" fill="var(--bad)" opacity=".75"/>
+            <text x={40+i*bw+bw/2} y={H*2+24} textAnchor="middle">{DAYS[i]}</text></g>)}
+          <line x1="40" x2={W+40} y1={H+5} y2={H+5} stroke="var(--fg)" strokeOpacity=".4"/></svg></div></section>
+      <section className="panel"><div className="panel-h"><h2>By category</h2></div>
+        <div className="list" style={{border:0,borderRadius:0}}>{[['Auction sales',8420,'7 invoices'],['Vendor sales',1960,'Greys and extras'],['Looted coin',2060,'15 coin loots'],['Auction purchases',-4210,'31 listings'],['Vendor purchases',-1880,'Thread, dye, spices'],['Deposits kept on expiry',-540,'4 expired posts'],['Training',-360,'Journeyman Cooking and Mining'],['Postage',-360,'12 mails']].map(([l,c,n])=>
+          <div key={l}><span><b style={{fontWeight:500}}>{l}</b><div className="muted" style={{fontSize:12}}>{n}</div></span><Money c={c} sign/></div>)}</div></section>
+    </div>
+    <section className="panel"><div className="panel-h"><h2>Restock</h2><span className="muted">Targets you set against what the team holds</span></div>
+      <div className="table-wrap"><table><thead><tr><th>Item</th><th className="r">Held</th><th className="r">Target</th><th>Level</th><th>Next</th></tr></thead>
+        <tbody>{[[2589,36,80,'Buy 2 stacks at ≤ 19c'],[2320,4,40,'Vendor · 36 needed'],[2770,52,40,'Above target'],[2672,9,20,'Farm wolves or wait']].map(([id,h,t,n])=><tr key={id} onClick={()=>open({t:'item',id})}>
+          <td><Item id={id} open={open}/></td><td className="r num">{h}</td><td className="r num">{t}</td>
+          <td style={{width:180}}><div className="bar"><i style={{width:Math.min(100,h/t*100)+'%',background:h>=t?'var(--good)':h/t<.3?'var(--bad)':'var(--warn)'}}/></div></td><td className="muted">{n}</td></tr>)}</tbody></table></div></section>
+  </div>}
+
+/* ---------------- Inspector ---------------- */
+function PriceChart({id}){const d=HIST[id],u=UNITS_HIST[id],it=ITEMS[id];if(!d)return null;
+  const W=440,H=150,mn=Math.min(...d,it.typ)*.9,mx=Math.max(...d,it.typ)*1.05,x=i=>36+i/(d.length-1)*(W-44),y=v=>8+(1-(v-mn)/(mx-mn))*(H-26);
+  const line=d.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');const umx=Math.max(...u);
+  const ticks=[mn,(mn+mx)/2,mx].map(Math.round);
+  return <svg className="chart" viewBox={`0 0 ${W} ${H+46}`} style={{width:'100%',height:'auto'}} role="img" aria-label={'Lowest price over 28 scans for '+it.name}>
+    {ticks.map(t=><g key={t}><line className="grid" x1="36" x2={W-8} y1={y(t)} y2={y(t)}/><text x="30" y={y(t)+3} textAnchor="end">{t}c</text></g>)}
+    <line x1="36" x2={W-8} y1={y(it.typ)} y2={y(it.typ)} stroke="var(--warn)" strokeDasharray="4 4"/><text x={W-8} y={y(it.typ)-5} textAnchor="end" style={{fill:'var(--warn)'}}>typical {it.typ}c</text>
+    <path d={line+` L${x(d.length-1)} ${H-18} L36 ${H-18} Z`} fill="var(--accent)" opacity=".1"/><path d={line} fill="none" stroke="var(--accent)" strokeWidth="2"/>
+    <circle cx={x(d.length-1)} cy={y(d[d.length-1])} r="4" fill="var(--accent)" stroke="var(--surface)" strokeWidth="2"/>
+    {u.map((v,i)=><rect key={i} x={x(i)-4} width="8" y={H+42-v/umx*30} height={v/umx*30} rx="1.5" fill="var(--line-strong)"/>)}
+    <text x="30" y={H+20} textAnchor="end">units</text><text x="36" y={H-4}>Oct 7</text><text x={W-8} y={H-4} textAnchor="end">Oct 16</text></svg>}
+function Ladder({id}){const it=ITEMS[id];if(!it.levels)return null;const lv=[];let cum=0;const n=Math.min(it.levels,14);
+  for(let i=0;i<n;i++){const units=Math.round(it.units*(i<3?.16:.5/(n-3))*(1+(i%3)*.1));cum+=units;lv.push({price:it.low+i*Math.max(1,Math.round(it.low*.04)),units,cum:Math.min(cum,it.units)})}
+  const W=440,H=150,mxc=lv[lv.length-1].cum;
+  return <svg className="chart" viewBox={`0 0 ${W} ${H+20}`} style={{width:'100%',height:'auto'}} role="img" aria-label="Units available at each price">
+    {[0,.5,1].map(f=><g key={f}><line className="grid" x1="40" x2={W-8} y1={8+(1-f)*(H-16)} y2={8+(1-f)*(H-16)}/><text x="34" y={11+(1-f)*(H-16)} textAnchor="end">{Math.round(mxc*f).toLocaleString()}</text></g>)}
+    <path d={lv.map((l,i)=>{const x0=40+i/n*(W-48),x1=40+(i+1)/n*(W-48),yy=8+(1-l.cum/mxc)*(H-16);return (i?'L':'M')+x0+' '+yy+' L'+x1+' '+yy}).join(' ')} fill="none" stroke="var(--accent)" strokeWidth="2"/>
+    {lv.map((l,i)=>i%3===0&&<text key={i} x={40+(i+.5)/n*(W-48)} y={H+14} textAnchor="middle">{l.price}c</text>)}</svg>}
+
+function ItemInspector({id,open}){
+  const it=ITEMS[id];const [tab,setTab]=useState('overview');useEffect(()=>setTab('overview'),[id]);
+  const r=RECIPES[id];const usedIn=Object.entries(RECIPES).filter(([,x])=>x.mats.some(([m])=>m===id)).map(([k])=>+k);
+  const e=r?econ(id):null;const opp=OPPS.find(o=>o.id===id);
+  const tabs=[['overview','Overview'],it.low&&['history','Price history'],it.levels&&['ladder','Listings'],['chain','Made from & used in'],['activity','Our activity']].filter(Boolean);
+  return <>
+    <div className="insp-head"><div className={'insp-title q'+it.q}><span className="ic-lg">{it.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</span>
+      <div style={{minWidth:0}}><h2 style={{fontSize:20,color:'var(--fg)'}}>{it.name}</h2><div className="muted" style={{fontSize:12.5}}>{it.kind} · <span className="mono">{it.id}</span></div></div>
+      <span style={{marginLeft:'auto'}}>{it.low?<Signal s={it.signal}/>:<span className="pill neutral">Vendor</span>}</span></div>
+      <div className="facts">
+        <div className="fact"><span className="l">{it.vendor?'Vendor price':'Lowest'}</span><span className="v"><Money c={it.vendor||it.low}/></span></div>
+        <div className="fact"><span className="l">{e?'Profit per craft':'Typical'}</span><span className="v">{e?<Money c={e.profit}/>:<Money c={it.typ}/>}</span></div>
+        <div className="fact"><span className="l">Listings · units</span><span className="v num">{it.listings?`${it.listings} · ${it.units.toLocaleString()}`:'—'}</span></div></div></div>
+    <div className="tabs" role="tablist">{tabs.map(([k,l])=><button key={k} role="tab" aria-selected={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
+    <div className="insp-body">
+      {tab==='overview'&&<>
+        {opp&&<div className="panel" style={{padding:14,display:'flex',flexDirection:'column',gap:8,background:'var(--surface-2)'}}>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}><h3>Our move</h3><span style={{marginLeft:'auto'}}><Conf level={opp.conf} reasons={opp.reasons}/></span></div>
+          <div>{opp.batch?<>Make <b>{opp.batch}</b> on {opp.who} and post at <Money c={e.sell}/> for <b><Money c={e.profit*opp.batch}/></b> profit.</>:<>{opp.who}. Profit would be <Money c={e.profit}/> per craft.</>}</div></div>}
+        {it.low&&<div><h3 style={{marginBottom:8}}>Last 28 scans</h3><PriceChart id={id}/></div>}
+        <dl className="kv" style={{margin:0}}>
+          {it.src&&<><dt>Where to get it</dt><dd>{it.src}</dd></>}
+          {r&&<><dt>Made by</dt><dd>{r.by||<span className="pill warn">No one yet</span>} · {r.prof} {r.skill}</dd></>}
+          {it.vendorSell!=null&&<><dt>Vendor sells for</dt><dd><Money c={it.vendorSell}/></dd></>}
+          {it.low&&<><dt>24h deposit, one</dt><dd><Money c={deposit(id,1)}/></dd></>}
+          <dt>We hold</dt><dd>{id===2589?'36 · Basilly 22, Keenagen bank 14':id===2770?'52 · Keenagen':'None'}</dd></dl></>}
+      {tab==='history'&&<><PriceChart id={id}/><p className="muted" style={{margin:0,fontSize:12.5}}>Lowest buyout per unit at each complete scan. The dashed line is the typical earlier price: the median of daily medians.</p></>}
+      {tab==='ladder'&&<><h3>Units available up to each price</h3><Ladder id={id}/><p className="muted" style={{margin:0,fontSize:12.5}}>Newest scan, zoomed to the cheapest 95% of units. {it.listings} listings at {it.levels} price levels; none without a buyout.</p></>}
+      {tab==='chain'&&<>
+        <div><h3 style={{marginBottom:8}}>Made from</h3>{r?<div className="list">{r.mats.map(([m,q])=><div key={m}><span style={{display:'flex',gap:8,alignItems:'center',minWidth:0}}><span className="num muted">{q}×</span><Item id={m} open={open}/></span><Money c={unitCost(m)*q}/></div>)}</div>:<p className="muted" style={{margin:0}}>Not crafted. {it.src}.</p>}</div>
+        <div><h3 style={{marginBottom:8}}>Used in</h3>{usedIn.length?<div className="list">{usedIn.map(u=><div key={u}><Item id={u} open={open}/><span className="muted" style={{fontSize:12.5}}>{RECIPES[u].prof} {RECIPES[u].skill}</span></div>)}</div>:<p className="muted" style={{margin:0}}>No recipe in our catalogs uses it.</p>}</div></>}
+      {tab==='activity'&&<div className="list">{id===4238?[['Posted 6 at 3s 40c','Basilly · Oct 14'],['Sold 4','Invoices · 13s 0c after cut'],['Expired 2','Returned Oct 15 · deposit kept']].map(([a,b])=><div key={a}><span>{a}</span><span className="muted" style={{fontSize:12.5}}>{b}</span></div>):<div><span className="muted">No posts or sales recorded for this item.</span></div>}</div>}
+      <div className="evidence"><span>Scan 20261016T013929Z-6005ec · finished 01:39 UTC · fresh</span><span>Forever beta · US Normal Alliance · rules v8</span></div>
+    </div></>}
+
+function CharInspector({name,open}){
+  const c=CHARS.find(x=>x.name===name);const [tab,setTab]=useState('profs');useEffect(()=>setTab('profs'),[name]);
+  return <>
+    <div className="insp-head"><div className="insp-title"><span className="avatar" style={{background:c.color}}>{c.name[0]}</span>
+      <div><h2 style={{fontSize:20}}>{c.name}</h2><div className="muted" style={{fontSize:12.5}}>Level {c.level} {c.cls} · seen {c.seen}</div></div></div>
+      <div className="facts"><div className="fact"><span className="l">Gold</span><span className="v"><Money c={c.gold}/></span></div>
+        <div className="fact"><span className="l">Professions</span><span className="v">{c.profs.length}</span></div>
+        <div className="fact"><span className="l">Known recipes</span><span className="v num">{c.name==='Basilly'?34:c.name==='Keenagen'?11:c.name==='Arille'?9:0}</span></div></div></div>
+    <div className="tabs" role="tablist">{[['profs','Professions'],['path','Path to 300'],['bags','Bags and bank']].map(([k,l])=><button key={k} role="tab" aria-selected={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
+    <div className="insp-body">
+      {tab==='profs'&&c.profs.map(p=><div key={p.p} className="panel" style={{padding:14,display:'flex',flexDirection:'column',gap:8}}>
+        <div style={{display:'flex',justifyContent:'space-between'}}><h3>{p.p}</h3><span className="num muted">{p.skill} / {p.cap}</span></div>
+        <div className="skillbar"><i style={{width:p.skill/300*100+'%'}}/><b style={{left:p.cap/300*100+'%'}}/></div>
+        <div className="muted" style={{fontSize:12.5}}>{p.cap-p.skill<=10?'Close to the cap: train the next tier.':`${p.cap-p.skill} points before this tier caps.`}</div></div>)}
+      {tab==='path'&&<div className="list">{[['Now → 95','Blue Linen Vest ×18',320],['95 → 125','Woolen Boots ×22',1480],['125 → 150','Gray Woolen Shirt ×25',2140],['150','Train Artisan? Level unconfirmed on Forever',null]].map(([a,b,cc],i)=>
+        <div key={i}><span><b style={{fontWeight:600}}>{a}</b><div className="muted" style={{fontSize:12.5}}>{b}</div></span>{cc!=null?<Money c={cc}/>:<span className="pill warn">Unknown</span>}</div>)}</div>}
+      {tab==='bags'&&<div className="list">{(c.name==='Basilly'?[[2589,22],[2996,4],[2320,4]]:c.name==='Keenagen'?[[2770,52],[2835,31],[2589,14]]:[[2672,9]]).map(([id,n])=><div key={id}><Item id={id} open={open}/><span className="num">{n}</span></div>)}</div>}
+      <div className="evidence"><span>Character capture 20:14 UTC · bags readable · bank captured 5h ago</span></div>
+    </div></>}
+
+function Inspector({stack,setStack,open}){
+  const cur=stack[stack.length-1];
+  useEffect(()=>{const k=e=>{if(e.key==='Escape')setStack([])};addEventListener('keydown',k);return()=>removeEventListener('keydown',k)},[]);
+  return <><div className="scrim" onClick={()=>setStack([])}/>
+    <aside className="inspector" aria-label="Details">
+      <div className="insp-top">{stack.length>1&&<button className="btn ghost sm" onClick={()=>setStack(s=>s.slice(0,-1))}><Icon n="back" s={16}/>{(()=>{const p=stack[stack.length-2];return p.t==='item'?ITEMS[p.id].name:p.id})()}</button>}
+        <button className="icon-btn" style={{marginLeft:'auto',width:36,height:36}} aria-label="Close details" onClick={()=>setStack([])}><Icon n="x" s={16}/></button></div>
+      <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
+        {cur.t==='item'?<ItemInspector id={cur.id} open={open}/>:<CharInspector name={cur.id} open={open}/>}</div>
+    </aside></>}
+
+/* ---------------- Palette, Data, Notes ---------------- */
+function Palette({close,go,open}){
+  const [q,setQ]=useState('');const [i,setI]=useState(0);const ref=useRef();useEffect(()=>ref.current?.focus(),[]);
+  const ql=q.toLowerCase();
+  const res=[...PLACES.map(p=>({g:'Go to',label:p.label,sub:p.q,run:()=>go(p.k)})),
+    ...Object.values(ITEMS).map(it=>({g:'Items',label:it.name,sub:it.kind+' · '+it.id,q:it.q,run:()=>open({t:'item',id:it.id})})),
+    ...CHARS.map(c=>({g:'Characters',label:c.name,sub:`Level ${c.level} ${c.cls}`,run:()=>open({t:'char',id:c.name})}))]
+    .filter(r=>!q||r.label.toLowerCase().includes(ql)||r.sub.toLowerCase().includes(ql)).slice(0,14);
+  const pick=r=>{r.run();close()};
+  return <><div className="scrim" style={{zIndex:59}} onClick={close}/><div className="palette" role="dialog" aria-label="Search">
+    <input id="pal-q" ref={ref} placeholder="Search items, characters and places" value={q} onChange={e=>{setQ(e.target.value);setI(0)}}
+      onKeyDown={e=>{if(e.key==='ArrowDown'){e.preventDefault();setI(x=>Math.min(x+1,res.length-1))}if(e.key==='ArrowUp'){e.preventDefault();setI(x=>Math.max(x-1,0))}if(e.key==='Enter'&&res[i])pick(res[i]);if(e.key==='Escape')close()}}/>
+    <div className="pal-list">{res.map((r,j)=><Fragment key={r.g+r.label}>{(j===0||res[j-1].g!==r.g)&&<div className="pal-group">{r.g}</div>}
+      <button className={'pal-item'+(j===i?' act':'')} onMouseEnter={()=>setI(j)} onClick={()=>pick(r)}><b className={r.q!=null?'q'+r.q:''} style={{fontWeight:600}}>{r.label}</b><span className="muted" style={{marginLeft:'auto',fontSize:12.5}}>{r.sub}</span></button></Fragment>)}
+      {!res.length&&<div className="muted" style={{padding:16}}>Nothing matches “{q}”. Try an item ID.</div>}</div></div></>}
+
+function DataSheet({close,imported,setImported,toast}){
+  const [sel,setSel]=useState(new Set(SCANS.filter(s=>s.state==='New').map(s=>s.id)));
+  return <><div className="scrim" style={{zIndex:59}} onClick={close}/><div className="sheet" role="dialog" aria-label="Data">
+    <div className="sheet-h"><h2>Data</h2><span className="muted">Scans and character evidence from the addon</span><button className="icon-btn" style={{marginLeft:'auto',width:36,height:36}} onClick={close} aria-label="Close"><Icon n="x" s={16}/></button></div>
+    <div className="sheet-b">
+      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><span className="chip"><span className="dot"/>25 scans saved</span><span className="chip">4 characters</span><span className="chip">1,006 item movements</span></div>
+      <div className="list">{SCANS.map(s=>{const isNew=s.state==='New'&&!imported;return <div key={s.id}>
+        <span style={{display:'flex',gap:10,alignItems:'center'}}>{isNew?<button className="check" role="checkbox" aria-checked={sel.has(s.id)} aria-label={'Select '+s.id} onClick={()=>setSel(x=>{const n=new Set(x);n.has(s.id)?n.delete(s.id):n.add(s.id);return n})}>{sel.has(s.id)&&<Icon n="check" s={14} w={3}/>}</button>:<span style={{width:22,color:'var(--good)'}}><Icon n="check" s={18}/></span>}
+          <span><b style={{fontWeight:600}}>{s.when}</b><div className="mono muted">{s.id}</div></span></span>
+        <span className="muted num" style={{fontSize:12.5,textAlign:'right'}}>{s.items.toLocaleString()} items<br/>{s.listings.toLocaleString()} listings</span></div>})}</div>
+      <p className="muted" style={{margin:0,fontSize:12.5}}>Checking reads the drop folder and changes nothing. Import saves the selected scans and the character records that came with them.</p>
+      <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}><button className="btn" onClick={()=>toast('Checked the drop folder: nothing newer')}>Check for new scans</button>
+        <button className="btn primary" disabled={imported||!sel.size} style={imported||!sel.size?{opacity:.5}:{}} onClick={()=>{setImported(true);toast(`Imported ${sel.size} scans`)}}>{imported?'Imported':`Import ${sel.size} scans`}</button></div>
+    </div></div></>}
+
+function Notes({close}){return <><div className="scrim" style={{zIndex:59}} onClick={close}/><div className="sheet notes" role="dialog" aria-label="Design notes">
+  <div className="sheet-h"><h2>What changed and why</h2><button className="icon-btn" style={{marginLeft:'auto',width:36,height:36}} onClick={close} aria-label="Close"><Icon n="x" s={16}/></button></div>
+  <div className="sheet-b">
+    <p>This is a clickable prototype using example figures shaped like the Forever beta data. Nothing here reads your database.</p>
+    <h3>The ideas behind it</h3>
+    <ul>
+      <li><b>One shell, nothing reloads.</b> Places sit in a fixed rail. Only the work area scrolls, and the search bar, source and data age stay in view.</li>
+      <li><b>Details open beside the list.</b> Click any item or character, anywhere, and it opens in the right-hand inspector, with a back button when you follow a chain. You never lose your place in a list.</li>
+      <li><b>Today is a route, not four tabs.</b> Plan, Shopping list, Sell and Queue become one ordered run through the evening, grouped by where you stand in game, with ticks.</li>
+      <li><b>Supply chains get their own place.</b> The recipe graph shows the whole path from raw material to sale. Switching buy and craft on any step moves the margin live.</li>
+      <li><b>Evidence moves to hover and tabs.</b> Confidence reasons and signals open on hover. Scan IDs and rules versions sit at the foot of each record instead of in expanders that push the page down.</li>
+      <li><b>Summary first, then detail.</b> Every place opens with a few numbers that answer its question, then the working list.</li>
+      <li><b>Search everything.</b> Press ⌘K or Ctrl K to jump to any item, character or place.</li>
+      <li><b>Data becomes a status, not a stop.</b> New scans show as a badge in the top bar and import from a sheet.</li>
+    </ul>
+    <h3>Where the old pages went</h3>
+    <div className="list">{[['Today → Plan, Shopping list, Sell, Queue','Today → Route'],['Today → This session','Today → Level up'],['Market home and item pages','Market grid + item inspector'],['Market → Crafting tab','Supply chains, and the item’s Made from tab'],['Team cards and hiring','Team roster, coverage matrix and new-hire table'],['Stock → Gold, Items, Targets','Ledger'],['Data → Import','Top-bar badge and Data sheet']].map(([a,b])=><div key={a}><span className="muted">{a}</span><span style={{textAlign:'right'}}>{b}</span></div>)}</div>
+  </div></div></>}
+
+/* ---------------- App ---------------- */
+function App(){
+  const [place,setPlace]=useState(()=>{try{const h=location.hash.slice(1);return PLACES.some(p=>p.k===h)?h:'today'}catch(e){return 'today'}});
+  const [stack,setStack]=useState([]); const [pal,setPal]=useState(false); const [data,setData]=useState(false); const [notes,setNotes]=useState(false);
+  const [imported,setImported]=useState(false); const [msg,setMsg]=useState(null);
+  const [theme,setTheme]=useState(null);
+  const scrollRef=useRef();
+  const open=useCallback(x=>setStack(s=>{const c=s[s.length-1];if(c&&c.t===x.t&&c.id===x.id)return s;return [...s,x]}),[]);
+  OPEN_REF.current=open;
+  const toast=useCallback(m=>{setMsg(m);clearTimeout(toast.t);toast.t=setTimeout(()=>setMsg(null),2600)},[]);
+  const go=k=>{setPlace(k);setStack([]);try{history.replaceState(null,'','#'+k)}catch(e){};scrollRef.current&&(scrollRef.current.scrollTop=0)};
+  useEffect(()=>{const k=e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPal(p=>!p)}};addEventListener('keydown',k);return()=>removeEventListener('keydown',k)},[]);
+  useEffect(()=>{if(theme)document.documentElement.setAttribute('data-theme',theme)},[theme]);
+  const isDark=()=>theme?theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+  const Page={today:Today,market:Market,chains:Chains,team:Team,ledger:Ledger}[place];
+  const cur=stack[stack.length-1];
+  const pending=imported?0:2;
+  return <div className="shell">
+    <nav className="rail" aria-label="Places">
+      <div className="brand"><span className="brand-mark">B</span><span><span className="brand-name">Brownstone</span><span className="brand-sub" style={{display:'block'}}>Brownleaf trading company</span></span></div>
+      {PLACES.map(p=><button key={p.k} className="nav-btn" aria-current={place===p.k?'page':undefined} onClick={()=>go(p.k)}><Icon n={p.icon}/><span>{p.label}<span className="q">{p.q}</span></span></button>)}
+      <div className="nav-sep"/>
+      <button className="nav-btn" onClick={()=>setData(true)}><Icon n="data"/><span>Data</span>{pending>0&&<span className="badge">{pending}</span>}</button>
+      <div className="rail-foot"><button className="nav-btn" onClick={()=>setNotes(true)}><Icon n="info"/><span>What changed</span></button></div>
+    </nav>
+    <div className="main">
+      <header className="topbar">
+        <button className="search-btn" onClick={()=>setPal(true)}><Icon n="search" s={16}/><span>Search items, characters, places</span><span className="kbd hide-sm">⌘K</span></button>
+        <div className="tb-right">
+          <span className="chip hide-sm" title="Selected source"><b style={{fontWeight:600}}>Forever beta</b><span className="muted">Normal Alliance</span></span>
+          <button className="chip" onClick={()=>setData(true)}><span className={'dot'+(pending?' warn':'')}/>{pending?<>{pending} new scans</>:'Up to date'}</button>
+          <button className="icon-btn" aria-label="Toggle dark mode" onClick={()=>setTheme(isDark()?'light':'dark')}><Icon n="moon" s={17}/></button>
+        </div>
+      </header>
+      <div className="scroll" ref={scrollRef}>
+        <div style={{maxWidth:1360,margin:'0 auto',padding:'14px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))'}}>
+          <div className="sample"><Icon n="info" s={16}/><span>Prototype with example figures. Click anything: items, characters, route steps, chain nodes. <button className="btn ghost sm" style={{color:'inherit',textDecoration:'underline',padding:'0 4px',minHeight:0}} onClick={()=>setNotes(true)}>What changed and why</button></span></div></div>
+        <Page open={open} toast={toast} pending={pending} sel={cur&&cur.t==='item'?cur.id:null}/>
+      </div>
+    </div>
+    <nav className="bottom-nav" aria-label="Places">{PLACES.map(p=><button key={p.k} aria-current={place===p.k?'page':undefined} onClick={()=>go(p.k)}><Icon n={p.icon} s={20}/>{p.label==='Supply chains'?'Chains':p.label}</button>)}</nav>
+    {stack.length>0&&<Inspector stack={stack} setStack={setStack} open={open}/>}
+    {pal&&<Palette close={()=>setPal(false)} go={go} open={open}/>}
+    {data&&<DataSheet close={()=>setData(false)} imported={imported} setImported={setImported} toast={toast}/>}
+    {notes&&<Notes close={()=>setNotes(false)}/>}
+    {msg&&<div className="toast" role="status">{msg}</div>}
+  </div>}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>

@@ -34,15 +34,13 @@ game doesn't offer and carry on.
 Mac*, and start the game. Log in fresh (not just `/reload`).
 
 Done on 2026-10-15: vendor lists, trainers, mob names, loot vendor prices, the panel and the deposit
-posts. On 2026-10-16 a scan with 8 h 50 m left read *long*, consistent with 12 hours but not pinning it. Install **0.12.8** first (vendor lists are no longer saved twice when you move; a scan waits 2 minutes for the server and records a failed start), then:
+posts. On 2026-10-16 the 12-hour label was accepted from the 24-hour posts (*very long* at 15 h 19 m, *long* at 8 h 52 m) and the expired one was mailed back at expiry. Install **0.12.8** first (vendor lists are no longer saved twice when you move; a scan waits 2 minutes for the server and records a failed start), then:
 
-1. **12-hour label (STORY-027):** post two cheap items at 24h, then scan twice: 11–11½ hours later
-   and again 12½–13 hours later, so one scan sees just over and one just under 12 hours left.
-2. **Sale gold:** post one Linen Cloth just under the lowest price, then open the mailbox every few
+1. **Sale gold:** post one Linen Cloth just under the lowest price, then open the mailbox every few
    minutes until the gold arrives, taking it when it does.
-3. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
-4. **Crafting tier levels:** when a crafting profession reaches skill 50, open its trainer once.
-5. `/reload`, log out and run the drop script.
+2. **Yellow skill-ups:** craft about 20 of one cheap recipe while it is yellow.
+3. **Crafting tier levels:** when a crafting profession reaches skill 50, open its trainer once.
+4. `/reload`, log out and run the drop script.
 
 ## Run a scan
 
@@ -351,12 +349,12 @@ unchanged, immutable recording of the account file. Keep them: STORY-006 builds 
 them. They can contain other players' names (ADDON-07), so they stay private and are never committed;
 a committed fixture is a small, anonymized extract.
 
-### Removed listings time-left beta check (STORY-027) — 12-hour bound pending
+### Removed listings time-left beta check (STORY-027) — accepted 2026-10-16
 
 On 2026-10-15 buckets 1–3 and the 30-minute and 2-hour bounds matched (`docs/status.md`). On
-2026-10-16 at 01:39 UTC (scan `20261016T013929Z-6005ec`, addon 0.12.8) two own 24-hour posts from
-2026-10-15 with about 8 h 50 m left read bucket 3. With bucket 4 at 21 h 40 m on 2026-10-15, the 3/4
-transition lies between 8 h 50 m and 21 h 40 m left: consistent with 12 hours, not yet pinned.
+2026-10-15 two own 24-hour posts read bucket 4 at 15 h 19 m left (scan `20261015T191236Z-8f626c`) and
+bucket 3 at 8 h 52 m (`20261016T013929Z-6005ec`, addon 0.12.8). The product owner accepted the
+12-hour bound on 2026-10-16 from these readings rather than pinning the transition to the minute.
 
 UI-10 in `docs/requirements.md` uses Classic Era's legacy auction time-left bounds; Forever's
 raw 1–4 capture alone does not establish their durations. In the Forever beta, record client build,

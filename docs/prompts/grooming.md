@@ -6,7 +6,8 @@ Use this between stories, when the backlog's Next list is thin or the direction 
 Read AGENTS.md, then docs/backlog.md and docs/status.md. For docs/requirements.md and docs/design.md, start
 from `python -m brownstone rules --list` and print only the rules and sections a story touches with
 `python -m brownstone rules <RULE_ID>... --section "<heading>" --design "<heading>"`. Also look at the app
-(nicegui_app.py and views/nicegui_*.py) so suggestions fit what the interface does today. Don't write code.
+(nicegui_app.py, views/nicegui_*.py and web/src, which replaces them place by place under UI-18) so
+suggestions fit what the interface does today. Don't write code.
 
 Context to keep in mind:
 - WoW Forever is the target. The beta closes on 4 November 2026 and the game launches that day. Classic Era

@@ -6,7 +6,7 @@ from .scan_changes import _MATCH_SQL, eligible_scans
 from .storage import scope_predicate
 
 MAX_GAP = timedelta(hours=12)
-# UI-10: Classic Era bounds, pending Forever beta confirmation.
+# UI-10: Classic Era bounds, accepted for Forever on 2026-10-16.
 BUCKET_LOWER_SECONDS = {1: 0, 2: 1800, 3: 7200, 4: 43200}
 CATEGORIES = ('early', 'expiry', 'unknown')
 

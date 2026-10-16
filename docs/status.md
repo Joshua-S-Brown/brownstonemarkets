@@ -58,7 +58,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Capture ages/unknown bank appear on Today; stale held counts add a reason without changing confidence.
   UI-11 high outputs use typical-price sell caps before ranking/sizing, with shared signal badges
   on crafts/Sell/posts; shown-output UI-10 history adds Low confidence for no early removals
-  in at least three qualifying gaps (Classic time-left assumptions pending Forever confirmation). This session
+  in at least three qualifying gaps (time-left bounds accepted for Forever 2026-10-16). This session
   composes reserved crafts and Team-window unlock costs with flood labels (UI-12)
   and measured journal farming rates and zone/NPC/position-cell farming spots (UI-13).
 - **Your sales (STORY-073, UI-14):** journal-confirmed posts, deduplicated seller invoices and
@@ -139,8 +139,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   its NPC ID in spots and evidence, with NPC-only fallback. The beta report counts named windows
   and lists unnamed NPC IDs. Confirmed on the beta on 2026-10-15 (7 of 29 windows named, no NPC ID unnamed).
   Other unpriced gathered items are counted and excluded; spot evidence includes all item values.
-- Listings are not sales/demand/forecasts. Removed-listing time-left bounds are Classic assumptions,
-  pending Forever confirmation. Tier requirements without trainer evidence use the labelled UI-12
+- Listings are not sales/demand/forecasts. Removed-listing time-left bounds match Forever
+  (12 hours accepted 2026-10-16). Tier requirements without trainer evidence use the labelled UI-12
   fallback; crafting tiers and yellow skill-up chances remain unconfirmed. Deposits (13 posts) and postage
   are measured (requirements → Product direction). Today models deposits under requirements → Today (v11): Sell and Queue show
   refundable posting gold and expiry loss at the saved 2/8/24-hour duration, including held outputs;
@@ -159,12 +159,12 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   behavior still need manual checks. Vendor lists, trainer lists, mob names and the panel
   were confirmed on 2026-10-15. A scan 46 minutes after the last answered one got no reply within 30 s and
   was wrongly blamed on the 15-minute limit (2026-10-15, not saved; 0.12.8 records the next one). Remaining in-game checks (addon README → *Last beta play session*):
-  pinning the 12-hour time-left bound, the sale-to-mailbox delay, crafting tier levels and yellow skill-up chances.
+  the sale-to-mailbox delay, crafting tier levels and yellow skill-up chances.
   On 2026-10-15 own posts read bucket 2 at 1 h 35 m left, 1 at 26 and 29 min, 3 at 7 h 35 m and 4 at
-  21 h 40 m; on 2026-10-16 two 24-hour posts read 3 at 8 h 50 m (scan `20261016T013929Z-6005ec`), so
-  the 3/4 transition lies between 8 h 50 m and 21 h 40 m, consistent with 12 hours; 2-hour posts were mailed back within 6 s of expiry. Seller invoices (`GetInboxInvoiceInfo`
+  21 h 40 m; two 24-hour posts read 4 at 15 h 19 m (scan `20261015T191236Z-8f626c`) and 3 at 8 h 52 m
+  (`20261016T013929Z-6005ec`), so the 3/4 transition lies between; accepted as 12 hours on 2026-10-16. Expired 2- and 24-hour posts were mailed back within 6 s of expiry. Seller invoices (`GetInboxInvoiceInfo`
   4 price, 6 deposit, 7 cut, 11 count) paid price + deposit − ⌊5%⌋ on all four sales; expiries returned
-  the items without the deposit. Sale mails showed a full 30 days when opened, so arrival stays unknown. Item pass measured
+  the items without the deposit. A sale mail's days left dates its arrival (09:07 UTC 2026-10-16, opened 2 h 31 m later), but that sale fell between scans 7 h 28 m apart, so the sale-to-mailbox delay stays unknown. Item pass measured
   2026-10-13: 5.9 s listing read, 0.34 s pass, 1,590 of 1,909 requests answered, none timed out.
 
 ## Verify

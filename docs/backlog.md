@@ -19,7 +19,9 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next.
+Nothing in progress; the next story is the top of *Order* under Next: the web app (STORY-081 onwards), after one last beta scan test.
+
+**Before STORY-081 (product owner, once):** install Node.js 22 LTS on the Mac from the official macOS installer at nodejs.org. It needs your password, so an agent can't do it. Check it with `node --version` (v22.x) in Terminal. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
 
 Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted on the beta with addon 0.3.1; the measurement record is in `addon/README.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
@@ -47,14 +49,136 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
-2. STORY-026 scan coverage and rhythm
-3. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-4. STORY-006 replay
+1. STORY-081 web app foundation
+2. STORY-082 Market in the web app
+3. STORY-083 Today in the web app
+4. STORY-084 Team in the web app
+5. STORY-085 Ledger and Data in the web app
+6. STORY-086 Supply chains
+7. STORY-087 retire NiceGUI
+8. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+9. STORY-026 scan coverage and rhythm
+10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+11. STORY-006 replay
 
-**Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
+**Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
+
+**Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
 **Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 035, 036, 031, 032, 033, 034, 034b, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
+
+### STORY-081 — Web app foundation
+
+Added 2026-10-16 (Claude, from the approved prototype). The foundation the other web stories build on: toolchain, API pattern, shell and inspector, with one real record (the item inspector's Overview) to prove the route from the database to the screen. No NiceGUI page is removed.
+
+As the owner, I want the new app shell running beside today's pages, so that each place can move into it without breaking the app I use every night.
+
+Acceptance:
+- **Toolchain (UI-18):** `web/` with Vite, React, TypeScript (strict), ESLint, Vitest with Testing Library and jsdom, React Router, TanStack Query, Radix primitives and cmdk, all at exact versions in `web/package.json` with `package-lock.json` committed and `web/.nvmrc` = 22. `web/node_modules`, `web/dist` and `web/coverage` are ignored. `npm run check` runs ESLint, `tsc --noEmit`, Vitest and the schema currency check (AGENTS.md's npm rule applies).
+- **Gates and CI:** `brownstone gates` runs `npm run check` after pytest when `web/package.json` exists, and its summary names it. `test_gates` covers the new gate with a fake runner, including a missing Node, which fails the gate and says to install Node 22 (the note under *Now*). CI's macOS job sets up Node 22 with `actions/setup-node` (npm cache), runs `npm ci` and `npm run check` in `web/`; the Windows job skips web checks explicitly and says so.
+- **Serving:** `nicegui_app.py` mounts `api.router` at `/api` and serves `web/dist` at `/app`, with `index.html` for client routes, on its own FastAPI app (NiceGUI's `app`). Loopback only, as UI-07. Every POST requires an `X-Brownstone-Token` header equal to the per-launch token, injected into `index.html` as a meta tag; no POST is added yet beyond a test route that proves the check.
+- **Build on launch (UI-05):** `launch_nicegui.py` fingerprints `web/src`, `web/index.html`, `web/package.json` and `package-lock.json`. When the fingerprint differs from `web/dist/.fingerprint`, it runs `npm ci` (only when `node_modules` is missing or the lock changed) and `npm run build`, then writes the fingerprint. A build failure, or no Node, opens the NiceGUI app as today with a one-line banner naming the next action; it never blocks the existing app.
+- **API pattern:** `api/__init__.py` assembles one router per place. First routes: `GET /api/sources` (UI-01 resolution and experience order, the selected source's label, data age per DATA-05 and the count of new scans waiting, from the read-only `import_review`/drop inventory used by Data), `GET /api/search?source=&q=` (Market's `market_explorer.search_items`; items by name or ID, and characters from the scoped roster) and `GET /api/items/{item_id}?source=` (the Overview fields of `market_explorer.item_summary`). Responses are pydantic models; copper fields are `int | None`; no router calculates. `web/src/api/schema.d.ts` is generated by `openapi-typescript` from the app's OpenAPI document; `npm run check` fails when the committed file is out of date.
+- **Money parity:** `tests/fixtures/money_vectors.json` lists copper values (including 0, 1, 99, 100, 10,000, a negative, and a value over 1,000g) with `money.format_money`'s output. A pytest test proves the fixture matches `money.py`, and a Vitest test proves `web/src/ui/Money` renders the same text.
+- **Shell (UI-18):** rail with the five places and their questions from `brownstone.navigation.QUESTIONS` (served by `/api/sources`), with Data as a badge and sheet showing the waiting count (the sheet links to the NiceGUI Data page in this story). The top bar holds a ⌘K search palette (keyboard navigation, Esc closes), the source chip and menu (several enabled sources need an explicit choice, never merged), a data-status chip and the theme toggle (light, dark or system, remembered locally). Places not yet migrated link to their NiceGUI page with the same source. At widths under 860 px the rail becomes a bottom tab bar.
+- **Inspector:** opens from any `ItemLink`, shows the item record's header facts, the Overview tab and an evidence footer (scan ID, finish time and freshness, source and market), keeps a back stack and writes `inspect=<item_id>` to the URL, so a refresh reopens it. A character link opens a placeholder record naming the place it will come from (STORY-084).
+- **Shared parts:** `Money`, `ItemLink` (quality colour from the captured quality; unknown quality uses the plain text colour, never a guess), `Pill`, `Tip` (hover and focus; portal so tables never clip it), `Sparkline`, the empty and error states (UI-08 5) and `tokens.css` copied from the prototype's palette. Fonts are bundled in `web/public`, never fetched (offline app).
+- **Offline tests:** pytest for each route (scope: another source and another full market excluded; a missing price is `null`; several enabled sources need a choice), the token check, the launcher's fingerprint and failure fallback, and the gate; Vitest for Money parity, the palette's filtering and keys, the inspector's back stack and URL, and ItemLink's unknown-quality case.
+- **Real data** (Forever beta source, read-only): open `/app`, search Linen Cloth (2589) and Bolt of Linen Cloth (2996), and compare the inspector's Overview with the NiceGUI Market Summary for the same scan. Report any difference. Screenshots of the shell at 1280 px and 390 px, light and dark.
+- Depends on the owner installing Node 22 (*Now*). Rules: UI-18, UI-01, UI-05, UI-07, UI-08, DATA-05, MONEY-01. Design: *Web app (UI-18)*, *App and modules*, *Market explorer (STORY-055)*, *Quality gates*. Out of scope: any NiceGUI page removal, other places' content, writes.
+
+### STORY-082 — Market in the web app
+
+Added 2026-10-16. The first full place: mostly reads and tables, so it proves the grid, charts and inspector tabs before Today.
+
+As a gold maker, I want Market as a sortable grid with an item record beside it, so that I can scan prices and supply and open any item without losing my place.
+
+Acceptance:
+- **Pulse strip:** three cards from existing evidence only. *Cheaper than usual* and *Dearer than usual* use UI-11's typical earlier price for items in our catalog chains (the five largest gaps each way, with the percentage). *Left early* uses UI-10's removed-early units over the same comparable gaps as Market home today. Each card states its basis in one line ("upper bound on purchases" for removals).
+- **Grid:** catalog-chain items with lowest unit buyout, typical price, the gap to typical, a sparkline of stored lowest buyout over the eligible scans (`item_history`), listings, units and the UI-11 signal pill with its evidence in a Tip. Columns sort in copper. Filter chips: all in our chains, materials, crafts and intermediates (by catalog role, never names) and with a signal, plus name/ID search over every item in the snapshot (UI-02). The selected row stays highlighted while its record is open.
+- **Item record tabs:** Overview (STORY-081, plus *Our move* when Today ranks the item, using Today's reserved profit and confidence reasons); Price history and Listings (UI-17's history and ladder, drawn with Recharts and keeping every UI-17 rule: gaps, null prices, the 95% zoom, the scan picker, no-buyout counts); Made from and used in (UI-09 routes, quantities and Board profits; each item is an `ItemLink`); Our activity (UI-14 sales outcomes and STORY-078 holdings). The evidence footer holds what Identity and evidence holds today.
+- **API:** `GET /api/market?source=` (pulse and grid in one response, from `market_explorer.load_explorer`, `scan_movement`, `flood_signals` and `item_history`, read once per load), `GET /api/items/{id}/history`, `GET /api/items/{id}/ladder?scan=`, `GET /api/items/{id}/chain` and `GET /api/items/{id}/activity`. Projections that exist only inside `views/nicegui_market.py` move into `brownstone/market_explorer.py` first (framework-free, tested), so both views use one source until the NiceGUI view is removed.
+- **Retire:** the rail's Market opens `/app/market`; `views/nicegui_market.py`, `views/nicegui_item_history.py` and their `tests/ui_trial` tests are removed after the side-by-side check. Their behaviour tests move to API and Vitest tests; Today and Team item links open the web inspector.
+- **Offline tests:** every rule named in UI-09, UI-10, UI-11 and UI-17 keeps a test (moved, not dropped): scope, variants never pooled, gaps never zero, missing prices never free, the 95% zoom, sorting in copper, the role filters using catalog membership.
+- **Real data:** Linen Cloth and Bolt of Linen Cloth history point counts and newest ladders match the NiceGUI page before it is removed (UI-17's numbers in `status.md`, plus any scans since). Pulse lists match Market home's lists for the same scans. Screenshots at 1280 and 390 px.
+- Depends on STORY-081. Rules: UI-02, UI-09, UI-10, UI-11, UI-14, UI-17, UI-18, ADDON-08. Design: *Market explorer (STORY-055)*, *Item charts (STORY-021)*, *Removed listings (STORY-027)*, *Flood signals (STORY-064/072)*, *Web app (UI-18)*.
+
+### STORY-083 — Today in the web app
+
+Added 2026-10-16. Today's calculation is unchanged; this changes how the plan is shown and walked.
+
+As a gold maker, I want tonight's plan as one ordered route through the game, so that I can follow it stop by stop instead of moving between Plan, Shopping list, Sell and Queue.
+
+Acceptance:
+- **Route:** the complete Queue (`today.session_queue` with `today_session.queue_with_gold`) grouped into stops by stage and character in Queue order: take and mail, auction purchases, vendor purchases, crafts, posts. Each stop names its character (an inspector link) and where it happens (bank or mailbox, auction house, vendor, the profession and rank, post duration). Each line keeps the quantities, prices, deposits, postage, warnings and confidence the Queue shows today. Ticks keep the Queue's identity rule: a changed plan context resets them. *Copy as text* gives today's Queue text.
+- **Summary strip:** planned profit (Queue expected profit), gold to spend against funds (Today's resolved funds, with the character or team label), steps done, and data age with the waiting-scan count.
+- **Opportunities:** the ranked crafts with profit per craft, confidence pill with its reasons in a Tip, batch and who makes it; each opens the item record. Adjusting crafts (choices, batch size, refill) moves from *Adjust crafts* into the item record's *Our move* panel and changes the plan through the same choices the NiceGUI view sends.
+- **Level up:** This session (UI-12) per character: next options, tier steps, the CRAFT-10 skill-up colour bands of the recipe at the character's rank, costs and UI-13 farming spots. Nothing invented: unknown bands or costs say why.
+- **Settings:** the gear opens Today settings in a dialog; Save-only, the same file and validation (`today_settings`), via `POST /api/today/settings`.
+- **API:** `GET /api/today?source=&view=` returns the plan, Queue stops and This session from `today_loading` and `build_today` exactly as the NiceGUI page loads them (one load per request; `flood=True`, `holdings=True`), and `POST /api/today/choices` applies choices. No new calculation: stops are a projection of Queue lines in `brownstone/today_session.py`.
+- **Retire:** `views/nicegui_today.py` and its ui_trial tests go after the side-by-side check; `views/today_rows.py` stays as the shared projection or moves into `brownstone/`. `today_version` is unchanged.
+- **Offline tests:** stop grouping for every stage, including held-item take and mail lines and gold-mail suggestions (STORY-069); tick reset on a changed context; settings save and refusal; each existing Today view test that tests a rule moves to an API or Vitest test.
+- **Real data:** the beta source's Route matches the NiceGUI Queue line for line (count, quantities, copper totals, deposits) for the same scan and settings; This session matches Team's next steps for Arille and Basilly as recorded in `status.md` → *Team*. Screenshots at 1280 and 390 px.
+- Depends on STORY-082 (inspector tabs and *Our move*). Rules: the Today section, UI-11, UI-12, UI-13, UI-14, UI-18, CRAFT-10, CRAFT-11. Design: *Today contracts*, *This session (STORY-063)*, *Farming*, *Web app (UI-18)*.
+
+### STORY-084 — Team in the web app
+
+Added 2026-10-16.
+
+As the owner, I want the team as a roster with each character's record a click away, so that I can see who makes what and where the gaps in our supply chains are.
+
+Acceptance:
+- **Roster:** a card per scoped character: name, level and class from the newest capture, gold, each profession's rank against its tier cap and the CRAFT-11 *Next step*. Unknown values say unknown.
+- **Character record** (the inspector's character tab, replacing STORY-081's placeholder): Professions (rank, cap, known recipe count and source labels per *Team character cards*), Path (CRAFT-11 reach steps and cost steps, incomplete estimates with reasons), Bags and bank (scoped holdings with capture ages) and the evidence footer. Character names stay out of the URL (UI-07); the record opens from the roster or any character link.
+- **Profession coverage:** professions by character with each rank. *Feeds* comes from the catalogs (which compatible catalogs consume this profession's outputs), never from names or hand-written text; a profession no character has shows *not covered*.
+- **If we add a character:** CRAFT-13's comparison as a table with cost to 300, best earner, what it unlocks for the team (catalog evidence) and complete or incomplete with reasons. The look-ahead window (Team's slider) keeps its commit-on-release rule.
+- **API:** `GET /api/team?source=&window=` and `GET /api/characters/{name}?source=` from the existing `characters`, `progression`, `hiring` and `team_holdings` projections; any shaping in `views/nicegui_team.py` moves into `brownstone` first.
+- **Retire:** `views/nicegui_team.py` and its ui_trial tests after the side-by-side check.
+- **Real data:** Arille's and Basilly's next steps and alternatives match `status.md` → *Team*; all nine hire estimates match the NiceGUI page. Screenshots at 1280 and 390 px.
+- Depends on STORY-081. Rules: *Team character cards*, CRAFT-11, CRAFT-12, CRAFT-13, UI-12, UI-18. Design: *Team contracts*, *Team recipe graph (STORY-015b)*, *Web app (UI-18)*.
+
+### STORY-085 — Ledger and Data in the web app
+
+Added 2026-10-16. Stock becomes Ledger (the place's question: *Where did our gold and goods go?*); Data becomes a sheet.
+
+As the owner, I want gold flow, holdings and restocking in one Ledger, and imports from a sheet, so that money questions have one home and importing never takes me away from what I'm doing.
+
+Acceptance:
+- **Ledger:** summary strip (in, out, net and reconciliation for the selected UTC days; cautious held value), a daily in/out chart, UI-15 categories with movement provenance in each row's record, UI-16 item movements and own-character mail, and Restock (Stock targets, held against target, whole-stack buy estimates). Target editing keeps Stock's Save-only rules through `POST /api/ledger/targets`.
+- **Data sheet:** opened from the rail badge or the data-status chip: saved-evidence chips, *Check for new scans* (read-only, ADDON-06), the reviewed scan list with selection, and Import (`POST /api/data/import`) with the same review invalidation and writer rules as today. A successful import refreshes every query for the source and shows import hits as today.
+- **API and retire:** `GET /api/ledger`, `GET /api/data/review`, the two POSTs; `views/nicegui_stock.py`, `views/nicegui_import.py` and their ui_trial tests go after the side-by-side check. `navigation.QUESTIONS` gains the Ledger wording.
+- **Offline tests:** import selection, refused and stale reviews, a second writer, target save and refusal, and reconciliation display, each moved from the NiceGUI tests.
+- **Real data:** on a copy of `data/`, import a dropped scan through the sheet and compare the result with the CLI preview; Ledger totals match STORY-034/034b's numbers in `status.md`. Screenshots at 1280 and 390 px.
+- Depends on STORY-081. Rules: UI-15, UI-16, ADDON-06, OPS-03, UI-18 and *Stock* (`requirements.md` → Interface). Design: *Stock contracts*, *Gold ledger contracts*, *Item ledger contracts*, *Scan import preview*, *Web app (UI-18)*.
+
+### STORY-086 — Supply chains
+
+Added 2026-10-16. A new place: the prototype's recipe graph. Built after the moves, so it adds a feature rather than delaying them.
+
+As a gold maker, I want to follow a craft back to its raw materials and see where the margin is made, so that I can choose between buying and crafting each step.
+
+Acceptance:
+- **Graph:** for a chosen output (the ranked crafts first, then search), the CRAFT-03/CRAFT-12 route as columns from raw materials to the output, with quantities on the edges, each node's unit cost and route (buy, craft by whom, vendor, held), and the team's ability to make each step. Cross-profession steps show the other character.
+- **Buy or craft:** each intermediate shows both costs where both exist, the chosen route highlighted. Switching a step recalculates through the existing route functions with that step forced; if the engine can't force a route yet, add that option to `crafting` with tests, never a second costing path (*Value-add chart*, Later).
+- **Per craft:** a waterfall from sale price through the cut and each leaf material to profit, all in copper; a missing price stops the waterfall with the reason, never zero.
+- **Batch:** a slider (1 to the Today craft cap) showing leaf quantities, spend and profit, without listing-depth claims beyond CRAFT-09.
+- **Add to tonight:** adds the craft to Today's choices through STORY-083's choices endpoint.
+- **Offline tests:** forced routes, a missing price, a cross-profession route, a vendor ceiling (CRAFT-04) and choice handoff.
+- **Real data:** Linen Bag and Blue Linen Vest routes match the Market record's *Made from* costs; screenshots at 1280 and 390 px.
+- Depends on STORY-082 and STORY-083. Rules: CRAFT-03, CRAFT-04, CRAFT-09, CRAFT-12, UI-18. Design: *Crafting calculation*, *Team recipe graph (STORY-015b)*, *Web app (UI-18)*.
+
+### STORY-087 — Retire NiceGUI
+
+Added 2026-10-16. Last web story: once every place is in the web app.
+
+As the owner, I want one app on one stack, so that nothing is maintained twice.
+
+Acceptance:
+- **Server:** a plain FastAPI app on uvicorn (`brownstone_app.py` or similar) replaces `nicegui_app.py`, keeping loopback binding, the launch token, the pywebview window, browser fallback, idle shutdown and UI-05's restart rule. `nicegui` leaves `pyproject.toml` and `requirements.lock.txt`; `fastapi`, `uvicorn` and `pydantic` are declared directly.
+- **Docs:** UI-07's NiceGUI rules are replaced by UI-18 (keep its URL and back-link rules there), UI-08 7's NiceGUI clause goes, and *App and modules* describes the web app. `requirements.md` and `design.md` end below their current ceilings, and the ceilings in `brownstone/gates.py` drop to match.
+- **Tests:** `tests/ui_trial` is gone; `test_retirement.py` checks NiceGUI is absent; coverage settings name `api` instead of `views` and NiceGUI entries.
+- **Real data:** a full play-evening walk-through on the beta or live source (import, Today route, Market, Team, Ledger), with screenshots.
+- Depends on STORY-082 to STORY-086 (STORY-086 may follow if the owner prefers). Rules: UI-05, UI-07, UI-08, UI-18, OPS-01. Design: *App and modules*, *Web app (UI-18)*, *Quality gates*.
 
 ### STORY-026 — Scan coverage and your play rhythm
 
@@ -135,7 +259,7 @@ These are grouped by what unblocks them.
 - **Gold per hour:** if the scaled minimum gain feels wrong in play, try a time-based minimum instead. Decide after using version 1.
 
 **Demand from your own scans** (needs repeated scans and STORY-018; optional sources from STORY-011b can add more data points):
-- *Removed listings* (STORY-027) is implemented; the time-left beta check is pending above.
+- *Removed listings* (STORY-027) is implemented; its Forever time-left bounds were accepted on 2026-10-16.
 - **Did the board hold up?** Whether "potential craft" rows were still profitable at the next scan. A tiny check is possible with beta scans; it means something after one to two weeks of live scans.
 
 **Market timing and a daily brief** (requested 2026-10-04; needs post-launch history, not beta scans (STORY-017)). The goal is to know when to buy and sell each kind of item (materials, crafted goods, equipment), and to open the app to a short list of the day's priorities without being online all day.
