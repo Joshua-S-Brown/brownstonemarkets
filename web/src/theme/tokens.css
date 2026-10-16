@@ -1,0 +1,169 @@
+:root {
+  --bg: #eef2f1;
+  --surface: #ffffff;
+  --surface-2: #f4f7f6;
+  --sunken: #e4eae8;
+  --line: #d6dedb;
+  --line-strong: #bccac5;
+  --fg: #15201d;
+  --muted: #5a6a65;
+  --faint: #8a9893;
+  --accent: #1b6a62;
+  --accent-fg: #ffffff;
+  --accent-soft: #d8ebe7;
+  --accent-line: #9fcbc3;
+  --good: #2c7a39;
+  --good-soft: #e1f1e3;
+  --warn: #9a6200;
+  --warn-soft: #fbefd6;
+  --bad: #b0342b;
+  --bad-soft: #f8e2df;
+  --gold: #a87a06;
+  --silver: #7d878d;
+  --copper: #a7602f;
+  --q-poor: #8b8f8d;
+  --q-common: #2b302e;
+  --q-uncommon: #1c8a2a;
+  --q-rare: #1a5fb4;
+  --q-epic: #7a3cb0;
+  --sk-orange: #d0650e;
+  --sk-yellow: #c9a400;
+  --sk-green: #3b9a3f;
+  --sk-grey: #9aa29f;
+  --shadow: 0 1px 2px rgba(20, 40, 35, 0.06), 0 8px 24px rgba(20, 40, 35, 0.08);
+  --shadow-lg: 0 12px 48px rgba(15, 30, 26, 0.22);
+  --f-display:
+    "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r: 10px;
+  --r-sm: 7px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1110;
+    --surface: #131a18;
+    --surface-2: #18211f;
+    --sunken: #0f1513;
+    --line: #25302d;
+    --line-strong: #344340;
+    --fg: #e3ebe8;
+    --muted: #97a7a1;
+    --faint: #6b7b76;
+    --accent: #4cb5a9;
+    --accent-fg: #06201c;
+    --accent-soft: #16312d;
+    --accent-line: #2b5e57;
+    --good: #5cc46b;
+    --good-soft: #15301a;
+    --warn: #e5a83c;
+    --warn-soft: #33270f;
+    --bad: #ee6c5f;
+    --bad-soft: #3a1714;
+    --gold: #e6b844;
+    --silver: #b8c2c7;
+    --copper: #da8b56;
+    --q-poor: #9d9d9d;
+    --q-common: #ececec;
+    --q-uncommon: #3fdc4f;
+    --q-rare: #4f9ff2;
+    --q-epic: #b780f2;
+    --sk-orange: #ff8a2a;
+    --sk-yellow: #f2d33a;
+    --sk-green: #52c45a;
+    --sk-grey: #7f8784;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1110;
+  --surface: #131a18;
+  --surface-2: #18211f;
+  --sunken: #0f1513;
+  --line: #25302d;
+  --line-strong: #344340;
+  --fg: #e3ebe8;
+  --muted: #97a7a1;
+  --faint: #6b7b76;
+  --accent: #4cb5a9;
+  --accent-fg: #06201c;
+  --accent-soft: #16312d;
+  --accent-line: #2b5e57;
+  --good: #5cc46b;
+  --good-soft: #15301a;
+  --warn: #e5a83c;
+  --warn-soft: #33270f;
+  --bad: #ee6c5f;
+  --bad-soft: #3a1714;
+  --gold: #e6b844;
+  --silver: #b8c2c7;
+  --copper: #da8b56;
+  --q-poor: #9d9d9d;
+  --q-common: #ececec;
+  --q-uncommon: #3fdc4f;
+  --q-rare: #4f9ff2;
+  --q-epic: #b780f2;
+  --sk-orange: #ff8a2a;
+  --sk-yellow: #f2d33a;
+  --sk-green: #52c45a;
+  --sk-grey: #7f8784;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/ibm-plex-sans-latin-400-normal.woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/ibm-plex-mono-latin-400-normal.woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/fonts/bricolage-grotesque-latin-700-normal.woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+:root {
+  --q-0: var(--q-poor);
+  --q-1: var(--q-common);
+  --q-2: var(--q-uncommon);
+  --q-3: var(--q-rare);
+  --q-4: var(--q-epic);
+  --q-5: #996000;
+  --q-6: #996000;
+  --q-7: #796000;
+  --q-8: #796000;
+}
+:root[data-theme="light"] {
+  --warn: #945c00;
+  --q-poor: #626663;
+  --q-uncommon: #176f22;
+  --gold: #866000;
+  --silver: #59636a;
+  --copper: #874823;
+}
+
+/* Accessible text variants on light surfaces, including the system light theme. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --warn: #945c00;
+    --q-poor: #626663;
+    --q-uncommon: #176f22;
+    --gold: #866000;
+    --silver: #59636a;
+    --copper: #874823;
+  }
+}
+:root {
+  --q-5: var(--gold);
+  --q-6: var(--gold);
+  --q-7: var(--gold);
+  --q-8: var(--gold);
+}

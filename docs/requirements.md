@@ -505,7 +505,7 @@ Prototype: `docs/prototype/web-app.html` (example figures). Each place moves in 
 - **Inspector:** every item or character link opens a right-hand record (header facts, tabs, evidence footer) over the page, with a back stack; `inspect=<item_id>` is in the URL. Pages lead with a summary strip, then one working list. Evidence is in hover or focus popovers and record footers, never removed.
 - **Look:** shared tokens in `web/src/theme/tokens.css`; light and dark follow the system, with a toggle; contrast at least 4.5:1, targets at least 32 px (44 px narrow). Item names use the captured quality colour; money shows coin-coloured g/s/c.
 - **Contracts:** every request names its source; responses are integer copper and null for missing, never 0. `api/` routers return pydantic models built from `brownstone` projections, with no calculations; TypeScript types are generated from the OpenAPI schema and checked current. Web money text matches `money.format_money` on shared vectors. Writes are explicit POSTs carrying the launch token.
-- **Toolchain:** Node 22 LTS (`web/.nvmrc`); exact versions in `web/package.json`, installed only by `npm ci` from `package-lock.json`. The launcher rebuilds `web/dist` (ignored) when the web source fingerprint changes.
+- **Toolchain:** Node 24 LTS (`web/.nvmrc`); exact versions in `web/package.json`, installed only by `npm ci` from `package-lock.json`. The launcher rebuilds `web/dist` (ignored) when the web source fingerprint changes.
 
 ### Operations
 - **OPS-01:** tests are offline and run in CI on macOS and Windows from the lock file, including the UI test, alongside Ruff and mypy. No market data is stored in Git.

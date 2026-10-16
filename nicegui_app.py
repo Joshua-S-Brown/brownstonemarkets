@@ -9,9 +9,10 @@ from urllib.parse import urlencode
 
 from nicegui import Client, app, ui
 
+from api import install as install_web
 from brownstone import config as configuration
 from brownstone import pipeline, recipe_catalogs
-from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences
+from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences, source_label
 from brownstone.today_loading import load_today_characters
 from views import nicegui_theme as theme
 from views.nicegui_import import render as render_import
@@ -22,6 +23,12 @@ from views.nicegui_team import render as render_team
 from views.nicegui_today import render
 
 ROOT = Path(__file__).resolve().parent
+install_web(app, ROOT / "web/dist")
+
+
+def web_warning():
+    if os.environ.get("BROWNSTONE_WEB_WARNING"):
+        ui.label(os.environ["BROWNSTONE_WEB_WARNING"]).classes("bs-note")
 
 
 def read_catalogs():
@@ -37,6 +44,7 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
                      origin_view: str = '', origin_item: str = '', origin_name: str = ''):
     place = place if place in ('Today', 'Team', 'Market', 'Stock', 'Data') else 'Today'
     theme.install()
+    web_warning()
     try:
         sources = [s for s in configuration.read_sources(ROOT / 'config/market.toml',
                    ROOT / 'config' / configuration.LOCAL_OVERRIDES) if s['enabled']]
@@ -59,6 +67,8 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
     with ui.column().classes('gap-1'):
         ui.label(place).classes('bs-title')
         ui.label(QUESTIONS[place]).classes('bs-question')
+    # The web app (UI-18) grows beside these pages; the native window has no address bar to reach it.
+    ui.link('Open the new app (preview) →', '/app?' + urlencode({'source': chosen['source_id']})).mark('web-app')
     await ui.context.client.connected()
     # Switching sources, including TSM, invalidates any active addon review.
     identity = pipeline.preview_configuration(chosen) if chosen['provider'] == 'addon' else None
@@ -200,13 +210,6 @@ class BrowserIdle:
         elif time.monotonic() - self.disconnected_since >= 300:
             app.shutdown()
 
-
-def source_label(source):
-    game = EXPERIENCES.get(source['game_version'], source['game_version'])
-    place = source.get('server_type') or source.get('realm') or source.get('scope', '')
-    faction = source.get('faction', '')
-    environment = source.get('environment', 'live')
-    return f"{game} · {place.title()} {faction.title()}" + (f" ({environment})" if environment != 'live' else '')
 
 
 if __name__ == '__main__':

@@ -5,6 +5,18 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Implemented
 
+- **Web foundation (STORY-081):** `/app` serves the React shell beside NiceGUI; source-scoped
+  `/api/sources`, `/api/search` and `/api/items/{id}` adapt existing read-only projections.
+  Routes reuse one explorer build per source until the database, config or hourly bucket
+  changes: search under 10 ms, item record about 0.25 s. The build (3–9 s) starts in the
+  background when the shell opens. Search shows the 50 closest hits.
+  Search opens URL-backed item Overview records and placeholder character records; Data links
+  to the existing review page. Source evidence loads independently of the potentially slow local/drop
+  scan inventory. Light/dark/system themes and bundled fonts work offline; narrow screens use bottom tabs.
+  The launcher builds changed web sources, with a recoverable banner on failure or missing Node 24.
+  `web/README.md` covers build/schema commands. Gates include the web checks on macOS; Windows
+  reports an explicit skip. No NiceGUI page has been removed.
+
 - **Item charts (STORY-021):** item Market tab adds stored price/supply history and an
   eligible-scan listing ladder with cumulative-unit steps, sortable prices and separate no-buyout
   counts. Rules: [UI-17](requirements.md#ui-17-item-price-history-and-listing-ladder-story-021);
@@ -158,7 +170,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 - App reads on load: reload after imports elsewhere. Native clipboard/appearance and phone-width
   behavior still need manual checks. Vendor lists, trainer lists, mob names and the panel
   were confirmed on 2026-10-15. A scan 46 minutes after the last answered one got no reply within 30 s and
-  was wrongly blamed on the 15-minute limit (2026-10-15, not saved; 0.12.8 records the next one). Remaining in-game checks (addon README → *Last beta play session*):
+  was wrongly blamed on the hourly limit (2026-10-15, not saved; 0.12.8 records the next one). Remaining in-game checks (addon README → *Last beta play session*):
   the sale-to-mailbox delay, crafting tier levels and yellow skill-up chances.
   On 2026-10-15 own posts read bucket 2 at 1 h 35 m left, 1 at 26 and 29 min, 3 at 7 h 35 m and 4 at
   21 h 40 m; two 24-hour posts read 4 at 15 h 19 m (scan `20261015T191236Z-8f626c`) and 3 at 8 h 52 m
@@ -174,7 +186,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 git diff --check
 ```
 
-`gates` runs ruff, mypy, then `pytest -n auto --cov` (pytest-xdist), stops at the first failure and prints
+`gates` runs ruff, mypy, `pytest -n auto --cov` (pytest-xdist), then `npm run check` in web/ on macOS;
+it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 

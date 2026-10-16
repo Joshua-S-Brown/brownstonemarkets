@@ -347,7 +347,7 @@ price contract. No changes to crafting/Board/views should be needed; otherwise a
 ## Quality gates
 
 Pytest offline branch coverage >=floor, Ruff complexity <=10 and mypy run locally/CI from
-pyproject/lock. Mypy covers brownstone, app/launcher, NiceGUI views and today_rows. Source is
+pyproject/lock. Mypy covers brownstone, api, web_build, app/launcher, NiceGUI views and today_rows. Source is
 a TypedDict; other records remain plain dictionaries.
 
 ## Known design debt

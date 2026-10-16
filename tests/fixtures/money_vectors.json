@@ -1,0 +1,34 @@
+[
+  {
+    "copper": null,
+    "text": "\u2014"
+  },
+  {
+    "copper": 0,
+    "text": "0c"
+  },
+  {
+    "copper": 1,
+    "text": "1c"
+  },
+  {
+    "copper": 99,
+    "text": "99c"
+  },
+  {
+    "copper": 100,
+    "text": "1s"
+  },
+  {
+    "copper": 10000,
+    "text": "1g"
+  },
+  {
+    "copper": -12345,
+    "text": "-1g 23s 45c"
+  },
+  {
+    "copper": 12345678,
+    "text": "1,234g 56s 78c"
+  }
+]

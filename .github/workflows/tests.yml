@@ -21,3 +21,18 @@ jobs:
       # NiceGUI user simulation stays offline.
       # Coverage report; fails below the fail_under floor in pyproject.toml.
       - run: python -m pytest -p no:cacheprovider -n auto --cov -ra
+
+      - uses: actions/setup-node@v4
+        if: runner.os == 'macOS'
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        if: runner.os == 'macOS'
+        working-directory: web
+      - run: npm run check
+        if: runner.os == 'macOS'
+        working-directory: web
+      - run: echo "Web checks skipped on Windows; checked on macOS."
+        if: runner.os == 'Windows'

@@ -18,7 +18,8 @@ def runner(codes, output=PYTEST_TAIL):
     return run, calls
 
 
-def test_gates_run_lint_then_parallel_tests_and_summarise():
+def test_gates_run_lint_then_parallel_tests_and_summarise(monkeypatch, tmp_path):
+    monkeypatch.setattr(gates, "ROOT", tmp_path)
     run, calls = runner([0, 0, 0])
     lines, code = gates.run_gates(runner=run, python="py")
     assert code == 0
@@ -64,3 +65,23 @@ def test_cli_gates_prints_the_summary_and_exits_with_its_code(monkeypatch, capsy
         cli.main()
     assert exit_.value.code == 3
     assert capsys.readouterr().out == "ruff   ok\nlint_only=True\n"
+
+
+def test_web_gate_runs_after_pytest_and_reports_missing_node(tmp_path, monkeypatch):
+    (tmp_path / 'web').mkdir()
+    (tmp_path / 'web/package.json').write_text('{}')
+    monkeypatch.setattr(gates, 'ROOT', tmp_path)
+    monkeypatch.setattr(gates.sys, 'platform', 'darwin')
+    run, calls = runner([0, 0, 0, 0])
+    lines, code = gates.run_gates(runner=run)
+    assert code == 0 and calls[-1] == ['npm', '--prefix', str(tmp_path / 'web'), 'run', 'check']
+    assert any(line.startswith('web    ok') and 'npm run check' in line for line in lines)
+    def missing(command):
+        if command[0] == 'npm':
+            raise FileNotFoundError('npm')
+        return subprocess.CompletedProcess(command, 0, PYTEST_TAIL, '')
+    lines, code = gates.run_gates(runner=missing)
+    assert code == 1 and 'Install Node 24 LTS' in lines[0]
+    monkeypatch.setattr(gates.sys, 'platform', 'win32')
+    lines, code = gates.run_gates(runner=missing)
+    assert code == 0 and any('skipped on Windows' in line for line in lines)

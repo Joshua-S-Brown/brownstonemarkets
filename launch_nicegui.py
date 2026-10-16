@@ -13,14 +13,17 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
+from web_build import build_web, web_paths
+
 ROOT = Path(__file__).resolve().parent
 
 
 def code_fingerprint():
     digest = hashlib.sha256()
     paths = [ROOT / 'nicegui_app.py', ROOT / 'launch_nicegui.py',
-             *ROOT.glob('brownstone/**/*.py'), *ROOT.glob('views/**/*.py')]
-    for path in sorted(paths):
+             *ROOT.glob('brownstone/**/*.py'), *ROOT.glob('views/**/*.py'),
+             *ROOT.glob('api/**/*.py'), ROOT / 'web_build.py', *web_paths(ROOT)]
+    for path in sorted(p for p in paths if p.is_file()):
         digest.update(path.relative_to(ROOT).as_posix().encode())
         digest.update(path.read_bytes())
     return digest.hexdigest()
@@ -91,6 +94,12 @@ def main(argv=None):
     work = ROOT / 'work'
     work.mkdir(exist_ok=True)
     ready_file = work / 'app-ready.json'
+    warning = build_web(ROOT)
+    if warning:
+        print(warning)
+        os.environ['BROWNSTONE_WEB_WARNING'] = warning
+    else:
+        os.environ.pop('BROWNSTONE_WEB_WARNING', None)
     if reuse(ready_file):
         return 0
     ready_file.unlink(missing_ok=True)

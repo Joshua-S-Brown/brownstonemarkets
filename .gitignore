@@ -26,3 +26,7 @@ tools/windows/drop-settings.local.json
 # Watchlist targets and atomic temporary saves stay local.
 watchlist.*.local.json
 watchlist.*.local.json.tmp
+
+web/node_modules/
+web/dist/
+web/coverage/

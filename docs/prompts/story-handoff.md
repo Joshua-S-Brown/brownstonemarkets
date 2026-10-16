@@ -1,6 +1,6 @@
 # Story handoff prompt
 
-Paste this into a **new** implementation session (GPT/Codex or Claude) to build one backlog story. Replace `STORY-XXX`; everything else the session needs is in the story itself (decisions, evidence, code pointers, expected real-data numbers), so put implementation notes there when refining it, not here. Bring the report back to a Claude session for review (`story-review.md`, or `/review-story` in Claude Code).
+Paste this into a **new** implementation session (GPT/Codex or Claude) to build one backlog story. Replace `STORY-XXX`; everything else the session needs is in the story itself (decisions, evidence, code pointers, expected real-data numbers), so put implementation notes there when refining it, not here. Bring the report (the session returns it as one copyable code block) back to a Claude session for review (`story-review.md`, or `/review-story` in Claude Code).
 
 ```text
 Implement STORY-XXX from docs/backlog.md in this repo.
@@ -9,7 +9,7 @@ Read AGENTS.md first and follow it. Then print the story with `python -m brownst
 
 Add the offline tests the story lists. Finish with `.venv/bin/python -m brownstone gates` passing (ruff, mypy, parallel pytest with coverage at or above the floor), with no new noqa comments. Don't commit.
 
-Report back with:
+Report back with the whole report inside one fenced block opened with four backticks and `text` (````text … ````), so it copies in one click and code blocks inside it don't end it. The report covers:
 1. Summary of the change
 2. Files changed
 3. Each acceptance criterion with the test that proves it

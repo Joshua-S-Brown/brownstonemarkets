@@ -141,3 +141,15 @@ def test_movement_limit_order_identity_dedup_and_missing_changes(monkeypatch):
     assert moved['rows'][0]['variant_state'] == 'unresolved'
     comparison['items'] = [missing]
     assert me.scan_movement(None, config, [catalog], NOW)['rows'] == [missing]
+
+
+def test_captured_quality_uses_exact_identity_and_scope(tmp_path):
+    config = addon_source(tmp_path / 'data')
+    from test_scan_v3 import rich
+    import_scans(config, write_scans(tmp_path / 'quality.lua', rich()), now=NOW)
+    result = me.load_explorer(config, [], NOW)
+    assert next(r for r in result['items'] if r['item_id'] == 2589)['quality'] == 1
+    assert {r['quality'] for r in result['items'] if r['item_id'] == 6538} == {2, None}
+    with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
+        assert me.captured_qualities(db, config | {'source_id': 'other'}, result['snapshot']['snapshot_id']) == {}
+        assert me.captured_qualities(db, config | {'environment': 'other'}, result['snapshot']['snapshot_id']) == {}

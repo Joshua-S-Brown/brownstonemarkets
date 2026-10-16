@@ -12,6 +12,7 @@ from .recipe_graph import RecipeGraph, label_routes, route_catalog
 from .recipe_import import GAME_PATHS
 from .session_options import base_signal
 from .skillups import build_skillups
+from .storage import scope_predicate
 from .today_characters import project_recipes, recipe_status, team_makeable
 from .today_loading import _load_holdings, load_today, load_today_characters
 from .today_settings import TodaySettings
@@ -32,13 +33,15 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
     snapshot = arguments['snapshot']
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
         items = analysis.browse(db, snapshot['snapshot_id'], config, limit=2_147_483_647).to_dicts()
+        qualities = captured_qualities(db, config, snapshot['snapshot_id'])
         metrics = read_scan_metrics(db, config, snapshot['snapshot_id']) or []
         roles = flood_signals.catalog_roles(selected)
         floods = flood_signals.top_lists(flood_signals.signals(db, config, sorted(roles), now), roles)
         movement = scan_movement(db, config, selected, now)
         removals = removed_listings.top_removals(db, config, sorted(
             {item for catalog in selected for item in catalog['items_by_id']}))
-    items = [{**row, **{k: row[k] if row[k] and row[k] > 0 else None
+    items = [{**row, 'quality': qualities.get((row['item_id'], row['variant_id'], row['variant_state'])),
+              **{k: row[k] if row[k] and row[k] > 0 else None
                         for k in ('min_buyout', 'market_value')}} for row in items]
     result.update(observations=arguments['observations'], snapshot=snapshot, items=items, metrics=metrics,
                   movement=movement, removals=removals, floods=floods,
@@ -230,3 +233,13 @@ def item_summary(config, result, page, now):
             'used_in': best_use(page['used_in']), 'made_from': best_use(page['made_from']),
             'farming': item_farming(config, result, page['item_id'], floods),
             'wowhead_url': wowhead_item_url(config['game_version'], page['item_id'])}
+
+
+def captured_qualities(db, config, snapshot_id):
+    """Only unanimous captured listing quality for this snapshot and exact variant identity."""
+    predicate, scope = scope_predicate(config)
+    rows = db.execute(f"""SELECT item_id, variant_id, variant_state,
+        CASE WHEN count(DISTINCT quality)=1 THEN min(quality) END
+        FROM scan_listings WHERE {predicate} AND snapshot_id=?
+        GROUP BY item_id, variant_id, variant_state""", [*scope, snapshot_id]).fetchall()
+    return {(item, variant, state): value for item, variant, state, value in rows}

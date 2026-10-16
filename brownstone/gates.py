@@ -60,6 +60,18 @@ def run_gates(lint_only: bool = False, runner: Runner = _run, python: str = sys.
         lines.append(f"{name:<7}{status:<7}{time.monotonic() - began:6.1f}s  {detail}".rstrip())
         if result.returncode:
             return [output.rstrip(), "", *lines, *_footer(started)], result.returncode
+    if not lint_only and (ROOT / 'web/package.json').exists() and sys.platform != 'win32':
+        began = time.monotonic()
+        try:
+            result = runner(['npm', '--prefix', str(ROOT / 'web'), 'run', 'check'])
+        except FileNotFoundError:
+            result = subprocess.CompletedProcess([], 1, '', 'Install Node 24 LTS, then run npm ci in web/.')
+        lines.append(f"{'web':<7}{'ok' if result.returncode == 0 else 'FAILED':<7}"
+                     f"{time.monotonic() - began:6.1f}s  npm run check")
+        if result.returncode:
+            return [result.stdout + result.stderr, '', *lines, *_footer(started)], result.returncode
+    elif not lint_only and (ROOT / 'web/package.json').exists() and sys.platform == 'win32':
+        lines.append('web    skipped on Windows; web checks run on macOS CI')
     return [*lines, *_footer(started)], 0
 
 

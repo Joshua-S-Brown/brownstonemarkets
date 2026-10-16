@@ -32,6 +32,8 @@ async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, m
     assert [b.text for b in buttons] == ['Today', 'Team', 'Market', 'Stock', 'Data']
     assert buttons[-2].id < next(iter(user.find(ui.separator).elements)).id < buttons[-1].id
     await user.should_see(QUESTIONS['Team'])
+    link = next(iter(user.find(marker='web-app').elements))
+    assert link.props['href'] == '/app?source=test'  # Same source in the web app.
     await user.should_see('No characters imported for this source')
     await user.open('/?game=classic&source=test&place=Team&tab=Buy')
     await user.should_see('No characters imported for this source')

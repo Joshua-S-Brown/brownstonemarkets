@@ -19,9 +19,9 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: the web app (STORY-081 onwards), after one last beta scan test.
+Nothing in progress; the next story is the top of *Order* under Next: Market in the web app (STORY-082). STORY-081's foundation is done.
 
-**Before STORY-081 (product owner, once):** install Node.js 22 LTS on the Mac from the official macOS installer at nodejs.org. It needs your password, so an agent can't do it. Check it with `node --version` (v22.x) in Terminal. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
+**Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
 
 Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted on the beta with addon 0.3.1; the measurement record is in `addon/README.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
@@ -49,43 +49,22 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-081 web app foundation
-2. STORY-082 Market in the web app
-3. STORY-083 Today in the web app
-4. STORY-084 Team in the web app
-5. STORY-085 Ledger and Data in the web app
-6. STORY-086 Supply chains
-7. STORY-087 retire NiceGUI
-8. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-9. STORY-026 scan coverage and rhythm
-10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-11. STORY-006 replay
+1. STORY-082 Market in the web app
+2. STORY-083 Today in the web app
+3. STORY-084 Team in the web app
+4. STORY-085 Ledger and Data in the web app
+5. STORY-086 Supply chains
+6. STORY-087 retire NiceGUI
+7. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+8. STORY-026 scan coverage and rhythm
+9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+10. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 035, 036, 031, 032, 033, 034, 034b, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
-
-### STORY-081 — Web app foundation
-
-Added 2026-10-16 (Claude, from the approved prototype). The foundation the other web stories build on: toolchain, API pattern, shell and inspector, with one real record (the item inspector's Overview) to prove the route from the database to the screen. No NiceGUI page is removed.
-
-As the owner, I want the new app shell running beside today's pages, so that each place can move into it without breaking the app I use every night.
-
-Acceptance:
-- **Toolchain (UI-18):** `web/` with Vite, React, TypeScript (strict), ESLint, Vitest with Testing Library and jsdom, React Router, TanStack Query, Radix primitives and cmdk, all at exact versions in `web/package.json` with `package-lock.json` committed and `web/.nvmrc` = 22. `web/node_modules`, `web/dist` and `web/coverage` are ignored. `npm run check` runs ESLint, `tsc --noEmit`, Vitest and the schema currency check (AGENTS.md's npm rule applies).
-- **Gates and CI:** `brownstone gates` runs `npm run check` after pytest when `web/package.json` exists, and its summary names it. `test_gates` covers the new gate with a fake runner, including a missing Node, which fails the gate and says to install Node 22 (the note under *Now*). CI's macOS job sets up Node 22 with `actions/setup-node` (npm cache), runs `npm ci` and `npm run check` in `web/`; the Windows job skips web checks explicitly and says so.
-- **Serving:** `nicegui_app.py` mounts `api.router` at `/api` and serves `web/dist` at `/app`, with `index.html` for client routes, on its own FastAPI app (NiceGUI's `app`). Loopback only, as UI-07. Every POST requires an `X-Brownstone-Token` header equal to the per-launch token, injected into `index.html` as a meta tag; no POST is added yet beyond a test route that proves the check.
-- **Build on launch (UI-05):** `launch_nicegui.py` fingerprints `web/src`, `web/index.html`, `web/package.json` and `package-lock.json`. When the fingerprint differs from `web/dist/.fingerprint`, it runs `npm ci` (only when `node_modules` is missing or the lock changed) and `npm run build`, then writes the fingerprint. A build failure, or no Node, opens the NiceGUI app as today with a one-line banner naming the next action; it never blocks the existing app.
-- **API pattern:** `api/__init__.py` assembles one router per place. First routes: `GET /api/sources` (UI-01 resolution and experience order, the selected source's label, data age per DATA-05 and the count of new scans waiting, from the read-only `import_review`/drop inventory used by Data), `GET /api/search?source=&q=` (Market's `market_explorer.search_items`; items by name or ID, and characters from the scoped roster) and `GET /api/items/{item_id}?source=` (the Overview fields of `market_explorer.item_summary`). Responses are pydantic models; copper fields are `int | None`; no router calculates. `web/src/api/schema.d.ts` is generated by `openapi-typescript` from the app's OpenAPI document; `npm run check` fails when the committed file is out of date.
-- **Money parity:** `tests/fixtures/money_vectors.json` lists copper values (including 0, 1, 99, 100, 10,000, a negative, and a value over 1,000g) with `money.format_money`'s output. A pytest test proves the fixture matches `money.py`, and a Vitest test proves `web/src/ui/Money` renders the same text.
-- **Shell (UI-18):** rail with the five places and their questions from `brownstone.navigation.QUESTIONS` (served by `/api/sources`), with Data as a badge and sheet showing the waiting count (the sheet links to the NiceGUI Data page in this story). The top bar holds a ⌘K search palette (keyboard navigation, Esc closes), the source chip and menu (several enabled sources need an explicit choice, never merged), a data-status chip and the theme toggle (light, dark or system, remembered locally). Places not yet migrated link to their NiceGUI page with the same source. At widths under 860 px the rail becomes a bottom tab bar.
-- **Inspector:** opens from any `ItemLink`, shows the item record's header facts, the Overview tab and an evidence footer (scan ID, finish time and freshness, source and market), keeps a back stack and writes `inspect=<item_id>` to the URL, so a refresh reopens it. A character link opens a placeholder record naming the place it will come from (STORY-084).
-- **Shared parts:** `Money`, `ItemLink` (quality colour from the captured quality; unknown quality uses the plain text colour, never a guess), `Pill`, `Tip` (hover and focus; portal so tables never clip it), `Sparkline`, the empty and error states (UI-08 5) and `tokens.css` copied from the prototype's palette. Fonts are bundled in `web/public`, never fetched (offline app).
-- **Offline tests:** pytest for each route (scope: another source and another full market excluded; a missing price is `null`; several enabled sources need a choice), the token check, the launcher's fingerprint and failure fallback, and the gate; Vitest for Money parity, the palette's filtering and keys, the inspector's back stack and URL, and ItemLink's unknown-quality case.
-- **Real data** (Forever beta source, read-only): open `/app`, search Linen Cloth (2589) and Bolt of Linen Cloth (2996), and compare the inspector's Overview with the NiceGUI Market Summary for the same scan. Report any difference. Screenshots of the shell at 1280 px and 390 px, light and dark.
-- Depends on the owner installing Node 22 (*Now*). Rules: UI-18, UI-01, UI-05, UI-07, UI-08, DATA-05, MONEY-01. Design: *Web app (UI-18)*, *App and modules*, *Market explorer (STORY-055)*, *Quality gates*. Out of scope: any NiceGUI page removal, other places' content, writes.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081 and SPIKE-009/009b.
 
 ### STORY-082 — Market in the web app
 
@@ -97,7 +76,8 @@ Acceptance:
 - **Pulse strip:** three cards from existing evidence only. *Cheaper than usual* and *Dearer than usual* use UI-11's typical earlier price for items in our catalog chains (the five largest gaps each way, with the percentage). *Left early* uses UI-10's removed-early units over the same comparable gaps as Market home today. Each card states its basis in one line ("upper bound on purchases" for removals).
 - **Grid:** catalog-chain items with lowest unit buyout, typical price, the gap to typical, a sparkline of stored lowest buyout over the eligible scans (`item_history`), listings, units and the UI-11 signal pill with its evidence in a Tip. Columns sort in copper. Filter chips: all in our chains, materials, crafts and intermediates (by catalog role, never names) and with a signal, plus name/ID search over every item in the snapshot (UI-02). The selected row stays highlighted while its record is open.
 - **Item record tabs:** Overview (STORY-081, plus *Our move* when Today ranks the item, using Today's reserved profit and confidence reasons); Price history and Listings (UI-17's history and ladder, drawn with Recharts and keeping every UI-17 rule: gaps, null prices, the 95% zoom, the scan picker, no-buyout counts); Made from and used in (UI-09 routes, quantities and Board profits; each item is an `ItemLink`); Our activity (UI-14 sales outcomes and STORY-078 holdings). The evidence footer holds what Identity and evidence holds today.
-- **API:** `GET /api/market?source=` (pulse and grid in one response, from `market_explorer.load_explorer`, `scan_movement`, `flood_signals` and `item_history`, read once per load), `GET /api/items/{id}/history`, `GET /api/items/{id}/ladder?scan=`, `GET /api/items/{id}/chain` and `GET /api/items/{id}/activity`. Projections that exist only inside `views/nicegui_market.py` move into `brownstone/market_explorer.py` first (framework-free, tested), so both views use one source until the NiceGUI view is removed.
+- **API:** `GET /api/market?source=` (pulse and grid in one response, from `market_explorer.load_explorer`, `scan_movement`, `flood_signals` and `item_history`, read once per load), `GET /api/items/{id}/history`, `GET /api/items/{id}/ladder?scan=`, `GET /api/items/{id}/chain` and `GET /api/items/{id}/activity`. Projections that exist only inside `views/nicegui_market.py` move into `brownstone/market_explorer.py` first (framework-free, tested), so both views use one source until the NiceGUI view is removed. Routes get the explorer through `api.context.explorer`, which reuses one build per source until the database, config or hourly clock bucket changes (STORY-081 review: about 3 s per build on the beta data).
+- **Variant identity (ADDON-08):** search lists each `item_id, variant_id, variant_state` hit, but STORY-081's record opens the base item for all of them, so an unresolved or variant hit shows base prices. The record shows the chosen identity's price, units and quality (with `variant` in the URL beside `inspect`), or the palette groups an item's identities under one hit that opens a record listing them separately. Never pool them.
 - **Retire:** the rail's Market opens `/app/market`; `views/nicegui_market.py`, `views/nicegui_item_history.py` and their `tests/ui_trial` tests are removed after the side-by-side check. Their behaviour tests move to API and Vitest tests; Today and Team item links open the web inspector.
 - **Offline tests:** every rule named in UI-09, UI-10, UI-11 and UI-17 keeps a test (moved, not dropped): scope, variants never pooled, gaps never zero, missing prices never free, the 95% zoom, sorting in copper, the role filters using catalog membership.
 - **Real data:** Linen Cloth and Bolt of Linen Cloth history point counts and newest ladders match the NiceGUI page before it is removed (UI-17's numbers in `status.md`, plus any scans since). Pulse lists match Market home's lists for the same scans. Screenshots at 1280 and 390 px.
