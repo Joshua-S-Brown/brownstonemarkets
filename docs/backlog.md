@@ -45,34 +45,14 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-021 item charts and listing ladder (refined 2026-10-15)
-2. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
-3. STORY-026 scan coverage and rhythm
-4. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-5. STORY-006 replay
+1. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
+2. STORY-026 scan coverage and rhythm
+3. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+4. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 036, 031, 032, 033, 034, 034b, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
-
-### STORY-021 — Item price history and listing ladder
-
-Extended at grooming (2026-10-05) with time-series and ladder charts, the app's first charts. Refined 2026-10-15 against the code (Claude): picking an item, keeping it selected (STORY-076/078), the catalogs that make or use it (*Crafting* tab) and freshness already exist, so this story adds only the two charts, on the item page's *Market* tab (STORY-078 layout). Beta evidence (2026-10-15): 28 UI-06 eligible scans from 2026-10-04 16:47 to 2026-10-15 19:12 UTC; Linen Cloth (2589) has a base/legacy metrics row in all 28, and the newest scan has 333 listings, 7,416 units and 25 unit-price levels for it (Bolt of Linen Cloth 2996: 175, 3,080, 17), none without a buyout. NiceGUI 3.18's built-in `ui.echart` draws the charts: no new dependency.
-
-As a gold maker, I want to see how an item's price and supply have moved and what the listings behind today's price look like, so that I can tell a normal price from a spike and see how many units I can buy before the price jumps.
-
-Acceptance:
-- **Price history:** one chart across every UI-06 eligible scan of the selected source and full market, from stored ADDON-10 metrics (no recalculation): lowest unit buyout and market value (p25) as prices, units listed on a second axis. The time axis is the scan finish time, so uneven gaps between scans show as gaps. Each point's tooltip names its scan (ID, UTC and local finish time) and its values in gold via `money.format_money`.
-- **Identity (ADDON-08):** chart the base item: format-3 `base` rows, and legacy rows only where ADDON-08's legacy/base compatibility holds (reuse UI-11's rule in `flood_signals`, don't re-derive it). Variants and unresolved rows never pool in; say how many other identities the newest scan has, if any.
-- **Never invent data:** a scan where the item is absent is a gap, never zero; a null price (units listed only without buyout) is a gap in the price lines while its units still plot. Partial and unpriced scans never appear. One scan shows a single point and says more scans are needed for a trend.
-- **Listing ladder:** for one eligible scan, newest by default, with a picker listing this source's eligible scans (finish time UTC and local): base-identity listings grouped by unit price (`unit_buyout_ceil`), cheapest first, with listings, units and cumulative units per price, as a step chart of cumulative units against unit price and as a sortable table. Listings without a buyout are counted and shown separately, never priced at zero. The ladder for a legacy scan follows the same compatibility rule as the history.
-- **Labels:** units listed are supply, never sales, demand or volume; say so once under the charts. DATA-05 freshness for the chosen ladder scan as a chip.
-- **Reads:** one framework-free module (e.g. `brownstone/item_history.py`) with item-only, read-only, scoped (`scope_predicate`, `metrics_version`) reads when the item page opens, like `item_removals`; integer copper throughout. A read failure shows only in this section, with the next action. Nothing else on the item page, Market home, Today or `today_version` changes (test this).
-- **Rules** recorded as UI-17 in `requirements.md`; raise the document size guard in `tests/test_retirement.py` only by what UI-17 needs.
-- **Page:** passes UI-08 at desktop and narrow widths (charts fit the card width, always-light theme colours from `nicegui_theme`).
-- **Offline tests:** an absent scan as a gap; a null-price scan with units; partial and unpriced scans excluded; legacy/base compatible and incompatible scans; a variant not pooled; another source and another full market excluded; ladder grouping, cumulative units and a no-buyout listing; the scan picker limited to eligible scans; a single-scan history; unchanged Today and item-page outputs.
-- **Real data** (Forever beta source, read-only): Linen Cloth and Bolt of Linen Cloth histories (expected 28 points each), their newest-scan ladders (expected the listing, unit and price-level counts above), and screenshots of the Market tab at desktop and narrow widths. Explain any difference.
-- Out of scope: the *Value-add chart* (Later), sales speed (STORY-062), time left (STORY-027) and charts anywhere else.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 035, 036, 031, 032, 033, 034, 034b, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
 
 ### STORY-026 — Scan coverage and your play rhythm
 

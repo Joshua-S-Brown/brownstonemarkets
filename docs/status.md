@@ -5,6 +5,17 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Implemented
 
+- **Item charts (STORY-021):** item Market tab adds stored price/supply history and an
+  eligible-scan listing ladder with cumulative-unit steps, sortable prices and separate no-buyout
+  counts. Rules: [UI-17](requirements.md#ui-17-item-price-history-and-listing-ladder-story-021);
+  contracts: design → Item charts. Offline tests: `tests/test_item_history.py` and
+  `tests/ui_trial/test_nicegui_item_history.py`. Forever beta currently has 28 points each for
+  Linen Cloth and Bolt of Linen Cloth; newest ladders match 333/7,416/25 and 175/3,080/17
+  listings/units/price levels respectively, with no no-buyout listings. Desktop (1280 px) and
+  narrow (390 px) Market tabs checked against copied data; charts fit without page overflow.
+  The ladder opens zoomed to the cheapest 95% of units, so outlier asks don't flatten it; the
+  slider and table still reach every level.
+
 - **Item movements (STORY-034b):** Stock's Items area below Gold shows cached category totals,
   own-character mail, snapshot residuals and expandable entry provenance, using Stock's search.
   Rules: [UI-16](requirements.md#ui-16-item-movements-story-034b); contracts: design → Item ledger.

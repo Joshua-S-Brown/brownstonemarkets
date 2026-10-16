@@ -9,6 +9,7 @@ from brownstone.freshness import age_caption
 from brownstone.money import format_money
 from brownstone.recipe_graph import made_by_label
 from views import nicegui_theme as theme
+from views.nicegui_item_history import item_charts
 from views.nicegui_navigation import set_href
 from views.nicegui_stock import capture_text
 from views.today_rows import vendor_cap_label
@@ -130,6 +131,7 @@ def show_item(result, page):
                 crafting(config, page)
             with ui.tab_panel('Market'):
                 prices(page)
+                item_charts(config, page['item_id'])
                 if summary and summary['floods_error']:
                     ui.label(f"Unable to read flood signals: {summary['floods_error']}. "
                              'Use Data to check saved scans.')

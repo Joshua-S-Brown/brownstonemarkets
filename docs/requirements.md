@@ -470,6 +470,23 @@ UI-15, holdings/targets, Today and Your sales retain their contracts. No prices 
     explicit team sums, own mail and reconciliation. Catalog names, otherwise ID; numeric sorting.
     IDs, machines, reasons, gaps and version on demand. Local error/empty guidance; UI-08 applies.
 
+### UI-17 Item price history and listing ladder (STORY-021)
+
+- Item Market tab only, after prices: read-only, item-only, selected source/full market,
+  current metrics version; reuse UI-06 eligible scans and UI-11's ADDON-08 compatibility.
+  Base identities only, compatible legacy retained; disclose newest scan's other identities.
+- History uses stored ADDON-10 lowest unit buyout, p25 and units listed on a second axis,
+  with scan finish time on a continuous time axis. Absent/incompatible items are gaps;
+  null prices leave supply visible. Never bridge gaps. One point asks for more scans.
+  Tooltips identify scan ID, UTC/local finish time and money via `money.format_money`.
+- Ladder defaults newest; eligible-scan picker shows UTC/local finish times. Group matching
+  listings by positive `unit_buyout_ceil`, cheapest first: listing/unit counts and cumulative
+  units, step chart (opens zoomed to the cheapest 95% of units) and sortable table (every level).
+  Count no-buyout listings/units separately, never zero-price. Selected scan carries DATA-05
+  freshness. Integer copper calculations, shared money/theme,
+  built-in ECharts, responsive UI-08; units are supply, never sales, demand or volume.
+- Local read errors give a next action; other item content, Market home and Today stay unchanged.
+
 - **UI-08 Design checklist:** every app page passes these before review, checked on screenshots, not only code.
   1. **Answer first:** the top of the page answers its place's question; one subtle business-question subtitle per place.
   2. **One primary action** per view, visually distinct.

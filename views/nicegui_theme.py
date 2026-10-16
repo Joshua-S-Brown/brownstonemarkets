@@ -3,6 +3,11 @@ from contextlib import contextmanager
 
 from nicegui import ui
 
+CHART_COLORS = ['#594235', '#1D5A40', '#7A3410']
+CHART_INK = '#1F1A17'
+CHART_LINE = '#E4DDD5'
+CHART_SURFACE = '#FFFFFF'
+
 CSS = '''
 :root {
  --ground:#F6F3EF; --surface:#FFFFFF; --ink:#1F1A17; --muted:#5E554F; --faint:#6B625C;

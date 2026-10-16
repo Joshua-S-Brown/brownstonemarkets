@@ -141,7 +141,8 @@ async def test_holdings_farming_all_characters_item_filter_and_lazy_reads(user, 
     await user.should_see('Alpha · Realm · Alliance')
     await user.should_see('Beta · Realm · Alliance')
     await user.should_see('36 units/hour')
-    tables = list(user.find(ui.table).elements)
+    tables = [e for panel in user.find(marker='session-farming').elements
+              for e in panel.descendants() if isinstance(e, ui.table)]
     assert len(tables) == 2
     assert all(len(t.rows) == 1 and t.rows[0]['Zone'] == 'Arbitrary zone' for t in tables)
     for element in user.find(marker='session-farming').elements:

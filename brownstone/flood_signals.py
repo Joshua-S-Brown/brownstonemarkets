@@ -59,7 +59,8 @@ def _match(current, rows):
     return next((r for r in same_item if r['variant_state'] == other and r['variant_id'] is None), None)
 
 
-def _compatible(current, rows, newest):
+def compatible_identity(current, rows, newest):
+    """Match ADDON-08 identities, retaining pure-base evidence on the format-3 side."""
     # Both sides must retain the pure-base condition; a base row alongside variants cannot use legacy history.
     match = _match(current, rows)
     if match is None or current['variant_state'] == match['variant_state']:
@@ -75,11 +76,11 @@ def _churn(current, history, pairs, newest):
     known = 0
     for pair in pairs:
         a_rows, b_rows = (history[pair[side]['scan_id']] for side in ('earlier', 'later'))
-        a, b = (_compatible(current, rows, newest) for rows in (a_rows, b_rows))
+        a, b = (compatible_identity(current, rows, newest) for rows in (a_rows, b_rows))
         if a is None or b is None or not a['min_buyout'] or not b['min_buyout']:
             continue
         # A pair itself must satisfy legacy/base compatibility, too.
-        if _compatible(a, b_rows, a_rows) is None:
+        if compatible_identity(a, b_rows, a_rows) is None:
             continue
         known += 1
         changed += a['min_buyout'] != b['min_buyout']
@@ -125,7 +126,7 @@ def overshoot(price, prices, options):
 def _history_prices(row, earlier, history, newest):
     prices = []
     for scan in earlier:
-        match = _compatible(row, history[scan['scan_id']], newest)
+        match = compatible_identity(row, history[scan['scan_id']], newest)
         if match is not None:
             prices.append((scan['finished_at'].astimezone(UTC).date(), match['min_buyout']))
     return prices
@@ -154,7 +155,7 @@ def signals(db, config, item_ids, now):
         earlier_identities = {}
         for pair in pairs:
             scan_id = pair['earlier']['scan_id']
-            match = _compatible(row, history[scan_id], newest)
+            match = compatible_identity(row, history[scan_id], newest)
             if match is not None:
                 earlier_identities[scan_id] = match['variant_state']
         prices = _history_prices(row, earlier, history, newest)

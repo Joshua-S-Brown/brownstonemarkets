@@ -215,9 +215,9 @@ value 1 means sold awaiting delivery); beta raw evidence remains required.
 ## Scan comparison
 
 - `storage.scope_predicate` supplies the source and full `MARKET_KEYS` predicate to price, depth and comparison reads.
-- `scan_changes.eligible_scans(db, config)` reads the selected source's completed, non-partial, priced `addon_scans` rows, ordered by finish time and scan ID descending. Finish times are normalized to UTC independently of DuckDB's session timezone.
-- `compare_scans(db, config, first_id, second_id, item_ids=None)` validates distinct eligible IDs and orders them chronologically. DuckDB reads `scan_metrics` facts per exact identity, scoped by source, market, scan ID, snapshot ID and metrics version. `market_snapshots` and a name-only `scan_listings` aggregation provide labels, with the same scope; neither supplies numeric metrics. A full outer join returns only item aggregates to Python, never raw listings.
-- The result carries earlier/later scan metadata, their time gap, shared `items`, `new` and `vanished`. Each row has item ID/name, earlier/later metric dictionaries (minimum buyout, market value, listings, units), later-minus-earlier changes and a changed flag. A missing side is `None`; unavailable prices and changes are `None`, with integer copper for all valid prices. Optional item IDs filter every list; an empty list matches nothing.
+- `scan_changes.eligible_scans(db, config)` returns UI-06 scans newest finish/ID first, with UTC finish times independent of connection timezone.
+- `compare_scans(db, config, first_id, second_id, item_ids=None)` validates distinct eligible IDs and orders them chronologically. Versioned `scan_metrics` supplies exact-identity facts scoped by source/full market/scan/snapshot; scoped snapshots and name-only listings supply only labels. A full outer join returns item aggregates, never raw listings.
+- Results retain scan metadata, gap, shared/new/vanished identities, before/after metrics and nullable changes. Absent sides and unavailable prices stay `None`; prices are integer copper. Optional item-ID filters apply to every list (empty matches nothing).
 - Market composes this comparison through `market_explorer.scan_movement`; UI-06 supplies its retained comparison contract.
 
 ### Removed listings (STORY-027)
@@ -249,6 +249,14 @@ All monetary arithmetic uses integer copper; ranking ratios use exact fractions.
 write, price path or seller inference. `market_explorer.load_explorer` reads only catalog-chain
 signals for the two top lists; `item_floods` opens a read-only connection only when an item page
 opens. `views/nicegui_market.py` uses shared theme badges/chips, links and short-history explanations.
+
+### Item charts (STORY-021)
+
+Rules: requirements → UI-17. `item_history` reads item-only, scoped/versioned metrics and
+eligible scans, retaining gaps. Shared `flood_signals.compatible_identity` anchors legacy matching
+on latest format-3 item evidence (legacy-only retains identity); exact base always remains.
+Read-only wrappers load history/selected ladder; SQL groups matching listings by unit price.
+`views/nicegui_item_history` renders ECharts/tables in `show_item`, with local errors.
 
 ## Crafting calculation
 
