@@ -158,9 +158,10 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   behavior still need manual checks. Vendor lists, trainer lists, mob names and the panel
   were confirmed on 2026-10-15. A scan 46 minutes after the last answered one got no reply within 30 s and
   was wrongly blamed on the 15-minute limit (2026-10-15, not saved; 0.12.8 records the next one). Remaining in-game checks (addon README → *Last beta play session*):
-  the 12-hour time-left bound, the sale-to-mailbox delay, crafting tier levels and yellow skill-up chances.
+  pinning the 12-hour time-left bound, the sale-to-mailbox delay, crafting tier levels and yellow skill-up chances.
   On 2026-10-15 own posts read bucket 2 at 1 h 35 m left, 1 at 26 and 29 min, 3 at 7 h 35 m and 4 at
-  21 h 40 m; 2-hour posts were mailed back within 6 s of expiry. Seller invoices (`GetInboxInvoiceInfo`
+  21 h 40 m; on 2026-10-16 two 24-hour posts read 3 at 8 h 50 m (scan `20261016T013929Z-6005ec`), so
+  the 3/4 transition lies between 8 h 50 m and 21 h 40 m, consistent with 12 hours; 2-hour posts were mailed back within 6 s of expiry. Seller invoices (`GetInboxInvoiceInfo`
   4 price, 6 deposit, 7 cut, 11 count) paid price + deposit − ⌊5%⌋ on all four sales; expiries returned
   the items without the deposit. Sale mails showed a full 30 days when opened, so arrival stays unknown. Item pass measured
   2026-10-13: 5.9 s listing read, 0.34 s pass, 1,590 of 1,909 requests answered, none timed out.
