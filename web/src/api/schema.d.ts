@@ -1,4 +1,106 @@
 export interface paths {
+    "/api/data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Data */
+        get: operations["data_api_data_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/data/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard */
+        post: operations["discard_api_data_discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/data/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Collect */
+        post: operations["collect_api_data_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/data/imported": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Imported */
+        get: operations["imported_api_data_imported_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/data/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review */
+        post: operations["review_api_data_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/data/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Selection */
+        post: operations["selection_api_data_selection_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/items/{item_id}": {
         parameters: {
             query?: never;
@@ -78,6 +180,57 @@ export interface paths {
         get: operations["ladder_api_items__item_id__ladder_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ledger */
+        get: operations["ledger_api_ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ledger/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Movements */
+        get: operations["movements_api_ledger_movements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ledger/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Targets */
+        post: operations["targets_api_ledger_targets_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -266,6 +419,25 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** Capture */
+        Capture: {
+            /** Age Hours */
+            age_hours: number | null;
+            /** Character */
+            character: string;
+            /** Empty */
+            empty: boolean;
+            /** Excluded */
+            excluded: number;
+            /** Kind */
+            kind: string;
+            /** Partial */
+            partial: boolean;
+            /** Unknown */
+            unknown: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** Card */
         Card: {
             /** Faction */
@@ -296,6 +468,15 @@ export interface components {
             stale: boolean;
         } & {
             [key: string]: unknown;
+        };
+        /** Category */
+        Category: {
+            /** Category */
+            category: string;
+            /** In Copper */
+            in_copper: number;
+            /** Out Copper */
+            out_copper: number;
         };
         /** Chain */
         Chain: {
@@ -356,6 +537,33 @@ export interface components {
             /** Profession */
             profession: string;
         };
+        /** Data */
+        Data: {
+            /** Chips */
+            chips: string[];
+            /** Cli */
+            cli?: string | null;
+            /** Details */
+            details: {
+                [key: string]: string;
+            };
+            /** Provider */
+            provider: string;
+        };
+        /** Day */
+        Day: {
+            /** Day */
+            day: string;
+            /** In Copper */
+            in_copper: number;
+            /** Out Copper */
+            out_copper: number;
+        };
+        /** Discard */
+        Discard: {
+            /** Review Id */
+            review_id?: string | null;
+        };
         /** Estimate */
         Estimate: {
             /** Complete */
@@ -391,6 +599,72 @@ export interface components {
             scan_id?: string | null;
             /** Source Id */
             source_id: string;
+        };
+        /** Gold */
+        Gold: {
+            /** Categories */
+            categories: components["schemas"]["Category"][];
+            /** Daily */
+            daily: components["schemas"]["Day"][];
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Movement Count */
+            movement_count: number;
+            pairs: components["schemas"]["Pairs"];
+            /** Reconciliation */
+            reconciliation: components["schemas"]["GoldPair"][];
+            team: components["schemas"]["GoldTeam"];
+            /** Totals */
+            totals: components["schemas"]["GoldTotal"][];
+        };
+        /** GoldPair */
+        GoldPair: {
+            /** Actual Copper */
+            actual_copper: number | null;
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** From Utc */
+            from_utc: string;
+            /** Reason */
+            reason: string | null;
+            /** Recorded Copper */
+            recorded_copper: number | null;
+            /** To Utc */
+            to_utc: string;
+            /** Unexplained Copper */
+            unexplained_copper: number | null;
+        };
+        /** GoldTeam */
+        GoldTeam: {
+            /** In Copper */
+            in_copper: number;
+            /** Net Copper */
+            net_copper: number;
+            /** Out Copper */
+            out_copper: number;
+        };
+        /** GoldTotal */
+        GoldTotal: {
+            /** Category */
+            category: string;
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Day */
+            day: string;
+            /** In Copper */
+            in_copper: number;
+            /** Out Copper */
+            out_copper: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -486,6 +760,13 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** Import */
+        Import: {
+            /** Review Id */
+            review_id: string;
+            /** Selected */
+            selected: string[];
+        };
         /** Item */
         Item: {
             /** At Least */
@@ -522,6 +803,73 @@ export interface components {
             /** Vendor Sell */
             vendor_sell: number | null;
         };
+        /** ItemResidual */
+        ItemResidual: {
+            /** Actual Units */
+            actual_units: number;
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** From Utc */
+            from_utc: string;
+            /** Item Id */
+            item_id: number;
+            /** Kind */
+            kind: string;
+            /** Possibly Incomplete */
+            possibly_incomplete: boolean;
+            /** Recorded Units */
+            recorded_units: number;
+            /** Residual Units */
+            residual_units: number;
+            /** To Utc */
+            to_utc: string;
+        };
+        /** ItemTeam */
+        ItemTeam: {
+            /** In Units */
+            in_units: number;
+            /** Out Units */
+            out_units: number;
+        };
+        /** ItemTotal */
+        ItemTotal: {
+            /** Category */
+            category: string;
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Day */
+            day: string;
+            /** In Units */
+            in_units: number;
+            /** Out Units */
+            out_units: number;
+        };
+        /** Items */
+        Items: {
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Movement Count */
+            movement_count: number;
+            /** Pairs */
+            pairs: components["schemas"]["Pairs"][];
+            /** Reconciliation */
+            reconciliation: components["schemas"]["ItemResidual"][];
+            team: components["schemas"]["ItemTeam"];
+            /** Totals */
+            totals: components["schemas"]["ItemTotal"][];
+            /** Transfers */
+            transfers: components["schemas"]["Transfer"][];
+        };
         /** Ladder */
         Ladder: {
             /** Freshness */
@@ -553,6 +901,24 @@ export interface components {
             price_copper: number;
             /** Units */
             units: number;
+        };
+        /** Ledger */
+        Ledger: {
+            /** Errors */
+            errors: {
+                [key: string]: string;
+            };
+            /** Evidence */
+            evidence: {
+                [key: string]: string;
+            };
+            gold: components["schemas"]["Gold"] | null;
+            items: components["schemas"]["Items"] | null;
+            /** Names */
+            names: {
+                [key: string]: string;
+            };
+            stock: components["schemas"]["Stock"] | null;
         };
         /** Market */
         Market: {
@@ -627,6 +993,38 @@ export interface components {
                 string
             ];
             progression: components["schemas"]["Progression"];
+        };
+        /** Movement */
+        Movement: {
+            /** Entry Id */
+            entry_id: string;
+            /** Item Id */
+            item_id?: number | null;
+            /** Machine */
+            machine: string | null;
+            /** Name */
+            name?: string | null;
+            /** Utc */
+            utc: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** Pairs */
+        Pairs: {
+            /**
+             * Kind
+             * @default bags
+             */
+            kind: string;
+            /** Reconciled */
+            reconciled: number;
+            /** Total */
+            total: number;
+            /**
+             * Unknown
+             * @default 0
+             */
+            unknown: number;
         };
         /** Payback */
         Payback: {
@@ -705,6 +1103,30 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Review */
+        Review: {
+            /**
+             * Hits
+             * @default []
+             */
+            hits: string[];
+            /**
+             * Messages
+             * @default []
+             */
+            messages: [
+                string,
+                string
+            ][];
+            review?: components["schemas"]["Selection"] | null;
+            /** Review Id */
+            review_id?: string | null;
+            /**
+             * Success
+             * @default false
+             */
+            success: boolean;
+        };
         /** RouteLine */
         RouteLine: {
             /** Evidence */
@@ -759,6 +1181,40 @@ export interface components {
             /** Variant State */
             variant_state?: string | null;
         };
+        /** Selection */
+        Selection: {
+            /** Can Import */
+            can_import: boolean;
+            /** Choices */
+            choices: string[];
+            /** Clear */
+            clear: string[];
+            /** Default */
+            default: string[];
+            /** File Status */
+            file_status: string[];
+            /** Has Records */
+            has_records: boolean;
+            /** Lines */
+            lines: string[];
+            /** New */
+            new: boolean;
+            /** Notes */
+            notes: string[];
+            /** Problems */
+            problems: string[];
+            /** Sections */
+            sections: [
+                string,
+                {
+                    [key: string]: unknown;
+                }[]
+            ][];
+            /** Selected */
+            selected: string[];
+            /** Selection Differs */
+            selection_differs: boolean;
+        };
         /** SettingsRequest */
         SettingsRequest: {
             /** Settings */
@@ -812,6 +1268,106 @@ export interface components {
             waiting: number | null;
             /** Waiting Error */
             waiting_error?: string | null;
+        };
+        /** Stock */
+        Stock: {
+            /** Buy Cost Copper */
+            buy_cost_copper: number;
+            /** Captures */
+            captures: components["schemas"]["Capture"][];
+            /** Entries */
+            entries: components["schemas"]["Target"][];
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Excluded Prices */
+            excluded_prices: number;
+            /** Holdings */
+            holdings: {
+                [key: string]: unknown;
+            }[];
+            /** Items Held */
+            items_held: number;
+            /** Items Short */
+            items_short: number;
+            /** Names */
+            names: {
+                [key: string]: string;
+            };
+            /** Rows */
+            rows: components["schemas"]["StockRow"][];
+            /** Scan State */
+            scan_state: string;
+            /** Value Copper */
+            value_copper: number;
+        };
+        /** StockRow */
+        StockRow: {
+            /** Above Limit Cost Copper */
+            above_limit_cost_copper?: number | null;
+            /** At Most */
+            at_most: boolean;
+            /** Buy Cost Copper */
+            buy_cost_copper?: number | null;
+            /** Buy Units */
+            buy_units?: number | null;
+            entry: components["schemas"]["Target"] | null;
+            /** Fill Cost Copper */
+            fill_cost_copper?: number | null;
+            /** Fill State */
+            fill_state: string;
+            /** Held */
+            held: number;
+            /** Item Id */
+            item_id: number;
+            /** Limit Copper */
+            limit_copper?: number | null;
+            /** Limit Kind */
+            limit_kind: string;
+            /**
+             * Limit Unknown
+             * @default false
+             */
+            limit_unknown: boolean;
+            /** Name */
+            name: string;
+            /** Purchased Units */
+            purchased_units?: number | null;
+            /** Short */
+            short?: number | null;
+            /** Target Units */
+            target_units: number | null;
+            /** Unlisted Units */
+            unlisted_units?: number | null;
+            /** Value Copper */
+            value_copper: number | null;
+            /** Variant Id */
+            variant_id: string | null;
+            /** Variant State */
+            variant_state: string;
+            /** Wait Cost Copper */
+            wait_cost_copper?: number | null;
+            /** Wait Units */
+            wait_units?: number | null;
+            /** Whole Stack Units */
+            whole_stack_units?: number | null;
+        };
+        /** Target */
+        Target: {
+            /** Buy Copper */
+            buy_copper?: number | null;
+            /** Buy Percent */
+            buy_percent?: number | null;
+            /** Item Id */
+            item_id: number;
+            /** Target Units */
+            target_units: number;
+        };
+        /** Targets */
+        Targets: {
+            /** Entries */
+            entries: components["schemas"]["Target"][];
         };
         /** Team */
         Team: {
@@ -875,6 +1431,29 @@ export interface components {
             /** Stops */
             stops: components["schemas"]["RouteStop"][];
         };
+        /** Transfer */
+        Transfer: {
+            /** Item Id */
+            item_id: number;
+            /** Recipient */
+            recipient: [
+                string,
+                string,
+                string
+            ];
+            /** Sender */
+            sender: [
+                string,
+                string,
+                string
+            ];
+            /** Status */
+            status: string;
+            /** Units */
+            units: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -897,6 +1476,211 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    data_api_data_get: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Data"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_api_data_discard_post: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Discard"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collect_api_data_import_post: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Import"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    imported_api_data_imported_get: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": [
+                        string,
+                        {
+                            [key: string]: unknown;
+                        }[]
+                    ][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_api_data_review_post: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    selection_api_data_selection_post: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Import"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Selection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     item_api_items__item_id__get: {
         parameters: {
             query?: {
@@ -1051,6 +1835,114 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Ladder"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ledger_api_ledger_get: {
+        parameters: {
+            query?: {
+                source?: string;
+                days?: "7" | "30" | "all";
+                q?: string;
+                chains?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ledger"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    movements_api_ledger_movements_get: {
+        parameters: {
+            query: {
+                name: string;
+                realm: string;
+                faction: string;
+                day: string;
+                category: string;
+                ledger: "gold" | "items";
+                source?: string;
+                q?: string;
+                chains?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Movement"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    targets_api_ledger_targets_post: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Targets"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Targets"];
                 };
             };
             /** @description Validation Error */

@@ -167,17 +167,18 @@ Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash
 
 ## Scan import preview
 
-pipeline.preview_scans returns ScanPreview exact bytes/resolved config/parsed records/validated
-summaries/known state; new_ids derived. Missing/old scan tables mean no known scans, never upgrade.
-Bounded _read_scan_bytes and shared prepare/select/check/listing/hash helpers implement ADDON-06.
-Validate references/types/unique membership/duration; aggregate availability. CLI validates selected
+pipeline.preview_scans returns ScanPreview bytes/config/records/validated
+summaries/known state; new_ids derived. Absent/old tables mean no known scans, never upgrade.
+Bounded _read_scan_bytes and prepare/select/check/listing/hash helpers: ADDON-06.
+Validate references/types/membership/duration; aggregate availability. CLI validates selected
 scans only; preview checks all with per-scan house mismatches excluded from new_ids.
-Reviewed import recomputes bytes/config/known state, rejects unknown/empty/imported selection,
+Reviewed import rechecks bytes/config/state, rejects unknown/empty/imported selection,
 rechecks under writer before archive, then consumes in-memory bytes. Explicit import creates/upgrades.
 _save_collection preserves bytes/manifest; _load_collection is shared transaction. _file_scan_state
 classifies saved exact-hash/other-house/remaining, unselected invalid remains. import_guidance protects
-subsets. Data uses import_review summary/action/details and one source/config-bound review; results
-replace it, errors discard it. Best-effort reads and non-atomic bronze/silver/DB limitations persist.
+subsets. `api/data.py` holds one source/config-bound review; POST replaces it, import consumes it
+under a non-blocking writer lock. Errors discard it; drops get a fresh review.
+`import_review` shapes Data. Best-effort reads; bronze/silver/DB remain non-atomic.
 
 ### Multiple input files (STORY-037)
 
@@ -645,12 +646,10 @@ inferring IDs or categories. `build_stock` is a pure projection with cautious sa
 buy/wait quantities describe short units, while purchased units and costs include whole stacks.
 Rules live in `requirements.md` → Stock.
 
-`views/nicegui_stock.py` uses the shared theme, cached search/chain filtering, disclosures and
-page information dialog. The target dialog copies saved entries into a fresh draft on opening;
-Update/remove changes only that draft, Save revalidates the current file and atomically replaces
-it, then reloads the page. Malformed files are preserved and explained. No schema or Today
-version/state changes. Offline coverage: `tests/test_stock.py` and
-`tests/ui_trial/test_nicegui_stock.py`.
+`api/ledger.py` caches source evidence until database/config/hour/targets change; `ledger_view`
+shapes days, filters, totals and evidence. The target dialog drafts saved entries; Save revalidates
+and atomically replaces them. Malformed files are preserved and explained. No schema or Today
+state changes. Offline coverage: `tests/test_stock.py`, `tests/test_ledger_web.py` and Ledger Vitest.
 
 ## Gold ledger contracts
 

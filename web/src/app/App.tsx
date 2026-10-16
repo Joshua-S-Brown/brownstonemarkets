@@ -15,6 +15,12 @@ const Today = lazy(() =>
 const Team = lazy(() =>
   import("../places/team/Team").then((m) => ({ default: m.Team })),
 );
+const Ledger = lazy(() =>
+  import("../places/ledger/Ledger").then((m) => ({ default: m.Ledger })),
+);
+const Data = lazy(() =>
+  import("../places/data/Data").then((m) => ({ default: m.Data })),
+);
 function Theme() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem("brownstone-theme") || "system",
@@ -73,6 +79,13 @@ export function App() {
       socket?.close();
     };
   }, [source]);
+  const sheetOpen = params.get("sheet") === "data";
+  function sheet(open: boolean) {
+    const next = new URLSearchParams(params);
+    if (open) next.set("sheet", "data");
+    else next.delete("sheet");
+    setParams(next);
+  }
   function choose(id: string) {
     const next = new URLSearchParams(params);
     next.set("source", id);
@@ -98,7 +111,7 @@ export function App() {
               </span>
             </a>
           ))}
-          <Dialog.Root>
+          <Dialog.Root open={sheetOpen} onOpenChange={sheet}>
             <Dialog.Trigger className={styles["data-button"]}>
               Data <Pill>{waiting ?? "?"}</Pill>
             </Dialog.Trigger>
@@ -110,13 +123,12 @@ export function App() {
               >
                 <Dialog.Title>Data</Dialog.Title>
                 <Dialog.Close>Close ✕</Dialog.Close>
-                <p>
-                  {inventory.isFetching
-                    ? "Checking local and dropped scan files…"
-                    : `${waiting ?? "Unknown"} new scans waiting`}
-                </p>
                 {waitingError && <p role="alert">{waitingError}</p>}
-                <a href={placeURL("Data", source)}>Review scans in Data →</a>
+                {source && sheetOpen && (
+                  <Suspense fallback={<p>Loading Data…</p>}>
+                    <Data key={source} source={source} />
+                  </Suspense>
+                )}
               </Dialog.Content>
             </Dialog.Portal>
           </Dialog.Root>
@@ -146,6 +158,7 @@ export function App() {
               </Popover.Portal>
             </Popover.Root>
             <Tip
+              onClick={() => sheet(true)}
               text={
                 data?.evidence
                   ? `${data.evidence.source_id} · ${data.evidence.market_id} · ${data.evidence.finished_at ?? "No scan"}`
@@ -173,15 +186,28 @@ export function App() {
             <Theme />
           </header>
           <main className={styles["workspace"]}>
-            {!["/app/market", "/app/today", "/app/team"].includes(
-              window.location.pathname,
-            ) && <p className={styles["eyebrow"]}>Your saved market</p>}
-            {!["/app/market", "/app/today", "/app/team"].includes(
-              window.location.pathname,
-            ) && <h1>Brownstone workspace</h1>}
-            {!["/app/market", "/app/today", "/app/team"].includes(
-              window.location.pathname,
-            ) && (
+            {![
+              "/app/market",
+              "/app/today",
+              "/app/team",
+              "/app/ledger",
+            ].includes(window.location.pathname) && (
+              <p className={styles["eyebrow"]}>Your saved market</p>
+            )}
+            {![
+              "/app/market",
+              "/app/today",
+              "/app/team",
+              "/app/ledger",
+            ].includes(window.location.pathname) && (
+              <h1>Brownstone workspace</h1>
+            )}
+            {![
+              "/app/market",
+              "/app/today",
+              "/app/team",
+              "/app/ledger",
+            ].includes(window.location.pathname) && (
               <p className={styles["muted"]}>
                 What should I do today to make gold?
               </p>
@@ -209,6 +235,10 @@ export function App() {
             ) : window.location.pathname === "/app/team" ? (
               <Suspense fallback={<p role="status">Loading Team…</p>}>
                 <Team key={source} source={source} />
+              </Suspense>
+            ) : window.location.pathname === "/app/ledger" ? (
+              <Suspense fallback={<p>Loading Ledger…</p>}>
+                <Ledger key={source} source={source} />
               </Suspense>
             ) : window.location.pathname === "/app/market" ? (
               <Market source={source} />

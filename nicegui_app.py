@@ -12,12 +12,9 @@ from nicegui import Client, app, ui
 from api import install as install_web
 from api.presence import connected as web_tabs
 from brownstone import config as configuration
-from brownstone import pipeline, recipe_catalogs
-from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences, source_label
+from brownstone.navigation import EXPERIENCES, experiences, source_label
 from views import nicegui_theme as theme
-from views.nicegui_import import render as render_import
 from views.nicegui_navigation import market_url, read_origin, team_url, today_url
-from views.nicegui_stock import render as render_stock
 
 ROOT = Path(__file__).resolve().parent
 install_web(app, ROOT / "web/dist")
@@ -26,13 +23,6 @@ install_web(app, ROOT / "web/dist")
 def web_warning():
     if os.environ.get("BROWNSTONE_WEB_WARNING"):
         ui.label(os.environ["BROWNSTONE_WEB_WARNING"]).classes("bs-note")
-
-
-def read_catalogs():
-    catalogs, errors = recipe_catalogs.parse_catalogs(recipe_catalogs.find_catalogs(recipe_catalogs.CONFIG_DIR))
-    for message in errors:
-        ui.label(message)
-    return catalogs
 
 
 @ui.page('/')
@@ -69,23 +59,11 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
     if place == 'Team':
         ui.navigate.to(team_url(chosen))
         return
-    with ui.column().classes('gap-1'):
-        ui.label(place).classes('bs-title')
-        ui.label(QUESTIONS[place]).classes('bs-question')
-    # The web app (UI-18) grows beside these pages; the native window has no address bar to reach it.
-    ui.link('Open the new app (preview) →', '/app?' + urlencode({'source': chosen['source_id']})).mark('web-app')
-    await ui.context.client.connected()
-    # Switching sources, including TSM, invalidates any active addon review.
-    identity = pipeline.preview_configuration(chosen) if chosen['provider'] == 'addon' else None
-    if app.storage.tab.get('import-identity') != identity:
-        app.storage.tab['import-identity'] = identity
-        app.storage.tab['import-review'] = {}
+    target = '/app/ledger' if place == 'Stock' else '/app/today'
+    values = {'source': chosen['source_id']}
     if place == 'Data':
-        render_import(chosen)
-        return
-    if place == 'Stock':
-        render_stock(chosen, read_catalogs())
-        return
+        values['sheet'] = 'data'
+    ui.navigate.to(target + '?' + urlencode(values))
 
 
 def header(sources, game, source, place, tab):

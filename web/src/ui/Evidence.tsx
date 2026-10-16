@@ -5,7 +5,13 @@ export function evidenceLabel(key: string) {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 // Stored metric fields that hold integer copper without the _copper suffix.
-const COPPER = new Set(["min_buyout", "market_value", "buyout", "unit_buyout"]);
+const COPPER = new Set([
+  "copper",
+  "min_buyout",
+  "market_value",
+  "buyout",
+  "unit_buyout",
+]);
 const copperField = (name: string) =>
   name.endsWith("_copper") || COPPER.has(name);
 function Value({ name, value }: { name: string; value: unknown }) {

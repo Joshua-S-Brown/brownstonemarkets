@@ -63,6 +63,9 @@ export function Today({
       />
     );
   if (!data) return <p role="status">Loading Today…</p>;
+  const dataParams = new URLSearchParams(params);
+  dataParams.set("source", source);
+  dataParams.set("sheet", "data");
   const queue = data.plan.queue;
   const ticks = data.state.ticks || {};
   return (
@@ -110,7 +113,8 @@ export function Today({
       </div>
       {data.plan.freshness.stale && (
         <p role="alert">
-          Stale — inspect only. Open Data to import a fresh scan.
+          Stale — inspect only. <a href={"?" + dataParams}>Open Data</a> to
+          import a fresh scan.
         </p>
       )}
       {data.reset_note && <p role="status">{data.reset_note}</p>}

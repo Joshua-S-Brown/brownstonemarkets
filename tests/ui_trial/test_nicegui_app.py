@@ -1,135 +1,23 @@
-"""Main-app navigation and import parity, using NiceGUI's offline user fixture."""
+"""Every legacy place redirects to the web app with its selected source."""
 
-import duckdb
 import pytest
-from app_helpers import app, preview_addon
-from nicegui import ui
-from test_scans import finished_now, listing, scan, write_scans
-
-from brownstone.navigation import QUESTIONS
+from app_helpers import app
 
 pytestmark = pytest.mark.asyncio
 
 
-def table(user, marker):
-    return next(iter(user.find(kind=ui.table, marker=marker).elements))
-
-
-def records(data):
-    with duckdb.connect(str(data / 'brownstone.duckdb'), read_only=True) as db:
-        return {name: db.execute(f"SELECT * {'EXCLUDE (collected_at)' if name == 'market_snapshots' else ''} "
-                                       f'FROM {name} ORDER BY ALL').fetchall()
-                for name in ('scan_listings', 'market_snapshots')}
-
-
-async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    ("place", "destination"),
+    [
+        ("Stock", "/app/ledger?source=test"),
+        ("Data", "/app/today?source=test&sheet=data"),
+        ("", "/app/today?source=test&view=route"),
+    ],
+)
+async def test_places_redirect_with_source(user, tmp_path, monkeypatch, place, destination):
     _, source, _ = app(tmp_path, monkeypatch)
-    other = source | {'source_id': 'other'}
-    monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [source, other])
-    await user.open('/?game=classic&source=test&place=Stock&tab=Buy')
-    buttons = sorted((e for e in user.find(ui.button).elements if any(
-        m.startswith('place-') for m in e._markers)), key=lambda e: e.id)
-    assert [b.text for b in buttons] == ['Today', 'Team', 'Market', 'Stock', 'Data']
-    assert buttons[-2].id < next(iter(user.find(ui.separator).elements)).id < buttons[-1].id
-    await user.should_see(QUESTIONS['Stock'])
-    link = next(iter(user.find(marker='web-app').elements))
-    assert link.props['href'] == '/app?source=test'  # Same source in the web app.
-    await user.should_see('What needs restocking')
-    await user.open('/?game=classic&source=test&place=Stock&tab=Buy')
-    await user.should_see('What needs restocking')
+    monkeypatch.setattr("brownstone.config.read_sources", lambda *args: [source, source | {"source_id": "other"}])
     targets = []
-    with monkeypatch.context() as patch:
-        patch.setattr(ui.navigate, 'to', targets.append)
-        user.find(marker='place-Market').click()
-    assert targets == ['/app/market?source=test']
-    await user.should_see(QUESTIONS['Stock'])
-    await user.should_see('What needs restocking')
-    with monkeypatch.context() as patch:
-        patch.setattr(ui.navigate, 'to', targets.append)
-        user.find(marker='place-Today').click()
-    assert targets[-1].startswith('/app/today?source=test')
-    await user.open('/?game=classic&source=other&place=Data&tab=Queue')
-    await user.should_see("python -m brownstone --source other")
-    user.find(marker='page-info').click()
-    await user.should_see('source other')
-    await user.should_not_see('Check for new scans')
-
-
-async def test_preview_subset_import_matches_cli_records(user, tmp_path, monkeypatch):
-    at, source = preview_addon(tmp_path, monkeypatch)
-    old = source.copy()
-    source['data_dir'] = tmp_path / 'nicegui-data'
-    await user.open('/?place=Data')
-    await user.should_see('Check for new scans')
-    await user.should_not_see(marker='import-action')
-    before = source['scan_path'].read_bytes()
-    user.find('Check for new scans').click()
-    await user.should_see('New partial scan: two')
-    assert not source['data_dir'].exists()
-    assert [r['Import state'] for r in table(user, 'Scan preview').rows] == ['New', 'New']
-    select = next(iter(user.find(kind=ui.select, content='New scans to import').elements))
-    select.set_value([])
-    await user.should_not_see(marker='import-action')
-    next(iter(user.find(kind=ui.select, content='New scans to import').elements)).set_value(['one'])
-    user.find(marker='import-action').click()
-    await user.should_see('Imported. Collection prices come from scan one')
-    await user.should_not_see(marker='Scan preview')
-    assert source['scan_path'].read_bytes() == before
-    # The CLI imports the same selected bytes into an independent directory.
-    import sys
-
-    from brownstone import cli
-    monkeypatch.setattr(cli, '_select_source', lambda args: old)
-    monkeypatch.setattr(sys, 'argv', ['brownstone', '--scan', 'one'])
-    cli.main()
-    assert records(source['data_dir']) == records(old['data_dir'])
-
-
-async def test_drop_rejected_file_cleanup_and_stale_review(user, tmp_path, monkeypatch):
-    _, source = preview_addon(tmp_path, monkeypatch, [])
-    folder = tmp_path / 'drops'
-    folder.mkdir()
-    good = write_scans(folder / 'windows-pc-20261007T004900Z-BrownstoneScan.lua',
-                       scan('win', finished_now(), [listing(2, 1, 80)]))
-    bad = folder / 'windows-pc-20261007T005000Z-BrownstoneScan.lua'
-    bad.write_text('truncated')
-    source.update(drop_folder=folder)
-    await user.open('/?place=Data')
-    await user.should_see('Check for new scans')
-    user.find('Check for new scans').click()
-    await user.should_see(bad.name)
-    assert not source['data_dir'].exists()
-    user.find(marker='import-action').click()
-    await user.should_see(f'{good}: imported')
-    await user.should_see('1 dropped file is fully imported')
-    await user.should_see("don't /bscan clear; its latest drop is not fully imported")
-    assert table(user, 'Latest drops').rows[0]['Fully imported'] is False
-    assert table(user, 'Files').rows[1]['Fully imported'] is True
-    # Duplicates may be explicitly selected, but changed bytes invalidate the review.
-    select = next(iter(user.find(kind=ui.select, content='Files to import').elements))
-    select.set_value([str(good)])
-    good.write_bytes(good.read_bytes() + b'\n')
-    user.find(marker='import-action').click()
-    await user.should_see('Nothing was imported')
-    await user.should_not_see(marker='Files')
-    assert bad.read_text() == 'truncated'
-
-
-async def test_preview_error_and_identity_change_discard_review(user, tmp_path, monkeypatch):
-    _, source = preview_addon(tmp_path, monkeypatch)
-    before = source['scan_path'].read_bytes()
-    source['scan_path'].unlink()
-    await user.open('/?place=Data')
-    await user.should_see('Check for new scans')
-    user.find('Check for new scans').click()
-    await user.should_see('Preview failed')
-    assert not source['data_dir'].exists()
-    source['scan_path'].write_bytes(before)
-    user.find('Check for new scans').click()
-    await user.should_see(marker='import-action')
-    second = source | {'source_id': 'second'}
-    monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [source, second])
-    await user.open('/?game=forever&source=second&place=Data')
-    await user.should_not_see(marker='import-action')
-    await user.open('/?game=forever&source=' + source['source_id'] + '&place=Data')
-    await user.should_not_see(marker='import-action')
+    monkeypatch.setattr(user.navigate, "to", targets.append)
+    await user.open("/?game=classic&source=test" + ("&place=" + place if place else ""))
+    assert targets[-1] == destination

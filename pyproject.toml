@@ -58,6 +58,6 @@ fail_under = 88
 
 [tool.mypy]
 python_version = "3.12"  # The tested version.
-files = ["api", "web_build.py", "brownstone", "launch_nicegui.py", "nicegui_app.py", "views/nicegui_theme.py", "views/nicegui_import.py", "views/nicegui_navigation.py", "views/nicegui_stock.py", "views/today_rows.py"]
+files = ["api", "web_build.py", "brownstone", "launch_nicegui.py", "nicegui_app.py", "views/nicegui_theme.py", "views/nicegui_navigation.py", "views/today_rows.py"]
 ignore_missing_imports = true
 warn_unused_ignores = true

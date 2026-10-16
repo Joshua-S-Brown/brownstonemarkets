@@ -14,12 +14,22 @@ export function Pill({
     </span>
   );
 }
-export function Tip({ text, children }: { text: string; children: ReactNode }) {
+export function Tip({
+  text,
+  children,
+  onClick,
+}: {
+  text: string;
+  children: ReactNode;
+  onClick?: () => void;
+}) {
   return (
     <Tooltip.Provider>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
-          <button className={styles["tip"]}>{children}</button>
+          <button className={styles["tip"]} onClick={onClick}>
+            {children}
+          </button>
         </Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Content className={styles["popover"]} sideOffset={8}>
@@ -58,7 +68,7 @@ export function ErrorState({
       <h2>Saved evidence could not load</h2>
       <p>{error.message}</p>
       <button onClick={retry}>Retry</button>{" "}
-      <a href={"/?" + new URLSearchParams({ place: "Data", source })}>
+      <a href={"/app/today?" + new URLSearchParams({ sheet: "data", source })}>
         Open Data
       </a>
     </section>

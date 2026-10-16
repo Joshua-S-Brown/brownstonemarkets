@@ -1,12 +1,5 @@
 """Shared, always-light presentation for the main app (UI-08)."""
-from contextlib import contextmanager
-
 from nicegui import ui
-
-CHART_COLORS = ['#594235', '#1D5A40', '#7A3410']
-CHART_INK = '#1F1A17'
-CHART_LINE = '#E4DDD5'
-CHART_SURFACE = '#FFFFFF'
 
 CSS = '''
 :root {
@@ -67,81 +60,3 @@ def install():
     ui.dark_mode(False)
     ui.colors(primary='#594235', secondary='#5E554F', positive='#1D5A40', warning='#7A3410')
     ui.add_css(CSS)
-
-
-def chip(text, *, on_click=None):
-    if on_click:
-        return ui.button(text, on_click=on_click).props('flat').classes('bs-chip')
-    return ui.label(text).classes('bs-chip')
-
-
-def badge(text, tone='neutral'):
-    return ui.label(text).classes('bs-badge bs-' + tone)
-
-
-def tile(label, value, *, profit=False, note=None, compact=False):
-    with ui.card().classes('bs-tile'):
-        ui.label(label).classes('bs-label')
-        ui.label(value).classes(('text-xl font-extrabold' if compact else 'bs-big') +
-                                (' bs-profit' if profit else ''))
-        if note:
-            ui.label(note).classes('bs-note')
-
-
-@contextmanager
-def dialog(title):
-    with ui.dialog() as popup, ui.card().classes('bs-dialog'):
-        with ui.row().classes('w-full items-center justify-between'):
-            ui.label(title).classes('text-xl font-bold')
-            ui.button('Close', on_click=popup.close).props('flat')
-        yield popup
-
-
-def info_button(title, on_click):
-    buttons = [e for e in ui.context.client.elements.values() if 'page-info' in e._markers]
-    if buttons:
-        button = buttons[0]
-        button.on_click(on_click)
-        button.props(f'aria-label="{title}"')
-        button.tooltip(title)
-    else:
-        ui.button(title, on_click=on_click).props('flat')
-
-
-def settings_button(on_click):
-    buttons = [e for e in ui.context.client.elements.values() if 'page-settings' in e._markers]
-    if buttons:
-        buttons[0].set_visibility(True)
-        buttons[0].on_click(on_click)
-    else:
-        ui.button('Today settings', on_click=on_click)
-
-
-def empty(sentence, settings, reasons):
-    with ui.card().classes('bs-card bs-empty').mark('empty-plan'):
-        ui.icon('search', size='40px').classes('bs-note')
-        ui.label('No craft clears your settings today').classes('text-xl font-bold')
-        ui.label(sentence).classes('bs-sentence')
-        with ui.row().classes('justify-center'):
-            ui.button('Review settings', on_click=settings)
-            ui.button('See all reasons', on_click=reasons).props('outline')
-
-
-def source_info(config):
-    with dialog('Source details') as popup:
-        ui.label(f"source {config['source_id']} · market {config['market_id']} · {config['provider']} feed")
-        ui.label('Configure sources in config/market.toml')
-    popup.on('hide', popup.delete)
-    popup.open()
-
-
-def banner(text, action_label, on_click):
-    with ui.row().classes('bs-banner'):
-        ui.icon('warning')
-        ui.label(text).classes('flex-1')
-        ui.button(action_label, on_click=on_click).props('flat')
-
-
-def farming_table(widget):
-    """Use the shared table treatment for the per-character farming comparison."""
-    widget.props('dense flat bordered').mark('farming-spots')

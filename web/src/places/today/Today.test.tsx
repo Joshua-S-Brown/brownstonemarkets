@@ -165,9 +165,13 @@ it("Route defaults, ticks survive refresh per source, copy matches Queue and URL
 });
 it("Opportunities retain ranking, money, reasons and Hide Low leaves Route complete", async () => {
   const user = userEvent.setup();
+  data.plan.freshness.stale = true;
   mount("opportunities");
   await screen.findByRole("button", { name: "Robe" });
   expect(screen.getByText("Low confidence")).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Open Data" }).getAttribute("href"),
+  ).toBe("?source=one&view=opportunities&sheet=data");
   await user.click(screen.getByLabelText("Hide Low confidence"));
   expect(screen.queryByRole("button", { name: "Robe" })).toBeNull();
   await user.click(screen.getByRole("tab", { name: "Route" }));

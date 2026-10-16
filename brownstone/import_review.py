@@ -184,3 +184,53 @@ def file_status_lines(preview):
             note = 'no scans in the file' if empty else 'see file details'
             lines.append(f'{file.machine} · game file · {note}')
     return lines
+
+
+def selection(preview, drops, selected=None, machine=None):
+    """Pure review state shared by the sheet and the retiring view."""
+    from brownstone import scan_inputs
+
+    default = list(preview.new_files if drops else preview.new_ids)
+    selected = default if selected is None else selected
+    if drops:
+        lines, problems = input_summary(preview, selected)
+        choices = [str(f.path) for f in preview.files if f.matching_ids or f.matching_records]
+        sections = [('Files', scan_inputs.file_rows(preview)), ('Latest drops', scan_inputs.latest_rows(preview))]
+        for file in preview.files:
+            if file.preview:
+                sections.extend(preview_sections(file.preview, file.machine, file.drop_time))
+        notes = [scan_inputs.CLEAR_REMINDER]
+    else:
+        lines, problems = [summary(preview, machine)], scan_problems(preview)
+        choices, sections, notes = default, preview_sections(preview, machine), preview_notes(preview)
+        if preview.new_record_ids:
+            notes.append("All new matching character records in this file will also be imported.")
+    differs = set(selected) != set(default)
+    return dict(new=bool(default or (not drops and preview.new_record_ids)), default=default,
+                choices=choices, selected=selected, selection_differs=differs,
+                can_import=bool(selected or (not drops and preview.new_record_ids)),
+                has_records=bool(not drops and preview.new_record_ids),
+                lines=lines, problems=problems + (['Selection differs from the default'] if differs else []),
+                sections=sections, notes=notes,
+                file_status=file_status_lines(preview) if drops else [],
+                clear=clear_lines(preview) if drops else [])
+
+
+def watchlist_hits(config, catalogs):
+    """Read scoped watchlist evidence after an explicit import, outside the display layer."""
+    from datetime import datetime
+
+    import duckdb
+
+    from brownstone.watchlist import hit_text, known_names, load_entries, read_watchlist, watchlist_path
+
+    try:
+        entries = load_entries(watchlist_path(config['data_dir'], config['source_id']))
+        if not entries:
+            return []
+        with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
+            result = read_watchlist(db, config, entries, datetime.now(UTC))
+            names = known_names(db, config, catalogs)
+        return [hit_text(r, names) for r in result['rows'] if r['buy_hit'] or r['sell_hit']]
+    except Exception as error:
+        return [f'Watchlist evidence unavailable: {error}']

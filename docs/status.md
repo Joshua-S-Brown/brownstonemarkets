@@ -10,8 +10,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Routes reuse one explorer build per source until the database, config or hourly bucket
   changes: search under 10 ms, item record about 0.25 s. The build (3–9 s) starts in the
   background when the shell opens. Search shows the 50 closest hits.
-  Search opens URL-backed item Overview records and scoped character records; Data links
-  to the existing review page. Source evidence loads independently of the potentially slow local/drop
+  Search opens URL-backed item Overview records and scoped character records; Data opens
+  the import sheet. Source evidence loads independently of the potentially slow local/drop
   scan inventory. Light/dark/system themes and bundled fonts work offline; narrow screens use bottom tabs.
   The launcher builds changed web sources, with a recoverable banner on failure or missing Node 24.
   `web/README.md` covers build/schema commands. Gates include the web checks on macOS; Windows
@@ -38,34 +38,23 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   page overflow; the grid/table scroll locally. Screenshots and comparison baseline remain ignored
   under `work/story-082/`. No collection or imports were run.
 
-- **Item movements (STORY-034b):** Stock's Items area below Gold shows cached category totals,
-  own-character mail, snapshot residuals and expandable entry provenance, using Stock's search.
-  Rules: [UI-16](requirements.md#ui-16-item-movements-story-034b); contracts: design → Item ledger.
-  Offline tests: `tests/test_item_ledger.py`, `tests/ui_trial/test_nicegui_stock.py`.
-  Imported Forever beta: 1,006 movements, 44 baselines/gaps (including bags still loading just
-  after a login), three unreadable captures excluded; team 731 units in, 596 out. 67/70 bags and
-  10/10 bank pairs have zero residual. The three left: Cicelyna's +4 item 117/+1 item 6948 behind
-  an old-addon baseline, and Basilly's −13 and −10 Conjured Water (5350), which vanishes at logout
-  with no event. Ten own-mail pairs match; one Linen Bag send stays unmatched because its bag
-  update came 20 s after the take. 229 other allocations, no unidentified mail.
+- **Item movements (UI-16):** Ledger's Items area shares name/ID/catalog filters with Restock,
+  with filtered team units, character/day/category totals, own-mail links and residuals first.
+  Lazy movements retain IDs, machine, allocation/reasons and version; gaps and snapshots are in evidence.
+  Offline: `tests/test_item_ledger.py`, `tests/test_ledger_web.py`, Ledger Vitest.
+  Copied beta scan `20261016T113727Z-eb77d0`: 1,007 movements, 46 baselines/gaps, 736 units in,
+  596 out, 73/76 bags and 10/10 bank pairs without residuals; 11 own-mail rows, one unmatched send.
+- **Gold ledger (UI-15):** `/app/ledger?source=` shows team in/out/net, daily chart, category totals,
+  character/day/category movements and reconciliation. Days (7/30/all UTC, default 7) persist per
+  tab/source. Evidence loads once until database/config/hour/targets change; failures stay local.
+  Offline: `tests/test_ledger.py`, `tests/test_ledger_web.py`, Ledger Vitest. Copied beta: 385 movements,
+  5,878c in / 4,079c out / 1,799c net; 76/76 bags pairs reconcile, no missing money baselines,
+  three unreadable bags excluded. Quests/flights remain other.
 
-- **Gold ledger (STORY-034):** Stock shows scoped per-character/UTC-day category in/out,
-  explicit team totals, readable-bags reconciliation and expandable movement provenance.
-  Rules: [UI-15](requirements.md#ui-15-gold-ledger-story-034); contracts: design → Gold ledger.
-  Offline tests: `tests/test_ledger.py`, `tests/ui_trial/test_nicegui_stock.py`.
-  Imported Forever beta: 384 movements, no missing money baselines or unidentified mail;
-  seven seller invoices allocate 999c proceeds and 910c refunds; plain mail is 1c/200c/400c.
-  All 70 readable snapshot pairs reconcile to zero; three unreadable bags captures are excluded.
-  The story's expected initial Basilly 52c pair starts at a zero-slot backpack capture on
-  October 8, so ADDON-11/UI-15 excludes it; first readable capture is October 9 at 52c.
-  Quests/flights remain other; timing attribution is evidence, not proof of hook success.
-
-- **App:** Web Today, Team and Market; NiceGUI Stock and Data → Import, with shared light theme,
-  URL-only back links for Today items and Market item chains (STORY-076, UI-07);
-  Today tab/view refresh persistence with This session loaded on URL entry,
-  wrapping navigation, page information and Save-only Today settings (UI-07/08).
-  `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
-  authenticated reuse/restart, loopback browser fallback and idle shutdown.
+- **App:** Today, Team, Market and Ledger are web places; Data is a lazy sheet opened from
+  the rail, status chip or `?sheet=data`. All legacy NiceGUI places redirect with source; Stock
+  redirects to Ledger, Data to Today with the sheet. NiceGUI remains the loopback server for STORY-087.
+  `Open Brownstone App.command` / `.cmd` uses authenticated reuse/restart, native window or browser fallback.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
   queue, confidence, character eligibility and captured funds; today_version 14.
   STORY-080 splits auction/vendor material purchases during batch sizing (requirements → Today),
@@ -131,13 +120,21 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   the remainder expand, skipped gaps are counted; market-wide lists stay on home (STORY-078, UI-09).
   UI-11 typical prices use equal-weight UTC daily medians, with days/scans evidence and
   `flood_min_days` history validation (STORY-072; rules in requirements → UI-11).
-- **Stock:** readable bags/bank holdings, cautious listed value, Save-only source-local team
-  targets and whole-stack buy/wait/unlisted estimates (Stock rules). Unknown bank is explicit.
-- **Data/CLI:** TSM ingestion and addon formats 1–4 within account format 6, snapshots/journal,
-  bounded read-only preview, reviewed import, exact gzip archive and per-file drops.
-  CLI supports collect/import, --preview/--input/--scan, recipes, beta-report, after-play, rules and close-story
-  (prints named backlog stories and requirements/design sections; AGENTS.md).
-  TSM and recipe refresh use the CLI. Watchlist engine/local files and Today/Import hits remain.
+- **Stock:** Ledger's Restock retains readable bags/bank captures, exact variants, cautious
+  listed values and whole-stack estimates. Target drafts save atomically through `/api/ledger/targets`;
+  damaged files remain unchanged with a 422 explanation. Today is unaffected. Copied beta: 10 capture
+  chips, 37 items held, 4,363c listed value excluding 19 no-price items. A copied Linen Cloth target
+  of 200 at 30c/unit matches NiceGUI: held 11, short at most 189, buy 189, whole stacks 206, cost 4,120c.
+- **Data/CLI:** Data's sheet uses `import_review`; GET reads saved evidence, POST review explicitly
+  reads game/drop files. A server-held source/config-bound opaque review is consumed before import;
+  a non-blocking process writer lock returns 409 for a concurrent import. Selection shaping uses cached
+  bytes; source switches discard reviews on both sides. Successful imports invalidate all source queries.
+  Imported evidence loads on demand; CLI refresh remains for non-addon sources. Offline coverage:
+  `tests/test_data_web.py`, Data Vitest and existing scan/import tests. Copied real-drop subset matches CLI:
+  72,338 listings, 8,097 prices, two character snapshots and five journal records, equal manifest evidence
+  and stored rows apart from collection identity/time. Real-source preview is read-only; current drops
+  are duplicates. Native Stock/Data views and rule tests moved to API/Vitest after beta comparison.
+  TSM/recipe refresh remains CLI-only; watchlist engine/local files and Today/Import hits remain.
 - **Storage:** schema 11, metrics version 1, backed-up idempotent migrations. Sources retain
   full market/environment identity and never mix implicitly (DATA-03/08).
 - **Catalogs:** twelve generated catalogs; nine Forever professions (1,930 recipes) and Classic
@@ -212,11 +209,11 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,891 Python tests pass (one platform skip), plus 44 Vitest tests.
+Expected: 1,899 Python tests pass (one platform skip), plus 50 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in
-`tests/test_retirement.py`; NiceGUI place/import tests in `tests/ui_trial/`.
+`tests/test_retirement.py`; legacy redirect tests in `tests/ui_trial/`.
 
 ### App
 
@@ -227,7 +224,7 @@ For real-data verification, copy data/ under ignored work/ and run:
 .venv/bin/python launch_nicegui.py --data-dir /path/to/copied-data
 ```
 
-Select Forever beta; open Today, Team, Market (Linen Cloth 2589 and Bolt 2996), Stock and Data.
+Select Forever beta; open Today, Team, Market (Linen Cloth 2589 and Bolt 2996), Ledger and the Data sheet.
 On Today → This session, inspect each character's Farming summary and expand Farming evidence
 for all rates, object IDs and excluded stretches. Inspect stale/unknown labels, holdings and source
 evidence; preview never writes. A browser check
