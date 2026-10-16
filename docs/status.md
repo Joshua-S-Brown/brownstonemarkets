@@ -10,7 +10,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Routes reuse one explorer build per source until the database, config or hourly bucket
   changes: search under 10 ms, item record about 0.25 s. The build (3–9 s) starts in the
   background when the shell opens. Search shows the 50 closest hits.
-  Search opens URL-backed item Overview records and placeholder character records; Data links
+  Search opens URL-backed item Overview records and scoped character records; Data links
   to the existing review page. Source evidence loads independently of the potentially slow local/drop
   scan inventory. Light/dark/system themes and bundled fonts work offline; narrow screens use bottom tabs.
   The launcher builds changed web sources, with a recoverable banner on failure or missing Node 24.
@@ -60,8 +60,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   October 8, so ADDON-11/UI-15 excludes it; first readable capture is October 9 at 52c.
   Quests/flights remain other; timing attribution is evidence, not proof of hook success.
 
-- **App:** NiceGUI Today, Team, Stock and Data → Import, with shared light theme,
-  URL-only back links for Today item/Team links and Market item chains (STORY-076, UI-07);
+- **App:** Web Today, Team and Market; NiceGUI Stock and Data → Import, with shared light theme,
+  URL-only back links for Today items and Market item chains (STORY-076, UI-07);
   Today tab/view refresh persistence with This session loaded on URL entry,
   wrapping navigation, page information and Save-only Today settings (UI-07/08).
   `Open Brownstone App.command` / `.cmd` calls `launch_nicegui.py`; native window with
@@ -106,22 +106,24 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   On copied beta data, scan `20261016T113727Z-eb77d0`: 13 Queue lines match NiceGUI verbatim,
   including quantities, gold mail, deposits and copy text. Shopping 1,825c, deposits 411c,
   expected profit 2,583c, captured team funds 1,939c. All five characters' This session options match.
-- **Team:** captured roster/history, recipe evidence, reach estimates and hiring comparison
-  (CRAFT-11/13). One board shared across characters/hiring; detail loads on demand.
-  STORY-070 chooses a profitable learnable next recipe before other sources and shows the other
-  route as an alternative tile ([CRAFT-11](requirements.md#crafting)); the best flows into
-  This session; reachable order and Today plans stay unchanged. Source labels, skill-ID-based
-  empty states, training payback and consolidated incomplete hire costs follow
-  [Team character-card rules](requirements.md#team-character-cards).
-  Team and hire cost steps and Team profit columns display money with copper sorting. Offline checks are in
-  `test_progression.py`, `test_session_options.py` and the Team/hiring NiceGUI tests;
-  `fixtures/today_story070.json` preserves the full Today regression fixture; only its version fields track Today changes.
-  On imported Forever beta scan `20261016T113727Z-eb77d0`, Arille's Cooking best is
-  Kaldorei Spider Kabob (quest, 21c), with Peace Tea (drop, 228c) as the alternative;
-  Tasty Raptor Bites is 216c and Spiced Wolf Meat −106c. Basilly's Tailoring best is
-  Blue Linen Vest (vendor, 289c); Red Linen Robe lacks a complete price and supplies no alternative.
-  Training costs remain unknown. Arille's Fishing and Keenagen's Mining retain gathering options.
-  Checked against NiceGUI on copied data; this migration imports no new evidence.
+- **Team (STORY-084):** `/app/team?source=` shows the roster, profession coverage and lazy hiring
+  detail. Roster, Route, Level up and palette links open inspector records by the full character key;
+  characters stay out of URLs. Records expose Professions, Path, Holdings and History, with source,
+  market, scan, capture and machine evidence. The release-only look-ahead persists per tab/source.
+  `team_view` owns shared shaping; `/api/team` caches one shared board per source/window until its
+  database, configuration or hour changes. Character holdings retain exact variant identities.
+  The NiceGUI Team view and its two test files are retired after comparison on copied beta data.
+  Rules: [CRAFT-11/13](requirements.md#crafting), [Team character cards](requirements.md#team-character-cards).
+  Offline checks: `test_team_web.py`, `test_progression.py`, `test_hiring.py`, `test_session_options.py`,
+  Team/CharacterRecord Vitest suites and Today/palette/inspector identity tests.
+  Copied Forever scan `20261016T113727Z-eb77d0`, window 25: five characters; Arille's Cooking
+  Kaldorei Spider Kabob 21c / Peace Tea 228c, Blacksmithing Cloudy Skyforged Wristguards 9,250c,
+  Mining Smelt Bronze 67c; Basilly's Blue Linen Vest 289c without alternative. Gathering sentences
+  remain for Arille's Fishing and Keenagen's Mining. Nine hire rows match the story's order and
+  profits, all incomplete; Fishing/Herbalism/Skinning appear once. Desktop 1280 and mobile 390 px
+  checks include open character/hire records; screenshots and baseline are ignored in `work/story-084/`.
+  No collection/import was run. Training, gathering income, demand and tier-fee limits remain as labelled.
+
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
   Item pages lead with a base-item decision summary, scoped holdings and own item farming evidence;
@@ -210,6 +212,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
+Expected: 1,891 Python tests pass (one platform skip), plus 44 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

@@ -15,6 +15,7 @@ export const places = [
 ] as const;
 export function placeURL(place: string, source: string) {
   if (place === "Today") return "/app/today?" + new URLSearchParams({ source });
+  if (place === "Team") return "/app/team?" + new URLSearchParams({ source });
   if (place === "Market")
     return "/app/market?" + new URLSearchParams({ source });
   return (
@@ -127,7 +128,7 @@ export function Palette({ source }: { source: string }) {
                                   hit.variant_id,
                                 ]),
                               }
-                            : { character: hit.name },
+                            : { character: hit.character! },
                         );
                         setOpen(false);
                       }}

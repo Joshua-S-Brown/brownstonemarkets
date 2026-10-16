@@ -135,6 +135,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Team */
+        get: operations["team_api_team_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/team/character": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Character */
+        get: operations["character_api_team_character_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/team/hire/{profession}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hire */
+        get: operations["hire_api_team_hire__profession__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/today/plan": {
         parameters: {
             query?: never;
@@ -215,6 +266,37 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** Card */
+        Card: {
+            /** Faction */
+            faction: string;
+            /** Gold Copper */
+            gold_copper: number | null;
+            /** History */
+            history: {
+                [key: string]: unknown;
+            }[];
+            /** Last Seen Relative */
+            last_seen_relative: string;
+            /** Last Seen Utc */
+            last_seen_utc: string;
+            /** Level */
+            level: number | null;
+            /** Machine */
+            machine: string | null;
+            /** Name */
+            name: string;
+            /** Professions */
+            professions: components["schemas"]["Skill"][];
+            /** Realm */
+            realm: string;
+            /** Skills Status */
+            skills_status: string;
+            /** Stale */
+            stale: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** Chain */
         Chain: {
             /** Demand */
@@ -231,6 +313,69 @@ export interface components {
             used_in: {
                 [key: string]: unknown;
             }[];
+        };
+        /** CharacterRecord */
+        CharacterRecord: {
+            card: components["schemas"]["Card"];
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            holdings: components["schemas"]["Holdings"];
+            progression: components["schemas"]["Progression"];
+        };
+        /** Comparison */
+        Comparison: {
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Professions */
+            professions: components["schemas"]["ComparisonProfession"][];
+        };
+        /** ComparisonBest */
+        ComparisonBest: {
+            /** Name */
+            name: string;
+            /** Profit Copper */
+            profit_copper: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ComparisonProfession */
+        ComparisonProfession: {
+            best: components["schemas"]["ComparisonBest"] | null;
+            /** Profession */
+            profession: string;
+        };
+        /** Estimate */
+        Estimate: {
+            /** Complete */
+            complete: boolean;
+            /** Cost Copper */
+            cost_copper?: number | null;
+            /**
+             * Reasons
+             * @default []
+             */
+            reasons: string[];
+            /**
+             * Steps
+             * @default []
+             */
+            steps: {
+                [key: string]: unknown;
+            }[];
+        } & {
+            [key: string]: unknown;
         };
         /** Evidence */
         Evidence: {
@@ -251,6 +396,41 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HireBest */
+        HireBest: {
+            /** Output Item Id */
+            output_item_id: number;
+            /** Output Name */
+            output_name: string;
+            /** Profit Copper */
+            profit_copper: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HireDetail */
+        HireDetail: {
+            /** Needs Pattern */
+            needs_pattern: number;
+            /** Profession */
+            profession: string;
+            /** Tiers */
+            tiers: {
+                [key: string]: unknown;
+            }[];
+            /** Unknown Source */
+            unknown_source: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HireRow */
+        HireRow: {
+            best: components["schemas"]["HireBest"] | null;
+            estimate: components["schemas"]["Estimate"];
+            /** Holders */
+            holders: components["schemas"]["Holder"][];
+            /** Profession */
+            profession: string;
         };
         /** History */
         History: {
@@ -281,6 +461,30 @@ export interface components {
             } | null;
             /** Scan Id */
             scan_id: string;
+        };
+        /** Holder */
+        Holder: {
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Max Rank */
+            max_rank: number | null;
+            /** Rank */
+            rank: number | null;
+        };
+        /** Holdings */
+        Holdings: {
+            /** Captures */
+            captures: {
+                [key: string]: unknown;
+            }[];
+            /** Items */
+            items: {
+                [key: string]: unknown;
+            }[];
         };
         /** Item */
         Item: {
@@ -413,6 +617,27 @@ export interface components {
             /** Variant State */
             variant_state: string | null;
         };
+        /** Member */
+        Member: {
+            card: components["schemas"]["Card"];
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            progression: components["schemas"]["Progression"];
+        };
+        /** Payback */
+        Payback: {
+            /** Crafts */
+            crafts: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "absent" | "unknown" | "never" | "crafts";
+        };
         /** PlanRequest */
         PlanRequest: {
             /** State */
@@ -425,6 +650,60 @@ export interface components {
              * @enum {string}
              */
             view: "route" | "opportunities" | "level-up";
+        };
+        /** Profession */
+        Profession: {
+            alternative: components["schemas"]["Recipe"] | null;
+            /** Alternative Kind */
+            alternative_kind: ("learn" | "hunt") | null;
+            best: components["schemas"]["Recipe"] | null;
+            /** Gathering */
+            gathering: boolean;
+            /** Max Rank */
+            max_rank: number | null;
+            /**
+             * Next Step
+             * @enum {string}
+             */
+            next_step: "note" | "best" | "none";
+            /** Note */
+            note: string;
+            /** Profession */
+            profession: string;
+            /** Rank */
+            rank: number | null;
+            /** Recipes */
+            recipes: components["schemas"]["Recipe"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** Progression */
+        Progression: {
+            /** Professions */
+            professions: components["schemas"]["Profession"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** Recipe */
+        Recipe: {
+            estimate: components["schemas"]["Estimate"];
+            /** Learn From */
+            learn_from: string;
+            /** Name */
+            name: string;
+            /** Output Item Id */
+            output_item_id: number;
+            payback: components["schemas"]["Payback"];
+            /** Points Needed */
+            points_needed: number;
+            /** Profit Copper */
+            profit_copper: number | null;
+            /** Required Skill */
+            required_skill: number | null;
+            /** Training Cost Copper */
+            training_cost_copper?: number | null;
+        } & {
+            [key: string]: unknown;
         };
         /** RouteLine */
         RouteLine: {
@@ -446,6 +725,12 @@ export interface components {
         RouteStop: {
             /** Character */
             character: string;
+            /** Characters */
+            characters: [
+                string,
+                string,
+                string
+            ][];
             /** Lines */
             lines: components["schemas"]["RouteLine"][];
             /** Place */
@@ -455,6 +740,12 @@ export interface components {
         };
         /** SearchHit */
         SearchHit: {
+            /** Character */
+            character?: [
+                string,
+                string,
+                string
+            ] | null;
             /** Item Id */
             item_id?: number | null;
             /** Kind */
@@ -474,6 +765,29 @@ export interface components {
             settings: {
                 [key: string]: unknown;
             };
+        };
+        /** Skill */
+        Skill: {
+            /** At Cap */
+            at_cap: boolean;
+            /** Known Count */
+            known_count: number | null;
+            /** Max Rank */
+            max_rank: number | null;
+            /** Name */
+            name: string;
+            /** Possibly Incomplete */
+            possibly_incomplete: boolean | null;
+            /** Rank */
+            rank: number | null;
+            /** Recipe Source */
+            recipe_source: string;
+            /** Recipes At */
+            recipes_at: string;
+            /** Seen At */
+            seen_at: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** SourceOption */
         SourceOption: {
@@ -498,6 +812,26 @@ export interface components {
             waiting: number | null;
             /** Waiting Error */
             waiting_error?: string | null;
+        };
+        /** Team */
+        Team: {
+            /** All Incomplete */
+            all_incomplete: boolean;
+            /** Comparisons */
+            comparisons: components["schemas"]["Comparison"][];
+            evidence: components["schemas"]["Evidence"];
+            /** Hires */
+            hires: components["schemas"]["HireRow"][];
+            /** Hiring Labels */
+            hiring_labels: string;
+            /** Labels */
+            labels: string;
+            /** No Catalog */
+            no_catalog: string[];
+            /** Notes */
+            notes: string[];
+            /** Roster */
+            roster: components["schemas"]["Member"][];
         };
         /** TodayPlan */
         TodayPlan: {
@@ -812,6 +1146,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Sources"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    team_api_team_get: {
+        parameters: {
+            query?: {
+                source?: string;
+                window?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Team"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    character_api_team_character_get: {
+        parameters: {
+            query: {
+                name: string;
+                realm: string;
+                faction: string;
+                source?: string;
+                window?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CharacterRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hire_api_team_hire__profession__get: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path: {
+                profession: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HireDetail"];
                 };
             };
             /** @description Validation Error */

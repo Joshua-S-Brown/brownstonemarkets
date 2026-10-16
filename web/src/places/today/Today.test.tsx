@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { InspectorContext } from "../../app/InspectorContext";
 import { Today } from "./Today";
 import { OurMove } from "./OurMove";
 import { type Plan, keepLocal, todayKey, readState, writeState } from "./state";
@@ -47,6 +48,7 @@ function fixture(): Plan {
       {
         stage: "craft",
         character: "Basilly",
+        characters: [["Basilly", "Beta", "Alliance"]],
         place: "tailoring · rank 8",
         lines: [
           {
@@ -83,6 +85,7 @@ function fixture(): Plan {
 function URL() {
   return <output data-testid="url">{useLocation().search}</output>;
 }
+const inspect = vi.fn();
 let data: Plan;
 let requests: {
   url: string;
@@ -90,6 +93,7 @@ let requests: {
   headers?: HeadersInit;
 }[];
 beforeEach(() => {
+  inspect.mockClear();
   data = fixture();
   requests = [];
   sessionStorage.clear();
@@ -125,7 +129,9 @@ function mount(
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/app/today?source=one&view=" + view]}>
-        <Today source="one" waiting={2} />
+        <InspectorContext.Provider value={inspect}>
+          <Today source="one" waiting={2} />
+        </InspectorContext.Provider>
         <URL />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -279,4 +285,29 @@ it("a response keeps ticks made in flight unless its Queue identity or context c
   expect(keepLocal("one", moved).state.ticks).toEqual({});
   const reset = { ...data, state: { ...data.state, context: "two" } };
   expect(keepLocal("one", reset).state.hide_low).toBeUndefined();
+});
+
+it("uses the Team window for Level up", async () => {
+  sessionStorage.setItem("brownstone-team-one", "40");
+  mount();
+  await screen.findByRole("tab", { name: "Level up" });
+  expect(requests[0].body.state).toMatchObject({ window: 40 });
+});
+
+it("renders each purchase crafter as its own full-key character link", async () => {
+  data.stops[0].characters = [
+    ["Maker", "First", "Alliance"],
+    ["Maker", "Second", "Horde"],
+  ];
+  mount();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Maker · First · Alliance" }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Maker · Second · Horde" }),
+  );
+  expect(inspect.mock.calls.map((c) => c[0])).toEqual([
+    { character: ["Maker", "First", "Alliance"] },
+    { character: ["Maker", "Second", "Horde"] },
+  ]);
 });

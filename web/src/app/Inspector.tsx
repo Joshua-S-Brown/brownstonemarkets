@@ -1,10 +1,19 @@
 import styles from "../theme/app.module.css";
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
-import { InspectorContext, type RecordRef } from "./InspectorContext";
+import {
+  InspectorContext,
+  type CharacterKey,
+  type RecordRef,
+} from "./InspectorContext";
 import { Origin } from "./Origin";
 import { ItemRecord } from "../records/ItemRecord";
+const CharacterRecord = lazy(() =>
+  import("../records/CharacterRecord").then((m) => ({
+    default: m.CharacterRecord,
+  })),
+);
 export function Inspector({
   source,
   children,
@@ -14,7 +23,7 @@ export function Inspector({
 }) {
   const [params, setParams] = useSearchParams();
   const [stack, setStack] = useState<RecordRef[]>([]);
-  const [character, setCharacter] = useState<string | null>(null);
+  const [character, setCharacter] = useState<CharacterKey | null>(null);
   const id = Number(params.get("inspect"));
   const current: RecordRef | null = character
     ? { character }
@@ -78,10 +87,13 @@ export function Inspector({
                   source={source}
                 />
               ) : (
-                <>
-                  <h1>{current.character}</h1>
-                  <p>Character records will come from Team (STORY-084).</p>
-                </>
+                <Suspense fallback={<p role="status">Loading character…</p>}>
+                  <CharacterRecord
+                    key={source + current.character.join("|")}
+                    source={source}
+                    character={current.character}
+                  />
+                </Suspense>
               ))}
           </Dialog.Content>
         </Dialog.Portal>

@@ -140,7 +140,8 @@ def test_waiting_inventory_deduplicates_new_scans_and_reports_errors(monkeypatch
 def test_search_returns_only_scoped_roster(client):
     browser, _ = client
     assert browser.get('/api/search?q=Scoped').json() == [
-        {'kind': 'character', 'name': 'Scoped Maker · Beta · Alliance', 'item_id': None, 'quality': None,
+        {'character': ['Scoped Maker', 'Beta', 'Alliance'],
+         'kind': 'character', 'name': 'Scoped Maker · Beta · Alliance', 'item_id': None, 'quality': None,
          'variant_state': None, 'variant_id': None}]
 
 

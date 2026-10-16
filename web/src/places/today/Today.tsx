@@ -11,6 +11,7 @@ import { type Plan, keepLocal, readState, writeState, todayKey } from "./state";
 import { LevelUp } from "./LevelUp";
 import { PlanText } from "./PlanText";
 import { Settings } from "./Settings";
+import { readWindow } from "../team/state";
 import styles from "../../theme/app.module.css";
 const views = ["route", "opportunities", "level-up"];
 export function Today({
@@ -33,7 +34,7 @@ export function Today({
         await post<Plan>(
           "today/plan",
           source,
-          { view, state: readState(source) },
+          { view, state: { ...readState(source), window: readWindow(source) } },
           signal,
         ),
       ),
@@ -162,15 +163,16 @@ export function Today({
               <li key={i} className={styles["route-stop"]}>
                 <h2>
                   {i + 1}.{" "}
-                  {stop.character === "Our team" ? (
-                    stop.character
-                  ) : (
-                    <button
-                      onClick={() => inspect({ character: stop.character })}
-                    >
-                      {stop.character}
-                    </button>
-                  )}{" "}
+                  {(stop.characters || []).length
+                    ? stop.characters.map((c) => (
+                        <button
+                          key={c.join("|")}
+                          onClick={() => inspect({ character: c })}
+                        >
+                          {c.join(" · ")}
+                        </button>
+                      ))
+                    : stop.character}
                   · {stop.place}
                 </h2>
                 {stop.lines.map((line) => (

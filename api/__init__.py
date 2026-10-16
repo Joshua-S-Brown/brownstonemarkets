@@ -6,13 +6,14 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from . import market, presence, sources, today
+from . import market, presence, sources, team, today
 
 router = APIRouter()
 router.include_router(sources.router)
 router.include_router(market.router)
 router.include_router(presence.router)
 router.include_router(today.router)
+router.include_router(team.router)
 
 
 def install(app: FastAPI, dist: Path, token: str | None = None):

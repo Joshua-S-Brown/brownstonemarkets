@@ -82,7 +82,7 @@ def test_training_cost_display_not_subtracted_and_unknown_cost():
     for field in ("batch_profit_copper", "batch_cost_copper", "batch_size", "purchases", "plan_order"):
         assert result["craft"][0][field] == original["craft"][0][field]
     def without_makers(queue):
-        return queue | {"lines": [{k: v for k, v in line.items() if k != "made_by"}
+        return queue | {"lines": [{k: v for k, v in line.items() if k not in ("made_by", "made_by_key")}
                                   for line in queue["lines"]]}
     assert without_makers(result["queue"]) == without_makers(original["queue"])
     assert result["buy"] == original["buy"]

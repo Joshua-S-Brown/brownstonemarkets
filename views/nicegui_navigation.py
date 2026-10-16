@@ -78,3 +78,7 @@ def today_url(config, view='', tab=''):
         'level-up' if view == 'This session' else 'opportunities' if view == 'Today plan' and tab in ('Craft', 'Plan')
         else 'route')
     return '/app/today?' + urlencode({'source': config['source_id'], 'view': selected})
+
+
+def team_url(config):
+    return '/app/team?' + urlencode({'source': config['source_id']})

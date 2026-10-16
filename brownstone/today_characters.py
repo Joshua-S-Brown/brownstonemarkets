@@ -190,7 +190,9 @@ def project_recipes(catalogs: list, data: dict, character: tuple | None, include
             key = (catalog["catalog_id"], recipe["recipe_id"])
             evidence = {c: recipe_status(recipe, data[c]) for c in characters}
             status = evidence[selected] if selected else (_team_status(list(evidence.values())) if evidence else {})
-            statuses[key] = status | {"who_can_make_it": [c[0] for c, s in evidence.items()
+            statuses[key] = status | {**({"who_can_make_keys": [c for c, s in evidence.items()
+                                      if s["craft_status"] in ("Known", "Train now")]} if evidence else {}),
+                                      "who_can_make_it": [c[0] for c, s in evidence.items()
                                                         if s["craft_status"] in ("Known", "Train now")],
                                       "team": selected is None}
             for c in ([selected] if selected else characters):

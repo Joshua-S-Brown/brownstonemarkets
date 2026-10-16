@@ -204,6 +204,8 @@ def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, au
         recipe = catalog["recipes_by_id"][row["recipe_id"]]
         if makers is not None:
             makes = projection["character"] and row.get("craft_status") in ("Known", "Train now")
+            row["made_by_key"] = projection["character"] if makes else next(
+                iter(row.get("who_can_make_keys", [])), None)
             row["made_by"] = projection["character"][0] if makes else next(iter(row.get("who_can_make_it", [])), None)
         row = {**row, 'holding_steps': today_holdings.route_evidence(catalog, prices, row),
                'holding_consumers': today_holdings.consumers(catalog, row)}
@@ -581,7 +583,9 @@ def session_queue(crafts, shopping, sells):
         lines.append({"stage": "craft", "name": row["output_name"], "recipe_id": row["recipe_id"],
                       "catalog_id": row["catalog_id"], "batch_size": row["batch_size"],
                       "profession": row["profession"],
-                      "made_by": row.get("made_by"), **_confidence_fields(row)})
+                      "made_by": row.get("made_by"),
+                      **({"made_by_key": row["made_by_key"]} if "made_by_key" in row else {}),
+                      **_confidence_fields(row)})
     for row, sell in zip(crafts, sells, strict=True):
         lines.append({"stage": "post", "name": row["output_name"],
                       "quantity": row["output_quantity"] * row["batch_size"],

@@ -1,7 +1,8 @@
 import { createContext, useContext } from "react";
+export type CharacterKey = [string, string, string];
 export type RecordRef =
   | { item: number; variant?: string }
-  | { character: string };
+  | { character: CharacterKey };
 export const InspectorContext = createContext<(record: RecordRef) => void>(
   () => {},
 );

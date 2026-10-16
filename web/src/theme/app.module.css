@@ -641,3 +641,21 @@ tr[data-selected="true"] {
 .route-line > span {
   min-width: 0;
 }
+.team-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  margin-block: 24px;
+}
+.team-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  min-width: 0;
+}
+.team-name {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}

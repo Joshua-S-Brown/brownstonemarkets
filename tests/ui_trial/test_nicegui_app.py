@@ -26,23 +26,22 @@ async def test_places_order_questions_place_source_tab_refresh(user, tmp_path, m
     _, source, _ = app(tmp_path, monkeypatch)
     other = source | {'source_id': 'other'}
     monkeypatch.setattr('brownstone.config.read_sources', lambda *args: [source, other])
-    await user.open('/?game=classic&source=test&place=Team&tab=Buy')
+    await user.open('/?game=classic&source=test&place=Stock&tab=Buy')
     buttons = sorted((e for e in user.find(ui.button).elements if any(
         m.startswith('place-') for m in e._markers)), key=lambda e: e.id)
     assert [b.text for b in buttons] == ['Today', 'Team', 'Market', 'Stock', 'Data']
     assert buttons[-2].id < next(iter(user.find(ui.separator).elements)).id < buttons[-1].id
-    await user.should_see(QUESTIONS['Team'])
+    await user.should_see(QUESTIONS['Stock'])
     link = next(iter(user.find(marker='web-app').elements))
     assert link.props['href'] == '/app?source=test'  # Same source in the web app.
-    await user.should_see('No characters imported for this source')
-    await user.open('/?game=classic&source=test&place=Team&tab=Buy')
-    await user.should_see('No characters imported for this source')
+    await user.should_see('What needs restocking')
+    await user.open('/?game=classic&source=test&place=Stock&tab=Buy')
+    await user.should_see('What needs restocking')
     targets = []
     with monkeypatch.context() as patch:
         patch.setattr(ui.navigate, 'to', targets.append)
         user.find(marker='place-Market').click()
     assert targets == ['/app/market?source=test']
-    user.find(marker='place-Stock').click()
     await user.should_see(QUESTIONS['Stock'])
     await user.should_see('What needs restocking')
     with monkeypatch.context() as patch:

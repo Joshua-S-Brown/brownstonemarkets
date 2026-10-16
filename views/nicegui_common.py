@@ -24,12 +24,6 @@ def table(rows, *, label, row_key='id'):
     widget = ui.table(columns=columns(decisions), rows=rows, row_key=row_key, pagination=10)
     widget.props('dense flat bordered')
     widget.classes('w-full').mark(label)
-    if label == 'Reachable recipes':
-        widget.add_slot('body-cell-Learn from', '<q-td :props="props"><span class="bs-badge bs-neutral">'
-                        '{{props.value}}</span></q-td>')
-        widget.add_slot('body-cell-Confidence', '<q-td :props="props"><span class="bs-badge" '
-                        ':class="props.value === \'High\' ? \'bs-good\' : \'bs-warn\'">'
-                        '{{props.value}}</span></q-td>')
     evidence.on_value_change(lambda e: setattr(widget, 'columns', columns(keys if e.value else decisions)))
     search.bind_value_to(widget, 'filter')
     if not rows:

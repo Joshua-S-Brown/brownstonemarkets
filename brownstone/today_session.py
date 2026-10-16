@@ -172,10 +172,13 @@ def route_stops(queue, crafts, character_data):
     stops = []
     posts = iter(crafts)
     for index, line in enumerate(queue['lines']):
-        character, place = route_place(line, crafts, character_data, next(posts) if line['stage'] == 'post' else None)
-        key = (line['stage'], character, place)
+        post = next(posts) if line['stage'] == 'post' else None
+        character, place = route_place(line, crafts, character_data, post)
+        identities = route_identities(line, crafts, character_data, post)
+        key = (line['stage'], character, place, tuple(identities))
         if not stops or stops[-1]['key'] != key:
-            stops.append(dict(key=key, stage=line['stage'], character=character, place=place, lines=[]))
+            stops.append(dict(key=key, stage=line['stage'], character=character,
+                              characters=identities, place=place, lines=[]))
         stops[-1]['lines'].append(dict(index=index, text=queue_line(line), evidence=line))
     return stops
 
@@ -199,6 +202,29 @@ def route_place(line, crafts, character_data, post=None):
     if stage != 'craft':
         return character, places[stage]
     profession = line.get('profession') or 'profession unknown'
-    state = next((data for c, data in character_data.items() if c[0] == character), None)
+    identities = route_identities(line, crafts, character_data, post)
+    state = character_data.get(identities[0]) if len(identities) == 1 else None
     rank = recipe_rank(state, line['recipe_id']) if state else None
     return character, f"{profession} · rank {rank if rank is not None else 'unknown'}"
+
+
+def route_identities(line, crafts, data, post=None):
+    """Resolve explicit keys first; a display name never picks an arbitrary same-name character."""
+    stage = line['stage']
+    if stage in ('auction house', 'vendor'):
+        rows = [r for r in crafts if any(p['item_id'] == line['item_id'] and
+                (p['method'] == 'vendor') == (stage == 'vendor') for p in r['purchases'])]
+    else:
+        rows = [post or line]
+    keys = set()
+    for row in rows:
+        explicit = row.get('made_by_key')
+        name = row.get('character') or row.get('made_by') or (row.get('name') if stage == 'gold unknown' else None)
+        if explicit and tuple(explicit) in data:
+            keys.add(tuple(explicit))
+        elif name:
+            matches = [c for c in data if c[0] == name and
+                       (not row.get('realm') or c[1:] == (row['realm'], row.get('faction'))) ]
+            if len(matches) == 1:
+                keys.add(matches[0])
+    return sorted(keys)

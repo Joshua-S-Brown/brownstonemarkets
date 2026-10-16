@@ -34,7 +34,7 @@ def search(source: str = '', q: str = ''):
     items = [SearchHit(kind='item', name=r['item_name'], item_id=r['item_id'], quality=quality(r),
                         variant_state=r['variant_state'], variant_id=r['variant_id'])
              for r in rows[:SEARCH_LIMIT]]
-    characters = [SearchHit(kind='character', name=' · '.join(identity))
+    characters = [SearchHit(kind='character', name=' · '.join(identity), character=identity)
                   for identity in result['characters'] if q.casefold() in ' · '.join(identity).casefold()]
     return items + characters
 

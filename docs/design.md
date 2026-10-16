@@ -540,10 +540,10 @@ and lists observed NPC IDs without any captured name. No storage migration, new 
 ## Team contracts
 
 Rules: [CRAFT-11/13](requirements.md#crafting) and [Team character cards](requirements.md#team-character-cards).
-nicegui_team reads shared load_today_characters and
-load_today snapshot/evidence, using tab/source character/window state. Cards select; reach slider
-commits on release. Tiles/reachable recipes lead; steps/history/comparison/provenance on demand.
-Without scan, roster remains readable and pricing explains missing evidence.
+`api/team.py` reads load_today_characters/load_today with TodaySettings defaults.
+Roster cards open (name, realm, faction) inspector records; sessionStorage keeps the release-only
+window per tab/source. Records expose professions/path/holdings/history and evidence.
+Without scan, roster remains readable.
 
 `progression.team_board` builds team RecipeGraph/Board once, shared across character progression
 and `hiring.prepare(shared=...)`. build_progression returns profession rank/max/note/evidenced skill ID, recipes/best,
@@ -553,7 +553,8 @@ estimate complete/copper/reasons/per-point steps. Unknown stays unknown.
 `session_options` retains that recipe identity while projecting its labelled estimate.
 Team's empty states use the group skill ID and `hiring.SKILL_IDS`; learning labels use
 `recipe_catalogs.learning_label`. Payback and hiring cost disclosures follow Team character-card rules;
-new-hire money cells retain hidden copper fields for the shared table's numeric sort.
+`team_view` owns payback, next-step/alternative/gathering and all-incomplete decisions;
+web money tables sort copper.
 Attribution uses Today's exact ID/rank matcher; planned_rank changes rank check only.
 evaluate_recipe supplies team-aware cautious material costs, including unranked intermediates;
 expected_crafts/estimate_cost use exact rational yellow expectations. One skillup_walk/window/cap
@@ -566,9 +567,9 @@ Synthetic hire evidence is unlearned trainer recipes. Own routes use trainer/cur
 other-profession routes use current team. Summary cost eagerly resolves sort ties; lazy detail reuses
 prefixes/tier maker maps. feeds evaluates current eligible Board roots with existing cost walker;
 unknown/unsupported baseline never claims savings. Top consuming rows retain total savings and
-hire-made material, avoiding nested double count. nicegui_team builds hiring once; first expansion
-loads detail, window change rerenders comparison with shared board. Empty characters still allow
-hire comparison; absent scans explain. No new price SQL/calculation I/O/Today state changes.
+hire-made material, avoiding nested double count. Team caches one build per source/window until
+database/config/hour changes; hire detail loads on first expansion. Empty characters still allow
+hire comparison; absent scans explain. No new price SQL or Today state changes.
 
 ## Beta evidence report
 

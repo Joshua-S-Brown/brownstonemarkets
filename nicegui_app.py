@@ -16,9 +16,8 @@ from brownstone import pipeline, recipe_catalogs
 from brownstone.navigation import EXPERIENCES, QUESTIONS, experiences, source_label
 from views import nicegui_theme as theme
 from views.nicegui_import import render as render_import
-from views.nicegui_navigation import back_link, market_url, read_origin, today_url
+from views.nicegui_navigation import market_url, read_origin, team_url, today_url
 from views.nicegui_stock import render as render_stock
-from views.nicegui_team import render as render_team
 
 ROOT = Path(__file__).resolve().parent
 install_web(app, ROOT / "web/dist")
@@ -67,7 +66,9 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
     if place == 'Today':
         ui.navigate.to(today_url(chosen, view, tab))
         return
-    back_link(chosen, origin if place == 'Team' else {})
+    if place == 'Team':
+        ui.navigate.to(team_url(chosen))
+        return
     with ui.column().classes('gap-1'):
         ui.label(place).classes('bs-title')
         ui.label(QUESTIONS[place]).classes('bs-question')
@@ -81,9 +82,6 @@ async def today_page(game: str = '', source: str = '', tab: str = 'Craft', place
         app.storage.tab['import-review'] = {}
     if place == 'Data':
         render_import(chosen)
-        return
-    if place == 'Team':
-        render_team(chosen, read_catalogs())
         return
     if place == 'Stock':
         render_stock(chosen, read_catalogs())
@@ -99,8 +97,8 @@ def header(sources, game, source, place, tab):
         values = {'game': selected_game, 'source': chosen['source_id'] if chosen else '',
                   'place': place, 'tab': app.storage.tab.get('today-active-tab', tab)}
         values.update(changes)
-        if chosen and values['place'] in ('Today', 'Market'):
-            ui.navigate.to(today_url(chosen) if values['place'] == 'Today' else market_url(chosen))
+        if chosen and values['place'] in ('Today', 'Market', 'Team'):
+            ui.navigate.to({'Today': today_url, 'Market': market_url, 'Team': team_url}[values['place']](chosen))
         else:
             ui.navigate.to('/?' + urlencode(values))
 

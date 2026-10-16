@@ -2,7 +2,7 @@ import { PlanText } from "./PlanText";
 import { Evidence } from "../../ui/Evidence";
 import { Money } from "../../ui/Money";
 import { ItemLink } from "../../ui/ItemLink";
-import { useInspector } from "../../app/InspectorContext";
+import { type CharacterKey, useInspector } from "../../app/InspectorContext";
 import type { Plan } from "./state";
 import styles from "../../theme/app.module.css";
 type Recipe = {
@@ -51,7 +51,7 @@ type Spot = {
   no_price_units: number;
 };
 type Character = {
-  character: string[];
+  character: CharacterKey;
   options_text: string[];
   professions: Group[];
   crafts: object[];
@@ -86,9 +86,7 @@ export function LevelUp({
       {characters.map((c) => (
         <section key={c.character.join("|")} className={styles["route-stop"]}>
           <h2>
-            <button
-              onClick={() => inspect({ character: c.character.join(" · ") })}
-            >
+            <button onClick={() => inspect({ character: c.character })}>
               {c.character[0]}
             </button>{" "}
             · level {c.level ?? "unknown"}

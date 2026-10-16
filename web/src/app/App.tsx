@@ -12,6 +12,9 @@ import { EmptyState, ErrorState, Pill, Tip } from "../ui/parts";
 const Today = lazy(() =>
   import("../places/today/Today").then((m) => ({ default: m.Today })),
 );
+const Team = lazy(() =>
+  import("../places/team/Team").then((m) => ({ default: m.Team })),
+);
 function Theme() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem("brownstone-theme") || "system",
@@ -170,13 +173,13 @@ export function App() {
             <Theme />
           </header>
           <main className={styles["workspace"]}>
-            {!["/app/market", "/app/today"].includes(
+            {!["/app/market", "/app/today", "/app/team"].includes(
               window.location.pathname,
             ) && <p className={styles["eyebrow"]}>Your saved market</p>}
-            {!["/app/market", "/app/today"].includes(
+            {!["/app/market", "/app/today", "/app/team"].includes(
               window.location.pathname,
             ) && <h1>Brownstone workspace</h1>}
-            {!["/app/market", "/app/today"].includes(
+            {!["/app/market", "/app/today", "/app/team"].includes(
               window.location.pathname,
             ) && (
               <p className={styles["muted"]}>
@@ -202,6 +205,10 @@ export function App() {
             ) : window.location.pathname === "/app/today" ? (
               <Suspense fallback={<p role="status">Loading Today…</p>}>
                 <Today key={source} source={source} waiting={waiting} />
+              </Suspense>
+            ) : window.location.pathname === "/app/team" ? (
+              <Suspense fallback={<p role="status">Loading Team…</p>}>
+                <Team key={source} source={source} />
               </Suspense>
             ) : window.location.pathname === "/app/market" ? (
               <Market source={source} />

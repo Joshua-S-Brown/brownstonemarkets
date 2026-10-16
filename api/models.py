@@ -28,6 +28,7 @@ class Sources(BaseModel):
 
 
 class SearchHit(BaseModel):
+    character: tuple[str, str, str] | None = None
     kind: str
     name: str
     item_id: int | None = None

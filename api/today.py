@@ -41,6 +41,7 @@ class RouteLine(BaseModel):
 class RouteStop(BaseModel):
     stage: str
     character: str
+    characters: list[tuple[str, str, str]]
     place: str
     lines: list[RouteLine]
 

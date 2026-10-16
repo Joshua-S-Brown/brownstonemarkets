@@ -25,10 +25,10 @@ async def test_today_default_and_legacy_urls(user, tmp_path, monkeypatch, view, 
 
 async def test_team_back_to_today_keeps_source_view_and_character_out_of_url(user, tmp_path, monkeypatch):
     source, _, _ = team_app(tmp_path, monkeypatch)
+    targets = []
+    monkeypatch.setattr(user.navigate, 'to', targets.append)
     await user.open('/?place=Team&origin_place=Today&origin_tab=Queue&origin_view=This+session')
-    await user.should_see('← Back to Today · This session')
-    target = user.find(marker='back-link').elements.pop().props['href']
-    assert target == '/app/today?source=test&view=level-up'
-    assert 'character' not in parse_qs(urlsplit(target).query)
+    assert targets[-1] == '/app/team?source=test'
+    assert 'character' not in parse_qs(urlsplit(targets[-1]).query)
     assert read_origin('Today', 'unknown', 'This session', '', '') == {}
     assert today_url(source, 'unknown', 'unknown').endswith('view=route')
