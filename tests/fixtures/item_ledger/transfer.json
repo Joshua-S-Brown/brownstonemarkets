@@ -1,0 +1,393 @@
+[
+  {
+    "sequence": 3502,
+    "captured_at": 1791917151,
+    "addon_version": "0.11.3",
+    "realm": "Fixture Realm",
+    "login_at": 1791915735,
+    "draft": {
+      "items": [
+        {
+          "info": {
+            "1": "Copper Bar",
+            "2": 2840,
+            "3": 133216,
+            "4": 5,
+            "5": 1,
+            "n": 5
+          },
+          "link": "|cnIQ1:|Hitem:2840::::::::8:1486:::::::::|h[Copper Bar]|h|r"
+        }
+      ],
+      "cod_copper": 0,
+      "money_copper": 0,
+      "observed_at": 1791917147
+    },
+    "event": "SendMail",
+    "character": "Alice",
+    "arguments": {
+      "1": "Cara Zandrig",
+      "2": "Copper Bar (5)"
+    },
+    "faction": "Alliance",
+    "entry_id": "6:Alice18:Fixture Realm:journal:1791917151:3502",
+    "family": "mail",
+    "machine": "fixture-pc"
+  },
+  {
+    "login_at": 1791915735,
+    "sequence": 3505,
+    "captured_at": 1791917151,
+    "event": "BAG_UPDATE_DELAYED",
+    "item_changes": {
+      "2840": -5
+    },
+    "entry_id": "6:Alice18:Fixture Realm:journal:1791917151:3505",
+    "character": "Alice",
+    "family": "bags",
+    "faction": "Alliance",
+    "arguments": {},
+    "addon_version": "0.11.3",
+    "realm": "Fixture Realm",
+    "machine": "fixture-pc"
+  },
+  {
+    "login_at": 1791917424,
+    "sequence": 3577,
+    "event": "MAIL_INBOX_UPDATE",
+    "faction": "Alliance",
+    "captured_at": 1791917432,
+    "inbox": {
+      "counts": {
+        "1": 4,
+        "2": 4,
+        "n": 2
+      },
+      "messages": [
+        {
+          "items": [
+            {
+              "info": {
+                "1": "Bolt of Linen Cloth",
+                "2": 2996,
+                "3": 132890,
+                "4": 8,
+                "5": 1,
+                "6": true,
+                "7": false,
+                "n": 7
+              },
+              "link": "|cnIQ1:|Hitem:2996::::::::1:1491:::::::::|h[Bolt of Linen Cloth]|h|r"
+            }
+          ],
+          "index": 1,
+          "header": {
+            "1": 132890,
+            "2": 134327,
+            "3": "Bob Surname",
+            "4": "Bolt of Linen Cloth (8)",
+            "5": 0,
+            "6": 0,
+            "7": 30.99844932556152,
+            "8": 1,
+            "9": false,
+            "10": false,
+            "11": false,
+            "12": true,
+            "13": false,
+            "14": 8,
+            "15": "|cnIQ1:|Hitem:2996::::::::1:1491:::::::::|h[Bolt of Linen Cloth]|h|r",
+            "n": 15
+          },
+          "invoice": {
+            "6": 0,
+            "7": 0,
+            "4": 0,
+            "5": 0,
+            "n": 7
+          }
+        },
+        {
+          "items": {},
+          "index": 2,
+          "header": {
+            "1": null,
+            "2": 134327,
+            "3": "Alice Surname",
+            "4": "G",
+            "5": 200,
+            "6": 0,
+            "7": 30.99701309204102,
+            "11": false,
+            "13": false,
+            "10": false,
+            "12": true,
+            "9": false,
+            "n": 15
+          },
+          "invoice": {
+            "6": 0,
+            "7": 0,
+            "4": 0,
+            "5": 0,
+            "n": 7
+          }
+        },
+        {
+          "items": [
+            {
+              "info": {
+                "1": "Copper Bar",
+                "2": 2840,
+                "3": 133216,
+                "4": 5,
+                "5": 1,
+                "6": true,
+                "7": false,
+                "n": 7
+              },
+              "link": "|cnIQ1:|Hitem:2840::::::::1:1491:::::::::|h[Copper Bar]|h|r"
+            }
+          ],
+          "index": 3,
+          "header": {
+            "1": 133216,
+            "2": 134327,
+            "3": "Alice Surname",
+            "4": "Copper Bar (5)",
+            "5": 0,
+            "6": 0,
+            "7": 30.99674797058106,
+            "8": 1,
+            "9": false,
+            "10": false,
+            "11": false,
+            "12": true,
+            "13": false,
+            "14": 5,
+            "15": "|cnIQ1:|Hitem:2840::::::::1:1491:::::::::|h[Copper Bar]|h|r",
+            "n": 15
+          },
+          "invoice": {
+            "6": 0,
+            "7": 0,
+            "4": 0,
+            "5": 0,
+            "n": 7
+          }
+        },
+        {
+          "items": {
+            "7": {
+              "info": {
+                "1": "Stringy Wolf Meat",
+                "2": 2672,
+                "3": 133970,
+                "4": 4,
+                "5": 1,
+                "6": true,
+                "7": false,
+                "n": 7
+              },
+              "link": "|cnIQ1:|Hitem:2672::::::::1:1491:::::::::|h[Stringy Wolf Meat]|h|r"
+            }
+          },
+          "index": 4,
+          "header": {
+            "1": 133970,
+            "2": 134327,
+            "3": "Alice Surname",
+            "4": "Stringy Wolf Meat (4)",
+            "5": 0,
+            "6": 0,
+            "7": 30.98153877258301,
+            "8": 1,
+            "9": false,
+            "10": false,
+            "11": false,
+            "12": true,
+            "13": false,
+            "14": 4,
+            "15": "|cnIQ1:|Hitem:2672::::::::1:1491:::::::::|h[Stringy Wolf Meat]|h|r",
+            "n": 15
+          },
+          "invoice": {
+            "6": 0,
+            "7": 0,
+            "4": 0,
+            "5": 0,
+            "n": 7
+          }
+        }
+      ]
+    },
+    "arguments": {},
+    "addon_version": "0.11.3",
+    "entry_id": "8:Cara18:Fixture Realm:journal:1791917432:3577",
+    "character": "Cara",
+    "family": "mail",
+    "realm": "Fixture Realm",
+    "machine": "fixture-mac"
+  },
+  {
+    "login_at": 1791917424,
+    "sequence": 3578,
+    "faction": "Alliance",
+    "captured_at": 1791917433,
+    "event": "TakeInboxItem",
+    "arguments": {
+      "1": 1,
+      "2": 1
+    },
+    "addon_version": "0.11.3",
+    "entry_id": "8:Cara18:Fixture Realm:journal:1791917433:3578",
+    "character": "Cara",
+    "family": "mail",
+    "realm": "Fixture Realm",
+    "machine": "fixture-mac"
+  },
+  {
+    "login_at": 1791917424,
+    "sequence": 3589,
+    "event": "MAIL_INBOX_UPDATE",
+    "faction": "Alliance",
+    "captured_at": 1791917433,
+    "inbox": {
+      "counts": {
+        "1": 2,
+        "2": 2,
+        "n": 2
+      },
+      "messages": [
+        {
+          "items": [
+            {
+              "info": {
+                "1": "Copper Bar",
+                "2": 2840,
+                "3": 133216,
+                "4": 5,
+                "5": 1,
+                "6": true,
+                "7": false,
+                "n": 7
+              },
+              "link": "|cnIQ1:|Hitem:2840::::::::1:1491:::::::::|h[Copper Bar]|h|r"
+            }
+          ],
+          "index": 1,
+          "header": {
+            "1": 133216,
+            "2": 134327,
+            "3": "Alice Surname",
+            "4": "Copper Bar (5)",
+            "5": 0,
+            "6": 0,
+            "7": 30.99674797058106,
+            "8": 1,
+            "9": true,
+            "10": false,
+            "11": false,
+            "12": true,
+            "13": false,
+            "14": 5,
+            "15": "|cnIQ1:|Hitem:2840::::::::1:1491:::::::::|h[Copper Bar]|h|r",
+            "n": 15
+          },
+          "invoice": {
+            "6": 0,
+            "7": 0,
+            "4": 0,
+            "5": 0,
+            "n": 7
+          }
+        },
+        {
+          "items": {
+            "7": {
+              "info": {
+                "1": "Stringy Wolf Meat",
+                "2": 2672,
+                "3": 133970,
+                "4": 4,
+                "5": 1,
+                "6": true,
+                "7": false,
+                "n": 7
+              },
+              "link": "|cnIQ1:|Hitem:2672::::::::1:1491:::::::::|h[Stringy Wolf Meat]|h|r"
+            }
+          },
+          "index": 2,
+          "header": {
+            "1": 133970,
+            "2": 134327,
+            "3": "Alice Surname",
+            "4": "Stringy Wolf Meat (4)",
+            "5": 0,
+            "6": 0,
+            "7": 30.98153877258301,
+            "8": 1,
+            "9": false,
+            "10": false,
+            "11": false,
+            "12": true,
+            "13": false,
+            "14": 4,
+            "15": "|cnIQ1:|Hitem:2672::::::::1:1491:::::::::|h[Stringy Wolf Meat]|h|r",
+            "n": 15
+          },
+          "invoice": {
+            "6": 0,
+            "7": 0,
+            "4": 0,
+            "5": 0,
+            "n": 7
+          }
+        }
+      ]
+    },
+    "arguments": {},
+    "addon_version": "0.11.3",
+    "entry_id": "8:Cara18:Fixture Realm:journal:1791917433:3589",
+    "character": "Cara",
+    "family": "mail",
+    "realm": "Fixture Realm",
+    "machine": "fixture-mac"
+  },
+  {
+    "login_at": 1791917424,
+    "sequence": 3590,
+    "faction": "Alliance",
+    "captured_at": 1791917434,
+    "event": "TakeInboxItem",
+    "arguments": {
+      "1": 1,
+      "2": 1
+    },
+    "addon_version": "0.11.3",
+    "entry_id": "8:Cara18:Fixture Realm:journal:1791917434:3590",
+    "character": "Cara",
+    "family": "mail",
+    "realm": "Fixture Realm",
+    "machine": "fixture-mac"
+  },
+  {
+    "login_at": 1791917424,
+    "sequence": 3597,
+    "family": "bags",
+    "faction": "Alliance",
+    "captured_at": 1791917434,
+    "event": "BAG_UPDATE_DELAYED",
+    "item_changes": {
+      "2840": 5,
+      "2996": 8
+    },
+    "arguments": {},
+    "entry_id": "8:Cara18:Fixture Realm:journal:1791917434:3597",
+    "addon_version": "0.11.3",
+    "character": "Cara",
+    "realm": "Fixture Realm",
+    "machine": "fixture-mac"
+  }
+]

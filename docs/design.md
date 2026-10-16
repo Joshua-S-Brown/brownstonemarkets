@@ -630,3 +630,15 @@ uses capture/sequence intervals and excludes unreadable backpacks; missing basel
 unknown residual. Stock loads this evidence once, below holdings, and displays cached totals,
 reconciliation and expandable movements/IDs; a ledger failure shows only in the Gold area. Today and existing Stock/sales
 contracts are unchanged. No storage migration, addon capture or price path.
+
+
+## Item ledger contracts
+
+Rules: [UI-16](requirements.md#ui-16-item-movements-story-034b). `item_ledger.load` reads
+bags/loot/craft/vendor/mail/auction once and bags/bank snapshots once, scoped and read-only.
+`project` groups sessions like `ledger`, reuses sales posts/mail/link identity and beta evidence
+inventory reconciliation, and retains per-item movements with signed allocation parts.
+Own-mail transfer rows (`sent` first send, `received` last take, `mails`/`takes` counts) mark
+parts for exclusion from team in/out; bank parts are transfers too.
+Stock filters cached evidence with its existing search/catalog controls. Gold projection/version,
+Today, holdings/targets and sales are unchanged; no migration, addon or price path.

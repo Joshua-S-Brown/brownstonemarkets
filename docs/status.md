@@ -5,6 +5,17 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Implemented
 
+- **Item movements (STORY-034b):** Stock's Items area below Gold shows cached category totals,
+  own-character mail, snapshot residuals and expandable entry provenance, using Stock's search.
+  Rules: [UI-16](requirements.md#ui-16-item-movements-story-034b); contracts: design → Item ledger.
+  Offline tests: `tests/test_item_ledger.py`, `tests/ui_trial/test_nicegui_stock.py`.
+  Imported Forever beta: 1,006 movements, 44 baselines/gaps (including bags still loading just
+  after a login), three unreadable captures excluded; team 731 units in, 596 out. 67/70 bags and
+  10/10 bank pairs have zero residual. The three left: Cicelyna's +4 item 117/+1 item 6948 behind
+  an old-addon baseline, and Basilly's −13 and −10 Conjured Water (5350), which vanishes at logout
+  with no event. Ten own-mail pairs match; one Linen Bag send stays unmatched because its bag
+  update came 20 s after the take. 229 other allocations, no unidentified mail.
+
 - **Gold ledger (STORY-034):** Stock shows scoped per-character/UTC-day category in/out,
   explicit team totals, readable-bags reconciliation and expandable movement provenance.
   Rules: [UI-15](requirements.md#ui-15-gold-ledger-story-034); contracts: design → Gold ledger.

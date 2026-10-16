@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from nicegui import ui
 
-from brownstone import ledger, stock
+from brownstone import item_ledger, ledger, sales, stock
 from brownstone.freshness import age_caption
 from brownstone.money import format_money
 from views import nicegui_theme as theme
@@ -56,7 +56,7 @@ def render(config, catalogs):
     if not result['captures']:
         with ui.card().classes('bs-card bs-empty'):
             ui.label('No character captures for this source and market. Import bags and bank snapshots in Data.')
-    stock_table(result)
+    search, chains = stock_table(result)
     with ui.expansion('Holdings by character and location'):
         names = {r['key']: r['name'] for r in result['rows']}
         plain_table([{'Item': names[h['key']],
@@ -70,8 +70,15 @@ def render(config, catalogs):
         with ui.card().classes('bs-card bs-empty'):
             ui.label(f'Unable to read gold evidence: {error}. Check saved journal evidence in Data, '
                      'then reload.').classes('bs-sentence')
-        return
-    gold_section(gold)
+    else:
+        gold_section(gold)
+    try:
+        items = item_ledger.load(config)
+    except Exception as error:
+        with ui.card().classes('bs-card bs-empty'):
+            ui.label(f'Unable to read item evidence: {error}. Check saved journal evidence in Data, then reload.')
+    else:
+        items_section(items, result, search, chains)
 
 
 def table_row(row):
@@ -110,6 +117,7 @@ def stock_table(result):
         with ui.expansion('Target and purchase evidence'):
             for row in result['rows']:
                 target_evidence(row)
+    return search, chains
 
 
 def limit_text(entry):
@@ -260,3 +268,90 @@ def gold_section(data):
                          for m in data['movements']], 'gold-movements')
             plain_table([{'Before snapshot': r['before_id'], 'After snapshot': r['after_id']}
                          for r in data['reconciliation']], 'gold-snapshots')
+
+
+def item_name(item, names):
+    return f"{names[item]} ({item})" if item in names else str(item)
+
+
+def items_section(data, stock_data, search, chains):
+    """Filter cached item evidence with Stock's controls; all quantities remain numeric."""
+    with ui.card().classes('bs-card w-full'):
+        ui.label('Items').classes('text-xl font-bold')
+        ui.label('What came in and went out?').classes('bs-note')
+        theme.chip(f"{len(data['movements'])} recorded item changes")
+        if data['baselines'] or data['unreadable_snapshots']:
+            theme.badge('Item evidence gaps', 'warn')
+        ui.label('UTC days · filtered by Stock’s name or item ID search and catalog switch above. '
+                 'Quests, trades and use or destruction have no event and remain other. '
+                 'Team totals sum these characters, excluding matched own mail and bank transfers.').classes('bs-note')
+        if not data['movements']:
+            ui.label('No item movements for this source and market. Import journal evidence in Data.')
+        area = ui.column().classes('w-full')
+        def update():
+            area.clear()
+            query = (search.value or '').strip().casefold()
+            names = stock_data['names']
+            def selected(item):
+                return ((not query or query in item_name(item, names).casefold())
+                        and (not chains.value or item in stock_data['chain_ids']))
+            with area:
+                items_answer(data, names, selected)
+        search.on_value_change(lambda e: update())
+        chains.on_value_change(lambda e: update())
+        update()
+
+
+def item_table(rows, marker):
+    widget = plain_table(rows, marker)
+    for column in widget.columns:
+        column['sortable'] = True
+    widget.update()
+
+
+def items_answer(data, names, selected):
+    movements = [m for m in data['movements'] if selected(m['item_id'])]
+    totals = item_ledger.team(movements)
+    with ui.element('div').classes('bs-tiles'):
+        theme.tile('Team item units in', str(totals['in_units']))
+        theme.tile('Team item units out', str(totals['out_units']))
+    item_table([{'Character': ' · '.join(r['character']), 'UTC day': r['day'], 'Category': r['category'],
+                 'In units': r['in_units'], 'Out units': r['out_units']}
+                for r in item_ledger.summarize(movements)], 'items-totals')
+    ui.label('Own-character mail').classes('font-bold')
+    item_table([{'Sender': t['sender'][0], 'Recipient': t['recipient'][0], 'Item': item_name(t['item_id'], names),
+                 'Units': t['units'], 'Mails': t['mails'], 'Takes': t['takes'], 'Status': t['status'],
+                 'Sent UTC': gold_time(t['sent']['at']) if t['sent'] else '',
+                 'Received UTC': gold_time(t['received']['at']) if t['received'] else '',
+                 'From machine': t['sent']['machine'] if t['sent'] else '',
+                 'To machine': t['received']['machine'] if t['received'] else ''}
+                for t in data['transfers'] if selected(t['item_id'])], 'items-transfers')
+    ui.label('Reconciliation · residuals are evidence gaps').classes('font-bold')
+    for kind in ('bags', 'bank'):
+        pairs = [r for r in data['reconciliation'] if r['kind'] == kind]
+        zero = sum(not any(i['residual_units'] for i in r['items']) for r in pairs)
+        theme.chip(f'{kind.title()}: {zero}/{len(pairs)} capture pairs without residuals')
+    if not data['reconciliation']:
+        ui.label('Two readable bags or bank captures per character are needed. Import snapshots in Data.')
+    rows = [{'Character': r['character'][0], 'Item': item_name(i['item_id'], names),
+             'Residual units': i['residual_units'], 'Actual units': i['actual_units'],
+             'Recorded units': i['recorded_units'], 'Location': r['kind'], 'From UTC': gold_time(r['from']),
+             'To UTC': gold_time(r['to']), 'Evidence': 'possibly incomplete' if r['possibly_incomplete'] else ''}
+            for r in data['reconciliation'] for i in r['items']
+            if selected(i['item_id']) and (i['actual_units'] or i['recorded_units'])]
+    # Unexplained differences first, so the answer is visible without sorting or scrolling.
+    item_table(sorted(rows, key=lambda row: not row['Residual units']), 'items-reconciliation')
+    with ui.expansion('Item movements and evidence'):
+        ui.label(f"Item ledger version {data['item_ledger_version']} · UI-16 · match within "
+                 f"{item_ledger.MATCH_SECONDS}s · {len(data['baselines'])} baselines/gaps · "
+                 f"{data['unreadable_snapshots']} unreadable captures excluded.")
+        item_table([{'UTC': gold_time(m['at']), 'Character': ' · '.join(m['character']), 'Machine': m['machine'],
+                     'Item': item_name(m['item_id'], names), 'Units': m['units'],
+                     'Allocation': ', '.join(f"{p['category']}: {p['units']}" for p in m['parts']),
+                     'Reason': '; '.join(p['reason'] for p in m['parts'] if p['reason']), 'Entry ID': m['entry_id']}
+                    for m in movements], 'items-movements')
+        item_table([{'Character': ' · '.join(sales.character(r)), 'UTC': gold_time(r['captured_at']),
+                     'Machine': r.get('machine'), 'Entry ID': r['entry_id']}
+                    for r in data['baselines']], 'items-baselines')
+        plain_table([{'Before snapshot': r['before_id'], 'After snapshot': r['after_id']}
+                     for r in data['reconciliation']], 'items-snapshots')

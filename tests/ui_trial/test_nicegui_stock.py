@@ -143,3 +143,57 @@ async def test_gold_failure_keeps_stock_visible(user, tmp_path, monkeypatch):
     await user.open('/?place=Stock')
     await user.should_see('Unable to read gold evidence: bad journal')
     await user.should_see('Items held')
+
+
+async def test_items_cached_filter_numbers_transfers_and_ids(user, tmp_path, monkeypatch):
+    from test_item_ledger import chat, mail, receive, row, snapshot
+
+    from brownstone import item_ledger
+    stock_app(tmp_path, monkeypatch)
+    records = [chat(), row(), row('SendMail', at=103, seq=1, arguments={'1': 'Bob Surname'}),
+               row(at=103, item_changes={'2589': -1}),
+               *receive(mail(sender='Fixture Surname'), at=104, character='Bob', machine='pc')]
+    data = item_ledger.project(records, [snapshot(), snapshot(110, 4)])
+    calls = []
+    def load(config):
+        calls.append(config)
+        return data
+    monkeypatch.setattr(item_ledger, 'load', load)
+    await user.open('/?place=Stock')
+    await user.should_see('What came in and went out?')
+    await user.should_see('Gold')
+    totals = next(iter(user.find(marker='items-totals').elements))
+    assert sum(r['In units'] for r in totals.rows) == 2
+    assert all(c['sortable'] for c in totals.columns)
+    transfers = next(iter(user.find(marker='items-transfers').elements))
+    assert transfers.rows[0]['Status'] == 'transfer' and transfers.rows[0]['To machine'] == 'pc'
+    reconciliation = next(iter(user.find(marker='items-reconciliation').elements))
+    assert reconciliation.rows[0]['Residual units'] == 4
+    user.find('Item movements and evidence').click()
+    movements = next(iter(user.find(marker='items-movements').elements))
+    assert movements.rows[0]['Entry ID'] == records[1]['entry_id']
+    user.find(marker='stock-search').type('not found')
+    assert next(iter(user.find(marker='items-totals').elements)).rows == []
+    user.find(marker='stock-search').clear().type('Linen')
+    assert next(iter(user.find(marker='items-totals').elements)).rows
+    user.find(marker='stock-chains').click()
+    assert next(iter(user.find(marker='items-totals').elements)).rows == []
+    assert len(calls) == 1
+
+
+async def test_items_failure_is_local_and_gold_failure_keeps_items(user, tmp_path, monkeypatch):
+    from brownstone import item_ledger, ledger
+    stock_app(tmp_path, monkeypatch)
+    original = item_ledger.load
+    def broken(config):
+        raise ValueError('bad item journal')
+    monkeypatch.setattr(item_ledger, 'load', broken)
+    await user.open('/?place=Stock')
+    await user.should_see('Unable to read item evidence: bad item journal')
+    await user.should_see('Items held')
+    await user.should_see('Gold')
+    monkeypatch.setattr(item_ledger, 'load', original)
+    monkeypatch.setattr(ledger, 'load', broken)
+    await user.open('/?place=Stock')
+    await user.should_see('Unable to read gold evidence')
+    await user.should_see('No item movements')

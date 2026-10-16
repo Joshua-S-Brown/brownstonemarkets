@@ -227,6 +227,14 @@ def _inventory(r: dict) -> Counter | None:
     return result
 
 
+def inventory_change(before: dict, after: dict) -> Counter:
+    """Signed per-item change between two readable snapshots (including zero changes)."""
+    first, last = _inventory(before), _inventory(after)
+    if first is None or last is None:
+        raise ValueError("Two readable inventories required")
+    return Counter({item: last[item] - first[item] for item in first.keys() | last.keys()})
+
+
 def _bag_residual(report: dict, before: dict, after: dict, interval: list[dict]) -> None:
     first, last = _inventory(before), _inventory(after)
     changes = [r for r in interval if r.get("family") == "bags"]
@@ -236,9 +244,10 @@ def _bag_residual(report: dict, before: dict, after: dict, interval: list[dict])
         return
     delta: Counter = Counter()
     for r in changes:
-        delta.update(r.get("item_changes", {}))
-    residual = {item: last[item] - first[item] - delta[item] for item in first.keys() | last.keys() | delta.keys()
-                if last[item] - first[item] - delta[item]}
+        delta.update({int(i): n for i, n in r.get("item_changes", {}).items()})
+    actual = inventory_change(before, after)
+    residual = {item: actual[item] - delta[item] for item in actual.keys() | delta.keys()
+                if actual[item] - delta[item]}
     check(report, "bag residual", "warn" if residual else "pass", {"residual_units": residual}, ids)
 
 

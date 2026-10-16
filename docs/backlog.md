@@ -45,28 +45,15 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-034b item movements and reconciliation (refine first)
-2. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
-3. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
-4. STORY-026 scan coverage and rhythm
-5. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-6. STORY-006 replay
+1. STORY-062 sales speed and suggested stock levels (after the 2026-10-16 scans and STORY-027's beta check; refine first)
+2. STORY-021 item charts and listing ladder (inside STORY-078's item page layout)
+3. STORY-026 scan coverage and rhythm
+4. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+5. STORY-006 replay
 
 **Pending an in-game beta check:** STORY-027's time-left scans (checklist in `addon/README.md` → *Last beta play session*). STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 036, 031, 032, 033, 034, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
-
-### STORY-034b — Item movements and reconciliation
-
-Added 2026-10-15 from the STORY-034 split; STORY-034 is done, so refine this before handing it off.
-
-As a gold maker, I want every item movement on each character sorted by what caused it, so that I can see what I gathered, crafted, bought, sold and moved between characters.
-
-Acceptance (to refine):
-- **Item movements** from `BAG_UPDATE_DELAYED` per-item deltas (ADDON-12 baselines; a missing baseline is a gap, never zero), categorised with STORY-034's rules where they apply, plus **craft in/out**, **gathered or looted**, **post** and **expired/cancelled return**. An invoice is the only proof of a sale; a listing that vanishes is only *removed* (STORY-027).
-- **Reconciliation** between snapshots per character and location: a positive item residual is *gathered or looted*, negative *used or destroyed*; bank changes only between bank captures.
-- **Across machines** (from STORY-037): mail between own characters on different machines appears once as sent and once as received; a send with no receipt shows as unmatched.
-- **Sale rate:** reuse STORY-073's per-item results.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 025, 030, 035, 036, 031, 032, 033, 034, 034b, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080 and SPIKE-009/009b.
 
 ### STORY-021 — Item page and charts
 

@@ -1,0 +1,1173 @@
+{
+  "gathered or looted": [
+    {
+      "login_at": 1791462787,
+      "sequence": 1,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791462789,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "159": 2,
+        "4536": 4,
+        "6948": 1
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462789:1",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 5,
+      "windows": {},
+      "captured_at": 1791462921,
+      "event": "CHAT_MSG_LOOT",
+      "arguments": {
+        "1": "You receive loot: |cnIQ1:|Hitem:750::::::::1:1482:::::::::|h[Tough Wolf Meat]|h|r",
+        "2": "Bob Surname"
+      },
+      "family": "loot",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462921:5",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 8,
+      "windows": {},
+      "captured_at": 1791462922,
+      "event": "CHAT_MSG_LOOT",
+      "arguments": {
+        "1": "You receive loot: |cnIQ0:|Hitem:1380::::::::1:1482:::::::::|h[Frayed Robe]|h|r",
+        "2": "Bob Surname"
+      },
+      "family": "loot",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462922:8",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 12,
+      "windows": {},
+      "captured_at": 1791462922,
+      "event": "CHAT_MSG_LOOT",
+      "arguments": {
+        "1": "You receive loot: |cnIQ0:|Hitem:7073::::::::1:1482:::::::::|h[Broken Fang]|h|r",
+        "2": "Bob Surname"
+      },
+      "family": "loot",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462922:12",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 13,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791462922,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "1380": 1,
+        "7073": 1,
+        "750": 1
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462922:13",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "other": [
+    {
+      "login_at": 1791462787,
+      "sequence": 1,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791462789,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "159": 2,
+        "4536": 4,
+        "6948": 1
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462789:1",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 5,
+      "windows": {},
+      "captured_at": 1791462921,
+      "event": "CHAT_MSG_LOOT",
+      "arguments": {
+        "1": "You receive loot: |cnIQ1:|Hitem:750::::::::1:1482:::::::::|h[Tough Wolf Meat]|h|r",
+        "2": "Bob Surname"
+      },
+      "family": "loot",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462921:5",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 8,
+      "windows": {},
+      "captured_at": 1791462922,
+      "event": "CHAT_MSG_LOOT",
+      "arguments": {
+        "1": "You receive loot: |cnIQ0:|Hitem:1380::::::::1:1482:::::::::|h[Frayed Robe]|h|r",
+        "2": "Bob Surname"
+      },
+      "family": "loot",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462922:8",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 12,
+      "windows": {},
+      "captured_at": 1791462922,
+      "event": "CHAT_MSG_LOOT",
+      "arguments": {
+        "1": "You receive loot: |cnIQ0:|Hitem:7073::::::::1:1482:::::::::|h[Broken Fang]|h|r",
+        "2": "Bob Surname"
+      },
+      "family": "loot",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462922:12",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 13,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791462922,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "1380": 1,
+        "7073": 1,
+        "750": 1
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462922:13",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 14,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791462924,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "56": 1,
+        "1380": -1
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462924:14",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "vendor sale": [
+    {
+      "login_at": 1791462787,
+      "sequence": 1,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791462789,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "159": 2,
+        "4536": 4,
+        "6948": 1
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791462789:1",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 304,
+      "arguments": {},
+      "windows": {
+        "merchant": true
+      },
+      "captured_at": 1791464320,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "1377": -1,
+        "1395": -1,
+        "2654": -1,
+        "1368": -1,
+        "1370": -1,
+        "7098": -5,
+        "4865": -7
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791464320:304",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 305,
+      "windows": {
+        "merchant": true
+      },
+      "captured_at": 1791464324,
+      "event": "C_Container.UseContainerItem",
+      "arguments": {
+        "1": 0,
+        "2": 15
+      },
+      "family": "vendor",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791464324:305",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791462787,
+      "sequence": 307,
+      "arguments": {},
+      "windows": {
+        "merchant": true
+      },
+      "captured_at": 1791464324,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "55": -1
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.9.0",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791464324:307",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "craft in": [
+    {
+      "login_at": 1791537371,
+      "sequence": 312,
+      "addon_version": "0.10.0",
+      "captured_at": 1791537373,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "6948": 1,
+        "117": 2,
+        "159": 3,
+        "2589": 5,
+        "4536": 4,
+        "247846": 1
+      },
+      "arguments": {},
+      "character": "Bob",
+      "windows": {},
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791537373:312",
+      "faction": "Alliance",
+      "family": "bags",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 848,
+      "captured_at": 1791540067,
+      "event": "UNIT_SPELLCAST_SUCCEEDED",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540067:848",
+      "character": "Bob",
+      "family": "craft",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": false
+      },
+      "arguments": {
+        "1": "player",
+        "2": "Cast-3-4621-0-123-2963-000048BB60"
+      },
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 849,
+      "captured_at": 1791540067,
+      "event": "CHAT_MSG_LOOT",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540067:849",
+      "character": "Bob",
+      "family": "loot",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": false
+      },
+      "arguments": {
+        "1": "You create: |cnIQ1:|Hitem:2996::::::::6:1482:::::::::|h[Bolt of Linen Cloth]|h|r.",
+        "2": "Bob Surname"
+      },
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 850,
+      "captured_at": 1791540067,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "2589": -2,
+        "2996": 1
+      },
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540067:850",
+      "character": "Bob",
+      "family": "bags",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": false
+      },
+      "arguments": {},
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "craft out": [
+    {
+      "login_at": 1791537371,
+      "sequence": 312,
+      "addon_version": "0.10.0",
+      "captured_at": 1791537373,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "6948": 1,
+        "117": 2,
+        "159": 3,
+        "2589": 5,
+        "4536": 4,
+        "247846": 1
+      },
+      "arguments": {},
+      "character": "Bob",
+      "windows": {},
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791537373:312",
+      "faction": "Alliance",
+      "family": "bags",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 848,
+      "captured_at": 1791540067,
+      "event": "UNIT_SPELLCAST_SUCCEEDED",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540067:848",
+      "character": "Bob",
+      "family": "craft",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": false
+      },
+      "arguments": {
+        "1": "player",
+        "2": "Cast-3-4621-0-123-2963-000048BB60"
+      },
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 849,
+      "captured_at": 1791540067,
+      "event": "CHAT_MSG_LOOT",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540067:849",
+      "character": "Bob",
+      "family": "loot",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": false
+      },
+      "arguments": {
+        "1": "You create: |cnIQ1:|Hitem:2996::::::::6:1482:::::::::|h[Bolt of Linen Cloth]|h|r.",
+        "2": "Bob Surname"
+      },
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 850,
+      "captured_at": 1791540067,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "2589": -2,
+        "2996": 1
+      },
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540067:850",
+      "character": "Bob",
+      "family": "bags",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": false
+      },
+      "arguments": {},
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "vendor purchase": [
+    {
+      "login_at": 1791537371,
+      "sequence": 312,
+      "addon_version": "0.10.0",
+      "captured_at": 1791537373,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "6948": 1,
+        "117": 2,
+        "159": 3,
+        "2589": 5,
+        "4536": 4,
+        "247846": 1
+      },
+      "arguments": {},
+      "character": "Bob",
+      "windows": {},
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791537373:312",
+      "faction": "Alliance",
+      "family": "bags",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 868,
+      "captured_at": 1791540089,
+      "event": "BuyMerchantItem",
+      "addon_version": "0.10.0",
+      "character": "Bob",
+      "faction": "Alliance",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540089:868",
+      "family": "vendor",
+      "arguments": {
+        "1": 1,
+        "2": 1
+      },
+      "windows": {
+        "merchant": true
+      },
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 869,
+      "captured_at": 1791540089,
+      "event": "CHAT_MSG_LOOT",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540089:869",
+      "character": "Bob",
+      "family": "loot",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": true
+      },
+      "arguments": {
+        "1": "You receive item: |cnIQ1:|Hitem:2320::::::::6:1482:::::::::|h[Coarse Thread]|h|r",
+        "2": "Bob Surname"
+      },
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 872,
+      "captured_at": 1791540090,
+      "event": "CHAT_MSG_LOOT",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540090:872",
+      "character": "Bob",
+      "family": "loot",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": true
+      },
+      "arguments": {
+        "1": "You receive item: |cnIQ1:|Hitem:2320::::::::6:1482:::::::::|h[Coarse Thread]|h|r",
+        "2": "Bob Surname"
+      },
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791537371,
+      "sequence": 874,
+      "captured_at": 1791540090,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "2320": 2
+      },
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540090:874",
+      "character": "Bob",
+      "family": "bags",
+      "faction": "Alliance",
+      "windows": {
+        "merchant": true
+      },
+      "arguments": {},
+      "addon_version": "0.10.0",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "mail out": [
+    {
+      "login_at": 1791540244,
+      "sequence": 894,
+      "family": "bags",
+      "faction": "Alliance",
+      "captured_at": 1791540244,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "2656": 1,
+        "2589": 11,
+        "35": 1,
+        "961": 3,
+        "4536": 5,
+        "5761": 1,
+        "6948": 1,
+        "2649": 1,
+        "5350": 13,
+        "286355": 1,
+        "117": 12,
+        "247846": 1,
+        "159": 10,
+        "2999": 1,
+        "2996": 2
+      },
+      "arguments": {},
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540244:894",
+      "windows": {},
+      "addon_version": "0.10.0",
+      "character": "Bob",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "sequence": 921,
+      "captured_at": 1791540336,
+      "addon_version": "0.10.0",
+      "windows": {},
+      "realm": "Fixture Realm",
+      "login_at": 1791540244,
+      "draft": {
+        "items": [
+          {
+            "info": {
+              "1": "Linen Bag",
+              "2": 4238,
+              "3": 133622,
+              "4": 1,
+              "5": 1,
+              "n": 5
+            },
+            "link": "|cnIQ1:|Hitem:4238::::::::6:1482::::::::Player-4620-0161A0DD:|h[Linen Bag]|h|r"
+          }
+        ],
+        "cod_copper": 0,
+        "money_copper": 0,
+        "observed_at": 1791540331
+      },
+      "event": "SendMail",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540336:921",
+      "arguments": {
+        "1": "Cara Zandrig",
+        "2": "Linen Bag"
+      },
+      "character": "Bob",
+      "faction": "Alliance",
+      "family": "mail",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791540244,
+      "sequence": 924,
+      "family": "bags",
+      "faction": "Alliance",
+      "captured_at": 1791540336,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "4238": -1
+      },
+      "arguments": {},
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791540336:924",
+      "windows": {},
+      "addon_version": "0.10.0",
+      "character": "Bob",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "post": [
+    {
+      "login_at": 1791639682,
+      "sequence": 1063,
+      "windows": {},
+      "captured_at": 1791639791,
+      "event": "C_AuctionHouse.PostCommodity",
+      "arguments": {
+        "1": {
+          "slotIndex": 5,
+          "bagID": 1
+        },
+        "2": 3,
+        "3": 5,
+        "4": 23
+      },
+      "family": "auction",
+      "character": "Bob",
+      "addon_version": "0.11.1",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791639791:1063",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791639682,
+      "sequence": 1064,
+      "windows": {},
+      "captured_at": 1791639791,
+      "event": "AUCTION_HOUSE_AUCTION_CREATED",
+      "arguments": {
+        "1": 51937920
+      },
+      "family": "auction",
+      "character": "Bob",
+      "addon_version": "0.11.1",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791639791:1064",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791639682,
+      "sequence": 1066,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791639791,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "2589": -5
+      },
+      "family": "bags",
+      "character": "Bob",
+      "addon_version": "0.11.1",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791639791:1066",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "mail in": [
+    {
+      "login_at": 1791917250,
+      "sequence": 3523,
+      "inbox": {
+        "counts": {
+          "1": 2,
+          "2": 2,
+          "n": 2
+        },
+        "messages": [
+          {
+            "items": [
+              {
+                "info": {
+                  "1": "Linen Cloth",
+                  "2": 2589,
+                  "3": 132889,
+                  "4": 8,
+                  "5": 1,
+                  "6": true,
+                  "7": false,
+                  "n": 7
+                },
+                "link": "|cnIQ1:|Hitem:2589::::::::6:1482:::::::::|h[Linen Cloth]|h|r"
+              }
+            ],
+            "header": {
+              "1": 132889,
+              "2": 134327,
+              "3": "Alice Surname",
+              "4": "Linen Cloth (8)",
+              "5": 0,
+              "6": 0,
+              "7": 30.9987850189209,
+              "8": 1,
+              "9": false,
+              "10": false,
+              "11": false,
+              "12": true,
+              "13": false,
+              "14": 8,
+              "15": "|cnIQ1:|Hitem:2589::::::::6:1482:::::::::|h[Linen Cloth]|h|r",
+              "n": 15
+            },
+            "index": 1,
+            "invoice": {
+              "6": 0,
+              "7": 0,
+              "4": 0,
+              "5": 0,
+              "n": 7
+            }
+          },
+          {
+            "items": [
+              {
+                "info": {
+                  "1": "Linen Cloth",
+                  "2": 2589,
+                  "3": 132889,
+                  "4": 20,
+                  "5": 1,
+                  "6": true,
+                  "7": false,
+                  "n": 7
+                },
+                "link": "|cnIQ1:|Hitem:2589::::::::6:1482:::::::::|h[Linen Cloth]|h|r"
+              },
+              {
+                "info": {
+                  "1": "Linen Cloth",
+                  "2": 2589,
+                  "3": 132889,
+                  "4": 12,
+                  "5": 1,
+                  "6": true,
+                  "7": false,
+                  "n": 7
+                },
+                "link": "|cnIQ1:|Hitem:2589::::::::6:1482:::::::::|h[Linen Cloth]|h|r"
+              }
+            ],
+            "header": {
+              "1": 132762,
+              "2": 134327,
+              "3": "Alice Surname",
+              "4": "Linen Cloth (20)",
+              "5": 0,
+              "6": 0,
+              "7": 30.98373794555664,
+              "8": 2,
+              "9": false,
+              "10": false,
+              "11": false,
+              "12": true,
+              "13": false,
+              "n": 15
+            },
+            "index": 2,
+            "invoice": {
+              "6": 0,
+              "7": 0,
+              "4": 0,
+              "5": 0,
+              "n": 7
+            }
+          }
+        ]
+      },
+      "family": "mail",
+      "captured_at": 1791917263,
+      "event": "MAIL_INBOX_UPDATE",
+      "character": "Bob",
+      "windows": {},
+      "arguments": {},
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791917263:3523",
+      "faction": "Alliance",
+      "addon_version": "0.11.3",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791917250,
+      "sequence": 3524,
+      "family": "mail",
+      "captured_at": 1791917264,
+      "event": "TakeInboxItem",
+      "character": "Bob",
+      "windows": {},
+      "arguments": {
+        "1": 1,
+        "2": 1
+      },
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791917264:3524",
+      "faction": "Alliance",
+      "addon_version": "0.11.3",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791917250,
+      "sequence": 3531,
+      "character": "Bob",
+      "captured_at": 1791917264,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "2589": 8
+      },
+      "addon_version": "0.11.3",
+      "arguments": {},
+      "windows": {},
+      "faction": "Alliance",
+      "family": "bags",
+      "entry_id": "7:Bob18:Fixture Realm:journal:1791917264:3531",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "to bank": [
+    {
+      "login_at": 1791918384,
+      "sequence": 3633,
+      "windows": {},
+      "captured_at": 1791918433,
+      "event": "BANKFRAME_OPENED",
+      "arguments": {},
+      "family": "bags",
+      "character": "Cara",
+      "addon_version": "0.11.3",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1791918433:3633",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791918384,
+      "sequence": 3635,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791918439,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "117": -4
+      },
+      "family": "bags",
+      "character": "Cara",
+      "addon_version": "0.11.3",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1791918439:3635",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "from bank": [
+    {
+      "login_at": 1791918384,
+      "sequence": 3638,
+      "windows": {},
+      "captured_at": 1791918444,
+      "event": "BANKFRAME_OPENED",
+      "arguments": {},
+      "family": "bags",
+      "character": "Cara",
+      "addon_version": "0.11.3",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1791918444:3638",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791918384,
+      "sequence": 3640,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791918445,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "117": 4
+      },
+      "family": "bags",
+      "character": "Cara",
+      "addon_version": "0.11.3",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1791918445:3640",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "expired/cancelled return": [
+    {
+      "login_at": 1791918537,
+      "sequence": 3667,
+      "inbox": {
+        "counts": {
+          "1": 1,
+          "2": 1,
+          "n": 2
+        },
+        "messages": [
+          {
+            "items": [
+              {
+                "info": {
+                  "1": "Stringy Wolf Meat",
+                  "2": 2672,
+                  "3": 133970,
+                  "4": 1,
+                  "5": 1,
+                  "6": true,
+                  "7": false,
+                  "n": 7
+                },
+                "link": "|cnIQ1:|Hitem:2672::::::::1:1491:::::::::|h[Stringy Wolf Meat]|h|r"
+              }
+            ],
+            "header": {
+              "1": 133970,
+              "2": 134939,
+              "3": "Alliance Auction House",
+              "4": "Auction canceled: Stringy Wolf Meat",
+              "5": 0,
+              "6": 0,
+              "7": 29.99991989135742,
+              "8": 1,
+              "9": false,
+              "10": false,
+              "11": true,
+              "12": false,
+              "13": false,
+              "14": 1,
+              "15": "|cnIQ1:|Hitem:2672::::::::1:1491:::::::::|h[Stringy Wolf Meat]|h|r",
+              "n": 15
+            },
+            "index": 1,
+            "invoice": {
+              "6": 0,
+              "7": 0,
+              "4": 0,
+              "5": 0,
+              "n": 7
+            }
+          }
+        ]
+      },
+      "windows": {},
+      "captured_at": 1791918587,
+      "event": "MAIL_INBOX_UPDATE",
+      "arguments": {},
+      "family": "mail",
+      "character": "Cara",
+      "addon_version": "0.11.3",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1791918587:3667",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791918537,
+      "sequence": 3668,
+      "windows": {},
+      "captured_at": 1791918588,
+      "event": "TakeInboxItem",
+      "arguments": {
+        "1": 1,
+        "2": 1
+      },
+      "family": "mail",
+      "character": "Cara",
+      "addon_version": "0.11.3",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1791918588:3668",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1791918537,
+      "sequence": 3673,
+      "arguments": {},
+      "windows": {},
+      "captured_at": 1791918588,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "2672": 1
+      },
+      "family": "bags",
+      "character": "Cara",
+      "addon_version": "0.11.3",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1791918588:3673",
+      "faction": "Alliance",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ],
+  "auction purchase": [
+    {
+      "login_at": 1792058410,
+      "sequence": 4090,
+      "event": "MAIL_INBOX_UPDATE",
+      "captured_at": 1792058437,
+      "inbox": {
+        "counts": {
+          "1": 1,
+          "2": 1,
+          "n": 2
+        },
+        "messages": [
+          {
+            "items": [
+              {
+                "info": {
+                  "1": "Linen Cloth",
+                  "2": 2589,
+                  "3": 132889,
+                  "4": 1,
+                  "5": 1,
+                  "6": true,
+                  "7": false,
+                  "n": 7
+                },
+                "link": "|cnIQ1:|Hitem:2589::::::::1:1491:::::::::|h[Linen Cloth]|h|r"
+              }
+            ],
+            "index": 1,
+            "header": {
+              "1": 132889,
+              "2": 134939,
+              "3": "Alliance Auction House",
+              "4": "Auction won: Linen Cloth",
+              "5": 0,
+              "6": 0,
+              "7": 28.45887756347656,
+              "8": 1,
+              "9": false,
+              "10": false,
+              "11": true,
+              "12": false,
+              "13": false,
+              "14": 1,
+              "15": "|cnIQ1:|Hitem:2589::::::::1:1491:::::::::|h[Linen Cloth]|h|r",
+              "n": 15
+            },
+            "invoice": {
+              "1": "buyer",
+              "2": "Linen Cloth",
+              "3": "Vant Skyflurry",
+              "4": 18,
+              "5": 1,
+              "6": 0,
+              "7": 0,
+              "8": 0,
+              "9": 0,
+              "10": 0,
+              "11": 1,
+              "12": false,
+              "n": 12
+            }
+          }
+        ]
+      },
+      "arguments": {},
+      "addon_version": "0.12.6",
+      "faction": "Alliance",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1792058437:4090",
+      "family": "mail",
+      "character": "Cara",
+      "windows": {},
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1792058410,
+      "sequence": 4091,
+      "captured_at": 1792058439,
+      "event": "TakeInboxItem",
+      "arguments": {
+        "1": 1,
+        "2": 1
+      },
+      "addon_version": "0.12.6",
+      "faction": "Alliance",
+      "entry_id": "8:Cara18:Fixture Realm:journal:1792058439:4091",
+      "family": "mail",
+      "character": "Cara",
+      "windows": {},
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    },
+    {
+      "login_at": 1792058410,
+      "sequence": 4096,
+      "captured_at": 1792058440,
+      "event": "BAG_UPDATE_DELAYED",
+      "item_changes": {
+        "2589": 1
+      },
+      "entry_id": "8:Cara18:Fixture Realm:journal:1792058440:4096",
+      "arguments": {},
+      "family": "bags",
+      "faction": "Alliance",
+      "windows": {},
+      "addon_version": "0.12.6",
+      "character": "Cara",
+      "realm": "Fixture Realm",
+      "machine": "fixture-pc"
+    }
+  ]
+}

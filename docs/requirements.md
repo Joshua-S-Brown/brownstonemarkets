@@ -426,6 +426,50 @@ and Your sales keep their existing sources. No item movements or cost basis.
     Copper drives sorting; shared money formatting drives display. No evidence explains how
     to import it in Data. UI-08 applies.
 
+### UI-16 Item movements (STORY-034b)
+
+`item_ledger_version` **1**; interpretation changes bump it. Additive below Stock's Gold;
+UI-15, holdings/targets, Today and Your sales retain their contracts. No prices or cost basis.
+
+1. Deduplicate scoped entry IDs. Each nonzero `BAG_UPDATE_DELAYED.item_changes` item (integer
+   ID, no variants) is one signed-unit movement with entry/time/character/realm/faction/machine.
+   Missing changes, `baseline_missing` and each login's first bag entry from addon ≤0.10.0 are
+   counted baselines/gaps, never movements; so are bag entries within the window after one with
+   no other event between (bags still loading: beta ammo, ore and stone already held).
+2. Match preceding evidence within **two seconds**, ordered by `sales.order`, same character,
+   machine and known login (beta 2026-10-15: 591/593 positive chat matches within 0–2s;
+   craft decreases mostly 0–1s). Consume observed counts once; summed lines may allocate one
+   movement into parts. Excess/unmatched units remain explicit. Window flags never classify alone.
+3. Own chat only (other players' lines ignored): `You receive loot:` → **gathered or looted**. `You create:` with preceding recorded
+   craft cast (`UNIT_SPELLCAST_SUCCEEDED`/`C_TradeSkillUI.CraftRecipe`) → **craft out**;
+   following negative deltas → **craft in**. Creation without cast → **other**.
+4. `You receive item:` after `BuyMerchantItem` → **vendor purchase**, otherwise **other**.
+   Negative after UI-15 rule 3's sale hooks (container use requires merchant open) → **vendor sale**.
+5. Reuse confirmed `sales.posts` for **post** decreases. Positive after `TakeInboxItem`/
+   `AutoLootMailItem`: argument 1 indexes latest inbox, argument 2 selects attachment slot (default 1; auto-loot takes all).
+   Consume attachments, removing empty money-free messages before resolving shifted indexes;
+   newer observations replace inbox state, pending takes survive within the window.
+   Reuse `sales.messages` identity; item/count match gives **mail in**, **auction purchase**
+   (`Auction won:`), or **expired/cancelled return** (`sales.RETURN_PREFIXES`). Missing identity
+   or unmatched counts → **mail in (unidentified)** with reason.
+6. Negative after `SendMail`/`MAIL_SEND_SUCCESS` → **mail out**; units always come from delta,
+   recipient from SendMail argument 1, never stale draft contents. Most recent eligible hook wins.
+7. Remaining deltas between `BANKFRAME_OPENED`/`CLOSED` → **to bank**/**from bank**.
+   Everything else → **other**; page explains quests, trades and use/destruction have no event.
+8. Own sender/recipient: first word, ignoring case, uniquely matches a character evidenced in
+   this source/full market on the same realm. Pair sends/receipts by sender, recipient, item and
+   equal count in time order across machines, summing parts by counterparty; then one row against
+   the earliest run on the other side with an equal sum (several takes or mails). Show once as
+   transfer; unmatched sides say **sent, not yet received**/**received, no send recorded**. Team in/out excludes matched mail and bank transfers.
+9. Consecutive readable bags/bank captures reconcile per-item actual slot-count change against
+   recorded movements (bank: opposite signed bank transfers only), open-left/closed-right time/
+   sequence interval. Exclude/disclose unreadable captures. Show actual minus recorded residual,
+   even across baseline gaps labelled **possibly incomplete**; never categorize residuals or infer
+   bank changes outside captures.
+10. Stock caches one load; shared name/ID/catalog search filters per-character UTC-day categories,
+    explicit team sums, own mail and reconciliation. Catalog names, otherwise ID; numeric sorting.
+    IDs, machines, reasons, gaps and version on demand. Local error/empty guidance; UI-08 applies.
+
 - **UI-08 Design checklist:** every app page passes these before review, checked on screenshots, not only code.
   1. **Answer first:** the top of the page answers its place's question; one subtle business-question subtitle per place.
   2. **One primary action** per view, visually distinct.
