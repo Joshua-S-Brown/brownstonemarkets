@@ -19,27 +19,11 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: sales speed and suggested stock levels (STORY-062, refine first). The web app migration is complete: every place and record is in the web app and follows the prototype (STORY-081 to STORY-094), and STORY-087 retired NiceGUI for a plain FastAPI/uvicorn server with a pywebview window.
+Nothing in progress; the next story is the top of *Order* under Next: the character record (STORY-097). Regroomed 2026-10-17 (product owner): the web app is complete (STORY-081 to STORY-095, NiceGUI retired in STORY-087), and **beta testing is wrapped**: 31 complete scans and the character captures are the data we build on, with no further in-game test sessions before go-live. The work now is making the app as useful as possible on that data; the launch-day checklist and remaining in-game checks wait until after go-live (*Launch-day checklist* under Later). Team's job is set as *what should each character do next, and is it paying off?* (STORY-097, STORY-099; *Is it paying off?* under Later).
 
-**Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
+**Scanning:** keep the usual routine (scan, `/reload`, import, then `/bscan clear` and `/reload`) whenever you happen to be at the auction house; nothing else is needed (STORY-026 dropped 2026-10-17).
 
-
-Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted on the beta with addon 0.3.1; the measurement record is in `addon/README.md`. Brownstone can now run on our own addon scans alone (STORY-010). Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta currently offers only Normal servers, so the configured example source is `forever-us-normal-alliance`.
-
-**Through the last full beta testing day, 21 October** (manual, in game):
-- **Keep scanning.** Twenty-five complete scans of the Normal Alliance house are imported (`status.md` → *Limitations*). Take more, at least 15 minutes apart, **at different times of day and on different days**, so the diff and timing work (STORY-018; *Market timing and a daily brief* under Later) has something to start from. The routine: scan, `/reload` (the game writes scans to the file only then, or on logout), import, and only then `/bscan clear` and `/reload`. A Roleplaying or neutral house scan, if reachable, tests house identification. This is a manual habit, not automation.
-- **Confirm the Forever catalog's unconfirmed values** (`status.md` → *Limitations*). Learn Bolt of Linen Cloth and check how many it makes: the profession window may show the count on the product icon, and crafting one (2 Linen Cloth) settles it. Buy your crafting reagents (thread, dye, flux, vials, spices) from a trade-supplies vendor rather than the auction house when you need them: the addon records each purchase, and Claude confirms the marked vendor prices from it. Also decide whether Runecloth Bag's dyes are really post-launch: both are listed on the beta auction house.
-- **Widen the Forever catalogs** (manual saved pages and `python -m brownstone recipes`): the rest of Tailoring, then the professions you plan to level at launch. The board and Today's *Craft* list only cover catalog recipes, so this is what gives them something to show.
-- **If any yield is more than 1** (now unlikely: Wowhead's "(2)" is an effect number, not a count; see `requirements.md` → CRAFT-08), *Multi-yield costing* (Later) moves to the top of Next: the Forever board's costs are wrong until it exists.
-- **Prepare a beta character for the character-data tests** (added 2026-10-06): level one **gathering** profession (Mining or Herbalism) and one **crafting** profession that uses it, far enough to gather, craft, post, sell, let something expire and cancel. Keep a little gold to buy and vendor with. This is what STORY-032 and STORY-033 are tested on.
-- **Test the new addon builds in game** once STORY-031 to STORY-033 and STORY-040 are ready (aim: by 13 October, leaving a week of beta). Each run records what actually happened, so it can be preserved as a test fixture before the beta closes:
-  - **Item info pass (STORY-031):** after a scan, how many items still lack vendor price, item level and stack size, against the 0.3.1 numbers.
-  - **Snapshots (STORY-032):** gold and bags written on logout and on `/reload`; bank only after opening the bank; two characters on the same account. With a new character (added 2026-10-07: no spare bags yet), test the backpack, any equipped bags, the main bank and one bank bag slot if you can buy it. That bank bag must appear in the bank snapshots (taken when you open the bank) and never in the logout snapshot of your bags. Whatever you can't test yet moves to *Snapshot coverage* under Later.
-  - **Event journal (STORY-033):** buy from the auction house, post, cancel, let one expire, sell one; open the mailbox and take the invoice and the returned item; craft; gather; buy and sell at a vendor; send mail between your own characters. Note which events fired and with what values.
-  - **Active auctions (STORY-040):** open the Auctions tab before posting, after posting, after a cancel and after a sale, and note whether the list arrives without opening the tab.
-  - **Professions (STORY-041):** open each profession window (Mining and Engineering on the new character; Tailoring and Enchanting on the druid), learn one new recipe and open the window again, gain a skill point, then log out.
-  - **Who checks (added 2026-10-07, product owner):** the product owner only plays: gathering, crafting, posting, mailing and logging out. Claude checks every session's file with the STORY-042 report and says what is confirmed, missing or wrong. Nobody reads the addon file by hand.
-  - **Unconfirmed claims** (`requirements.md` → *Product direction*): time from a sale to its gold in the mailbox, The Black Market vendor waits for live (*Later*). Deposits and postage between your own characters were measured on 2026-10-15.
+Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying-alliance`); the beta source is `forever-us-normal-alliance`. Node.js 24 LTS is installed on the Mac; the Windows PC only plays and drops scans (OPS-03).
 
 ## Next
 
@@ -48,11 +32,17 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - An optional AI narration layer can come later. It may only explain those defined metrics, never invent numbers (*Out of scope*).
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
-**Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-2. STORY-026 scan coverage and rhythm
-3. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-4. STORY-006 replay
+**Order** (regroomed 2026-10-17, product owner):
+1. STORY-097 character record: what next, and what's in the bags
+2. STORY-098 hiring and levelling evidence from our own captures
+3. STORY-099 a profession for every empty slot
+4. STORY-062 sales speed and suggested stock levels (refine first)
+5. STORY-100 a Market front page worth reading
+6. STORY-006 replay (before launch)
+7. STORY-101 frozen beta test corpus
+8. STORY-102 beta prices as a launch-week reference
+9. STORY-011a survey third-party scan sources
+10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
@@ -60,28 +50,128 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 
 **Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095 and SPIKE-009/009b.
 
-### STORY-026 — Scan coverage and your play rhythm
+### STORY-097 — Character record: what next, and what's in the bags
 
-As a gold maker, I want to see when I've scanned and when I usually play, so that I know which times are covered and when it's worth making time to log in.
+Added 2026-10-17 (grooming: Team's job is *what should each character do next, and is it paying off?*). Today the record lists facts and answers no question: on the beta, Arille's Professions tab shows bars and "44 points before this tier caps", Holdings is an unpriced list of 17 bag stacks with *Contents unknown* for the bank, and History is a skill chart.
+
+As the owner, I want a character's record to open on what that character should do next and what to do with what it holds, so that I can play it without cross-checking Today, Market and Ledger.
 
 Acceptance:
-- **Coverage grid:** scans by hour and weekday in local time for the selected source, with counts and gaps.
-- **Your rhythm:** the hours and days you usually scan, from scan times only.
-- **What's missing:** which slots need scans before timing claims can be made, with the thresholds recorded in `requirements.md`.
-- Works on beta scans now. Depends on nothing (uses `addon_scans`). Feeds *Plan ahead* under Later.
+- **Next tab, first and default:** (1) this character's steps in today's Route (UI-18 Today, same plan and numbering, links to the Route); (2) its best next skill step per profession from CRAFT-11 (recipe, skill needed, cost to reach, earns per craft, *pays back training in N crafts*), the same choice the roster card shows; (3) its last 7 UTC days from the gold ledger: came in, went out, net, and its top three categories (UI-15), with *unknown* where ledger evidence is missing.
+- **Holdings with values and actions:** each bags/bank stack shows units, unit value and total at the same cautious price Ledger's held stock uses (so the two never disagree), and one suggested action, in this order: *used in tonight's plan* (Route step), *mail to X for …* when another character's plan needs it, *sell* when listed above its vendor price, *vendor* when it has a vendor sell price and no listing, otherwise *keep* with no claim. Unpriced items say *no price* and are never valued at 0. Totals are labelled *at least* while the bank is uncaptured or partial. This replaces *Vendor the junk* under Later.
+- **Path tidy:** rows whose profit is unknown collapse behind *N more without a price*; CRAFT-11's incomplete reasons read as sentences (*Smelt Copper's skill-up colour is unknown*), not raw text; per-catalog unlisted counts move into the evidence footer.
+- **Unchanged:** calculations, `today_version`, CRAFT-11 ranking and storage. The record reuses Today's plan for the same source and settings rather than building a second one.
+- **Implementation notes:**
+  - *One plan, Today's:* Today's plan is built from the tab's sessionStorage state (`web/src/places/today/state.ts`: `readState`, `readWindow`, `todayKey`) by `POST /api/today/plan`, cached server-side in `api/today.py` (`cached_plan`, keyed by plan identity). The record must not build its own. Suggested shape: a `POST /api/team/character/next` that takes the same body as `/today/plan` plus the character key, calls `cached_plan` (a cache hit when Today is already open), and returns this character's `stops` (match `RouteStop.characters`) and the holdings actions. Use the same react-query key so an open Today page and the record share one fetch.
+  - *Holdings actions are calculation:* put them in a `brownstone/` function (inputs: the plan result, the character's holdings units from `team_holdings.holdings`, cautious prices from `basis_prices(observations, 'cautious')` as `stock.build_stock` does, and captured vendor sell prices), not in `api/` or `web/` (AGENTS.md). *Used in tonight's plan* and *mail to X* come from the plan's held-item use and its mail lines (`today_session.route_stops`), never from item names.
+  - *Last 7 days:* the gold ledger already has per-character, per-day, per-category totals (`api/ledger.py` `GoldTotal`, `ledger_view.day_bounds`); filter, don't recompute.
+  - *Where it shows:* `web/src/records/CharacterRecord.tsx` (tabs start at *Professions*; add *Next* first, keep the rest) and `web/src/places/team/Path.tsx` for the Path tidy. `api/team.py` `character` already returns holdings; extend its model rather than adding a second holdings read.
+- **Offline tests:** Next shows only this character's Route steps; holdings actions follow the stated order and never value a missing price; partial bank says *at least*; the record and Today agree on the same plan.
+- **Real data** (copied beta, scan `20261017T104157Z-ff991e`): Arille's Next lists Route steps 6, 7, 9 and 11 (buy 12 Copper Bar and 7 Light Leather, 3 Weak Flux, craft 3 Rough Grinding Stone and 3 Copper Dagger, post 3 Copper Dagger for 21s 69c profit); its Blacksmithing step is Cloudy Skyforged Chain at skill 50, 2s 17c to reach, 90s 50c per craft. Screenshots at 1280 and 390 px.
+- Depends on nothing. Rules: CRAFT-11, *Team character cards*, UI-15, UI-18, ADDON-11, MONEY-02. Design: *Team contracts*, *Today contracts*, *Gold ledger contracts*, *Web app (UI-18)*.
+
+### STORY-098 — Hiring and levelling evidence from our own captures
+
+Added 2026-10-17. On the beta every *Cost to 300* in Team's *If we add a character* reads *unknown* and every estimate *Incomplete* (`status.md` → *Limitations*: hiring walks complete only for Tailoring, Alchemy and Blacksmithing; Smelt Copper sits at skill 25 without a colour). The addon already saves each recipe's difficulty in the profession window at the captured rank, and trainer lists, but no Brownstone code reads difficulty yet.
+
+As the owner, I want the catalogs' skill-up colours and starter recipes confirmed from what our characters actually saw, so that levelling and hiring costs become numbers instead of *unknown*.
+
+Acceptance:
+- **Evidence report first:** a read-only report (beta-report section or CLI command) lists, per profession and recipe, each captured (rank, difficulty) observation and each trainer-list recipe with its skill and cost, against the catalog's colour ranks and learning source: *confirms*, *contradicts* or *not observed*.
+- **Catalog changes need that evidence:** confirmed values are recorded in the Forever selection files with the capture as source; contradictions are listed for the owner, not applied silently (AGENTS: catalog value changes need source evidence). Classic estimates stay marked as estimates where nothing was observed.
+- **Effect shown:** after regeneration, the report states how many Team hire rows and CRAFT-11 paths moved from incomplete to complete, per profession.
+- **Offline tests:** difficulty parsing from a fixture profession window (orange/yellow/green/grey and missing); observations never override a catalog value without a recorded change; an unobserved recipe stays as before.
+- **Real data:** run on the copied beta; report the counts per profession. Expected at least: Smelt Copper's colour at Arille's captured Mining ranks.
+- Depends on nothing: uses the captures already imported. Rules: CRAFT-08, CRAFT-10, CRAFT-11, CRAFT-13, ADDON-12. Design: *Recipe import*, *Skill-up map contracts*, *Team contracts*.
+
+### STORY-099 — A profession for every empty slot
+
+Added 2026-10-17. On the beta Lira, Cicelyna and Raaem end with *Learn a profession to see what's in reach*, while CRAFT-13 already prices every profession for a rank-one hire.
+
+As the owner, I want each character with a free profession slot to get a suggested profession, so that every roster card ends in an action.
+
+Acceptance:
+- **Suggestion per free slot:** run CRAFT-13's rank-one comparison for that character (its free primary slots; Cooking, First Aid and Fishing take none) and show the best profession by its existing sort, with best per craft at the window, cost to reach it, and what it would feed for the current team (*What it feeds*). Professions the team already covers are shown, labelled, not hidden.
+- **Card and record:** the roster card's action reads *Take up Tailoring: best within 25 points earns X per craft*; the record's Next tab (STORY-097) lists the top three.
+- **Honest gaps:** incomplete estimates keep their pill and reasons; no suggestion when every option has no profit, saying why.
+- **Offline tests:** free-slot counting with two primaries, one, or only secondaries; ordering matches CRAFT-13; incomplete stays incomplete.
+- **Real data:** copied beta, three characters with free slots get a suggestion; report each.
+- Depends on STORY-097 (Next tab) and works better after STORY-098. Rules: CRAFT-13, CRAFT-11, *Team character cards*, UI-18. Design: *Team contracts*.
 
 ### STORY-062 — Sales speed and suggested stock levels
 
-Added 2026-10-13 (product owner: "turnover, how fast items sell in the market is really kind of the point… I don't know how else you determine how much stock or inventory you keep"). Brownstone only. Needs STORY-027 and enough consecutive scans: refine the minimum before handoff with the beta's scan count. Draft.
+Added 2026-10-13 (product owner: "turnover, how fast items sell in the market is really kind of the point… I don't know how else you determine how much stock or inventory you keep"). Brownstone only. Needs STORY-027 and enough consecutive scans: refine the minimum before handoff with the beta's 31 complete scans. Draft.
 
 As the owner, I want to see how fast each item moves on the auction house and a suggested stock level from it, so that targets come from evidence instead of guesses.
 
 Acceptance:
 - **Removal rate** per item from STORY-027: units removed per hour across consecutive scan pairs within the maximum gap, as a median with the number of scan pairs it rests on. Always *removed*, an upper bound on sales, never *sold*. Too few pairs says so instead of a number.
 - **Turnover:** listed units divided by the removal rate (how long today's supply would last), shown beside it.
-- **Suggested target** in STORY-061: removal rate × the days of cover the owner chooses (one setting), capped at a share of typical listed supply so we never plan to hold more than the market moves. Shown next to the manual target, never replacing it.
-- **Shown** on the Market explorer's item page (STORY-055) and in Stock (STORY-061).
+- **Suggested target** beside Ledger's stock targets (STORY-061): removal rate × the days of cover the owner chooses (one setting), capped at a share of typical listed supply so we never plan to hold more than the market moves. Shown next to the manual target, never replacing it.
+- **Shown** on the Market explorer's item page (STORY-055) and beside held stock and targets in Ledger (STORY-061).
 - Feeds *Sales speed instead of a fixed cap* (Later) for Today, which stays a separate story.
+
+### STORY-100 — A Market front page worth reading
+
+Added 2026-10-17; merges *One card row per item* and *Market for our levels* from Later. On the copied beta scan `20261017T104157Z-ff991e`, *Dearer than usual* opens with Raw Winter Squid at +4,185.7% (9s against 21c typical, 4 listings) and spends two of three rows on it (*base* and *unresolved*); *Cheaper than usual* does the same with Bright Yellow Shirt. The grid's top rows are thin outliers at the team's levels nobody can use.
+
+As the owner, I want Market's front cards and default list to show items I can act on, so that the page tells me something in a glance.
+
+Acceptance:
+- **One row per item** on the front cards: the largest identity, labelled, as UI-09's movement does (decide this in UI-11 and check, per ADDON-08, whether identical base/unresolved rows are the same listings seen twice).
+- **Minimum evidence** for *Cheaper* and *Dearer*: a listings and units floor recorded in UI-11 (proposal: at least 5 listings and 10 units); items below it stay in the grid with their thin label.
+- **For our levels:** a default filter or ordering by the skill bands the team can reach (Team's window), with *All in our chains* one click away; never inferred from names.
+- **Unchanged:** prices, metrics, flood labels and calculations.
+- **Offline tests:** one row per item with identities kept separate in data; the floor excludes thin rows from cards only; the level filter uses catalog skill bands.
+- **Real data:** copied beta, report the three rows of each card before and after, and the default grid's count. Screenshots at 1280 and 390 px beside the prototype's Market view.
+- Depends on nothing. Rules: UI-09, UI-11, ADDON-08, CRAFT-11, UI-18. Design: *Market explorer (STORY-055)*, *Flood signals (STORY-064/072)*, *Web app (UI-18)*.
+
+### STORY-006 — Replay and rebuild local data
+
+As the product owner, I want derived data rebuildable from the raw archive, so that schema changes and validation fixes never strand old scans.
+
+Acceptance:
+- **Deterministic rebuild.** One command rebuilds silver and DuckDB from bronze into a fresh database without modifying bronze. Running it twice gives identical results.
+- **Every source.** Covers TSM CSVs and addon scans (bronze `.lua` and `.lua.gz` files; silver already holds per-scan listings and prices).
+- **Documented.** It's the recovery procedure for partial runs referenced in `status.md`. Backup is STORY-016.
+- Groomed 2026-10-17: do before launch, so a schema change after 4 November never strands live scans. Rules: DATA-01, DATA-02, DATA-04. Design: *Data contracts*, *Schema migrations*.
+
+### STORY-101 — Frozen beta test corpus
+
+Added 2026-10-17. Beta testing is wrapped; its data is the only real data we have until live scans build up. Not a backup (STORY-016 stays deferred).
+
+As the owner, I want a frozen copy of the beta data and one command that re-checks its known numbers, so that changes made after the beta closes are still tested against real play.
+
+Acceptance:
+- **Corpus:** a dated copy of the current `data/` under ignored `work/`, with a manifest (file count, SHA-256 of every bronze file, scan count, character count, newest scan ID). Never in Git.
+- **One command** (`python -m brownstone beta-check <corpus>`, read-only) prints the headline numbers each place shows today: scans and newest scan, Market items and chain count, Today route steps and planned profit, Team characters, Ledger net and reconciled pairs, and compares them with an expected file saved beside the corpus. Differences are listed, not failed silently.
+- **Story reviews use it:** `docs/prompts/story-review.md` step 6 names it as the default real-data check once the beta is closed.
+- **Offline tests:** the command on a small synthetic corpus; a changed expected value is reported; the corpus is opened read-only.
+- Depends on nothing. Rules: DATA-01, OPS-01. Design: *Beta evidence report*, *Quality gates*.
+
+### STORY-102 — Beta prices as a launch-week reference
+
+Added 2026-10-17; replaces STORY-012 (Forever against Classic) under Later. On launch day the live market has no typical prices; the beta's do exist. They are a different market (DATA-03), so they may only be shown, labelled, never used.
+
+As the owner, I want to see an item's beta typical price beside its live price in the first weeks, so that I can tell a bargain or a mispriced listing from noise before live history exists.
+
+Acceptance:
+- **Explicit pairing:** in config, a live source names one reference source (the beta). Items pair on full identity inside this view only; the view says *beta reference, a different market*. Nothing from it feeds crafting, Today, the Board, flood labels or any price basis (DATA-03, DATA-08).
+- **Shown with care:** the Market item record's Overview and the grid show *beta typical* and the ratio beside the live price, with the beta's newest scan time. Items missing or unpriced on either side say so, never 0.
+- **Fades out:** once the live item has its own typical price from enough scans (ADDON-10's threshold), the reference moves behind evidence on demand.
+- **Offline tests:** no calculation reads the reference; missing on either side; the switch to evidence once live typical exists.
+- **Real data:** pair the beta source with a copy of itself under a test `source_id` to check the wiring; the live check happens after go-live.
+- Depends on the live source being configured after go-live (*Launch-day checklist* under Later); buildable now. Rules: DATA-03, DATA-08, ADDON-10, UI-09, UI-18. Design: *Market metrics layer (STORY-024)*, *Market explorer (STORY-055)*.
+
+### STORY-011a — Survey third-party scan sources
+
+Split from STORY-011 at grooming (2026-10-04); ingestion is STORY-011b under Later.
+
+As a gold maker, I want to know whether any trustworthy third-party Forever scan source can be used, so that I can plan around it rather than guess.
+
+Acceptance:
+- **Survey and record.** Check AHledger, Booty Bay Broker and TSM for an official export or API and terms that allow personal use. Record the result in `requirements.md`, closing that open decision. No code.
+- If a source qualifies, STORY-011b moves to Next.
 
 ### STORY-028 — Sellers and their supply chains
 
@@ -94,38 +184,36 @@ Acceptance:
 - **Private:** seller names stay on this machine, as recorded in STORY-023's decision.
 - Depends on seller capture, which the beta's bulk scan does not provide (*Seller capture* under Later), and the implemented market metrics layer (ADDON-10).
 
-### STORY-011a — Survey third-party scan sources
-
-Split from STORY-011 at grooming (2026-10-04); ingestion is STORY-011b under Later.
-
-As a gold maker, I want to know whether any trustworthy third-party Forever scan source can be used, so that I can plan around it rather than guess.
-
-Acceptance:
-- **Survey and record.** Check AHledger, Booty Bay Broker and TSM for an official export or API and terms that allow personal use. Record the result in `requirements.md`, closing that open decision. No code.
-- If a source qualifies, STORY-011b moves to Next.
-
-### STORY-006 — Replay and rebuild local data
-
-As the product owner, I want derived data rebuildable from the raw archive, so that schema changes and validation fixes never strand old scans.
-
-Acceptance:
-- **Deterministic rebuild.** One command rebuilds silver and DuckDB from bronze into a fresh database without modifying bronze. Running it twice gives identical results.
-- **Every source.** Covers TSM CSVs and addon scans (bronze `.lua` and `.lua.gz` files; silver already holds per-scan listings and prices).
-- **Documented.** It's the recovery procedure for partial runs referenced in `status.md`. Backup is STORY-016.
-
 ## Later
 
 **Chosen-route column placement** (found in the STORY-092 review, 2026-10-17): Supply chains places each card at its deepest column across chosen *and* unchosen branches, so an item the chosen route uses directly can be pushed right by an unchosen path that also reaches it, leaving its solid edge to cross an empty column. Lay out columns from the chosen path first and only then place unchosen-only nodes.
-
-**One card row per item** (found in the STORY-090 review, 2026-10-17): on the beta, Market's *Cheaper* and *Dearer* cards spend two of their three rows on the same item (Bright Yellow Shirt and Raw Winter Squid, each *base* and *unresolved* at identical prices), because UI-11 lists every identity. Decide in UI-11 whether a card shows one row per item (its largest identity, labelled, as UI-09's movement does) and check whether identical base/unresolved rows are the same listings seen twice (ADDON-08).
 
 **Biggest lever across characters** (found in the STORY-088 review, 2026-10-17): Today's lever card takes the first character whose Level up options include a *Level …* step, read from the option text. With one levelling step on the beta that is right, but with several it is not the team's best. Have UI-12 return a structured best next step (character, profession, cost, unlocked profit per craft) and rank it there, so the web neither parses text nor picks by character order.
 
 **One mailbox stop per holder** (found in the STORY-095 review, 2026-10-17): on the beta Route, Cicelyna and Baspion each get two mailbox stops, one for material mail and a later one for gold mail, and gold mail still reads *Cicelyna mails 8s 87c to Arille* rather than STORY-095's *Cicelyna: mail …*. Fold gold mail into the holder's material mailbox stop and share the wording.
 
+**Route and Ledger tidy-up** (groomed 2026-10-17; with *Biggest lever across characters* and *One mailbox stop per holder* above): the beta Route opens with five mailbox steps that each repeat *postage is unconfirmed*; show that note once. Ledger's gold reconciliation lists 61 pairs, nearly all 0c actual, 0c recorded, 0c unexplained; show pairs with an unexplained amount by default and the rest on demand. Also check why the beta Route plans *Craft 5 × Linen Bag · needs 45 · you're 32* for Basilly: whether earlier crafts in that step reach 45 or the plan schedules a recipe the character can't make yet.
+
+**Is it paying off?** (groomed 2026-10-17; the second half of Team's job): profit by activity (crafting, farming, vendoring, auction) per character, in total and per hour played, from the gold ledger (UI-15), item movements (UI-16), farming rates (UI-13) and journal session times. Shown in the character record and as a Team summary. Needs a rule for attributing a crafted sale's profit to the crafting activity and for what counts as time played.
+
 **Lots and cost basis** (deferred from STORY-034 on 2026-10-15): which purchase each sold or crafted unit came from, for realised profit. Needs STORY-034b's item movements and a rule for held stock of unknown cost.
 
-**Optional client-version cutover guard:** investigate whether recorded client versions can flag a misconfigured beta/live source during STORY-020b and first live imports. Source configuration remains authoritative (DATA-03); STORY-017 adds no client-version evidence checks.
+**Launch-day checklist** (STORY-020a and STORY-020b merged and moved to Later on 2026-10-17, product owner: no rehearsal; when it launches, it launches. Write it when go-live is near or after it):
+
+As a gold maker, I want a short, tested checklist for 4 November, so that the switch to the live game is quick and nothing is missed.
+
+Acceptance:
+- **A short checklist** in `docs/`, linked from `status.md`, with: install or update the addon and check that it loads (the `.toc` interface number may change), first scan, `/reload`, import, clear; and
+  - a copy of `data/` before and after (a dated folder copy until STORY-016 is picked up)
+  - adding and enabling the live Roleplaying Alliance source in `config/market.local.toml`, with its own `source_id`, `environment = "live"`, the live game folder's `scan_path` and its `rules_version` (DATA-03)
+  - re-saving each Forever Wowhead page and regenerating. If the live `rules_version` differs from the beta's, every Forever catalog stays inspection-only until regenerated (*Refresh due* flags it).
+  - re-checking the confirmed and unconfirmed facts under *Product direction* in `requirements.md`
+  - turning on STORY-102's beta reference for the live source
+- **Checked** on data copies where it can be; live-house checks happen at launch.
+- **Post-launch in-game checks** that the beta left open: the sale-to-mailbox delay, crafting tier levels and yellow skill-up chances (`status.md` → *Limitations*).
+- Rules: OPS-01, DATA-03, CRAFT-01, CRAFT-08. Design: *Switching to WoW Forever*.
+
+**Optional client-version cutover guard:** investigate whether recorded client versions can flag a misconfigured beta/live source during the launch-day checklist and first live imports. Source configuration remains authoritative (DATA-03); STORY-017 adds no client-version evidence checks.
 
 These are grouped by what unblocks them.
 
@@ -148,16 +236,16 @@ These are grouped by what unblocks them.
 
 **Demand from your own scans** (needs repeated scans and STORY-018; optional sources from STORY-011b can add more data points):
 - *Removed listings* (STORY-027) is implemented; its Forever time-left bounds were accepted on 2026-10-16.
-- **Did the board hold up?** Whether "potential craft" rows were still profitable at the next scan. A tiny check is possible with beta scans; it means something after one to two weeks of live scans.
+- **Did the board hold up?** Whether "potential craft" rows were still profitable at the next scan. Possible now on the 31 beta scans (groomed 2026-10-17) as a measured basis for Today's confidence labels; it means more after one to two weeks of live scans.
 
 **Market timing and a daily brief** (requested 2026-10-04; needs post-launch history, not beta scans (STORY-017)). The goal is to know when to buy and sell each kind of item (materials, crafted goods, equipment), and to open the app to a short list of the day's priorities without being online all day.
 - **Honest limits:** scans happen only when you are at the auction house, so hour-of-day and weekday patterns are sampled at your playtimes. A pattern is shown only with its coverage (scans per hour and weekday), and claimed only where coverage is enough. Weekday effects such as the weekly reset need at least four weeks. Optional sources (STORY-011b) could fill hours you don't scan.
 - **Steps** (each needs the one before):
-  1. **Scan coverage:** now STORY-026 in Next.
+  1. **Scan coverage:** dropped as a story (2026-10-17: the owner scans when playing, not at other times). Each timing pattern shows how many scans per hour and weekday it rests on instead.
   2. **Timing profile:** per item, and for groups by catalog role (material, intermediate, finished; never inferred from names), price and supply by hour and weekday, with a confidence label. A weekday chart overlays price against supply (units listed, never called demand or volume sold). "Cheapest to buy" and "best to sell" windows only where coverage supports them.
   3. **Daily brief:** STORY-025 (*Today*) is its rule-based first version on the newest scan. This step adds the timing profile's advice: what to buy now or hold, and what to post now or wait on, each with its coverage.
   4. **Plan ahead** (requested 2026-10-05): next-day planning, not only right now.
-     - **When to log in:** suggested sessions that combine your usual play times (STORY-026) with the hours the timing profile marks as best to buy or sell, and how much each session is worth on current evidence.
+     - **When to log in:** suggested sessions that combine your usual play times (from scan times) with the hours the timing profile marks as best to buy or sell, and how much each session is worth on current evidence.
      - **Key times and milestones:** a calendar of known events entered by hand, each with its source (weekly reset, maintenance, holidays, patch days, launch-week phases, raid unlocks such as one claimed for 9 December, once sourced). Their effect on prices is shown only once enough scans cover them.
      - **Tomorrow's plan:** what to buy tonight for tomorrow's crafts, and which listings will expire before your next usual session (needs time left, STORY-023).
 
@@ -175,15 +263,6 @@ These are grouped by what unblocks them.
 - The board shows sold-per-day and sale rate with their own timestamp, labeled as context, not a promise to sell.
 - *Removed listings* (STORY-027) is the Forever equivalent and should replace or check it.
 
-**STORY-012 — Compare a market with a reference market** (moved from Next at grooming, 2026-10-05: its own evidence shows Forever and Classic prices diverge too much for a strong sanity check, and it targets the first weeks after launch):
-
-As a gold maker, I want to see an item's price on Forever next to its price on Classic Era, so that I can sanity-check Forever prices and spot import errors, especially in the first weeks after launch.
-
-Acceptance:
-- **Explicit pairing.** The user picks two configured sources, each a different market. Items pair on item ID only inside this view, and the view is labeled as a comparison of different markets. Nothing from it feeds crafting, the board or any price basis (DATA-03, DATA-08).
-- **Shown with care.** Each side shows its own source, scan time and freshness, plus the ratio between them. Items missing or unpriced on either side are listed, never treated as zero.
-- **Evidence for the idea:** on 2026-10-04, 2,323 of 2,927 priced Forever beta items were also priced on Mankrik. Common materials were within about 0.5–2× (Linen Cloth 38c vs 32c), but scarce high-level ones diverged widely (Runecloth 2g 55s vs 10s 75c). The median ratio was 0.32.
-
 **STORY-011b — Third-party scan ingestion** (only if STORY-011a finds a qualifying source):
 - **Separate source.** A qualifying feed is ingested as its own source for the same market, with raw preservation and provenance like every other source.
 - **Visible and optional.** The board shows which source each price came from. Disabling the source leaves everything working on your own scans.
@@ -193,15 +272,12 @@ Acceptance:
 - **Find the scan file:** on a click, offer the SavedVariables files under the usual WoW install folders, one per account, and save the choice as `scan_path` in the untracked `config/market.local.toml`. Your path is already set, so this only helps a new machine or account.
 - **In-game confirmations:** tick off values checked in game (a yield, a vendor and its price, a post-launch decision) with a date, written to the selection file, then Regenerate. For now there are only a few, edited by hand.
 - **Browse filters:** items used or made by any catalog (membership, not names) and a minimum listing count.
-- **Market for our levels** (walkthrough 2026-10-13): Market's front-page lists were dominated by Wool, Silk and Mithril-level items while the team was level 1–8. Filter or order them by the skill bands the team can reach (Team's window), with the full lists one click away.
 - **Plain identity labels** (walkthrough 2026-10-13): *base* and *unresolved* tags, and items listed twice under each, mean nothing to a player. Say *variant* or *unidentified link* only where it matters, keeping identities separate (ADDON-08).
 - **Shorter removal history** (walkthrough 2026-10-13): an item page lists every scan gap, mostly zeros. Summarise (removed early and could-have-expired totals over the comparable gaps), with each gap on demand.
 - **Vendor value as a floor** (2026-10-14, from CraftProfit's *vendor net* and TSM's posting rules): for leveling crafts whose auction market is flooded, show what the output fetches from a vendor (vendor sell price × output − cost) beside the auction profit. *Sell* never suggests a post price at or below the vendor price ÷ (1 − cut); it says *vendor it instead*.
 - **Buy a pattern to level cheaper** (2026-10-14, from ProfessionMaster): when a recipe item listed on the auction house would make a CRAFT-11 reach path cheaper including its price, show it as an option. Today such recipes are excluded as *needs pattern or other source*.
 - **Green recipes when much cheaper** (2026-10-14, from ProfessionMaster): allow a green recipe in a reach path only when every orange and yellow option costs more than twice as much per point, labelled as uncertain.
-- **Confirm skill-up colours from our own captures** (2026-10-14): the addon already records each recipe's difficulty in the profession window at the captured rank. Compare that with the catalog's colour ranks to confirm or contradict the Classic estimates on Forever, as evidence for the catalog (ProfessionMaster ships a Forever recipe table, but it's all rights reserved, so we gather our own).
 - **Mail and auction expiry warnings** (2026-10-14, from TSM's task list): items or gold in a captured mailbox close to its 30-day expiry, and your auctions about to end.
-- **Vendor the junk** (walkthrough 2026-10-13): Stock showed 20 of 43 held items with no price, mostly vendor trash. Suggest vendoring held items with a vendor price and no auction price, using captured vendor prices only.
 - **Best use of a material:** for an item such as Linen or Wool Cloth, compare selling it with each craft it feeds, at current prices.
 - **Value-add chart** (suggested 2026-10-04): in the recipe explanation, a tier-by-tier waterfall from raw materials through intermediates to the finished item. It shows cost added and the sale value at each tier where it's listed (an unlisted tier shows no value, never zero), so you can see where the margin is made. It draws from the existing `crafting.py` calculation, never a second costing path in SQL. Cross-profession chains wait for STORY-015b.
 
@@ -243,35 +319,6 @@ Acceptance:
 - **Multi-yield costing:** if an in-game check shows a recipe makes more than 1, build whole crafts, round unit costs up to the copper, and show leftovers without crediting them. Keep the shopping list and the all-craft materials consistent. Until then the calculator can reject such intermediates with "Fractional unit costs" (`requirements.md` → *Not modeled*). **Moves to the top of Next if the Bolt of Linen Cloth check finds a yield above 1.**
 - **Skill-up demand map:** now STORY-047 in Next (2026-10-08).
 - **In-game recipe reader:** now part of *Known recipes and skill* under *Your own character's data* (reading your own character's data was approved 2026-10-06).
-
-**Launch runbook** (moved from Next, product owner 2026-10-06): beta and live are separate markets (DATA-03), so launch needs no data migration or cutover rehearsal. Do both parts in the week before 4 November, when the steps are current.
-
-**STORY-020a — Rehearse the launch-day in-game steps**
-
-Split from STORY-020 at grooming (2026-10-05) so the part that needs the beta isn't blocked by STORY-016.
-
-As a gold maker, I want the in-game half of the launch checklist rehearsed while the beta is still up, so that launch day has no surprises.
-
-Acceptance:
-- **A draft runbook** in `docs/`, linked from `status.md`, with the in-game steps: install or update the addon and check that it loads (the `.toc` interface number may change), first scan, `/reload`, import, clear.
-- **Walked through once** while the beta is still up if convenient (by 21 October); no step timings needed.
-- **Placeholders** for the steps STORY-020b completes.
-- Depends on nothing; uses the current addon (0.3.1).
-
-**STORY-020b — Finish the launch-day runbook**
-
-The rest of STORY-020, split at grooming (2026-10-05). Finished one or two days before 4 November.
-
-As a gold maker, I want a short, tested checklist for 4 November, so that the switch to the live game is quick and nothing is missed.
-
-Acceptance:
-- **Completes STORY-020a's runbook** with:
-  - backing up before and after (STORY-016)
-  - adding and enabling the live Roleplaying Alliance source in `config/market.local.toml`, with its own `source_id`, `environment = "live"`, the live game folder's `scan_path` and its `rules_version` (DATA-03)
-  - re-saving each Forever Wowhead page and regenerating. If the live `rules_version` differs from the beta's, every Forever catalog stays inspection-only until regenerated (*Refresh due* flags it).
-  - re-checking the confirmed and unconfirmed facts under *Product direction* in `requirements.md`
-- **Checked** using archived scans and data copies: the backup, restore and source-cutover steps work end to end. Live-house checks happen at launch.
-- Depends on STORY-016 (deferred; its backup steps wait for it) and STORY-020a.
 
 **STORY-016 — Back up local data**
 
