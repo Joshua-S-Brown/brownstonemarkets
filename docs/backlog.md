@@ -49,44 +49,19 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-092 Supply chains as the prototype drew it
-2. STORY-093 item and character records as the prototype drew them
-3. STORY-094 Level up as the prototype drew it
-4. STORY-087 retire NiceGUI
-5. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-6. STORY-026 scan coverage and rhythm
-7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-8. STORY-006 replay
+1. STORY-093 item and character records as the prototype drew them
+2. STORY-094 Level up as the prototype drew it
+3. STORY-087 retire NiceGUI
+4. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+5. STORY-026 scan coverage and rhythm
+6. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+7. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 091, 095 and SPIKE-009/009b.
-
-### STORY-092 — Supply chains as the prototype drew it
-
-Added 2026-10-16 from the STORY-086 review's usability pass on the beta copy. The engine, numbers and Add to tonight are right (Linen Bag 156c/34c; forcing Bolt to buy gives 180c/10c; Add to tonight puts Linen Bag in Today's route). But the page:
-- opens on Azure Skyforged Pauldrons, which nobody on the team can make: all ten ranked chips are top Board profits, none from the team's professions at its ranks;
-- has ten chips that fill the whole first screen at 390 px;
-- draws fixed 360 px node cards, so a three-material route like Linen Bag needs about two screens of mostly empty card;
-- draws a waterfall of unlabelled bars above a separate text list;
-- puts Batch and Add to tonight below the fold, in one long column.
-
-Presentation and ordering only: no costing change. Built with STORY-089's components.
-
-As a gold maker, I want the route, its margin and the batch on one screen, starting from something we can make, so that I can decide buy-or-craft without scrolling.
-
-Acceptance:
-- **Starting point:** ranked chips put crafts the team can make tonight first (any character Known or Train now, from the same `recipe_status` evidence the nodes show), then the rest marked *no one on the team can make this yet* with the reason in a `Tip`. Draw the makeable group from every valued Board recipe, not just today's top ten: on the 17 Oct scan none of the top ten is makeable and the first makeable one is 110th. Ten chips in all: up to five of each group, filling from the other group when one has fewer than five. Grouping and the cut happen in `supply_chain.outputs`, not the web app. The page opens on the first makeable one; with none, it opens on the first ranked and says so. Ordering within each group stays the Board's. Chips scroll horizontally on narrow screens (one row), with the search beside them.
-- **Layout:** the prototype's two columns at 1100 px and wider: the route `Panel` on the left; *Per craft* and *Batch* `Panel`s stacked on the right. Narrower: route, then Per craft, then Batch. `PageHead` with the basis and scan in the eyebrow and the forcing note as a muted line.
-- **Nodes:** cards size to their content (the prototype's ~210 × 110 px), with name, unit cost, the route toggle (or *Vendor* / *Auction House · N listings*), maker and held count; team recipe status in a `Tip`, not an open list. Edges are curves with ×N labels, solid along the chosen craft path and dashed into unchosen branches, as in the prototype. The output node says *Sells at* with the sale price and an *Output* pill.
-- **Waterfall:** one list of rows, each with its label, quantity × unit cost and signed amount, and a bar inside the row scaled to the sale price; the profit row is a total row. No separate unlabelled chart. A missing price still stops it at that row with its reason.
-- **Batch:** the slider with the number shown big beside it, leaf quantities, spend and profit, and *Add to tonight* as the panel's primary action. The result names Today's reason in plain words.
-- **UI-08 and UI-18 screenshots:** 1280 and 390 px beside the prototype's Supply chains; the route, Per craft and Batch for Linen Bag fit in one screen at 1280×860.
-- **Offline tests:** makeable-first ordering from beyond the top ten, keeping the Board order within each group; the five-and-five split and its fill when one group is short; the opening choice with and without a makeable craft; waterfall rows summing to profit as now; edge styles for chosen and unchosen branches; layout breakpoints in Vitest.
-- **Real data:** beta copy, newest scan (`20261017T104157Z-ff991e`, rechecked 17 Oct after STORY-091; newer imports may move these). The first chip is Copper Dagger (Arille, 601c cost / 824c profit), then White Linen Robe (Basilly, 801c profit); the Board's top non-makeable chip is Mageweave Reagent Bag (82,606c). Linen Bag (Basilly) is 144c / 141c; forcing Bolt of Linen Cloth to buy gives 195c / 90c; ×5 is 30 Linen Cloth + 15 Coarse Thread, 720c spend, 705c profit. Sandpaper now loses 5,748c (Bauxite listed at 3,900c; no team engineer), so its waterfall must show the loss without a positive bar. The 1280 px screenshot shows the whole Linen Bag answer without scrolling. Report any figure that differs and why.
-- Depends on STORY-086 and STORY-089. Rules: CRAFT-03, CRAFT-12, UI-08, UI-18. Design: *Web app (UI-18)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 091, 092, 095 and SPIKE-009/009b.
 
 ### STORY-093 — Item and character records as the prototype drew them
 
@@ -211,6 +186,8 @@ Acceptance:
 - **Documented.** It's the recovery procedure for partial runs referenced in `status.md`. Backup is STORY-016.
 
 ## Later
+
+**Chosen-route column placement** (found in the STORY-092 review, 2026-10-17): Supply chains places each card at its deepest column across chosen *and* unchosen branches, so an item the chosen route uses directly can be pushed right by an unchosen path that also reaches it, leaving its solid edge to cross an empty column. Lay out columns from the chosen path first and only then place unchosen-only nodes.
 
 **One card row per item** (found in the STORY-090 review, 2026-10-17): on the beta, Market's *Cheaper* and *Dearer* cards spend two of their three rows on the same item (Bright Yellow Shirt and Raw Winter Squid, each *base* and *unresolved* at identical prices), because UI-11 lists every identity. Decide in UI-11 whether a card shows one row per item (its largest identity, labelled, as UI-09's movement does) and check whether identical base/unresolved rows are the same listings seen twice (ADDON-08).
 

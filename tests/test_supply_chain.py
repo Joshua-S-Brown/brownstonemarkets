@@ -162,3 +162,69 @@ def test_root_eligibility_uses_selected_catalog_not_shared_item_role(chain):
     assert route['can_add'] and route['profit_copper'] is not None
     chain['snapshot'] = None
     assert not supply_chain.route(chain, 'tailoring', 2393)['can_add']
+
+
+@pytest.mark.parametrize('ready_count,later_count,expected_ready,expected_later', [
+    (8, 8, 5, 5), (2, 12, 2, 8), (12, 2, 8, 2), (0, 12, 0, 10), (12, 0, 10, 0), (2, 1, 2, 1),
+])
+def test_ranked_split_fill_and_board_order(chain, ready_count, later_count, expected_ready, expected_later):
+    template = chain['recipes'][0]
+    rows = [template | {'recipe': template['recipe'] | {'recipe_id': i},
+                        'value': {'profit_copper': 1000 - i}}
+            for i in range(later_count + ready_count)]
+    chain['recipes'] = rows
+    chain['characters'] = {('Maker', 'Beta', 'Alliance'): {
+        'recipes': {}, 'seen': {'tailoring': list(range(later_count, later_count + ready_count))}, 'bags': {}}}
+    result = supply_chain.outputs(chain)['ranked']
+    assert [r['recipe_id'] for r in result] == (
+        list(range(later_count, later_count + expected_ready)) + list(range(expected_later)))
+    assert [r['makeable'] for r in result] == [True] * expected_ready + [False] * expected_later
+    assert all('Maker:' in r['team_reason'] for r in result)
+
+
+def test_makeable_beyond_top_ten_and_no_evidence(chain):
+    template = chain['recipes'][0]
+    chain['recipes'] = [template | {'recipe': template['recipe'] | {'recipe_id': i},
+                                    'value': {'profit_copper': 1000 - i}}
+                        for i in range(115)]
+    chain['characters'] = {('Maker', 'Beta', 'Alliance'): {'recipes': {}, 'bags': {}, 'seen': {'test': [110, 112]}}}
+    result = supply_chain.outputs(chain)['ranked']
+    assert [r['recipe_id'] for r in result] == [110, 112, *range(8)]
+    # A search keeps its Board ordering, independently of the ranked cut.
+    assert supply_chain.outputs(chain, template['catalog']['items_by_id'][
+        template['recipe']['output_item_id']]['name'])['hits'][0]['recipe_id'] == 0
+    chain['characters'] = {}
+    assert [r['recipe_id'] for r in supply_chain.outputs(chain)['ranked']] == list(range(10))
+    assert supply_chain.outputs(chain)['ranked'][0]['team_reason'] == 'No character evidence for this source'
+
+
+def test_train_now_ranking_uses_same_status_as_nodes(chain):
+    recipe = chain['recipes'][0]['recipe']
+    chain['characters'] = {('Maker', 'Beta', 'Alliance'): {'seen': {}, 'bags': {}, 'recipes': {'test': {
+        'known_recipes': {'rows': [{'recipe_id': recipe['recipe_id'], 'learned': False}],
+                          'rank': 300, 'max_rank': 300}}}}}
+    assert supply_chain.outputs(chain)['ranked'][0]['makeable']
+    assert 'Train now' in supply_chain.outputs(chain)['ranked'][0]['team_reason']
+    result = supply_chain.route(chain, 'tailoring', recipe['recipe_id'])
+    assert result['nodes'][0]['characters'][0]['craft_status'] == 'Train now'
+
+
+def test_unchosen_branches_keep_dashed_evidence_without_changing_costs(chain):
+    normal = supply_chain.route(chain, 'tailoring', 2393)
+    assert all(e['chosen'] for e in normal['edges'])
+    forced = supply_chain.route(chain, 'tailoring', 2393, forced={2996: 'buy'})
+    assert next(e for e in forced['edges'] if e['child'] == 2996)['chosen']
+    assert not next(e for e in forced['edges'] if e['child'] == 2589)['chosen']
+    assert {n['item_id'] for n in normal['nodes']} == {n['item_id'] for n in forced['nodes']}
+    assert 2589 not in {leaf['item_id'] for leaf in forced['leaves']}
+    units = {n['item_id']: n['units'] for n in forced['nodes']}
+    assert units[2996] and not units[2589]
+    assert normal['nodes'][0]['output']
+    assert normal['nodes'][0]['sale_price_copper'] == normal['waterfall'][0]['amount_copper']
+
+
+def test_loss_waterfall_sums_to_negative_profit(chain):
+    chain['observations'][2576] = {'min_buyout': 1, 'market_value': 1}
+    result = supply_chain.route(chain, 'tailoring', 2393)
+    assert result['waterfall'][-1]['amount_copper'] < 0
+    assert sum(line['amount_copper'] for line in result['waterfall'][:-1]) == result['waterfall'][-1]['amount_copper']

@@ -14,6 +14,8 @@ import { Chains, Graph, type Route } from "./Chains";
 import { addToTonight, readState, writeState, type Plan } from "../today/state";
 import { placeURL } from "../../app/Palette";
 const output = {
+  makeable: true,
+  team_reason: "Basilly: Known",
   catalog_id: "tailoring",
   recipe_id: 3755,
   item_id: 4238,
@@ -30,6 +32,9 @@ function route(forced = false, batch = 1): Route {
     can_add: true,
     nodes: [
       {
+        output: false,
+        sale_price_copper: null,
+        listings: 2,
         item_id: 2996,
         name: "Bolt of Linen Cloth",
         units: 3,
@@ -319,4 +324,132 @@ it("words held units without implying zero is a partial count", () => {
   expect(screen.getByText("None seen in captured bags and banks")).toBeTruthy();
   show(11, true);
   expect(screen.getByText("Held: at least 11")).toBeTruthy();
+});
+
+it.each([true, false])(
+  "opens the projection's first chip with makeable=%s",
+  async (makeable) => {
+    const urls: URL[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: URL) => {
+        urls.push(url);
+        return {
+          ok: true,
+          json: async () =>
+            url.pathname.endsWith("/route")
+              ? route()
+              : { ranked: [{ ...output, makeable }], hits: [], hit_count: 0 },
+        };
+      }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <Chains source="beta" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (u) =>
+            u.pathname.endsWith("/route") &&
+            u.searchParams.get("recipe_id") === "3755",
+        ),
+      ).toBe(true),
+    );
+    expect(Boolean(screen.queryByText(/No ranked craft is makeable/))).toBe(
+      !makeable,
+    );
+  },
+);
+
+it("draws curved solid chosen edges and dashed unchosen branches", () => {
+  const r = route();
+  r.nodes = [
+    r.nodes[0]!,
+    { ...r.nodes[0]!, item_id: 2589, name: "Linen Cloth", column: 2, units: 0 },
+    {
+      ...r.nodes[0]!,
+      item_id: 4238,
+      name: "Linen Bag",
+      column: 0,
+      output: true,
+      sale_price_copper: 300,
+    },
+  ];
+  r.edges = [
+    { parent: 4238, child: 2996, quantity: 3, chosen: true },
+    { parent: 2996, child: 2589, quantity: 2, chosen: false },
+  ];
+  const { container } = render(<Graph route={r} force={vi.fn()} />);
+  const paths = container.querySelectorAll("path");
+  expect(paths.length).toBe(2);
+  expect(paths[0]!.getAttribute("d")).toContain("C");
+  expect(paths[0]!.getAttribute("stroke-dasharray")).toBeNull();
+  expect(paths[1]!.getAttribute("stroke-dasharray")).toBe("3 5");
+  expect(screen.getByText("Sells at")).toBeTruthy();
+  expect(screen.getByText("Output")).toBeTruthy();
+  // An unchosen-branch node offers no route toggle: forcing it cannot change cost.
+  expect(screen.getByText("Not on the chosen route")).toBeTruthy();
+  expect(screen.queryByRole("group", { name: "Linen Cloth route" })).toBeNull();
+});
+
+it("scales an intermediate waterfall to its largest cost, not one copper", async () => {
+  const { Waterfall } = await import("./Chains");
+  const r = route();
+  r.waterfall = [
+    {
+      label: "Linen Cloth",
+      quantity: 2,
+      unit_cost_copper: 50,
+      amount_copper: -100,
+      start_copper: 0,
+      end_copper: -100,
+    },
+    {
+      label: "Coarse Thread",
+      quantity: 1,
+      unit_cost_copper: 25,
+      amount_copper: -25,
+      start_copper: -100,
+      end_copper: -125,
+    },
+  ];
+  const { container } = render(<Waterfall route={r} />);
+  const widths = [
+    ...container.querySelectorAll<HTMLElement>("[data-negative] [style]"),
+  ].map((b) => b.style.width);
+  expect(widths).toEqual(["100%", "25%"]);
+});
+
+it("keeps labelled signed rows, quantity evidence and a negative total in one waterfall", async () => {
+  const { Waterfall } = await import("./Chains");
+  const r = route();
+  r.waterfall = [
+    { label: "Sale", amount_copper: 100, start_copper: 0, end_copper: 100 },
+    {
+      label: "Bauxite",
+      quantity: 2,
+      unit_cost_copper: 3900,
+      amount_copper: -7800,
+      start_copper: 100,
+      end_copper: -7700,
+    },
+    {
+      label: "Profit",
+      amount_copper: -7700,
+      start_copper: 0,
+      end_copper: -7700,
+    },
+  ];
+  const { container } = render(<Waterfall route={r} />);
+  expect(screen.getByText("Bauxite")).toBeTruthy();
+  expect(screen.getByText(/2 ×/)).toBeTruthy();
+  expect(screen.queryByRole("img")).toBeNull();
+  const negative = container.querySelectorAll('[data-negative="true"]');
+  expect(negative.length).toBe(2);
+  expect(negative[1]!.textContent).toContain("Profit");
+  expect(screen.getByText("+")).toBeTruthy();
 });

@@ -24,7 +24,8 @@ Work through these steps, pausing for my answers where marked:
    and anything in status.md's Limitations that the backlog doesn't cover yet.
 
 2. Review the backlog. For each Now/Next story: is it still worth doing, still in the right order, and are
-   its acceptance criteria testable? Flag stories that should be split, merged, dropped or re-ordered, with
+   its acceptance criteria testable (an *Offline tests* line names behaviours to prove, not test cases to
+   write)? Flag stories that should be split, merged, dropped or re-ordered, with
    one line of reasoning each. Pause for my answers.
 
 3. Ideate, grouped by theme. For each idea give: the problem it solves for me as a gold maker, what data it

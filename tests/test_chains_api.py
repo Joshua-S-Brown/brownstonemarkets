@@ -44,5 +44,7 @@ def test_source_and_market_compatibility(client, monkeypatch):
     from api import context
     assert browser.get('/api/chains?source=another').status_code == 404
     monkeypatch.setattr(context, 'enabled', lambda: [source | {'rules_version': 'other'}])
-    assert browser.get('/api/chains').json() == {'ranked': [], 'hits': [], 'hit_count': 0}
+    result = browser.get('/api/chains').json()
+    assert result['scan_at']
+    assert result['ranked'] == result['hits'] == [] and result['hit_count'] == 0
     assert browser.get('/api/chains/route?catalog_id=tailoring&recipe_id=2393').status_code == 404

@@ -14,6 +14,8 @@ router = APIRouter()
 
 
 class Output(BaseModel):
+    makeable: bool
+    team_reason: str
     catalog_id: str
     recipe_id: int
     item_id: int
@@ -23,6 +25,7 @@ class Output(BaseModel):
 
 
 class Outputs(BaseModel):
+    scan_at: str | None
     ranked: list[Output]
     hits: list[Output]
     hit_count: int
@@ -41,6 +44,9 @@ class CharacterStatus(BaseModel):
 
 
 class Node(BaseModel):
+    output: bool
+    sale_price_copper: int | None
+    listings: int | None
     quality: int | None = None
     item_id: int
     name: str
@@ -58,6 +64,7 @@ class Node(BaseModel):
 
 
 class Edge(BaseModel):
+    chosen: bool
     parent: int
     child: int
     quantity: int

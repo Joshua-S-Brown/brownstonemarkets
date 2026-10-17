@@ -1,78 +1,267 @@
-.panel {
-  overflow: auto;
-  max-height: 760px;
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+.picker {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 14px 0 8px;
+  min-width: 0;
+}
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  min-width: 0;
+  padding: 4px 2px;
+  flex: 1;
+  scrollbar-width: thin;
+}
+.chip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.chip > button {
+  white-space: nowrap;
+  border-radius: 24px;
+}
+.chip > button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.chip :global([data-tone]) {
+  font-size: 10px;
+}
+.search {
+  flex: 0 0 190px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.search input {
+  width: 100%;
+  padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+.layout > * {
+  min-width: 0;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.graphWrap {
+  overflow: auto;
+  padding: 4px;
 }
 .graph {
   position: relative;
-  width: var(--graph-width);
-  height: var(--graph-height);
+  width: max-content;
+  min-width: 100%;
 }
 .edges {
   position: absolute;
+  inset: 0;
   color: var(--muted);
+  pointer-events: none;
+}
+.edges path {
+  stroke-width: 1.5;
+}
+.edges path[data-chosen="true"] {
+  stroke: var(--accent);
 }
 .edges text {
-  fill: currentColor;
+  fill: var(--muted);
+  font-size: 11px;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
 }
 .nodes {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), 186px);
+  gap: 16px 24px;
+  align-items: center;
 }
 .node {
-  position: absolute;
-  width: 280px;
-  height: 336px;
-  overflow: auto;
-  padding: 16px;
-  box-sizing: border-box;
+  position: relative;
+  width: 186px;
+  padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--surface);
+  font-size: 11px;
+}
+.node[data-output="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .node h3 {
-  margin-top: 0;
+  margin: 0 0 6px;
+  font-size: 13px;
 }
 .node p {
-  margin: 8px 0;
+  margin: 2px 0;
 }
-.node button {
-  min-height: 32px;
-}
-.node button[aria-pressed="true"] {
-  outline: 2px solid currentColor;
-}
-.waterfall {
-  max-width: 620px;
-}
-.waterfall p {
+.price,
+.status {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
-  border-bottom: 1px solid var(--line);
-  padding: 8px;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.status {
+  font-size: 11px;
+  margin-top: 4px;
+}
+.status button {
+  font-size: 10px;
+}
+.toggle {
+  display: flex;
+  gap: 4px;
+}
+.node button {
+  font-size: 11px;
+  padding: 3px 5px;
+  min-height: 32px;
+}
+.toggle button {
+  flex: 1;
+}
+.toggle button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.waterRow {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.waterLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.waterLabel > :last-child {
+  white-space: nowrap;
+}
+.waterRow small {
+  font-size: 11px;
+}
+.barTrack {
+  height: 3px;
+  margin-top: 4px;
+  background: var(--surface-2);
+}
+.bar {
+  height: 100%;
+  background: var(--good);
+}
+.waterRow[data-negative="true"] .bar {
+  background: var(--bad);
+}
+.total {
+  border-bottom: 0;
+  border-top: 2px solid var(--fg);
+  margin-top: 4px;
+  font-weight: 700;
+}
+.batch {
+  font-size: 26px;
+  font-family: var(--f-display);
+  margin: 0;
+  line-height: 1;
+}
+.side input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.totals {
+  margin: 4px 0;
+}
+.totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 0;
+}
+.totals dd {
+  margin: 0;
+}
+.add {
+  width: 100%;
+  margin: 8px 0;
+}
+@media (max-width: 1099px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 @media (max-width: 767px) {
-  .panel {
-    max-height: none;
+  .picker {
+    gap: 8px;
   }
-  .graph {
-    width: auto;
-    height: auto;
+  .search {
+    flex-basis: 120px;
   }
-  .edges {
-    display: none;
+  .search input {
+    min-height: 44px;
   }
-  .node {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 12px 0 12px var(--indent);
+  .chip > button {
+    min-height: 44px;
   }
   .node button {
     min-height: 44px;
   }
+}
+
+.page h1 {
+  margin: 6px 0;
+}
+.layout h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.side > section > div {
+  padding: 12px;
+}
+.totals button {
+  min-height: 32px;
+}
+@media (max-width: 767px) {
+  .totals button {
+    min-height: 44px;
+  }
+}
+
+.chips::-webkit-scrollbar {
+  height: 4px;
+}
+.page > .muted {
+  margin: 8px 0;
+}
+.unitCost {
+  display: inline;
+  white-space: nowrap;
+}
+
+.waterfall {
+  display: grid;
 }

@@ -5,20 +5,21 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Implemented
 
-- **Supply chains (STORY-086):** `/app/chains?source=&catalog=&recipe=` explores compatible
-  outputs using Market's cached routes, opening on the top ranked craft. Ranked chips and name/ID
-  search (only while searching, at most 50 hits) include intermediates;
-  item Made from rows link to their recipes. Buy/vendor/craft overrides use the shared engine,
-  with cheapest-route reset, per-craft copper waterfall and server-sized batch leaves/depth.
-  Team makers, recipe status, held units and postage evidence remain inspectable. Add to tonight
-  shares Today's tab session choices; exploration overrides never enter Today.
-  The lazy graph uses SVG edges and item cards, becoming an indented list below 768 px.
-  Offline: `test_supply_chain.py`, `test_chains_api.py`, Chains Vitest; unforced routes equal the
-  cheapest option across every catalog. Copied beta scan `20261016T113727Z-eb77d0` matches Market:
-  Linen Bag 156c/34c cost/profit (Bolt bought: 180c/10c), Blue Linen Vest 186c/289c
-  (210c/265c), Sandpaper 840c/1,250c with Basilly's Tailoring Bolt. Linen Bag ×5 is
-  30 Linen Cloth +15 Coarse Thread, 780c spend, 170c profit. Screenshots and read-only
-  comparison evidence are ignored under `work/story-086/`.
+- **Supply chains (STORY-086, STORY-092):** `/app/chains?source=&catalog=&recipe=` explores
+  compatible outputs using Market's cached routes. Ranked chips open on the first makeable craft;
+  the projection groups all valued Board recipes by team eligibility before the ten-chip cut.
+  Name/ID search (only while searching, at most 50 hits) also includes intermediates.
+  Buy/vendor/craft overrides use the shared engine; Add to tonight shares Today's tab choices
+  and always uses its cheapest routes. Route, Per craft and Batch use shared panels: two columns
+  from 1100 px, stacked below. Content-sized cards retain maker/status/held evidence; curved
+  quantity edges distinguish chosen paths from unchosen branches, whose cards read *Not on the
+  chosen route* with no toggle or units. Chips and wide graphs scroll
+  horizontally. The labelled waterfall keeps quantities, costs, missing-price stops and losses
+  in its rows. Offline verification: `test_supply_chain.py`, `test_chains_api.py`, Chains Vitest.
+  Copied beta scan `20261017T104157Z-ff991e`: Copper Dagger opens at 601c/824c cost/profit;
+  Linen Bag 144c/141c (Bolt bought: 195c/90c); ×5 uses 30 Linen Cloth + 15 Coarse Thread,
+  720c spend, 705c profit. Sandpaper loses 5,748c. Desktop/mobile prototype comparisons and
+  real-data evidence are ignored under `work/story-092/`.
 
 - **Web foundation (STORY-081):** `/app` serves the React shell beside NiceGUI; source-scoped
   `/api/sources`, `/api/search` and `/api/items/{id}` adapt existing read-only projections.

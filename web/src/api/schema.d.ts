@@ -622,6 +622,8 @@ export interface components {
         Edge: {
             /** Child */
             child: number;
+            /** Chosen */
+            chosen: boolean;
             /** Parent */
             parent: number;
             /** Quantity */
@@ -1165,6 +1167,8 @@ export interface components {
             held: number | null;
             /** Item Id */
             item_id: number;
+            /** Listings */
+            listings: number | null;
             /** Maker */
             maker: string;
             /** Method */
@@ -1173,10 +1177,14 @@ export interface components {
             name: string;
             /** Options */
             options: components["schemas"]["Option"][];
+            /** Output */
+            output: boolean;
             /** Quality */
             quality?: number | null;
             /** Route Note */
             route_note: string;
+            /** Sale Price Copper */
+            sale_price_copper: number | null;
             /** Unit Cost Copper */
             unit_cost_copper: number | null;
             /** Units */
@@ -1195,6 +1203,8 @@ export interface components {
             catalog_id: string;
             /** Item Id */
             item_id: number;
+            /** Makeable */
+            makeable: boolean;
             /** Name */
             name: string;
             /** Profession */
@@ -1203,6 +1213,8 @@ export interface components {
             profit_copper: number | null;
             /** Recipe Id */
             recipe_id: number;
+            /** Team Reason */
+            team_reason: string;
         };
         /** Outputs */
         Outputs: {
@@ -1212,6 +1224,8 @@ export interface components {
             hits: components["schemas"]["Output"][];
             /** Ranked */
             ranked: components["schemas"]["Output"][];
+            /** Scan At */
+            scan_at: string | null;
         };
         /** Pairs */
         Pairs: {

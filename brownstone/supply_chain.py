@@ -8,10 +8,14 @@ from .today_characters import recipe_status
 HIT_LIMIT = 50
 
 
-def output(row):
+def output(row, characters):
     recipe, catalog = row['recipe'], row['catalog']
     item = catalog['items_by_id'][recipe['output_item_id']]
-    return {'catalog_id': catalog_identity(catalog), 'recipe_id': recipe['recipe_id'],
+    statuses = [recipe_status(recipe, state) | {'name': c[0]} for c, state in sorted(characters.items())]
+    makeable = any(s['craft_status'] in ('Known', 'Train now') for s in statuses)
+    reason = '; '.join(f"{s['name']}: {s['craft_status']} {s['character_reason']}".strip() for s in statuses)
+    return {'makeable': makeable, 'team_reason': reason or 'No character evidence for this source',
+            'catalog_id': catalog_identity(catalog), 'recipe_id': recipe['recipe_id'],
             'item_id': item['item_id'], 'name': item['name'], 'profession': recipe['profession'],
             'profit_copper': row['value']['profit_copper']}
 
@@ -28,8 +32,15 @@ def outputs(explorer, query=''):
         item = row['recipe']['output_item_id']
         return q in row['catalog']['items_by_id'][item]['name'].casefold() or q in str(item)
 
-    hits = [output(r) for r in rows if matches(r)] if q else []
-    return {'ranked': [output(r) for r in rows if r['value']['profit_copper'] is not None][:10],
+    characters = explorer['characters']
+    hits = [output(r, characters) for r in rows if matches(r)] if q else []
+    valued = [output(r, characters) for r in rows if r['value']['profit_copper'] is not None]
+    ready = [r for r in valued if r['makeable']]
+    later = [r for r in valued if not r['makeable']]
+    ready_count = min(len(ready), max(5, 10 - len(later)))
+    ranked = ready[:ready_count] + later[:10 - ready_count]
+    snapshot = explorer.get('snapshot') or {}
+    return {'scan_at': snapshot.get('updated_at') or snapshot.get('collected_at'), 'ranked': ranked,
             'hits': hits[:HIT_LIMIT], 'hit_count': len(hits)}
 
 
@@ -68,6 +79,7 @@ def route(explorer, catalog_id, recipe_id, batch=1, maximum=5, forced=None):
     intermediate = original['items_by_id'][recipe['output_item_id']]['role'] != 'finished'
     nodes[0]['unit_cost_copper'] = (value['craft_cost_copper'] // recipe['output_quantity']
                                     if value['craft_cost_copper'] is not None else None)
+    nodes[0]['sale_price_copper'] = value['sale_price_copper'] if not intermediate else None
     leaves = leaf_rows(explorer, catalog, value, batch)
     profit = None if intermediate else value['profit_copper']
     reason = ('Intermediate: no Action Board profit row' if intermediate else
@@ -94,16 +106,17 @@ def build_graph(explorer, catalog, root, buy, forced):
     nodes: dict[int, dict] = {}
     edges: dict[tuple[int, int], dict] = {}
 
-    def visit(item_id, units, column, trail, root_node=False):
+    def visit(item_id, units, column, trail, root_node=False, chosen=True):
         cost, method, _ = unit_route(catalog, buy, item_id, trail, forced) if not root_node else (None, 'craft', {})
         rid = root['recipe_id'] if root_node else catalog['recipe_for_output'].get(item_id)
         recipe = catalog['recipes_by_id'][rid] if rid is not None else None
         if item_id not in nodes:
             nodes[item_id] = node(explorer, catalog, item_id, recipe, method, cost, buy, trail, forced, root_node)
         current = nodes[item_id]
-        current['units'] += units
+        # Unchosen branches are drawn as evidence only; their quantities are never needed.
+        current['units'] += units if chosen else 0
         current['column'] = max(current['column'], column)
-        if method != 'craft' or recipe is None:
+        if recipe is None:
             return
         if rid in trail:
             raise ValueError('Recipe cycle detected')
@@ -112,8 +125,11 @@ def build_graph(explorer, catalog, root, buy, forced):
             child = ingredient['item_id']
             inputs[child] = inputs.get(child, 0) + ingredient['quantity']
         for child, quantity in inputs.items():
-            edges[item_id, child] = {'parent': item_id, 'child': child, 'quantity': quantity}
-            visit(child, units * quantity // recipe['output_quantity'], column + 1, (*trail, rid))
+            active = chosen and method == 'craft'
+            previous = edges.get((item_id, child), {}).get('chosen', False)
+            edges[item_id, child] = {'parent': item_id, 'child': child, 'quantity': quantity,
+                                     'chosen': active or previous}
+            visit(child, units * quantity // recipe['output_quantity'], column + 1, (*trail, rid), chosen=active)
 
     visit(root['output_item_id'], root['output_quantity'], 0, (), True)
     return list(nodes.values()), list(edges.values())
@@ -127,7 +143,9 @@ def node(explorer, catalog, item_id, recipe, method, cost, buy, trail, forced, r
     makers = catalog.get('team_makeable', {}).get((recipe.get('catalog_id', catalog_identity(catalog)),
                                                  recipe['recipe_id']), []) if recipe else []
     maker = {'profession': recipe['profession'], 'made_by': makers[0] if makers else None} if recipe else {}
-    return {'item_id': item_id, 'name': item['name'],
+    metric = base_signal(explorer['metrics'], item_id) or {}
+    return {'item_id': item_id, 'name': item['name'], 'output': root_node,
+            'sale_price_copper': None, 'listings': metric.get('listings'),
             'quality': (base_signal(explorer['items'], item_id) or {}).get('quality'),
             'units': 0, 'column': 0,
             'method': method, 'unit_cost_copper': cost, 'forced': bool(forced and item_id in forced),
@@ -140,7 +158,8 @@ def node(explorer, catalog, item_id, recipe, method, cost, buy, trail, forced, r
 
 
 def leaf_rows(explorer, catalog, value, batch):
-    metrics = {r['item_id']: base_signal(explorer['metrics'], r['item_id']) for r in explorer['metrics']}
+    leaves = {choice['item_id'] for choice in value['shopping_choices']}
+    metrics = {item: base_signal(explorer['metrics'], item) for item in leaves}
     metrics = {item: row for item, row in metrics.items() if row is not None}
     rows = []
     for choice in value['shopping_choices']:
