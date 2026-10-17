@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: shared page components (STORY-089). Every place is in the web app (STORY-082 to STORY-086); STORY-088 to STORY-092 bring each page to the prototype.
+Nothing in progress; the next story is the top of *Order* under Next: shared page components (STORY-089). Every place is in the web app (STORY-082 to STORY-086); STORY-088 to STORY-093 bring each page and record to the prototype.
 
 **Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
@@ -54,11 +54,12 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 3. STORY-090 Market that leads with what moved
 4. STORY-091 Team and Ledger as the prototype drew them
 5. STORY-092 Supply chains as the prototype drew it
-6. STORY-087 retire NiceGUI
-7. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-8. STORY-026 scan coverage and rhythm
-9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-10. STORY-006 replay
+6. STORY-093 item and character records as the prototype drew them
+7. STORY-087 retire NiceGUI
+8. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+9. STORY-026 scan coverage and rhythm
+10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+11. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
@@ -73,16 +74,22 @@ Added 2026-10-16 after an owner walk-through of every web page against the proto
 As the owner, I want every page built from the same clear pieces, so that each one looks like the prototype and leads with its answer.
 
 Acceptance:
-- **Components** in `web/src/ui`, each with a Vitest test, matching the prototype's look (`docs/prototype/web-app.html` CSS: `.panel`, `.panel-h`, `.tile`, `.pill`, `.node`, `.wf-row`):
+- **Port the prototype's styles first:** `tokens.css` already matches the prototype's variables, but almost none of its component CSS was ported, which is why pages re-derive the look by eye. Copy the prototype's rules into CSS modules beside the components (adapting names, not values): `.page-head`, `.panel`/`.panel-h`/`.panel-b`, `.kpis`/`.kpi`, `.pill`, `.chip`/`.filters`, `.seg`, `.table-wrap` and `.num`, `.avatar`, `.skillbar`, `.cell` (coverage matrix), `.stop`/`.stop-title`/`.step`/`.step-what`/`.step-meta`, `.opp`, `.node`/`.edge`/`.edge-label`/`.graph-wrap`, `.wf`/`.wf-row`, `.kv`, and the page grids `.today-grid`, `.chain-layout`, `.ledger-grid`, `.lvl-grid`, `.roster`, with the prototype's seven `@media` breakpoints. Later page stories reuse these, never restyle them.
+- **Components** in `web/src/ui`, each with a Vitest test, built on those styles:
   - `PageHead`: eyebrow (scan or scope · age), title, the place's question as subtitle, optional right-side action.
   - `Panel`: header with title, muted subtitle and optional action or control; body; optional evidence footer through `Evidence`.
-  - `Tile`: label, big value (usually `Money`), caption, optional progress bar (0–1, never shown for unknown values) — the summary strip's tile.
+  - `Tile`: the prototype's `.kpi`: label, big value (usually `Money`), caption, optional progress bar (0–1, never shown for unknown values).
   - `CharacterName`: the character's name only, opening the STORY-084 record by the full `(name, realm, faction)` key, with realm and faction in its tooltip. Initials avatar variant for roster cards.
   - `ConfidencePill` (High good, Medium warn, Low bad) with its reasons in a `Tip`; `SignalPill` for UI-11 labels (*steady*, *contested*, *cheap*, *high*, *thin*, *removed early*) with one colour each.
   - `Identity`: shows nothing for `base`; a muted *variant* or *unresolved* pill with ADDON-08's explanation in a `Tip` otherwise. Variant identities stay separate rows wherever they are now.
   - `DataGrid` options: right-aligned tabular numbers for money, units and percentages; signed percentages coloured by sign only; a compact row density; a `muted` style for zero values (zero stays a real 0, never *unknown*).
   - `ItemLink` gains an optional two-letter initials badge, as the prototype's item squares (no downloaded icons).
+- **`UtcTime`:** one component for every stored time (*16 Oct 11:37 UTC*, with the full ISO value and local time in its tooltip); no page or record prints a raw ISO timestamp.
+- **Shell (prototype `App`, `.topbar`, `.rail`, `.bottom-nav`):** the top bar keeps search, the source chip and theme on one line at every width: the source chip shows the source's short label (full label in its menu), theme is an icon button as in the prototype. Under 860 px the rail becomes the prototype's bottom bar with an icon above each label (inline SVGs ported from the prototype's `Icon`, no icon library). The Data badge never shows a bare *?*: before the inventory has been checked it shows a muted dot with the tooltip *not checked yet*; a read error shows a warn dot with the error in its tooltip.
+- **⌘K palette (prototype `Palette`):** groups *Go to*, *Items* and *Characters*, each hidden when it has no matches (no empty *Places* header). Item rows show the name in its captured quality colour, the catalog role (*Material*, *Craft*, *Intermediate*) and ID on the right, and an `Identity` pill only for non-base identities; the canonical variant key (*v1:e41:g0,0,0,0:s0:b*) moves to the row's tooltip. Characters show `CharacterName` with level.
 - **Cross-cutting fixes:** every character mention in Today, Team, Ledger and records uses `CharacterName` (no full key in page text); every *base*/*unresolved* label uses `Identity`; every place's top uses `PageHead`. Recipe IDs, catalog IDs, rule versions and route reasons that are currently inline move into `Evidence` (UI-08 4). Nothing is removed: each moved fact is still reachable.
+- **Kit page:** `/app/kit` (not in the rail or ⌘K) renders every component with real-data edge states the prototype's example figures never show: unknown and zero money, missing prices, *at least* counts, a character with no profession, *unresolved* and *variant* identities, a 40-character item name, Low confidence with three reasons, an empty list and an error. Page stories and reviews screenshot it to check a state before building a page around it.
+- **Prototype rendering:** the prototype gained a doctype, charset and viewport meta on 2026-10-16, so its own narrow layout (bottom bar, stacked tiles) now renders at 390 px and its middots no longer show as *Â·*. Compare against it as it is now.
 - **Screenshot rule (UI-18):** from this story on, a page story's report includes 1280 and 390 px screenshots beside the prototype's matching view, and the review compares them. This story's report shows each component in both themes.
 - **Offline tests:** each component (unknown values, zero muted, tooltip text, record opening by full key, identity variants); a check that no rendered page text contains a full character key (Today, Team, Ledger Vitest fixtures).
 - **Docs:** `design.md` → *Web app (UI-18)*'s `web/src/ui` row lists the new parts (trim the table or text by as much as you add: under 100 bytes of headroom); `status.md` → *App* and the test count.
@@ -169,6 +176,41 @@ Acceptance:
 - **Real data:** beta copy, scan `20261016T113727Z-eb77d0`: the first chip is a craft Basilly or Arille can make (report which), Linen Bag and Sandpaper match STORY-086's numbers, and the 1280 px screenshot shows the whole Linen Bag answer without scrolling.
 - Depends on STORY-086 and STORY-089. Rules: CRAFT-03, CRAFT-12, UI-08, UI-18. Design: *Web app (UI-18)*.
 
+### STORY-093 — Item and character records as the prototype drew them
+
+Added 2026-10-16 from the full owner review of the inspector records against the prototype's `ItemInspector` and `CharInspector`. Both records hold the right evidence but read as dumps.
+- **Item record:**
+  - seven large tiles push the tabs down, and the tabs wrap onto two lines;
+  - the subtitle says *Quality 1 · base-item Overview* on every tab;
+  - Price history plots three similar-coloured lines on two unlabelled axes;
+  - Listings' scan picker shows *2026-10-16T11:37:31.000Z UTC*;
+  - Our activity prints *newest sale 2026-10-11T10:56:31.000Z*, and its holdings line ends in a stray *·*;
+  - Used in reads *1 units per craft · potential craft*.
+- **Character record:**
+  - Professions prints *Window list: 2026-10-15T10:54:16+00:00 · window list + seen crafted* and a stray *observed*;
+  - Path's seven-column table is crushed into the record, wrapping *Cloudy Skyforged Wristguards* a few letters per line;
+  - Holdings opens with a raw capture dump (*Snapshot id 6:Arille18:…*, *Age hours 38.006*, *Partial no*) before the items;
+  - History's chart uses one colour for every series, and its table leads with ISO times and a *Sequence* column.
+
+Presentation only, built with STORY-089's components. Every fact stays reachable, the evidence in footers and tips.
+
+As the owner, I want a record to tell me what an item or character is and what to do with it at a glance, so that clicking a name is worth it.
+
+Acceptance:
+- **Shared:** the record panel keeps the prototype's width at 1280 px and goes full-screen under 600 px. Its header is the badge or avatar, name and one muted line (item: role from compatible catalogs, *Material*, *Craft* or *Intermediate*, and the ID; character: level, last seen and machine), then a three-fact strip, then tabs on one line (scrolling on narrow screens), then the tab body, then an evidence footer. Times use STORY-089's `UtcTime`.
+- **Item Overview:** facts *Lowest*, *Typical* and *Listings · units*, plus the UI-11 signal as a `SignalPill` in the header. Then the stored-history price line with *typical* as a dashed reference and units as bars, as the prototype draws it. Then a key-value list: where to get it, vendor buy and sell, the post deposit, and team holdings with the *at least* rule. *Best use* and farming spots follow as panels, with NPC names where known and *NPC N* only in evidence. The fixed subtitle bug: the header never names the tab.
+- **Item tabs:** Price history gets one colour per series with a legend, labelled axes (unit price; units listed) and `UtcTime` ticks. Listings' scan picker uses `UtcTime`. Made from and used in shows profession names capitalised, *N units per craft* (singular and plural), the Board's action label in words (*potential craft* becomes the UI-09 wording, unchanged in meaning), and STORY-086's *Open in Supply chains* link. Our activity: `UtcTime`, no trailing separators, sales as a small table (character, sold of posted, each after cut, newest).
+- **Character Professions:** facts *Gold*, *Professions* and *Known recipes*. Each profession is a `skillbar` with *N points before this tier caps*. The window-list and seen-crafted evidence moves into a `Tip`.
+- **Character Path:** per profession, the best next recipe as a highlighted row (recipe, skill needed, cost to reach, earns per craft, where learned), then the other reachable recipes as a compact list with at most four columns (recipe, skill, cost to reach, earns per craft). Points, confidence and where learned sit in each row's `Tip`. No column narrower than its longest word.
+- **Character Holdings:** items first, grouped by location (bags, bank) with units and `Identity` pills, *at least* where a location is unknown or partial. Each capture's metadata (snapshot, age, machine, partial, excluded) goes to the evidence footer.
+- **Character History:** one colour per series with a legend and `UtcTime` axis ticks. The table goes behind *All readings* with `UtcTime` and no *Sequence* column (that moves to evidence).
+- **Offline tests:** header facts for item and character, the subtitle not naming the tab, unit pluralisation, Path rows within four columns, Holdings ordering before evidence, distinct series colours, and no ISO timestamp in rendered record text (Vitest fixtures).
+- **Real data:** beta copy, scan `20261016T113727Z-eb77d0`.
+  - Linen Cloth 2589: lowest 20c, typical 20c, 219 listings · 5,538 units, *contested*, held at least 11.
+  - Arille: Blacksmithing 31/75, Mining 48/75; Path's best next recipe is Cloudy Skyforged Wristguards (skill 50, 4s 5c to reach, 92s 50c per craft); Holdings has 75 bag units and an unknown bank.
+  - Screenshots at 1280 and 390 px beside the prototype's item and character records.
+- Depends on STORY-089. Rules: UI-09, UI-11, UI-13, UI-14, UI-17, UI-18, CRAFT-11, ADDON-08. Design: *Web app (UI-18)*.
+
 ### STORY-087 — Retire NiceGUI
 
 Added 2026-10-16. Last web story: once every place is in the web app.
@@ -180,7 +222,7 @@ Acceptance:
 - **Docs:** UI-07's NiceGUI rules are replaced by UI-18 (keep its URL and back-link rules there), UI-08 7's NiceGUI clause goes, and *App and modules* describes the web app. `requirements.md` and `design.md` end below their current ceilings, and the ceilings in `brownstone/gates.py` drop to match.
 - **Tests:** `tests/ui_trial` is gone; `test_retirement.py` checks NiceGUI is absent; coverage settings name `api` instead of `views` and NiceGUI entries.
 - **Real data:** a full play-evening walk-through on the beta or live source (import, Today route, Market, Team, Ledger), with screenshots.
-- Depends on STORY-082 to STORY-086 and STORY-088 to STORY-092. Rules: UI-05, UI-07, UI-08, UI-18, OPS-01. Design: *App and modules*, *Web app (UI-18)*, *Quality gates*.
+- Depends on STORY-082 to STORY-086 and STORY-088 to STORY-093. Rules: UI-05, UI-07, UI-08, UI-18, OPS-01. Design: *App and modules*, *Web app (UI-18)*, *Quality gates*.
 
 ### STORY-026 — Scan coverage and your play rhythm
 
