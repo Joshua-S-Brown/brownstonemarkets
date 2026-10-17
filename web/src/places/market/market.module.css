@@ -1,0 +1,75 @@
+.pulse {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.card-row > div {
+  min-width: 0;
+}
+.card-row small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.trend {
+  text-align: right;
+  flex-shrink: 0;
+}
+.trend svg {
+  display: block;
+  width: 60px;
+  height: 22px;
+}
+.percent {
+  font-family: var(--f-mono);
+  white-space: nowrap;
+}
+.percent[data-direction="cheap"] {
+  color: var(--good);
+}
+.percent[data-direction="high"] {
+  color: var(--bad);
+}
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+.tools {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tools button {
+  border-radius: 20px;
+  font-size: 12px;
+}
+.tools input {
+  min-width: 160px;
+  flex: 1;
+}
+.evidence {
+  margin-top: 20px;
+}
+@media (max-width: 1050px) {
+  .pulse {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pulse + section > header {
+  flex-wrap: wrap;
+}
+.pulse + section > header > div {
+  max-width: 100%;
+}

@@ -49,38 +49,21 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-090 Market that leads with what moved
-2. STORY-091 Team and Ledger as the prototype drew them
-3. STORY-092 Supply chains as the prototype drew it
-4. STORY-093 item and character records as the prototype drew them
-5. STORY-094 Level up as the prototype drew it
-6. STORY-087 retire NiceGUI
-7. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-8. STORY-026 scan coverage and rhythm
-9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-10. STORY-006 replay
+1. STORY-091 Team and Ledger as the prototype drew them
+2. STORY-092 Supply chains as the prototype drew it
+3. STORY-093 item and character records as the prototype drew them
+4. STORY-094 Level up as the prototype drew it
+5. STORY-087 retire NiceGUI
+6. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+7. STORY-026 scan coverage and rhythm
+8. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+9. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 095 and SPIKE-009/009b.
-
-### STORY-090 — Market that leads with what moved
-
-Added 2026-10-16 after the owner walk-through. Market's data is right but the page doesn't answer *What is the market telling me?* at a glance: the signal cards show bare percentages with no price or trend, *Left early* leads with ammunition (6,929 Crafted Heavy Shot), and the grid opens alphabetically (*Accurate Scope*, *Anti-Venom*…) with most items listed twice (*base* and *unresolved*), 1,204 rows over 41 pages, and a *Stored lowest* column that is empty on the beta copy. Presentation only: UI-09, UI-11 and ADDON-08 selection and ordering rules are unchanged. Built with STORY-089's components.
-
-As the owner, I want Market to show me what moved and why it matters to our chains, so that I can spot a buy or a sell in seconds.
-
-Acceptance:
-- **Head:** `PageHead` with the scan, item count and age (*779 listed now of 2,290 items in our chains* stays as the subtitle's fact).
-- **Signal cards:** *Cheaper than usual*, *Dearer than usual* and *Left early* as three `Panel`s like the prototype: the top three rows each (UI-11's existing order and selection), *N more* expanding to the rest. Each row: `ItemLink` with badge, price now and typical (`Money`), the signed % vs typical, and a sparkline from UI-17 stored history when it has two or more points. *Left early* rows show units and its caption *bought or cancelled; an upper bound on sales*. Rows outside our chains are marked so.
-- **Grid:** one row per item: the base (or legacy) identity is the row; other identities of the same item sit under it, collapsed behind *+N variants/unresolved*, each still its own row with its own prices when opened (ADDON-08: never pooled, never summed). Default sort is the absolute gap to typical, largest first, unknown gaps last; columns as the prototype: Item, Lowest, Typical, vs typical, history sparkline (replacing *Stored lowest*: if the column is empty because of a bug, say so in the report and fix it or drop it), Listings, Units, Signal (`SignalPill`). Filter chips (*All in our chains*, *Materials*, *Crafts and intermediates*, *With a signal*) and a name-or-ID filter in the grid's panel header. Sorting and grouping happen in `brownstone`/`api` projections, not the web.
-- **Caveat:** *Listings are supply, not sales* once in the subtitle; the rest of today's caveats move to the page's evidence footer.
-- **Offline tests:** grouping keeps identities separate (prices and units per identity unchanged, none summed); default sort with unknown gaps last; cards' three-plus-more with UI-11 order kept; sparkline absent below two points.
-- **Docs:** UI-09's presentation sentence describes the grouped grid and cards; trim `requirements.md` by at least as much as you add (146 bytes of headroom on 17 Oct). `status.md` → *Market*.
-- **Real data:** beta copy, newest scan (`20261017T104157Z-ff991e` as of 17 Oct; the 1,204 identity rows above were counted on `20261016T113727Z-eb77d0`): report the item-row count against that scan's identity-row count, the top three of each card, and the first ten grid rows; open Linen Cloth's record from the grid. Screenshots at 1280 and 390 px beside the prototype's Market.
-- Depends on STORY-089. Rules: UI-09, UI-11, UI-17, ADDON-08, UI-18. Design: *Web app (UI-18)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 095 and SPIKE-009/009b.
 
 ### STORY-091 — Team and Ledger as the prototype drew them
 
@@ -247,6 +230,8 @@ Acceptance:
 - **Documented.** It's the recovery procedure for partial runs referenced in `status.md`. Backup is STORY-016.
 
 ## Later
+
+**One card row per item** (found in the STORY-090 review, 2026-10-17): on the beta, Market's *Cheaper* and *Dearer* cards spend two of their three rows on the same item (Bright Yellow Shirt and Raw Winter Squid, each *base* and *unresolved* at identical prices), because UI-11 lists every identity. Decide in UI-11 whether a card shows one row per item (its largest identity, labelled, as UI-09's movement does) and check whether identical base/unresolved rows are the same listings seen twice (ADDON-08).
 
 **Biggest lever across characters** (found in the STORY-088 review, 2026-10-17): Today's lever card takes the first character whose Level up options include a *Level …* step, read from the option text. With one levelling step on the beta that is right, but with several it is not the team's best. Have UI-12 return a structured best next step (character, profession, cost, unlocked profit per craft) and rank it there, so the web neither parses text nor picks by character order.
 

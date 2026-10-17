@@ -3,6 +3,7 @@ import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
+  getExpandedRowModel,
   getPaginationRowModel,
   flexRender,
   type ColumnDef,
@@ -22,19 +23,38 @@ export function DataGrid<T>({
   columns,
   selected,
   density = "normal",
+  subRows,
+  rowKey,
+  onSort,
+  initialSorting = [],
 }: {
   rows: T[];
+  subRows?: (row: T) => T[];
+  rowKey?: (row: T) => string;
+  onSort?: (sorting: SortingState) => void;
+  initialSorting?: SortingState;
   columns: GridColumn<T>[];
   density?: "normal" | "compact";
   selected?: (row: T) => boolean;
 }) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const table = useReactTable({
     defaultColumn: { cell: ({ getValue }) => String(getValue() ?? "unknown") },
     data: rows,
     columns,
     state: { sorting },
-    onSortingChange: setSorting,
+    onSortingChange: (update) => {
+      const next = typeof update === "function" ? update(sorting) : update;
+      setSorting(next);
+      onSort?.(next);
+    },
+    manualSorting: !!onSort,
+    // The server always sorts; a cleared header would hide the order still applied.
+    enableSortingRemoval: !onSort,
+    getSubRows: subRows,
+    getRowId: rowKey,
+    getExpandedRowModel: getExpandedRowModel(),
+    paginateExpandedRows: false,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -83,7 +103,7 @@ export function DataGrid<T>({
           <tbody>
             {table.getRowModel().rows.map((r) => (
               <tr key={r.id} data-selected={selected?.(r.original)}>
-                {r.getVisibleCells().map((c) => (
+                {r.getVisibleCells().map((c, index) => (
                   <td
                     key={c.id}
                     className={`${(c.column.columnDef as GridColumn<T>).presentation?.numeric || typeof c.getValue() === "number" ? kit.num : ""} ${c.getValue() === 0 && (c.column.columnDef as GridColumn<T>).presentation?.mutedZero ? kit.muted : ""}`}
@@ -101,6 +121,9 @@ export function DataGrid<T>({
                         : undefined
                     }
                   >
+                    {index === 0 && r.depth > 0 && (
+                      <span aria-hidden="true">↳ </span>
+                    )}
                     {(c.column.columnDef as GridColumn<T>).presentation
                       ?.signedPercent ? (
                       c.getValue() == null ? (
@@ -115,6 +138,16 @@ export function DataGrid<T>({
                       "unknown"
                     ) : (
                       flexRender(c.column.columnDef.cell, c.getContext())
+                    )}
+                    {index === 0 && r.getCanExpand() && (
+                      <button
+                        className={kit["expand-identities"]}
+                        aria-expanded={r.getIsExpanded()}
+                        onClick={r.getToggleExpandedHandler()}
+                      >
+                        {r.getIsExpanded() ? "−" : "+"}
+                        {r.subRows.length} variants/unresolved
+                      </button>
                     )}
                   </td>
                 ))}

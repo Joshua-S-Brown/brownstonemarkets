@@ -223,8 +223,10 @@ def test_market_grid_catalog_roles_prices_sparkline_and_lazy_item_reads(client, 
     assert rows[2589]['roles'] == ['materials']
     assert rows[2996]['roles'] == ['materials', 'crafts', 'intermediates']
     assert rows[2576]['roles'] == ['crafts']
-    assert rows[99999]['price_copper'] is None and rows[99999]['roles'] == []
-    assert rows[99999]['gap_copper'] is None
+    outside = browser.get('/api/market?q=99999').json()['rows'][0]
+    assert outside['price_copper'] is None and outside['roles'] == []
+    assert outside['gap_copper'] is None
+    assert outside['sparkline'] == [None, None]  # Noncatalog history is included in the same batch.
     assert page['movement']['rows'][0]['change']['min_buyout'] == 1
     assert page['evidence']['source_id']
 
@@ -287,7 +289,9 @@ def test_selected_variant_prices_units_quality_and_refresh_never_use_base(client
     for hit in hits:
         identity = json.dumps([hit['variant_state'], hit['variant_id']])
         item = browser.get('/api/items/6538', params={'variant': identity}).json()
-        row = next(r for r in browser.get('/api/market').json()['rows']
+        parents = browser.get('/api/market?q=6538').json()['rows']
+        identities = [r for parent in parents for r in [parent, *parent['variants']]]
+        row = next(r for r in identities
                    if r['item_id'] == 6538 and r['variant_id'] == hit['variant_id'] and
                    r['variant_state'] == hit['variant_state'])
         assert (item['price_copper'], item['units'], item['quality']) == (
@@ -349,7 +353,7 @@ def test_market_pulse_matches_shared_lists_and_reads_batch_once(tmp_path, monkey
         return real(*args)
     monkeypatch.setattr(ih, '_metrics_by_scan', tracked)
     r = me.load_explorer(source, [catalog], NOW)
-    assert len(calls) == 1 and set(calls[0]) == set(catalog['items_by_id'])
+    assert len(calls) == 1 and set(calls[0]) == {item['item_id'] for item in r['items']}
     assert r['market']['pulse']['cheap'] + r['market']['pulse']['high'] == r['floods']['overshoots']
     assert r['market']['pulse']['early'] == r['removals']['rows']
     assert r['market']['pulse']['cheap'][0]['item_id'] == 2589
@@ -444,3 +448,17 @@ def test_search_role_uses_catalog_evidence_and_joins_disagreements():
     result = {'catalogs': catalogs, 'items': [{'item_id': 1, 'item_name': 'Cloth', 'variant_state': 'variant',
                                             'variant_id': 'exact-key'}]}
     assert search_items(result, 'cloth') == [result['items'][0] | {'role': 'Craft · Material'}]
+
+
+def test_market_api_server_sort_role_filter_and_card_contract(client):
+    browser, _ = client
+    page = browser.get('/api/market').json()
+    assert page['item_count'] > page['listed_chain_count']
+    assert page['identity_count'] >= page['item_count']
+    assert all(len(card['preview']) <= 3 for card in page['cards'].values())
+    assert all(not r['variants'] for r in page['rows'])
+    crafts = browser.get('/api/market?role=crafts&sort=name&descending=false').json()['rows']
+    assert {r['item_id'] for r in crafts} == {2996, 2576}
+    assert [r['name'] for r in crafts] == sorted(r['name'] for r in crafts)
+    rows = browser.get('/api/market?sort=price_copper&descending=true').json()['rows']
+    assert [r['price_copper'] for r in rows] == sorted((r['price_copper'] for r in rows), reverse=True)

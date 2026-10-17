@@ -1,18 +1,21 @@
-import { SignalPill, isSignal } from "../../ui/SignalPill";
-import { PageHead } from "../../ui/PageHead";
-import { Identity } from "../../ui/Identity";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { components } from "../../api/schema";
 import { get } from "../../api/client";
 import type { Market as MarketData, Row, Signal } from "../../api/market";
+import { PageHead } from "../../ui/PageHead";
+import { Panel } from "../../ui/Panel";
+import { SignalPill, isSignal } from "../../ui/SignalPill";
+import { Identity } from "../../ui/Identity";
 import { Money } from "../../ui/Money";
 import { ItemLink } from "../../ui/ItemLink";
+import { UtcTime } from "../../ui/UtcTime";
 import { Tip, Sparkline, ErrorState } from "../../ui/parts";
 import { DataGrid } from "../../ui/DataGrid";
 import { Evidence } from "../../ui/Evidence";
-import styles from "../../theme/app.module.css";
+import styles from "./market.module.css";
 export function signalEvidence(s: Signal) {
   return `${s.listings} listings · ${s.units} units · largest stack ${s.largest_stack_units}/${s.units} · lowest buyout changes ${s.churn.changed}/${s.churn.pairs} comparable gaps${s.churn.pairs ? "" : " (churn unknown)"} · ${s.overshoot.days} days, ${s.overshoot.scans} scans · ${s.overshoot.label}`;
 }
@@ -22,25 +25,27 @@ export function identityVariant(row: {
 }) {
   return JSON.stringify([row.variant_state, row.variant_id]);
 }
-/** Distinct catalog items in the newest snapshot; chain items without listings have no row. */
-export function chainListed(rows: Row[]) {
-  return new Set(rows.filter((r) => r.roles.length > 0).map((r) => r.item_id))
-    .size;
+function Percent({ value }: { value: number | null }) {
+  return (
+    <span
+      className={styles.percent}
+      data-direction={
+        value == null || value === 0 ? "unknown" : value < 0 ? "cheap" : "high"
+      }
+    >
+      {value == null
+        ? "unknown"
+        : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`}
+    </span>
+  );
 }
-export function filterRows(rows: Row[], role: string, q: string) {
-  const search = q.trim().toLowerCase();
-  return rows.filter((r) =>
-    search
-      ? r.name.toLowerCase().includes(search) ||
-        String(r.item_id).includes(search)
-      : role === "signal"
-        ? r.roles.length > 0 &&
-          !!r.signal &&
-          (r.signal.crowding === "contested" ||
-            ["cheap", "high"].includes(r.signal.overshoot.label))
-        : role === "all"
-          ? r.roles.length > 0
-          : r.roles.includes(role),
+function Trend({ values, name }: { values: (number | null)[]; name: string }) {
+  return values.filter((v) => v !== null).length >= 2 ? (
+    <Sparkline values={values} label={`${name} stored lowest buyout`} />
+  ) : (
+    <span className={styles.muted} title="Two priced stored points needed">
+      —
+    </span>
   );
 }
 const columns: ColumnDef<Row>[] = [
@@ -53,6 +58,7 @@ const columns: ColumnDef<Row>[] = [
           id={r.item_id}
           name={r.name}
           quality={r.quality}
+          badge
           variant={identityVariant(r)}
         />
         <small>
@@ -61,44 +67,27 @@ const columns: ColumnDef<Row>[] = [
       </>
     ),
   },
-  ...(["price_copper", "typical_copper", "gap_copper"] as const).map(
-    (key, i) => ({
-      id: key,
-      accessorFn: (r: Row) => r[key] ?? undefined,
-      sortDescFirst: false,
-      header: ["Lowest / unit", "Typical / unit", "Gap to typical"][i],
-      sortUndefined: "last" as const,
-      cell: ({ row: { original: r } }: { row: { original: Row } }) => (
-        <>
-          <Money copper={r[key]} />
-          {key === "gap_copper" && r.gap_percent !== null && (
-            <small
-              style={{
-                color:
-                  r.gap_percent > 0
-                    ? "var(--good)"
-                    : r.gap_percent < 0
-                      ? "var(--bad)"
-                      : "var(--muted)",
-              }}
-            >
-              {r.gap_percent > 0 ? "+" : ""}
-              {r.gap_percent.toFixed(1)}%
-            </small>
-          )}
-        </>
-      ),
-    }),
-  ),
+  ...(["price_copper", "typical_copper"] as const).map((key, i) => ({
+    id: key,
+    accessorFn: (r: Row) => r[key] ?? undefined,
+    header: ["Lowest", "Typical"][i],
+    sortUndefined: "last" as const,
+    cell: ({ row: { original: r } }: { row: { original: Row } }) => (
+      <Money copper={r[key]} />
+    ),
+  })),
+  {
+    id: "gap_percent",
+    header: "vs typical",
+    accessorFn: (r) => r.gap_percent ?? undefined,
+    cell: ({ row: { original: r } }) => <Percent value={r.gap_percent} />,
+  },
   {
     id: "history",
-    header: "Stored lowest",
+    header: "History",
     enableSorting: false,
     cell: ({ row: { original: r } }) => (
-      <Sparkline
-        values={r.sparkline}
-        label={`${r.name} stored lowest buyout`}
-      />
+      <Trend values={r.sparkline} name={r.name} />
     ),
   },
   { accessorKey: "listings", header: "Listings" },
@@ -124,13 +113,57 @@ const columns: ColumnDef<Row>[] = [
       ),
   },
 ];
+function CardRow({ row: r }: { row: components["schemas"]["MarketCardRow"] }) {
+  return (
+    <div className={styles["card-row"]}>
+      <div>
+        <ItemLink
+          id={r.item_id}
+          name={r.name}
+          quality={r.quality}
+          badge
+          variant={identityVariant(r)}
+        />
+        <small>
+          <Identity state={r.variant_state} />
+          {r.outside_chains && " · Outside our chains"}
+        </small>
+        <small>
+          <Money copper={r.price_copper} /> now ·{" "}
+          <Money copper={r.typical_copper} /> typical
+        </small>
+      </div>
+      <div className={styles.trend}>
+        <Trend values={r.sparkline} name={r.name} />
+        <Percent value={r.gap_percent} />
+        {r.removed_units !== null && (
+          <small>{r.removed_units.toLocaleString("en-US")} units</small>
+        )}
+      </div>
+    </div>
+  );
+}
 export function Market({ source }: { source: string }) {
   const [role, setRole] = useState("all"),
     [q, setQ] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "gap_percent", desc: true },
+  ]);
   const [params] = useSearchParams();
-  const query = useQuery({
-    queryKey: [source, "market"],
-    queryFn: ({ signal }) => get<MarketData>("market", source, signal),
+  const sort = sorting[0];
+  const path =
+    "market?" +
+    new URLSearchParams({
+      role,
+      q,
+      sort: sort?.id || "gap_percent",
+      descending: String(sort?.desc ?? true),
+    });
+  const query = useQuery<MarketData>({
+    placeholderData: (previous, query) =>
+      query?.queryKey[0] === source ? previous : undefined,
+    queryKey: [source, "market", role, q, sorting],
+    queryFn: ({ signal }) => get<MarketData>(path, source, signal),
   });
   if (query.error)
     return (
@@ -143,84 +176,110 @@ export function Market({ source }: { source: string }) {
       />
     );
   if (!query.data) return <p role="status">Loading saved Market…</p>;
-  const data = query.data,
-    rows = filterRows(data.rows, role, q);
+  const data = query.data;
   return (
     <>
       <PageHead
-        eyebrow={`${chainListed(data.rows).toLocaleString("en-US")} listed now of ${data.chain_count.toLocaleString("en-US")} items in our chains`}
+        eyebrow={
+          <>
+            Scan {data.evidence.scan_id || "unknown"} ·{" "}
+            {data.item_count.toLocaleString("en-US")} items ·{" "}
+            {data.evidence.freshness?.upstream_known
+              ? `${Number(data.evidence.freshness.age_hours).toFixed(1)}h old`
+              : "price age unknown"}{" "}
+            · <UtcTime value={data.evidence.finished_at} />
+          </>
+        }
         title="Market"
-        subtitle="What is the market telling me?"
+        subtitle={`${data.listed_chain_count.toLocaleString("en-US")} listed now of ${data.chain_count.toLocaleString("en-US")} items in our chains. Listings are supply, not sales.`}
       />
+      {(data.note || data.warning) && (
+        <p role="status">
+          {data.note} {data.warning}
+        </p>
+      )}
       <div className={styles.pulse}>
         {(["cheap", "high", "early"] as const).map((key, i) => (
-          <section key={key}>
-            <h2>
-              {["Cheaper than usual", "Dearer than usual", "Left early"][i]}
-            </h2>
-            <p className={styles.muted}>
-              {key === "early"
-                ? "Removed early units · upper bound on purchases"
-                : "Lowest buyout vs earlier daily median · thin items excluded"}
-            </p>
-            {data.pulse[key].length === 0 && <p>No qualifying evidence.</p>}
-            {data.pulse[key].map((r, i) => (
-              <div key={i}>
-                <ItemLink
-                  id={r.item_id}
-                  name={r.item_name}
-                  variant={identityVariant(r)}
-                />
-                <small>
-                  <Identity state={r.variant_state} />{" "}
-                  {"early" in r
-                    ? `${r.early.units} units`
-                    : r.overshoot.ratio
-                      ? `${(100 * (r.overshoot.ratio.numerator / r.overshoot.ratio.denominator - 1)).toFixed(1)}% · ${r.overshoot.days} days, ${r.overshoot.scans} scans`
-                      : "unknown"}
-                </small>
-              </div>
+          <Panel
+            key={key}
+            title={
+              ["Cheaper than usual", "Dearer than usual", "Left early"][i]!
+            }
+            subtitle={key === "early" ? "last 3 gaps" : "vs typical"}
+          >
+            {data.cards[key]!.preview.map((r, i) => (
+              <CardRow key={i} row={r} />
             ))}
-          </section>
+            {!data.cards[key]!.preview.length && (
+              <p className={styles.muted}>No qualifying evidence.</p>
+            )}
+            {!!data.cards[key]!.more.length && (
+              <details>
+                <summary>{data.cards[key]!.more.length} more</summary>
+                {data.cards[key]!.more.map((r, i) => (
+                  <CardRow key={i} row={r} />
+                ))}
+              </details>
+            )}
+            {key === "early" && (
+              <p className={styles.muted}>
+                bought or cancelled; an upper bound on sales
+              </p>
+            )}
+          </Panel>
         ))}
       </div>
-      <p>
-        {data.note}
-        {data.warning}
-      </p>
-      <div className={styles["grid-tools"]} aria-label="Catalog role filters">
-        {[
-          ["all", "All in our chains"],
-          ["materials", "Materials"],
-          ["crafts", "Crafts"],
-          ["intermediates", "Intermediates"],
-          ["signal", "With a signal"],
-        ].map(([v, label]) => (
-          <button key={v} aria-pressed={role === v} onClick={() => setRole(v!)}>
-            {label}
-          </button>
-        ))}
-        <input
-          aria-label="Search snapshot by name or ID"
-          placeholder="Search every snapshot item…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </div>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        selected={(r) =>
-          String(r.item_id) === params.get("inspect") &&
-          (!params.get("variant") ||
-            params.get("variant") === identityVariant(r))
+      <Panel
+        title="Listed items"
+        action={
+          <div className={styles.tools}>
+            {[
+              ["all", "All in our chains"],
+              ["materials", "Materials"],
+              ["crafts", "Crafts and intermediates"],
+              ["signal", "With a signal"],
+            ].map(([v, label]) => (
+              <button
+                key={v}
+                aria-pressed={role === v}
+                onClick={() => setRole(v!)}
+              >
+                {label}
+              </button>
+            ))}
+            <input
+              aria-label="Search snapshot by name or ID"
+              placeholder="Filter by name or ID"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
         }
-      />
-      <p className={styles.muted}>
-        Units are listed supply. Sellers unknown; no sales or demand forecast.
-      </p>
-      <details>
+      >
+        <DataGrid
+          rows={data.rows}
+          columns={columns}
+          subRows={(r) => r.variants as Row[]}
+          rowKey={(r) => `${r.item_id}:${identityVariant(r)}`}
+          onSort={setSorting}
+          initialSorting={sorting}
+          selected={(r) =>
+            String(r.item_id) === params.get("inspect") &&
+            (!params.get("variant") ||
+              params.get("variant") === identityVariant(r))
+          }
+        />
+        {!data.rows.length && !data.note && (
+          <p>No items match. Clear the filter or try an item ID.</p>
+        )}
+      </Panel>
+      <details className={styles.evidence}>
         <summary>Market evidence and scan movement</summary>
+        <p>
+          Lowest buyout vs earlier daily median; thin items excluded from price
+          cards. Units are listed supply. Sellers unknown; no sales or demand
+          forecast.
+        </p>
         <Evidence
           data={{
             evidence: data.evidence,

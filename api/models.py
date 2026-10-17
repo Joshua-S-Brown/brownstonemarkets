@@ -81,10 +81,34 @@ class MarketRow(BaseModel):
     units: int | None
     signal: dict[str, Any] | None
     sparkline: list[int | None]
+    variants: list["MarketRow"] = []
+
+
+class MarketCardRow(BaseModel):
+    item_id: int
+    name: str
+    variant_id: str | None
+    variant_state: str | None
+    quality: int | None
+    price_copper: int | None
+    typical_copper: int | None
+    gap_percent: float | None
+    sparkline: list[int | None]
+    outside_chains: bool
+    removed_units: int | None
+
+
+class MarketCard(BaseModel):
+    preview: list[MarketCardRow]
+    more: list[MarketCardRow]
 
 
 class Market(BaseModel):
     rows: list[MarketRow]
+    cards: dict[str, MarketCard]
+    item_count: int
+    identity_count: int
+    listed_chain_count: int
     pulse: dict[str, list[dict[str, Any]]]
     removals: dict[str, Any]
     movement: dict[str, Any]

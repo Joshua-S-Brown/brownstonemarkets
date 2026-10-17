@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException
 from fastapi.encoders import jsonable_encoder
 
-from brownstone import item_history
+from brownstone import item_history, market_presentation
 from brownstone import market_explorer as me
 
 from . import context
@@ -89,10 +89,11 @@ def item(item_id: int, source: str = '', variant: str = ''):
 
 
 @router.get('/market', response_model=Market)
-def market(source: str = ''):
+def market(source: str = '', role: str = 'all', q: str = '', sort: str = 'gap_percent', descending: bool = True):
     chosen = context.resolve(source)
     result = context.explorer(chosen)
-    return jsonable_encoder(result['market'] | {'evidence': context.evidence(chosen, result['snapshot'] or {})})
+    page = market_presentation.project(result['market'], role, q, sort, descending)
+    return jsonable_encoder(page | {'evidence': context.evidence(chosen, result['snapshot'] or {})})
 
 
 def read_history(chosen, item_id):

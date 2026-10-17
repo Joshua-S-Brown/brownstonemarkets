@@ -1012,6 +1012,10 @@ export interface components {
         };
         /** Market */
         Market: {
+            /** Cards */
+            cards: {
+                [key: string]: components["schemas"]["MarketCard"];
+            };
             /** Chain Count */
             chain_count: number;
             evidence: components["schemas"]["Evidence"];
@@ -1019,6 +1023,12 @@ export interface components {
             floods: {
                 [key: string]: unknown;
             };
+            /** Identity Count */
+            identity_count: number;
+            /** Item Count */
+            item_count: number;
+            /** Listed Chain Count */
+            listed_chain_count: number;
             /** Movement */
             movement: {
                 [key: string]: unknown;
@@ -1039,6 +1049,38 @@ export interface components {
             rows: components["schemas"]["MarketRow"][];
             /** Warning */
             warning: string | null;
+        };
+        /** MarketCard */
+        MarketCard: {
+            /** More */
+            more: components["schemas"]["MarketCardRow"][];
+            /** Preview */
+            preview: components["schemas"]["MarketCardRow"][];
+        };
+        /** MarketCardRow */
+        MarketCardRow: {
+            /** Gap Percent */
+            gap_percent: number | null;
+            /** Item Id */
+            item_id: number;
+            /** Name */
+            name: string;
+            /** Outside Chains */
+            outside_chains: boolean;
+            /** Price Copper */
+            price_copper: number | null;
+            /** Quality */
+            quality: number | null;
+            /** Removed Units */
+            removed_units: number | null;
+            /** Sparkline */
+            sparkline: (number | null)[];
+            /** Typical Copper */
+            typical_copper: number | null;
+            /** Variant Id */
+            variant_id: string | null;
+            /** Variant State */
+            variant_state: string | null;
         };
         /** MarketRow */
         MarketRow: {
@@ -1072,6 +1114,11 @@ export interface components {
             variant_id: string | null;
             /** Variant State */
             variant_state: string | null;
+            /**
+             * Variants
+             * @default []
+             */
+            variants: components["schemas"]["MarketRow"][];
         };
         /** Member */
         Member: {
@@ -2225,6 +2272,10 @@ export interface operations {
         parameters: {
             query?: {
                 source?: string;
+                role?: string;
+                q?: string;
+                sort?: string;
+                descending?: boolean;
             };
             header?: never;
             path?: never;

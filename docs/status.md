@@ -32,26 +32,23 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   `web/README.md` covers build/schema commands. Gates include the web checks on macOS; Windows
   reports an explicit skip. Market now lives in the web app (STORY-082).
 
-- **Web Market (STORY-082):** `/app/market?source=` shows the three pulse lists and a sortable,
-  paginated catalog grid; search reaches every snapshot identity. Catalog-role chips, stored-lowest
-  sparklines and signal evidence keep identities separate. URL-backed records have Overview, Price
-  history, Listings, Made from and used in, and Our activity tabs. Selected identities carry `variant`
-  beside `inspect`; history/ladders and catalog routes explicitly describe base/compatible legacy.
-  Item links retain validated Today/Market origins; the NiceGUI Market place redirects to the web page.
-  The two NiceGUI Market/chart views are retired after comparison against copied Forever beta data.
-  `/api/market` shares the explorer cache and batches stored grid histories in one metrics read;
-  the item history, ladder, chain and activity routes read scoped evidence on demand. A web presence
-  socket keeps browser fallback alive while a React tab is connected. The header counts distinct
-  chain items listed now against all catalog-chain items. Evidence disclosures render as labelled
-  lists and tables (`web/src/ui/Evidence.tsx`), never raw JSON; Recharts loads with the first chart tab.
-  Offline checks: `tests/test_web_api.py`, `tests/test_market_explorer.py`, `tests/test_item_history.py`,
-  `tests/test_flood_signals.py`, `tests/test_removed_listings.py` and Market/record Vitest tests.
-  Beta scan `20261016T113727Z-eb77d0`: Linen Cloth and Bolt of Linen Cloth have 30 eligible points each;
-  newest base ladders match the former page at 219/5,538/17 and 70/947/14 listings/units/levels.
-  Neither ladder has no-buyout listings; 95% zoom ends are 30c and 100c. Pulse identities/order/values
-  match Market home's 5 cheap, 5 high and 10 early-removal rows. Checked at 1280 and 390 px without
-  page overflow; the grid/table scroll locally. Screenshots and comparison baseline remain ignored
-  under `work/story-082/`. No collection or imports were run.
+- **Web Market:** `/app/market?source=` uses the shared PageHead, Panels and item badges.
+  Three signal cards preview three identities each; more expands in UI-11/removal order, with
+  current/typical money, signed percentage, stored history and early units. The grouped grid shows
+  base/legacy first (otherwise the first separate identity), with other identities collapsed;
+  no prices or supply are combined. Server projections own grouping, filters and sorting:
+  absolute percentage gap descending, unknown last. Search reaches every snapshot item.
+  Stored history now batches all browsed IDs, including noncatalog items; formerly those histories
+  were omitted. Fewer than two priced points show no sparkline. Evidence retains all caveats.
+  URL-backed records retain Overview, Price history, Listings, Made from and used in, Our activity;
+  exact identity links keep `variant` beside `inspect`. History/ladders/routes retain base/legacy scope.
+  Item-only reads remain lazy; a presence socket keeps browser fallback alive while React is connected.
+  The NiceGUI Market place redirects to the web page; its Market/chart views are retired.
+  Offline checks: `tests/test_market_presentation.py`, `tests/test_web_api.py`, history/flood/removal
+  suites and Market/record Vitest tests. Copied Forever beta scan `20261017T104157Z-ff991e` has
+  2,904 items / 6,284 identities; the default grid has 788 chain items / 1,248 identities.
+  Linen Cloth has 31 stored points. Desktop/mobile comparisons and real-data evidence are ignored
+  under `work/story-090/`; no collection or imports ran.
 
 - **Item movements (UI-16):** Ledger's Items area shares name/ID/catalog filters with Restock,
   with filtered team units, character/day/category totals, own-mail links and residuals first.
@@ -236,7 +233,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,934 Python tests pass (one platform skip), plus 88 Vitest tests.
+Expected: 1,945 Python tests pass (one platform skip), plus 88 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

@@ -40,7 +40,7 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
         metrics = read_scan_metrics(db, config, snapshot['snapshot_id']) or []
         roles = flood_signals.catalog_roles(selected)
         floods = flood_signals.top_lists(flood_signals.signals(db, config, sorted(roles), now), roles)
-        histories = item_history.histories(db, config, sorted(roles))
+        histories = item_history.histories(db, config, sorted({r['item_id'] for r in items}))
         movement = scan_movement(db, config, selected, now)
         removals = removed_listings.top_removals(db, config, sorted(
             {item for catalog in selected for item in catalog['items_by_id']}))
@@ -286,13 +286,14 @@ def grid_rows(result, histories):
 def market_page(result, histories):
     floods = result.get('floods', {})
     overshoots = floods.get('overshoots', [])
+    chain_ids = sorted(flood_signals.catalog_roles(result['catalogs']))
     return {'rows': grid_rows(result, histories),
             'pulse': {'cheap': [r for r in overshoots if r['overshoot']['label'] == 'cheap'],
                       'high': [r for r in overshoots if r['overshoot']['label'] == 'high'],
                       'early': result['removals']['rows']},
             'removals': result['removals'], 'movement': result['movement'],
             'floods': {k: floods.get(k) for k in ('settings', 'scan', 'freshness', 'note')},
-            'chain_count': len(flood_signals.catalog_roles(result['catalogs'])),
+            'chain_ids': chain_ids, 'chain_count': len(chain_ids),
             'warning': result['warning'], 'note': '' if result['snapshot'] else
             'No saved snapshot. Use Data to import complete priced scans.'}
 
