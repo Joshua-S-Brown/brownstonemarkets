@@ -25,8 +25,7 @@ def install(app: FastAPI, dist: Path, token: str | None = None):
 
     @app.middleware('http')
     async def token_boundary(request: Request, call_next):
-        # Every /api write needs the token, whatever its method. NiceGUI's internal transport and
-        # authenticated launcher endpoints keep their existing protocols.
+        # Every /api write needs the token; launcher endpoints authenticate separately.
         if request.method not in ('GET', 'HEAD', 'OPTIONS') and request.url.path.startswith('/api'):
             supplied = request.headers.get('X-Brownstone-Token', '')
             if not secrets.compare_digest(supplied, launch_token):
@@ -49,7 +48,7 @@ def install(app: FastAPI, dist: Path, token: str | None = None):
 
 
 def schema():
-    """Stable schema export without starting NiceGUI or reading local data."""
+    """Stable schema export without starting the server or reading local data."""
     app = FastAPI()
     app.include_router(router, prefix='/api')
     return jsonable_encoder(app.openapi())

@@ -1,4 +1,5 @@
-"""Surviving entry points work even when Streamlit cannot be imported."""
+"""Surviving entry points work without the retired display frameworks."""
+import ast
 import re
 import subprocess
 import sys
@@ -9,34 +10,34 @@ import pytest
 from brownstone.gates import DOC_SIZE_LIMITS, doc_size
 
 ROOT = Path(__file__).resolve().parents[1]
-BLOCK_STREAMLIT = '''
+BLOCK_RETIRED = '''
 import importlib.abc
 import runpy
 import sys
 
-class NoStreamlit(importlib.abc.MetaPathFinder):
+class NoRetiredFramework(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split('.')[0] == 'streamlit':
-            raise ImportError('Streamlit is retired')
+        if fullname.split('.')[0] in ('streamlit', 'nicegui'):
+            raise ImportError('Display framework is retired')
 
-sys.meta_path.insert(0, NoStreamlit())
+sys.meta_path.insert(0, NoRetiredFramework())
 '''
 
 
-def test_app_launcher_and_cli_import_without_streamlit():
-    result = subprocess.run([sys.executable, '-c', BLOCK_STREAMLIT + '''
-import nicegui_app
-import launch_nicegui
+def test_app_launcher_and_cli_import_without_retired_frameworks():
+    result = subprocess.run([sys.executable, '-c', BLOCK_RETIRED + '''
+import brownstone_app
+import launch_app
 import brownstone.cli
-assert launch_nicegui.code_fingerprint()
-assert not any(n.split('.')[0] == 'streamlit' for n in sys.modules)
+assert launch_app.code_fingerprint()
+assert not any(n.split('.')[0] in ('streamlit', 'nicegui') for n in sys.modules)
 '''], cwd=ROOT, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize('command', [[], ['recipes'], ['beta-report'], ['close-story']])
-def test_module_cli_commands_without_streamlit(command):
-    code = (BLOCK_STREAMLIT + "sys.argv = ['brownstone', *sys.argv[1:]]\n"
+def test_module_cli_commands_without_retired_frameworks(command):
+    code = (BLOCK_RETIRED + "sys.argv = ['brownstone', *sys.argv[1:]]\n"
             "runpy.run_module('brownstone', run_name='__main__')")
     result = subprocess.run([sys.executable, '-c', code, *command, '--help'], cwd=ROOT,
                             capture_output=True, text=True, timeout=30)
@@ -48,11 +49,22 @@ def test_retired_artifacts_and_dependency_are_absent():
     assert not (ROOT / 'app.py').exists()
     assert not (ROOT / 'launch.py').exists()
     assert not list(ROOT.glob('Open Old Streamlit App.*'))
-    sources = [ROOT / 'nicegui_app.py', ROOT / 'launch_nicegui.py',
+    sources = [ROOT / 'brownstone_app.py', ROOT / 'launch_app.py',
                *ROOT.glob('brownstone/*.py'), *ROOT.glob('views/*.py')]
     assert all('streamlit' not in p.read_text(encoding='utf-8').lower() for p in sources)
     assert 'streamlit' not in (ROOT / 'pyproject.toml').read_text(encoding='utf-8').lower()
     assert 'streamlit==' not in (ROOT / 'requirements.lock.txt').read_text(encoding='utf-8').lower()
+
+    for path in ROOT.rglob('*.py'):
+        # Ruff's exclusions: hidden folders (.venv, .claude worktrees), work, data and node_modules.
+        parts = path.relative_to(ROOT).parts
+        if any(part.startswith('.') or part in ('work', 'data', 'node_modules') for part in parts):
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'))):
+            if isinstance(node, ast.Import):
+                assert all(a.name.split('.')[0] != 'nicegui' for a in node.names), path
+            elif isinstance(node, ast.ImportFrom):
+                assert (node.module or '').split('.')[0] != 'nicegui', path
 
 
 def test_document_size_and_rule_id_inventory():

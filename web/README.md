@@ -9,8 +9,8 @@ npm run build
 ```
 
 The Python launcher builds automatically when source or lock bytes change. On failure,
-NiceGUI remains available and shows the recovery action. The build is served at `/app`
-by the same loopback-only NiceGUI server. Existing places remain at `/?place=...&source=...`.
+the launcher prints the recovery action. Plain FastAPI serves the build at `/app`;
+legacy `/?place=...&source=...` URLs redirect there.
 
 `npm run schema` regenerates `src/api/schema.d.ts` from the API application's OpenAPI
 contract using the repo's Python environment (`BROWNSTONE_PYTHON` overrides it).
@@ -22,7 +22,7 @@ Queries include the source in their URL and TanStack Query key. Source and scan 
 load before the separate read-only drop inventory request finishes; an unknown waiting count
 is shown as `?`, with checking/error detail in Data. No imports or other writes are exposed.
 Future API POSTs must send the `brownstone-token` meta tag value as `X-Brownstone-Token`.
-NiceGUI's internal transport and authenticated launcher keep their existing protocols.
+Authenticated launcher endpoints use their own token checks.
 
 Fonts are bundled in `public/fonts`, with their SIL Open Font Licenses. The exact Fontsource
 packages in the lock file provide their provenance. No remote font requests occur at runtime.

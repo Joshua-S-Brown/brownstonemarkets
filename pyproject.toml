@@ -9,11 +9,11 @@ description = "Local WoW market research: price snapshots, addon scans and craft
 requires-python = ">=3.11"
 dependencies = ["duckdb>=1.2,<2", "polars>=1.20,<2", "pyarrow>=19,<26", "requests>=2.32,<3", "tzdata>=2025.1",
                 # DuckDB needs pytz to return TIMESTAMPTZ values to Python.
-                "pytz>=2024.1"]
+                "pytz>=2024.1", "fastapi==0.143.0", "uvicorn[standard]==0.54.0", "pydantic==2.14.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "pytest-cov>=5,<8", "pytest-xdist>=3.6,<4", "ruff>=0.6,<1", "mypy>=1.10,<2", "lupa==2.6", "pytest-asyncio>=1,<2", "httpx>=0.28,<1"]
-nicegui = ["nicegui==3.18.0", "pywebview==6.2.1"]
+app = ["pywebview==6.2.1"]
 
 [project.scripts]
 brownstone = "brownstone.cli:main"
@@ -47,7 +47,7 @@ max-complexity = 10
 exclude = ["work", "data", "**/node_modules", "**/__pycache__", "**/.*"]
 
 [tool.coverage.run]
-source = ["brownstone", "views", "launch_nicegui", "nicegui_app", "api", "web_build"]
+source = ["brownstone", "views.today_rows", "launch_app", "brownstone_app", "api", "web_build"]
 branch = true
 
 [tool.coverage.report]
@@ -58,6 +58,6 @@ fail_under = 88
 
 [tool.mypy]
 python_version = "3.12"  # The tested version.
-files = ["api", "web_build.py", "brownstone", "launch_nicegui.py", "nicegui_app.py", "views/nicegui_theme.py", "views/nicegui_navigation.py", "views/today_rows.py"]
+files = ["api", "web_build.py", "brownstone", "launch_app.py", "brownstone_app.py", "views/today_rows.py"]
 ignore_missing_imports = true
 warn_unused_ignores = true

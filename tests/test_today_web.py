@@ -1,6 +1,6 @@
 """STORY-083: shared merge, complete route, API state, settings and lazy session contracts.
 
-Rule coverage migrated from test_nicegui_today*, alongside Vitest interaction tests.
+Rule coverage sits alongside Vitest interaction tests.
 """
 from copy import deepcopy
 from dataclasses import asdict

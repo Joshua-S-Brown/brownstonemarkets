@@ -30,7 +30,7 @@ On Windows, use `py -m venv .venv` and `.venv\Scripts\python.exe` in place of `.
 Double-click **Open Brownstone App.command** (macOS) or **Open Brownstone App.cmd** (Windows), or run:
 
 ```bash
-.venv/bin/python launch_nicegui.py
+.venv/bin/python launch_app.py
 ```
 
 Brownstone opens in its own desktop window on a free port at `127.0.0.1`. A second launch
@@ -46,7 +46,7 @@ Data previews without writing and imports only after explicit review and selecti
 For a copied-data browser check:
 
 ```bash
-.venv/bin/python nicegui_app.py --data-dir /path/to/copied-data --port 8081
+.venv/bin/python brownstone_app.py --data-dir /path/to/copied-data --port 8081
 ```
 
 All money is shown in gold: decimal in tables, `4g 50s 97c` in summaries.

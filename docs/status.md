@@ -21,7 +21,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   720c spend, 705c profit. Sandpaper loses 5,748c. Desktop/mobile prototype comparisons and
   real-data evidence are ignored under `work/story-092/`.
 
-- **Web foundation (STORY-081):** `/app` serves the React shell beside NiceGUI; source-scoped
+- **Web foundation (STORY-081):** `/app` serves the React shell on plain FastAPI; source-scoped
   `/api/sources`, `/api/search` and `/api/items/{id}` adapt existing read-only projections.
   Routes reuse one explorer build per source until the database, config or hourly bucket
   changes: search under 10 ms, item record about 0.25 s. The build (3–9 s) starts in the
@@ -44,7 +44,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   URL-backed records retain Overview, Price history, Listings, Made from and used in, Our activity;
   exact identity links keep `variant` beside `inspect`. History/ladders/routes retain base/legacy scope.
   Item-only reads remain lazy; a presence socket keeps browser fallback alive while React is connected.
-  The NiceGUI Market place redirects to the web page; its Market/chart views are retired.
+  Legacy Market URLs redirect to the web page.
   Offline checks: `tests/test_market_presentation.py`, `tests/test_web_api.py`, history/flood/removal
   suites and Market/record Vitest tests. Copied Forever beta scan `20261017T104157Z-ff991e` has
   2,904 items / 6,284 identities; the default grid has 788 chain items / 1,248 identities.
@@ -73,8 +73,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   keeps a single-line top bar, icon theme menu and narrow bottom navigation. Search shows captured
   quality and compatible catalog roles, keeping variant keys in tooltips.
   Today, Team, Market and Ledger are web places; Data is a lazy sheet opened from
-  the rail, status chip or `?sheet=data`. All legacy NiceGUI places redirect with source; Stock
-  redirects to Ledger, Data to Today with the sheet. NiceGUI remains the loopback server for STORY-087.
+  the rail, status chip or `?sheet=data`. All legacy places redirect with source; Stock
+  redirects to Ledger, Data to Today with the sheet. `brownstone_app.py` serves FastAPI/uvicorn with a pywebview window; `launch_app.py` reuses or restarts it through authenticated endpoints.
   `Open Brownstone App.command` / `.cmd` uses authenticated reuse/restart, native window or browser fallback.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
   queue, confidence, character eligibility and captured funds; today_version 14.
@@ -245,7 +245,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,957 Python tests pass (one platform skip), plus 103 Vitest tests.
+Expected: 1,963 Python tests pass (one platform skip), plus 103 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in
@@ -257,14 +257,14 @@ Install the lock file and open `Open Brownstone App.command` / `.cmd`.
 For real-data verification, copy data/ under ignored work/ and run:
 
 ```bash
-.venv/bin/python launch_nicegui.py --data-dir /path/to/copied-data
+.venv/bin/python launch_app.py --data-dir /path/to/copied-data
 ```
 
 Select Forever beta; open Today, Team, Market (Linen Cloth 2589 and Bolt 2996), Ledger and the Data sheet.
 On Today → This session, inspect each character's Farming summary and expand Farming evidence
 for all rates, object IDs and excluded stretches. Inspect stale/unknown labels, holdings and source
 evidence; preview never writes. A browser check
-uses `nicegui_app.py --data-dir /path/to/copied-data --port 8081`.
+uses `brownstone_app.py --data-dir /path/to/copied-data --port 8081`.
 
 ### After a play session
 

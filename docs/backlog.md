@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: Level up as the prototype drew it (STORY-094). Every place is in the web app (STORY-082 to STORY-086), the shared components exist (STORY-089: `web/src/ui`, kit at `/app/kit`), and Today (STORY-088), Market (STORY-090), Team and Ledger (STORY-091), Supply chains (STORY-092) and the item and character records (STORY-093) follow the prototype; STORY-094 brings Level up to it.
+Nothing in progress; the next story is the top of *Order* under Next: sales speed and suggested stock levels (STORY-062, refine first). The web app migration is complete: every place and record is in the web app and follows the prototype (STORY-081 to STORY-094), and STORY-087 retired NiceGUI for a plain FastAPI/uvicorn server with a pywebview window.
 
 **Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
@@ -49,30 +49,16 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-087 retire NiceGUI
-2. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-3. STORY-026 scan coverage and rhythm
-4. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-5. STORY-006 replay
+1. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+2. STORY-026 scan coverage and rhythm
+3. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+4. STORY-006 replay
 
-**Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
+**Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 091, 092, 093, 094, 095 and SPIKE-009/009b.
-
-### STORY-087 — Retire NiceGUI
-
-Added 2026-10-16. Last web story: once every place is in the web app.
-
-As the owner, I want one app on one stack, so that nothing is maintained twice.
-
-Acceptance:
-- **Server:** a plain FastAPI app on uvicorn (`brownstone_app.py` or similar) replaces `nicegui_app.py`, keeping loopback binding, the launch token, the pywebview window, browser fallback, idle shutdown and UI-05's restart rule. `nicegui` leaves `pyproject.toml` and `requirements.lock.txt`; `fastapi`, `uvicorn` and `pydantic` are declared directly.
-- **Docs:** UI-07's NiceGUI rules are replaced by UI-18 (keep its URL and back-link rules there), UI-08 7's NiceGUI clause goes, and *App and modules* describes the web app. `requirements.md` and `design.md` end below their current ceilings, and the ceilings in `brownstone/gates.py` drop to match.
-- **Tests:** `tests/ui_trial` is gone; `test_retirement.py` checks NiceGUI is absent; coverage settings name `api` instead of `views` and NiceGUI entries.
-- **Real data:** a full play-evening walk-through on the beta or live source (import, Today route, Market, Team, Ledger), with screenshots.
-- Depends on STORY-082 to STORY-086 and STORY-088 to STORY-094. Rules: UI-05, UI-07, UI-08, UI-18, OPS-01. Design: *App and modules*, *Web app (UI-18)*, *Quality gates*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095 and SPIKE-009/009b.
 
 ### STORY-026 — Scan coverage and your play rhythm
 

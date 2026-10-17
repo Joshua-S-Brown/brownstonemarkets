@@ -59,15 +59,13 @@ def test_finder_path_fallback(monkeypatch):
     assert wb.find_tool('node') is None
 
 
-def test_launcher_fallback_banner_still_opens_existing_app(tmp_path, monkeypatch, capsys):
-    import launch_nicegui as launcher
+def test_launcher_build_warning_still_opens_existing_app(tmp_path, monkeypatch, capsys):
+    import launch_app as launcher
     monkeypatch.setattr(launcher, 'ROOT', tmp_path)
     monkeypatch.setattr(launcher, 'build_web', lambda root: 'Web app unavailable: install Node 24 LTS.')
     monkeypatch.setattr(launcher, 'reuse', lambda path: True)
-    monkeypatch.delenv('BROWNSTONE_WEB_WARNING', raising=False)
     assert launcher.main([]) == 0
     assert 'install Node 24 LTS' in capsys.readouterr().out
-    assert 'install Node 24 LTS' in launcher.os.environ['BROWNSTONE_WEB_WARNING']
     monkeypatch.setattr(launcher, 'build_web', lambda root: '')
     assert launcher.main([]) == 0
-    assert 'BROWNSTONE_WEB_WARNING' not in launcher.os.environ
+    assert not capsys.readouterr().out

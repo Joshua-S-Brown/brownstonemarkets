@@ -25,28 +25,17 @@ CLI collection bytes are written before validation, so failures stay inspectable
 
 ## App and modules
 
-`nicegui_app.py` owns loopback entry, URL place/source/Today-tab/view state and lifecycle;
-`launch_nicegui.py` owns native launch, browser fallback and the path/byte fingerprint of
-both entries plus brownstone/views Python sources. Reuse/restart requires authenticated
-launcher state; the fingerprint has no dependency on a removed entry.
+`brownstone_app.py` owns the plain FastAPI loopback server, legacy URL redirects,
+launcher token endpoints and lifecycle. Uvicorn runs on 127.0.0.1; native mode binds
+an ephemeral socket and runs it in a thread while pywebview owns the main thread.
+First load activates the 1280×900 selectable-text window and atomically publishes
+readiness; closing it stops the server. Browser fallback uses API presence sockets
+for the five-minute idle stop. URL and navigation rules are UI-07/UI-18.
 
-| Place | View | Job |
-| --- | --- | --- |
-| Today | nicegui_today | Plan cards/table, shopping, sell, queue, extras, This session |
-| Team | nicegui_team | Roster, progression, hiring |
-| Market | nicegui_market | Item search/chains, movement, removals, flood evidence |
-| Stock | nicegui_stock | Captured holdings, listed value, manual targets |
-| Data | nicegui_import | Explicit addon review/import |
-
-`views/nicegui_theme.py` owns light tokens, chips/badges/banners/tiles/cards/dialogs/empty states.
-`views/today_rows.py` projects framework-free rows/wording. The header wraps place tabs,
-separates Data, and offers source/page information and Today settings. Native text selection
-is enabled. Evidence lives in dialogs/disclosures; rules are UI-07/08.
-
-Per-tab state (`app.storage.tab`) holds Today choices/refill/preferences/ticks per source,
-Team character/window per source, and one import review invalidated by source/config change.
-Import results replace review; drops refresh file evidence. Place/source/tab are URL-backed.
-Settings drafts reopen from saved values and persist only on Save.
+`launch_app.py` owns native launch, browser fallback and the path/byte fingerprint
+of both entries plus brownstone/views/api Python and web sources. Reuse/restart
+requires authenticated launcher state. `views/today_rows.py` projects framework-free
+rows/wording; the web app owns display and per-tab state.
 
 Dependencies point inward: entry → views/api → brownstone; brownstone never imports display
 frameworks, views or api. Calculation modules take supplied data/clock and do not download.
@@ -70,8 +59,8 @@ frameworks, views or api. Calculation modules take supplied data/clock and do no
 
 ### Web app (UI-18)
 
-`nicegui_app.py` mounts `api.router` at `/api` and `web/dist` at `/app`; both share its
-loopback FastAPI server, launcher, token and window until STORY-087 replaces NiceGUI.
+`brownstone_app.py` calls `api.install` to serve `/api` and `web/dist` at `/app`
+from one loopback FastAPI server, launcher token and pywebview window.
 
 | Path | Job |
 | --- | --- |
@@ -224,7 +213,7 @@ journal/diagnostics/errors. Latest: capture then sequence. Tuples retain nils; n
   `today_loading` passes `sales_data` into `build_today` for Today; `sales.combined` attaches scoped
   display evidence before `today_confidence` labels the selected plan. Today v12, no ranking/sizing
   changes. Sell/table/card share `today_rows.sales_text`. Market's item-only `item_summary` loads
-  per-character outcomes and scoped unidentified count; `nicegui_market.own_sales` renders them.
+  per-character outcomes and scoped unidentified count for Our activity.
   `beta_report` supplies validated matching-house journal and parsed scan names to the same projection;
   `beta_markdown` lists attempts/outcomes including money evidence. No schema/addon changes.
 - `scan_timing` isn't imported; `beta_report.scan_attempts` reports it.
@@ -320,7 +309,7 @@ still permits local routes and supplies blocked-material labels. `catalog_for_ro
 the original catalog, while route details use `route_catalog` to obtain the same projection.
 Today retains the board choices for sizing and queue postorder. Team routes its skill-up entries
 through the same graph; This session expands those selected steps; Market uses it for finished and
-unvalued intermediate recipe details. The NiceGUI views show maker/profession, catalog warnings
+unvalued intermediate recipe details. The web views show maker/profession, catalog warnings
 and Queue's uncharged-mail note. Session identity includes Today version so the existing reset path
 discards obsolete choices and ticks.
 
@@ -346,7 +335,7 @@ price contract. No changes to crafting/Board/views should be needed; otherwise a
 ## Quality gates
 
 Pytest offline branch coverage >=floor, Ruff complexity <=10 and mypy run locally/CI from
-pyproject/lock. Mypy covers brownstone, api, web_build, app/launcher, NiceGUI views and today_rows. Source is
+pyproject/lock. Mypy covers brownstone, api, web_build, `brownstone_app.py`, `launch_app.py` and `views/today_rows.py`. Source is
 a TypedDict; other records remain plain dictionaries.
 
 ## Known design debt
@@ -413,7 +402,7 @@ source-local JSON; invalid/unreadable existing files refuse replacement. `build_
 pure clock-supplied projection. `read_watchlist` composes latest_snapshot,
 today_data.read_skillup_market and metrics.units_below_price under base/legacy full scope.
 Hit-name choices use scoped observations/compatible catalogs, not another source's lookup.
-NiceGUI Today/Import render hits without changing host calculations; no standalone editor.
+Today and Data render hits without changing host calculations; no standalone editor.
 
 ## Today contracts
 
@@ -482,7 +471,7 @@ Rules: `requirements.md` → Today. Framework-free calculations.
   `queue_state` checks identity; `route_stops` groups adjacent Queue lines. The web keeps
   tab/source state in sessionStorage. `api/today.py` caches inputs like `context.explorer`, plus
   settings and state minus ticks/Hide Low; Level up is lazy. Our move reuses Today's query.
-  Legacy URLs: `nicegui_navigation.today_url`.
+  Legacy URLs: `brownstone_app.legacy_url`.
 
 
 ### This session (STORY-063)
@@ -627,7 +616,7 @@ UI-09 defines the summary, tabs and removal disclosure; home alone renders marke
 UI-09 defines ordering, distinct-item limit and handling of missing evidence.
 `api.context.explorer` caches builds per source/database/config/hour. `market_page`, `grid_rows`,
 `item_chain` and `item_activity` project web contracts through `api/market.py`.
-`views/nicegui_navigation` links to `/app/market`; the inspector retains UI-07 origins/back stack.
+Legacy `/` item URLs redirect to `/app/market`; the inspector retains UI-07 origins/back stack.
 
 The palette renders up to 50 identity hits; the grid searches every snapshot item by name/ID. IDs, incompatible catalog versions,
 expanded quantities and comparison evidence remain on demand. No writes.

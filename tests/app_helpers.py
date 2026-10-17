@@ -1,4 +1,4 @@
-"""Framework-free synthetic app evidence shared by offline NiceGUI tests."""
+"""Framework-free synthetic app evidence shared by offline tests."""
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 

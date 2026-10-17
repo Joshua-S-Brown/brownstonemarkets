@@ -18,7 +18,6 @@ jobs:
       - run: python -m pip check
       - run: python -m ruff check .
       - run: python -m mypy
-      # NiceGUI user simulation stays offline.
       # Coverage report; fails below the fail_under floor in pyproject.toml.
       - run: python -m pytest -p no:cacheprovider -n auto --cov -ra
 

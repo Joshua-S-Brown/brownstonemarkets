@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import secrets
+import socket
 import subprocess
 import sys
 import time
@@ -20,7 +21,7 @@ ROOT = Path(__file__).resolve().parent
 
 def code_fingerprint():
     digest = hashlib.sha256()
-    paths = [ROOT / 'nicegui_app.py', ROOT / 'launch_nicegui.py',
+    paths = [ROOT / 'brownstone_app.py', ROOT / 'launch_app.py',
              *ROOT.glob('brownstone/**/*.py'), *ROOT.glob('views/**/*.py'),
              *ROOT.glob('api/**/*.py'), ROOT / 'web_build.py', *web_paths(ROOT)]
     for path in sorted(p for p in paths if p.is_file()):
@@ -64,10 +65,12 @@ def reuse(ready_file):
 
 
 def start(args, ready_file, log, *, native):
-    from nicegui.native import find_open_port
-    command = [sys.executable, str(ROOT / 'nicegui_app.py'), '--ready-file', str(ready_file),
+    command = [sys.executable, str(ROOT / 'brownstone_app.py'), '--ready-file', str(ready_file),
                '--focus-token', secrets.token_urlsafe(32), '--code-fingerprint', code_fingerprint()]
-    command += ['--native'] if native else ['--port', str(find_open_port())]
+    with socket.socket() as listener:
+        listener.bind(('127.0.0.1', 0))
+        port = listener.getsockname()[1]
+    command += ['--native'] if native else ['--port', str(port)]
     if args.data_dir:
         command += ['--data-dir', str(args.data_dir.resolve())]
     return subprocess.Popen(command, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
@@ -97,9 +100,6 @@ def main(argv=None):
     warning = build_web(ROOT)
     if warning:
         print(warning)
-        os.environ['BROWNSTONE_WEB_WARNING'] = warning
-    else:
-        os.environ.pop('BROWNSTONE_WEB_WARNING', None)
     if reuse(ready_file):
         return 0
     ready_file.unlink(missing_ok=True)

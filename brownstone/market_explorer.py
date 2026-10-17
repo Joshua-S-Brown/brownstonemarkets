@@ -304,7 +304,7 @@ def market_page(result, histories):
 
 
 def chain_recipe(row, item_id):
-    """UI-09 facts formerly assembled only in the NiceGUI crafting panel."""
+    """UI-09 crafting facts for the Market item record."""
     recipe, value, catalog = row['recipe'], row['value'], row['catalog']
     output = recipe['output_item_id']
     return {'catalog_id': catalog_identity(catalog), 'recipe_id': recipe['recipe_id'],
