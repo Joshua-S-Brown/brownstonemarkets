@@ -51,7 +51,7 @@ def test_batch_matches_every_size_brute_force(nested, count, funds):
     catalogs = [nested_catalog(2) if nested else catalog()]
     observations = {1: {'min_buyout': 10, 'market_value': 20}, 3: {'min_buyout': 150}}
     projection = project_recipes(catalogs, {}, None, False)
-    rows, _, _ = _candidates(catalogs, observations, MARKET, SNAPSHOT, NOW, 24, .05, projection, None, {})
+    rows, _, _, _ = _candidates(catalogs, observations, MARKET, SNAPSHOT, NOW, 24, .05, projection, None, {})
     row = rows[0]
     remaining = {4 if nested else 1: count, 1: count, 2: count}
     ladders = {1: Ladder([(2, 20, 10), (7, 140, 20), (40, 2000, 50)])}
@@ -170,10 +170,10 @@ def test_take_mail_allocation_order_and_rebuilt_queue(monkeypatch):
     import brownstone.today as today
     original = today._candidates
     def makers(*args):
-        rows, hidden, warnings = original(*args)
+        rows, hidden, warnings, board = original(*args)
         for row in rows:
             row['made_by'] = 'Arille'
-        return rows, hidden, warnings
+        return rows, hidden, warnings, board
     monkeypatch.setattr(today, '_candidates', makers)
     result = plan(TodaySettings(1000, 1, 'fixed', max_crafts=3), holdings_data=evidence(
         (1, 1, 'C', 'bags'), (1, 2, 'Basilly', 'bank'), (1, 1, 'Arille', 'bank'),
@@ -225,7 +225,7 @@ def test_no_holdings_matches_pre_story_golden():
         if isinstance(value, dict):
             return {k: strip_version(v) for k, v in value.items()
                     if k not in ('today_version', 'deposit_copper', 'post_duration_hours', 'deposits_to_post_copper',
-                                  'your_sales', 'max_expiries')}
+                                  'your_sales', 'max_expiries', 'unplanned')}
         if isinstance(value, list):
             return [strip_version(v) for v in value]
         return value

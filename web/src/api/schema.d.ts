@@ -1315,6 +1315,10 @@ export interface components {
         };
         /** RouteLine */
         RouteLine: {
+            /** Display */
+            display?: {
+                [key: string]: unknown;
+            };
             /** Evidence */
             evidence: {
                 [key: string]: unknown;

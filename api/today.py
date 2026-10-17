@@ -11,12 +11,12 @@ from fastapi import APIRouter, HTTPException
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 
-from brownstone import recipe_catalogs, session_options, today_loading, today_session, today_settings
+from brownstone import market_explorer, recipe_catalogs, session_options, today_loading, today_session, today_settings
 from brownstone.markets import MARKET_KEYS
 from brownstone.money import parse_money
 from brownstone.today import apply_removals
 from brownstone.today_funds import recorded_balances, resolve_funds
-from views import today_rows
+from views import today_rows, today_web
 
 from . import context
 
@@ -36,6 +36,7 @@ class RouteLine(BaseModel):
     text: str
     evidence: dict[str, Any]
     warnings: str = ''
+    display: dict[str, Any] = Field(default_factory=dict)
 
 
 class RouteStop(BaseModel):
@@ -101,9 +102,9 @@ def build(chosen, request, now):
                    evidence=plan_evidence(chosen, arguments, characters, funds),
                    settings=asdict(saved), characters=list(characters), notes=notes + list(funds.notes) + errors
                    + [today_rows.capture_label(c) for c in result.get('holdings_captures', [])])
-    for stop in payload['stops']:
-        for line in stop['lines']:
-            line['warnings'] = today_rows.warning_text(line['evidence'])
+    with duckdb.connect(str(chosen['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
+        qualities = market_explorer.captured_qualities(db, chosen, arguments['snapshot']['snapshot_id'])
+    today_web.route_lines(payload['stops'], arguments, qualities, result['craft'])
     if warning:
         payload['notes'].append(warning)
     return json.loads(json.dumps(jsonable_encoder(payload))), arguments

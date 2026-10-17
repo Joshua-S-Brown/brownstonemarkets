@@ -186,7 +186,7 @@ def _held_batch(purchases, steps):
 def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut, projection, makers, signals):
     selected = compatible_catalogs(catalogs, market)
     if not selected:
-        return [], Counter(), []
+        return [], Counter(), [], []
     graph = RecipeGraph(selected, makers, market) if makers is not None else None
     caps = price_caps(signals)
     board = rank_catalogs(selected, observations, market, snapshot, now=now,
@@ -223,7 +223,7 @@ def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, au
                      "evidence_notes": route_notes(catalog, recipe, row),
                      "signal": signals.get(row["output_item_id"]),
                      "price_cap_copper": caps.get(row["output_item_id"])})
-    return rows, hidden, board.get("catalog_warnings", [])
+    return rows, hidden, board.get("catalog_warnings", []), board["rows"]
 
 
 def _sort(rows):
@@ -264,6 +264,51 @@ def _select(rows, settings, ladders, *, funds=None, reserved=None, shown=None, h
     feasible, hidden = _feasible(rows, settings, ladders, reserved, funds, holdings)
     # Each output is selected at most once, so other routes to the same output are not extra rows.
     return _sort(shown), hidden + duplicates, len({row["output_item_id"] for row in feasible})
+
+
+def unplanned_rows(board, candidates, crafts, projection, settings, ladders, holdings, catalogs, choices, refill):
+    """Explain Board rows after reservations; never influence the selected plan."""
+    reserved, held = {}, dict(holdings or {})
+    for craft in sorted(crafts, key=lambda r: r['plan_order']):
+        _reserve(craft, ladders, reserved, held)
+    funds = settings.gold_copper - sum(today_holdings.gold_cost(r['purchases']) for r in crafts)
+    indexed = {(r['catalog_id'], r['recipe_id']): r for r in candidates}
+    outputs = {r['output_item_id'] for r in crafts}
+    rows = []
+    for row in board:
+        if row['output_item_id'] in outputs:
+            continue
+        key = row['catalog_id'], row['recipe_id']
+        status = projection['statuses'].get(key, {})
+        candidate = indexed.get(key)
+        reason = unplanned_reason(row, candidate, status, settings, ladders, reserved, funds, held)
+        if reason == 'not selected tonight':
+            reason = selection_reason(key, choices, refill, len(crafts))
+        recipe = catalog_for_row(catalogs, row)['recipes_by_id'][row['recipe_id']]
+        rows.append(row | status | {'tonight_reason': reason, 'required_skill': recipe.get('required_skill')})
+        outputs.add(row['output_item_id'])
+        if len(rows) == 5:
+            break
+    return rows
+
+
+def selection_reason(key, choices, refill, count):
+    if any((c['catalog_id'], c['recipe_id']) == key and c['batch_size'] is None for c in choices or []):
+        return 'unchecked for tonight'
+    if count >= ROW_LIMIT:
+        return f'{ROW_LIMIT}-craft plan limit'
+    return 'refill is off' if not refill else 'not selected tonight'
+
+
+def unplanned_reason(row, candidate, status, settings, ladders, reserved, funds, holdings):
+    if candidate is None:
+        return status.get('character_reason') or row['action']
+    sized, reason = _batch(candidate, settings, ladders, reserved, funds, holdings)
+    if sized is None:
+        return reason
+    if sized['batch_profit_copper'] <= 0 or sized['batch_profit_copper'] < settings.minimum_gain:
+        return 'below minimum gain'
+    return 'not selected tonight'
 
 
 def _reserve(row, ladders, reserved, holdings=None):
@@ -460,7 +505,7 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
     projection = project_recipes(compatible_catalogs(catalogs, market), character_data or {},
                                  settings.character, settings.include_unknown)
     makers = team_makeable(compatible_catalogs(catalogs, market), character_data or {})
-    candidates, hidden, warnings = _candidates(catalogs, observations, market, snapshot, now,
+    candidates, hidden, warnings, board = _candidates(catalogs, observations, market, snapshot, now,
                                               max_age_hours, auction_cut, projection, makers,
                                               base_signals(flood_evidence))
     holdings, captures, units = today_holdings.scoped(holdings_data, projection["character"])
@@ -471,6 +516,8 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
         crafts, excluded, rest, dropped, limits = _choose(candidates, choices, settings, ladders, refill, holdings)
     hidden.update(excluded)
     hidden = +hidden
+    unplanned = unplanned_rows(board, candidates, crafts, projection, settings, ladders, holdings,
+                               catalogs, choices, refill)
     _public_materials(crafts, holdings)
     shopping = _shopping(crafts, metrics)
     sells = [_sell(row, metrics, auction_cut) for row in crafts]
@@ -495,7 +542,7 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
             **({"holdings_captures": captures} if captures else {}),
             **({"holdings_warning": holdings_warning} if holdings_warning else {}),
             "catalog_checks": projection["catalog_checks"],
-            "catalog_warnings": warnings,
+            "catalog_warnings": warnings, "unplanned": unplanned,
             "hidden": dict(hidden), "remaining": {**{name: max(0, len(rows) - ROW_LIMIT)
                                                       for name, rows in lists.items()}, "craft": rest},
             "freshness": freshness, "listing_evidence_available": ladders is not None,

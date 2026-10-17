@@ -1,20 +1,20 @@
-import { ConfidencePill } from "../../ui/ConfidencePill";
-import { PageHead } from "../../ui/PageHead";
-import { CharacterName } from "../../ui/CharacterName";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { post } from "../../api/client";
+import { PageHead } from "../../ui/PageHead";
+import { Panel } from "../../ui/Panel";
+import { Tile } from "../../ui/Tile";
 import { Money } from "../../ui/Money";
-import { Evidence, EvidenceTip } from "../../ui/Evidence";
-import { ItemLink } from "../../ui/ItemLink";
+import { Evidence } from "../../ui/Evidence";
 import { ErrorState } from "../../ui/parts";
 import { type Plan, keepLocal, readState, writeState, todayKey } from "./state";
 import { LevelUp } from "./LevelUp";
-import { PlanText } from "./PlanText";
+import { Route } from "./Route";
+import { Opportunities } from "./Opportunities";
 import { Settings } from "./Settings";
 import { readWindow } from "../team/state";
-import styles from "../../theme/app.module.css";
+import styles from "../../ui/components.module.css";
 const views = ["route", "opportunities", "level-up"];
 export function Today({
   source,
@@ -27,6 +27,8 @@ export function Today({
   const [params, setParams] = useSearchParams();
   const requested = params.get("view") || "route";
   const view = views.includes(requested) ? requested : "route";
+  const [dismissed, dismiss] = useState("");
+  const opportunities = useRef<HTMLDivElement>(null);
   const query = useQuery({
     queryKey: todayKey(source),
     queryFn: async ({ signal }) =>
@@ -41,8 +43,12 @@ export function Today({
       ),
     staleTime: Infinity,
   });
+  const ready = !!query.data;
+  useEffect(() => {
+    if (view === "opportunities" && ready)
+      opportunities.current?.scrollIntoView?.({ block: "start" });
+  }, [view, ready]);
   const { refetch } = query;
-  // The query already loads on mount; refetch only when the view changes (Level up loads lazily).
   const shownView = useRef(view);
   useEffect(() => {
     if (shownView.current === view) return;
@@ -53,6 +59,30 @@ export function Today({
   useEffect(() => {
     if (data) writeState(source, data.state);
   }, [data, source]);
+  // This request starts only after the Route has committed. Its errors/loading never replace the Route.
+  const level = useQuery({
+    queryKey: [
+      source,
+      "today-lever",
+      data?.state.context,
+      data?.state.choices,
+      data?.state.queue_identity,
+      data?.state.refill,
+      readWindow(source),
+    ],
+    enabled: !!data,
+    queryFn: ({ signal }) =>
+      post<Plan>(
+        "today/plan",
+        source,
+        {
+          view: "level-up",
+          state: { ...readState(source), window: readWindow(source) },
+        },
+        signal,
+      ),
+    staleTime: Infinity,
+  });
   if (query.error)
     return (
       <ErrorState
@@ -67,8 +97,19 @@ export function Today({
   const dataParams = new URLSearchParams(params);
   dataParams.set("source", source);
   dataParams.set("sheet", "data");
+  const resetKey = `${source}:${data.state.context}:${data.reset_note}`;
   const queue = data.plan.queue;
   const ticks = data.state.ticks || {};
+  const done = queue.lines.filter((_, i) => ticks[String(i)]).length;
+  const update = (state: Plan["state"]) => {
+    writeState(source, state);
+    client.setQueryData(todayKey(source), { ...data, state });
+  };
+  const setView = (v: string) => {
+    const next = new URLSearchParams(params);
+    next.set("view", v);
+    setParams(next);
+  };
   return (
     <>
       <PageHead
@@ -77,38 +118,49 @@ export function Today({
         subtitle="What should I do today to make gold?"
         action={<Settings source={source} data={data} />}
       />
-      <div className={`${styles.tiles} ${styles["today-summary"]}`}>
-        <div>
-          Planned profit
-          <strong>
-            <Money copper={queue.expected_profit_copper} />
-          </strong>
-        </div>
-        <div>
-          Gold to spend
-          <strong>
-            <Money copper={queue.gold_needed_copper} /> /{" "}
-            <Money copper={data.funds_copper} />
-          </strong>
-          <small>{data.funds_label}</small>
-        </div>
-        <div>
-          Steps done
-          <strong>
-            {queue.lines.filter((_, i) => ticks[String(i)]).length} /{" "}
-            {queue.lines.length}
-          </strong>
-        </div>
-        <div>
-          Data age
-          <strong>
-            {data.plan.freshness.upstream_known &&
+      <div className={styles.kpis}>
+        <Tile
+          label="Gold to spend"
+          value={
+            <>
+              <Money copper={queue.gold_needed_copper} />{" "}
+              <small>
+                of <Money copper={data.funds_copper} />
+              </small>
+            </>
+          }
+          caption={data.funds_label.split(";")[0]}
+          progress={
+            data.funds_copper > 0
+              ? queue.gold_needed_copper / data.funds_copper
+              : null
+          }
+        />
+        <Tile
+          label="Progress"
+          value={`${done} of ${queue.lines.length} steps`}
+          caption="Follow the Route below"
+          progress={queue.lines.length ? done / queue.lines.length : null}
+        />
+        <Tile
+          label="Data age"
+          value={
+            data.plan.freshness.upstream_known &&
             data.plan.freshness.age_hours !== null
               ? `${data.plan.freshness.age_hours.toFixed(1)} hours`
-              : "Price age unknown"}
-          </strong>
-          <small>{waiting ?? "Unknown"} scans waiting</small>
-        </div>
+              : "Price age unknown"
+          }
+          caption={
+            waiting == null
+              ? "Waiting scans not checked"
+              : `${waiting} ${waiting === 1 ? "scan" : "scans"} waiting`
+          }
+        />
+        <Tile
+          label="Planned profit"
+          value={<Money copper={queue.expected_profit_copper} />}
+          caption="At planned undercut · listings, not sales"
+        />
       </div>
       {data.plan.freshness.stale && (
         <p role="alert">
@@ -116,38 +168,30 @@ export function Today({
           import a fresh scan.
         </p>
       )}
-      {data.reset_note && <p role="status">{data.reset_note}</p>}
-      <details>
-        <summary>Funds and capture evidence</summary>
-        {data.notes.map((n, i) => (
-          <p key={i}>{n}</p>
-        ))}
-      </details>
-      {data.plan.holdings_warning && <p>{data.plan.holdings_warning}</p>}
+      {data.reset_note && resetKey !== dismissed && (
+        <div role="status">
+          {data.reset_note}
+          <button onClick={() => dismiss(resetKey)}>
+            Dismiss reset notice
+          </button>
+        </div>
+      )}
       {data.plan.dropped_choices.map((c, i) => (
         <p key={i}>
-          {(data.state.rows || []).find(
+          {data.state.rows?.find(
             (r) => r.catalog_id === c.catalog_id && r.recipe_id === c.recipe_id,
-          )?.output_name || (
-            <EvidenceTip
-              label="Unavailable recipe"
-              data={{ recipe_id: c.recipe_id, catalog_id: c.catalog_id }}
-            />
-          )}
+          )?.output_name || "Requested recipe"}
           : {c.reason}
         </p>
       ))}
-      <div role="tablist" aria-label="Today views">
+      <div role="tablist" aria-label="Today views" className={styles.tabs}>
         {views.map((v) => (
           <button
             key={v}
             role="tab"
+            data-view={v}
             aria-selected={view === v}
-            onClick={() => {
-              const next = new URLSearchParams(params);
-              next.set("view", v);
-              setParams(next);
-            }}
+            onClick={() => setView(v)}
           >
             {v === "level-up"
               ? "Level up"
@@ -157,153 +201,61 @@ export function Today({
           </button>
         ))}
       </div>
-      {view === "route" && (
-        <>
-          <p>{queue.mail_note}</p>
-          {data.stops.length === 0 && (
-            <p>
-              No funded crafts. Open settings or inspect the plan evidence
-              below.
-            </p>
-          )}
-          <ol className={styles["route-list"]}>
-            {data.stops.map((stop, i) => (
-              <li key={i} className={styles["route-stop"]}>
-                <h2>
-                  {i + 1}.{" "}
-                  {(stop.characters || []).length
-                    ? stop.characters.map((c) => (
-                        <CharacterName character={c} key={c.join("|")} />
-                      ))
-                    : stop.character}{" "}
-                  · {stop.place}
-                </h2>
-                {stop.lines.map((line) => (
-                  <div key={line.index}>
-                    <label className={styles["route-line"]}>
-                      <input
-                        type="checkbox"
-                        checked={!!ticks[String(line.index)]}
-                        onChange={(e) => {
-                          const state = {
-                            ...data.state,
-                            ticks: {
-                              ...ticks,
-                              [String(line.index)]: e.target.checked,
-                            },
-                          };
-                          writeState(source, state);
-                          client.setQueryData(todayKey(source), {
-                            ...data,
-                            state,
-                          });
-                        }}
-                      />
-                      <span>
-                        <PlanText
-                          text={line.text}
-                          characters={data.characters}
-                        />
-                      </span>
-                    </label>
-                    {line.warnings && <p>{line.warnings}</p>}
-                    <details>
-                      <summary>Line evidence</summary>
-                      <Evidence data={line.evidence} />
-                    </details>
-                  </div>
-                ))}
-              </li>
-            ))}
-          </ol>
-          <button
-            onClick={() => {
-              void navigator.clipboard.writeText(data.copy_text);
-            }}
-          >
-            Copy as text
-          </button>
-          <details>
-            <summary>Queue text and totals</summary>
-            <pre className={styles["queue-text"]}>{data.copy_text}</pre>
-          </details>
-        </>
-      )}
-      {view === "opportunities" && (
-        <>
-          <label>
-            <input
-              type="checkbox"
-              checked={!!data.state.hide_low}
-              onChange={(e) => {
-                const state = { ...data.state, hide_low: e.target.checked };
-                writeState(source, state);
-                client.setQueryData(todayKey(source), { ...data, state });
-              }}
-            />
-            Hide Low confidence
-          </label>
-          <p>
-            {data.state.hide_low
-              ? data.plan.craft.filter((r) => r.confidence === "Low").length
-              : 0}{" "}
-            Low confidence crafts hidden; the complete Route is retained.
-          </p>
-          <p>
-            Open an item’s Our move panel to adjust its batch, choice, or
-            refill.
-          </p>
-          {data.plan.craft
-            .filter((row) => !data.state.hide_low || row.confidence !== "Low")
-            .map((row) => (
-              <section
-                key={row.catalog_id + row.recipe_id}
-                className={styles["route-stop"]}
+      {view !== "level-up" && (
+        <div className={styles["today-grid"]}>
+          <Panel
+            title="Route"
+            subtitle={`${queue.lines.length} steps`}
+            action={
+              <button
+                className={styles.primary}
+                onClick={() => {
+                  void navigator.clipboard.writeText(data.copy_text);
+                }}
               >
-                <h2>
-                  <ItemLink id={row.output_item_id} name={row.output_name} />
-                </h2>
-                <p>
-                  <Money copper={row.headline_per_craft_copper} /> per craft
-                  {row.profit_basis} · {row.batch_size} crafts ·{" "}
-                  <PlanText
-                    text={row.made_by || "Maker unknown"}
-                    characters={data.characters}
-                  />
-                </p>
-                {row.warnings_text && <p>{row.warnings_text}</p>}
-                <ConfidencePill
-                  level={row.confidence}
-                  reasons={row.confidence_reasons}
-                />
-              </section>
-            ))}
-          {(data.state.rows || [])
-            .filter(
-              (r) =>
-                !data.plan.craft.some(
-                  (c) =>
-                    c.catalog_id === r.catalog_id &&
-                    c.recipe_id === r.recipe_id,
-                ),
-            )
-            .map((row) => (
-              <p key={row.catalog_id + row.recipe_id}>
-                <ItemLink id={row.output_item_id} name={row.output_name} /> ·
-                not in tonight’s plan; open it to include it again.
-              </p>
-            ))}
-        </>
+                Copy as text
+              </button>
+            }
+          >
+            <Route
+              data={data}
+              tick={(index, checked) =>
+                update({
+                  ...data.state,
+                  ticks: { ...ticks, [String(index)]: checked },
+                })
+              }
+            />
+          </Panel>
+          <div ref={opportunities}>
+            <Panel title="Opportunities" subtitle="Tonight and what comes next">
+              <Opportunities
+                data={data}
+                source={source}
+                session={data.session || level.data?.session}
+                openLevel={() => setView("level-up")}
+                hideLow={(hide_low) => update({ ...data.state, hide_low })}
+              />
+            </Panel>
+          </div>
+        </div>
       )}
       {view === "level-up" &&
-        (query.isFetching || !data.session ? (
-          <p role="status">Loading Level up…</p>
+        (data.session || level.data?.session ? (
+          <LevelUp session={(data.session || level.data?.session)!} />
         ) : (
-          <LevelUp session={data.session} />
+          <p role="status">Loading Level up…</p>
         ))}
       <details>
         <summary>How this plan was made</summary>
-        <Evidence data={{ ...data.evidence, plan: data.plan }} />
+        <Evidence
+          data={{
+            ...data.evidence,
+            funds_label: data.funds_label,
+            notes: data.notes,
+            plan: data.plan,
+          }}
+        />
       </details>
     </>
   );

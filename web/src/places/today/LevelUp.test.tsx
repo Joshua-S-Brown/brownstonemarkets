@@ -85,7 +85,7 @@ it("groups equal reaches once, preserves unknown costs/bands, farming rates and 
     }),
   ).toHaveLength(1);
   expect(
-    screen.getAllByText(/skill-up range unknown:/, { selector: "p" }),
+    screen.getAllByRole("button", { name: /skill-up range unknown:/ }),
   ).toHaveLength(2);
   expect(
     screen
@@ -94,4 +94,73 @@ it("groups equal reaches once, preserves unknown costs/bands, farming rates and 
   ).toBe("https://www.wowhead.com/classic/npc=475");
   expect(screen.getByText(/10 units\/hour/).textContent).toContain("no price");
   expect(screen.getByText(/Your own past sessions/)).toBeTruthy();
+});
+it("shows three priced recipes per reach, expands the rest, and groups missing prices", async () => {
+  const { cleanup } = await import("@testing-library/react");
+  cleanup();
+  const recipes = Array.from({ length: 6 }, (_, i) => ({
+    output_item_id: 100 + i,
+    name: `Recipe ${i}`,
+    profit_copper: i < 4 ? 100 : null,
+    board_reason: "missing prices",
+    skillup_band: "needs 35 · you're 31 · orange 35, yellow 50",
+    required_skill: 35,
+    estimate: { complete: true, cost_copper: 405, reasons: [] },
+  }));
+  render(
+    <InspectorContext.Provider value={vi.fn()}>
+      <LevelUp
+        session={{
+          characters: [
+            {
+              character: ["Arille", "Beta", "Alliance"],
+              options_text: [],
+              professions: [
+                {
+                  profession: "Blacksmithing",
+                  rank: 31,
+                  max_rank: 75,
+                  recipes,
+                  milestones: [
+                    { skill: 35, estimate: recipes[0].estimate, recipes },
+                  ],
+                  capped: false,
+                  tier: null,
+                },
+              ],
+              crafts: [],
+              level: 10,
+              farming: {
+                rows: [],
+                spots: [],
+                recorded_seconds: 0,
+                excluded_stretches: 0,
+              },
+            },
+          ],
+        }}
+      />
+    </InspectorContext.Provider>,
+  );
+  expect(screen.getByText("1 more").closest("details")?.open).toBe(false);
+  expect(
+    screen.getByText("2 with missing prices").closest("details")?.open,
+  ).toBe(false);
+  expect(
+    screen
+      .getAllByRole("button", { name: /needs 35 · you're 31/ })
+      .filter(
+        (button) =>
+          !button.closest("details") || button.closest("details")?.open,
+      ),
+  ).toHaveLength(3);
+  fireEvent.click(screen.getByText("1 more"));
+  expect(
+    screen
+      .getAllByRole("button", { name: /needs 35 · you're 31/ })
+      .filter(
+        (button) =>
+          !button.closest("details") || button.closest("details")?.open,
+      ),
+  ).toHaveLength(4);
 });

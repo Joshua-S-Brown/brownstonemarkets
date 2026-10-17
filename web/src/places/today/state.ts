@@ -26,6 +26,7 @@ export type State = {
   queue_identity?: string;
   ticks?: Record<string, boolean>;
   choices?: Choice[] | null;
+  feasible_choices?: Choice[];
   refill?: boolean;
   rows?: Craft[];
 };
@@ -36,6 +37,7 @@ export type Plan = Omit<
   state: State;
   plan: {
     craft: Craft[];
+    unplanned?: import("./Opportunities").Unplanned[];
     sell: ({ output_item_id: number } & Record<string, unknown>)[];
     queue: {
       lines: object[];

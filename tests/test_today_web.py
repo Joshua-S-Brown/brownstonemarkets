@@ -84,7 +84,7 @@ def test_every_stage_route_preserves_lines_and_group_order():
     assert [line['index'] for s in stops for line in s['lines']] == list(range(len(lines)))
     assert len(stops[0]['lines']) == 2 and stops[0]['place'] == 'bank'
     assert stops[2]['place'] == 'mailbox'
-    assert stops[4]['character'] == 'B' and stops[5]['character'] == 'B'
+    assert stops[3]['character'] == 'B' and stops[4]['character'] == 'B'
     assert stops[-2]['place'] == 'tailoring · rank unknown'
     assert stops[-1]['place'] == 'auction house · 8h posts'
     assert 'refunded on a sale' in stops[-1]['lines'][0]['text']
@@ -176,6 +176,7 @@ def test_settings_saved_cancelled_invalid_and_failed_write_keep_saved_plan(brows
     saved = data['settings'] | {'post_duration_hours': 8}
     assert client.post('/api/today/settings', json={'settings': saved}, headers=TOKEN).status_code == 200
     assert load_settings(path).post_duration_hours == 8
+    data['state']['ticks'] = {'0': True}
     updated = request(browser, data['state']).json()
     assert updated['reset_note'] == today_session.PLAN_RESET and updated['state']['ticks'] == {}
     assert all(line['post_duration_hours'] == 8 for line in updated['plan']['queue']['lines']
@@ -257,7 +258,7 @@ def test_bands_unknown_rank_and_catalog_evidence():
     assert 'unknown' in today_rows.recipe_band(row, 1, [catalog()])
     c = catalog()
     c['recipes_by_id'][30]['skillup_colors'] = [1, 20, 30, 40]
-    for rank, color in [(0, 'not yet'), (1, 'orange'), (20, 'yellow'), (30, 'green'), (40, 'grey')]:
+    for rank, color in [(0, "needs 1 · you're 0"), (1, 'orange'), (20, 'yellow'), (30, 'green'), (40, 'grey')]:
         assert today_rows.recipe_band(row, rank, [c]).startswith(color)
     assert 'rank unknown' in today_rows.recipe_band(row, None, [c])
     assert today_rows.band_colour(20, [1, 1, 1, 40]) == 'no reliable skill-ups'

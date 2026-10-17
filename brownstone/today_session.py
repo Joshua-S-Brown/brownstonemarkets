@@ -142,9 +142,10 @@ def session_plan(arguments, state):
     context = plan_context(arguments)
     note = ''
     if state.get('context') != context:
-        note = PLAN_RESET if state else ''
+        note = PLAN_RESET if state.get('choices') or any(state.get('ticks', {}).values()) else ''
         state = dict(context=context, choices=None, refill=True, rows=[], ticks={})
     result = build_today(**arguments, choices=state['choices'], refill=state['refill'])
+    explain_drops(result, state)
     dropped = {(d['catalog_id'], d['recipe_id']) for d in result['dropped_choices']}
     for choice in state['choices'] or []:
         if (choice['catalog_id'], choice['recipe_id']) in dropped:
@@ -155,7 +156,25 @@ def session_plan(arguments, state):
     state['rows'].extend(new)
     if state['choices'] is not None:
         state['choices'].extend({k: r[k] for k in ('catalog_id', 'recipe_id', 'batch_size')} for r in new)
+    state['feasible_choices'] = [{k: row[k] for k in ('catalog_id', 'recipe_id', 'batch_size')}
+                                 for row in result['craft']]
     return result, state, note
+
+
+def explain_drops(result, state):
+    """Distinguish a newly requested size from a previously feasible choice."""
+    previous = {(r['catalog_id'], r['recipe_id'], r['batch_size'])
+                for r in state.get('feasible_choices', state.get('rows', []))}
+    limits = {(r['catalog_id'], r['recipe_id']): r['maximum'] for r in result['choice_limits']}
+    for dropped in result['dropped_choices']:
+        if not dropped['reason'].startswith('Choice is no longer feasible'):
+            continue
+        was_planned = (dropped['catalog_id'], dropped['recipe_id'], dropped['batch_size']) in previous
+        reason = 'Choice is no longer feasible' if was_planned else 'Requested batch does not fit tonight'
+        maximum = limits.get((dropped['catalog_id'], dropped['recipe_id']))
+        if maximum is not None:
+            reason += f'; at most {maximum} fit tonight'
+        dropped['reason'] = reason + '; dropped, not resized.'
 
 
 def queue_state(queue, state):
@@ -175,7 +194,7 @@ def route_stops(queue, crafts, character_data):
         post = next(posts) if line['stage'] == 'post' else None
         character, place = route_place(line, crafts, character_data, post)
         identities = route_identities(line, crafts, character_data, post)
-        key = (line['stage'], character, place, tuple(identities))
+        key = (character, place, tuple(identities))
         if not stops or stops[-1]['key'] != key:
             stops.append(dict(key=key, stage=line['stage'], character=character,
                               characters=identities, place=place, lines=[]))

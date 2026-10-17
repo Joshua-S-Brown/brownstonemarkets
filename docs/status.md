@@ -106,7 +106,12 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Beta reports list captured Apprentice/Journeyman/Expert/Artisan services with level, skill,
   copper cost and provenance for review. Offline checks cover zero/positive/unknown levels,
   Classic scope, source-aware merging, hiring, malformed tables and report output.
-- **Today web (STORY-083):** `/app/today` offers Route, Opportunities and lazy Level up.
+- **Today web (STORY-083/088):** `/app/today` pairs compact Route stops with Opportunities
+  (stacked below 1100px), plus a Level up tab. Adjacent character/place stops merge; item links,
+  confidence tips and line evidence keep the complete Queue readable. Opportunities adds five
+  unplanned Board rows with reasons/history and a lazy best Level up lever. Level up shows three
+  recipes per reach, with expandable extras and missing prices. Reset notices require dropped
+  saved choices/ticks; refused batches explain the maximum that fits.
   The complete Queue supplies stop lines, copy/totals and tick identity; choices and ticks persist
   per tab/source in sessionStorage. Item Overview's Our move shares the Today query and adjusts
   crafts/refill, including crafts excluded earlier in the session. Settings save through the token boundary to the existing source file.
@@ -229,7 +234,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,921 Python tests pass (one platform skip), plus 77 Vitest tests.
+Expected: 1,928 Python tests pass (one platform skip), plus 85 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

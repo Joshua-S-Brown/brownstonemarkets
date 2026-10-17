@@ -1011,7 +1011,7 @@ input[type="range"] {
 .bottom-nav {
   display: none;
 }
-@media (max-width: 1080px) {
+@media (max-width: 1099px) {
   .today-grid,
   .ledger-grid,
   .chain-layout {
@@ -1221,5 +1221,105 @@ button.chip:hover {
 @media (max-width: 860px) {
   .page-head h1 {
     font-size: 23px;
+  }
+}
+
+/* Today keeps the ported Route stops and Opportunities rows together. */
+.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.step input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+}
+@media (max-width: 600px) {
+  .step input[type="checkbox"] {
+    width: 44px;
+    height: 44px;
+    margin: 0;
+  }
+  .step {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  .step-what .item .nm,
+  .opp .item .nm {
+    white-space: normal;
+  }
+  .step-meta {
+    text-align: right;
+  }
+}
+
+.skill-band {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.skill-band i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.skill-band[data-band="orange"] i {
+  background: var(--sk-orange);
+}
+.skill-band[data-band="yellow"] i {
+  background: var(--sk-yellow);
+}
+.skill-band[data-band="green"] i {
+  background: var(--sk-green);
+}
+
+.step-meta {
+  max-width: 180px;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .step-meta {
+    max-width: none;
+  }
+}
+
+.compact-route .stop-body {
+  padding: 0;
+}
+.compact-route .steps {
+  margin-top: 2px;
+}
+.compact-route .step {
+  padding: 4px 8px;
+}
+
+.compact-route input[type="checkbox"] {
+  margin: 0;
+}
+@media (max-width: 600px) {
+  .compact-route .step-meta button,
+  .name,
+  .item,
+  .pill {
+    min-width: 44px;
+  }
+}
+
+.lever {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--fg);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.lever strong {
+  color: var(--accent);
+}
+
+/* Opportunities sits beside the Route on wide screens, so its jump tab only helps narrow ones. */
+@media (min-width: 1100px) {
+  .tabs [data-view="opportunities"] {
+    display: none;
   }
 }

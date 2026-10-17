@@ -247,3 +247,32 @@ it("CharacterWords links source-supplied keys in prose without guessing duplicat
   expect(screen.getByText("recipe 3319 (forever-blacksmithing)")).toBeTruthy();
   expect(screen.getByText("2s")).toBeTruthy();
 });
+it("SkillBand preserves readable needs/rank and shows catalog colour through a tip", async () => {
+  const { SkillBand } = await import("./SkillBand");
+  render(
+    <SkillBand text="needs 35 · you're 31 · orange 35, yellow 50, green 60, grey 70" />,
+  );
+  const pill = screen.getByRole("button", { name: "needs 35 · you're 31" });
+  await userEvent.tab();
+  pill.focus();
+  expect(pill.textContent).toBe("needs 35 · you're 31");
+  await waitFor(() =>
+    expect(screen.getByRole("tooltip").textContent).toContain("yellow 50"),
+  );
+});
+it("compact Route kit keeps numbered stops, item links, ticks and icon-only evidence", async () => {
+  const { cleanup } = await import("@testing-library/react");
+  cleanup();
+  render(
+    <InspectorContext.Provider value={vi.fn()}>
+      <Kit />
+    </InspectorContext.Provider>,
+  );
+  const tick = screen.getByRole("checkbox", { name: "Example craft" });
+  await userEvent.click(tick);
+  expect((tick as HTMLInputElement).checked).toBe(true);
+  const evidence = screen.getByRole("button", { name: "Line evidence" });
+  expect(evidence.textContent?.trim()).toBe("ⓘ");
+  await userEvent.click(evidence);
+  expect(screen.getByRole("dialog").textContent).toContain("3319");
+});

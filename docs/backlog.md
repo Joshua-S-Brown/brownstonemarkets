@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: Today that reads like a plan (STORY-088). Every place is in the web app (STORY-082 to STORY-086) and the shared components exist (STORY-089: `web/src/ui`, kit at `/app/kit`); STORY-088 and STORY-090 to STORY-093 bring each page and record to the prototype with them.
+Nothing in progress; the next story is the top of *Order* under Next: Market that leads with what moved (STORY-090). Every place is in the web app (STORY-082 to STORY-086), the shared components exist (STORY-089: `web/src/ui`, kit at `/app/kit`) and Today follows the prototype (STORY-088); STORY-090 to STORY-094 bring the remaining pages and records to it.
 
 **Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
@@ -49,11 +49,11 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-088 Today that reads like a plan
-2. STORY-090 Market that leads with what moved
-3. STORY-091 Team and Ledger as the prototype drew them
-4. STORY-092 Supply chains as the prototype drew it
-5. STORY-093 item and character records as the prototype drew them
+1. STORY-090 Market that leads with what moved
+2. STORY-091 Team and Ledger as the prototype drew them
+3. STORY-092 Supply chains as the prototype drew it
+4. STORY-093 item and character records as the prototype drew them
+5. STORY-094 Level up as the prototype drew it
 6. STORY-087 retire NiceGUI
 7. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
 8. STORY-026 scan coverage and rhythm
@@ -64,30 +64,7 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 089 and SPIKE-009/009b.
-
-### STORY-088 — Today that reads like a plan
-
-Added 2026-10-16 after an owner walk-through of the web Today page (STORY-083) against the approved prototype (`docs/prototype/web-app.html` → *Tonight's run*). The numbers and rules are right, but the page reads like an evidence log: 12 full-width cards for 13 steps (about five screens at 1280×860), the full character key in every header, confidence reasons repeated inline on every line, items not clickable, Opportunities in a separate tab with only the two planned crafts, a reset notice on every fresh tab, and the evening's biggest lever buried in Level up (on the beta copy: *Level Blacksmithing 31 → 50 for 4s 5c · unlocks Cloudy Skyforged Wristguards at 92s 50c per craft*, against a 25s 83c plan). Presentation only: no calculation, ranking, reservation or `today_version` change; every number and piece of evidence stays, behind UI-08 4's disclosures where it is evidence.
-
-As the owner, I want Today to look like the evening I'm about to play, so that I can follow it at a glance and see the one thing worth doing differently.
-
-Acceptance:
-- **Layout:** at 1100 px and wider, Route on the left and Opportunities beside it (the prototype's two columns), Level up stays a tab. Narrower, Route first, then Opportunities below it; the tabs remain. On the beta copy the 13-step route fits within two screen heights at 1280×860, and at 390×844 the first Route stop starts on the first screen.
-- **Summary strip:** the four tiles keep their numbers, drawn like the prototype: *Gold to spend 18s 25c of 19s 39c* with a bar and who holds it (team or character); *Progress N of M steps* with a bar; data age with the waiting-scans count; planned profit with its basis caption. Money through `Money`.
-- **Route stops:** consecutive Queue lines with the same character and place merge into one stop (Cicelyna's two mailbox lines become one), keeping Queue order; stops are numbered. A stop header shows the character's name only (an inspector link; realm and faction in its tooltip and record), the place, and profession and rank for craft stops; the mail note sits on mailbox stops, not above the Route.
-- **Route lines:** checkbox, verb, quantity, item as `ItemLink` with its quality colour, the line's key money (unit and total for buys, per-unit and profit for posts, deposit with *back on sale*) right-aligned; craft lines add the skill-up colour at the crafter's rank (`today_rows.recipe_band`, already computed for Level up). Confidence is a coloured `Pill` (High, Medium, Low) with its reasons in a `Tip`, not inline text; recipe ID, catalog, route reasons and the rest of today's line text move into the line's `Evidence`. Price warnings (*pricier than usual…*, *contested*) stay visible as warn pills. Ticks, copy-as-text and its text are unchanged.
-- **Opportunities:** the planned crafts first (reserved profit per craft, batch, maker, confidence pill), then up to five next-best Action Board rows Today did not plan, each with the reason it isn't tonight's (*needs Tailoring 75*, *pattern not learned*, *one craft exceeds funds*, *below minimum*, *Low confidence hidden*), taken from Today's existing hidden-reason and eligibility evidence. If per-row reasons aren't in the plan payload, expose them from `brownstone` without changing which rows are chosen. Each row shows a small price sparkline from UI-17 stored history when it has two or more points (`Sparkline`), otherwise none. Hide Low confidence and *Our move* stay where they are.
-- **Biggest lever:** a card at the top of Opportunities with the single best Level up next step for the team (the first `→` line UI-12 already ranks, with its cost and what it unlocks per craft), labelled as Level up labels it (*your own past sessions, not a promise*), linking to Level up. It loads after the Route renders and never blocks it; none when Level up has none.
-- **Use STORY-089's kit:** build with `PageHead`, `Panel`, `Tile`, `CharacterName`, `ConfidencePill`, `SignalPill`, `Identity`, `UtcTime` and the ported prototype styles in `web/src/ui/components.module.css`; check new states on `/app/kit` first. Don't restyle them; extend a component (with a kit fixture and test) when a state is missing.
-- **Drop reasons:** a choice Today refuses says why in plain words and, where Today has one, the largest batch that fits (the plan's `choice_limits` maximum: *at most N fit tonight*). Found in the STORY-086 review: Linen Bag ×5 added from Supply chains came back *Choice is no longer feasible; dropped, not resized* although it had never been planned, while ×1 was accepted. Keep *no longer feasible* for a choice that was feasible before. Today's drop decisions are unchanged; only the wording changes.
-- **Reset notice:** shown only when the request carried earlier choices or ticks that were actually dropped, as a dismissible notice naming what reset; a fresh tab with no saved Today state shows none. The server's reset logic is unchanged; only when the note is sent or shown changes.
-- **Level up readability:** *not yet at rank 31* reads *needs 35 · you're 31*; each tier shows its first three recipes with *N more* to expand, and recipes with missing prices collapse into one *N with missing prices* line per tier. Same rows and evidence, display only.
-- **UI-08:** checked on screenshots: answer first, one primary action (Copy as text or the first unticked step), status as pills not sentences, evidence on demand, 44 px targets and wrapping at 390 px.
-- **Offline tests:** stop merging (adjacent only, order kept), confidence pill and tip, line evidence holding the moved text, Opportunities' unplanned rows and reasons, lever card absent and present and not blocking the Route, reset notice only with dropped state, Level up wording and collapsing. Existing Today API tests stay green; any new per-row reason field gets a `brownstone` test.
-- **Docs:** `requirements.md` → Today's *Presentation (UI-18)* bullet describes the two columns, merged stops, Opportunities' unplanned rows and the lever card; `requirements.md` has about 240 bytes of headroom, so trim that bullet or its neighbours by at least as much as you add. `status.md` → *Today* and the test count.
-- **Real data:** beta source on a copy of `data/`, scan `20261016T113727Z-eb77d0`, a fresh tab (read 2026-10-16): planned profit 25s 83c, gold 18s 25c of 19s 39c across 4 characters, 13 steps, crafts Copper Chain Boots ×4 (Arille) and White Linen Robe ×5 (Basilly), lever *Blacksmithing 31 → 50 for 4s 5c* unlocking Cloudy Skyforged Wristguards at 92s 50c per craft; no reset notice. If newer scans were imported, compare with the current page on the same copy and explain each difference. Screenshots at 1280 and 390 px of Route, Opportunities and Level up, beside the prototype at the same width.
-- Depends on STORY-083, STORY-086 (which adds an Add-to-tonight helper to `web/src/places/today/state.ts`) and STORY-089 (its components: `PageHead`, `Panel`, `Tile`, `CharacterName`, `ConfidencePill`). Rules: Today (*Presentation (UI-18)*, *Confidence*, *Choices/refill*, *Hidden/caps*), UI-08, UI-12, UI-17, UI-18. Design: *Web app (UI-18)*, *Today contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089 and SPIKE-009/009b.
 
 ### STORY-090 — Market that leads with what moved
 
@@ -182,6 +159,27 @@ Acceptance:
   - Screenshots at 1280 and 390 px beside the prototype's item and character records.
 - Depends on STORY-089. Rules: UI-09, UI-11, UI-13, UI-14, UI-17, UI-18, CRAFT-11, ADDON-08. Design: *Web app (UI-18)*.
 
+### STORY-094 — Level up as the prototype drew it
+
+Added 2026-10-17 from the STORY-088 review. Today's Route and Opportunities now follow the prototype, but Level up is still a long text column: each character's `→` lines, then every tier with every recipe and its evidence disclosure, below the fold. The prototype's Level up view (`docs/prototype/web-app.html` → Today → *Level up*, the `LevelUp` component and `.lvl-grid`) gives one card per character and profession instead:
+- the profession and rank, and an *about +N skill* pill;
+- *Make N* with the recipe as an `ItemLink`;
+- the skill-up colour band (orange, yellow, green, grey) with *you are at N* marked;
+- *Materials* and *Net after selling* in copper, and a one-line note.
+
+Presentation only, built with STORY-089's components (`Panel`, `CharacterName` avatar, `SkillBand`, `Money`, `ItemLink`). UI-12, UI-13, CRAFT-10 and CRAFT-11 numbers are unchanged.
+
+As a gold maker, I want each character's best levelling step as one card, so that I can see who should level what tonight without reading a list.
+
+Acceptance:
+- **Cards:** `.lvl-grid` of cards, one per character and profession that has a next step: avatar and name, profession and rank (`rank / tier maximum`), and an *about +N skill* pill from the existing UI-12 points estimate. Then *Make N* `ItemLink`, the `SkillBand` with the four colour ranges and the character's rank marked, *Materials* (`Money`), *Net after selling* (signed `Money`, *unknown* when a price is missing) and the existing note (*Sells for a profit while it levels*, *uses held …*, *a small loss*) where Level up has one. Characters or professions without a valued step get a short card saying why (*no valued recipe in reach*, *learn a profession*).
+- **Detail stays reachable:** the current tier list (each *Reach N* group with its recipes, *N with missing prices* and evidence) moves behind *All tiers and recipes* on each card. Farming rates and the *your own past sessions, not a promise* caveat stay, the caveat once in the panel header.
+- **Order:** cards in the order UI-12 already ranks next steps across the team; the STORY-088 *Biggest lever* card links to the matching card.
+- **UI-08 and UI-18 screenshots:** 1280 and 390 px beside the prototype's Level up view; at 1280×860 the first row of cards is above the fold.
+- **Offline tests:** card per character and profession, the band marker at the rank, missing price as *unknown* never 0, the no-step card, tiers behind the disclosure, and ranking order.
+- **Real data:** beta copy, scan `20261016T113727Z-eb77d0`. Arille's Blacksmithing card shows 31 / 75 and *Cloudy Skyforged Wristguards* with +19 points for 4s 5c; Basilly's Tailoring card shows 32 / 75 and *Blue Linen Vest* with +23 points for 14s 43c (Team's next steps on the same load). Keenagen's Mining card says *no valued recipe in reach*.
+- Depends on STORY-088 and STORY-089. Rules: UI-12, UI-13, CRAFT-10, CRAFT-11, UI-18. Design: *Web app (UI-18)*.
+
 ### STORY-087 — Retire NiceGUI
 
 Added 2026-10-16. Last web story: once every place is in the web app.
@@ -193,7 +191,7 @@ Acceptance:
 - **Docs:** UI-07's NiceGUI rules are replaced by UI-18 (keep its URL and back-link rules there), UI-08 7's NiceGUI clause goes, and *App and modules* describes the web app. `requirements.md` and `design.md` end below their current ceilings, and the ceilings in `brownstone/gates.py` drop to match.
 - **Tests:** `tests/ui_trial` is gone; `test_retirement.py` checks NiceGUI is absent; coverage settings name `api` instead of `views` and NiceGUI entries.
 - **Real data:** a full play-evening walk-through on the beta or live source (import, Today route, Market, Team, Ledger), with screenshots.
-- Depends on STORY-082 to STORY-086 and STORY-088 to STORY-093. Rules: UI-05, UI-07, UI-08, UI-18, OPS-01. Design: *App and modules*, *Web app (UI-18)*, *Quality gates*.
+- Depends on STORY-082 to STORY-086 and STORY-088 to STORY-094. Rules: UI-05, UI-07, UI-08, UI-18, OPS-01. Design: *App and modules*, *Web app (UI-18)*, *Quality gates*.
 
 ### STORY-026 — Scan coverage and your play rhythm
 
@@ -249,6 +247,8 @@ Acceptance:
 - **Documented.** It's the recovery procedure for partial runs referenced in `status.md`. Backup is STORY-016.
 
 ## Later
+
+**Biggest lever across characters** (found in the STORY-088 review, 2026-10-17): Today's lever card takes the first character whose Level up options include a *Level …* step, read from the option text. With one levelling step on the beta that is right, but with several it is not the team's best. Have UI-12 return a structured best next step (character, profession, cost, unlocked profit per craft) and rank it there, so the web neither parses text nor picks by character order.
 
 **Lots and cost basis** (deferred from STORY-034 on 2026-10-15): which purchase each sold or crafted unit came from, for realised profit. Needs STORY-034b's item movements and a rule for held stock of unknown cost.
 

@@ -1,3 +1,5 @@
+import { EvidenceTip } from "../../ui/Evidence";
+import { SkillBand } from "../../ui/SkillBand";
 import { PageHead } from "../../ui/PageHead";
 import { Panel } from "../../ui/Panel";
 import { Tile } from "../../ui/Tile";
@@ -77,6 +79,37 @@ export function Kit() {
           <Identity state="unresolved" /> <Identity state={null} />
         </p>
         <UtcTime value="2026-10-16T11:37:27Z" />
+      </Panel>
+      <Panel title="Compact Route and skill-up colours">
+        <div className={styles["compact-route"]}>
+          <div className={styles.stop}>
+            <span className={styles["stop-n"]}>1</span>
+            <div className={styles["stop-body"]}>
+              <CharacterName character={["Arille", "Beta", "Alliance"]} /> ·
+              Blacksmithing · rank 31
+              <div className={styles.steps}>
+                <div className={styles.step}>
+                  <input type="checkbox" aria-label="Example craft" />
+                  <ItemLink id={3469} name="Copper Chain Boots" />
+                  <EvidenceTip
+                    label="Line"
+                    iconOnly
+                    data={{ recipe_id: 3319 }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <SkillBand text="orange at rank 31 · orange 1, yellow 35, green 40, grey 50" />
+        <SkillBand text="needs 35 · you're 31 · orange 35, yellow 50, green 60, grey 70" />
+      </Panel>
+      <Panel title="Narrow opportunity row">
+        <div className={styles.opp}>
+          <ItemLink id={447131} name="Azure Skyforged Pauldrons" />
+          <Money copper={86799} />
+          <span className={styles.why}>needs Blacksmithing 175</span>
+        </div>
       </Panel>
       <Panel title="Confidence and signals">
         {(["High", "Medium", "Low"] as const).map((level) => (

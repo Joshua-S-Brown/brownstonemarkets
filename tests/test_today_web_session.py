@@ -94,6 +94,7 @@ def test_cross_profession_queue_postorder_names_and_context_reset():
     assert 'Basilly, Tailoring' in texts[2]
     assert today_rows.PLAN_RESET == today_session.PLAN_RESET
     state['context'] = 'old'
+    state['ticks'] = {'0': True}
     _, changed, note = today_session.session_plan(args,state)
     assert note and changed['choices'] is None and not changed['ticks']
 

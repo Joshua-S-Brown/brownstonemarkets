@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { reasonText } from "./Opportunities";
 import { InspectorContext } from "../../app/InspectorContext";
 import { Today } from "./Today";
 import { OurMove } from "./OurMove";
@@ -142,7 +143,7 @@ it("Route defaults, ticks survive refresh per source, copy matches Queue and URL
   const user = userEvent.setup();
   mount();
   await screen.findByText("Craft 2 Robe");
-  expect(requests.some((r) => r.body.view === "level-up")).toBe(false);
+  expect(requests[0].body.view).toBe("route");
   expect(screen.getByText("2 scans waiting")).toBeTruthy();
   await user.click(screen.getByRole("checkbox", { name: "Craft 2 Robe" }));
   expect(readState("one").ticks?.["0"]).toBe(true);
@@ -320,4 +321,127 @@ it("renders short character names without the full identity in page text", async
   expect(document.body.textContent).not.toMatch(
     /(?:Maker|Basilly) · (?:Realm(?: [12])?|Beta) · Alliance/,
   );
+});
+it("compact lines link items and keep confidence reasons and original recipe text in evidence", async () => {
+  data.stops[0].lines[0] = {
+    index: 0,
+    text: "Craft Robe · recipe 30 (fixture) · Low confidence (thin listings)",
+    warnings: "contested",
+    display: {
+      item_id: 3,
+      quality: 2,
+      skillup_band: "orange at rank 8 · orange 1, yellow 10",
+    },
+    evidence: {
+      stage: "craft",
+      name: "Robe",
+      batch_size: 2,
+      recipe_id: 30,
+      catalog_id: "fixture",
+      confidence: "Low",
+      confidence_reasons: ["thin listings"],
+    },
+  };
+  mount();
+  await screen.findByRole("heading", { name: "Route" });
+  expect(
+    screen.getAllByRole("button", { name: "Robe" })[0].getAttribute("style"),
+  ).toContain("--q-2");
+  expect(screen.getByText("thin listings").closest("details")?.open).toBe(
+    false,
+  );
+  screen.getAllByRole("button", { name: "Low" })[0].focus();
+  await waitFor(() =>
+    expect(screen.getByRole("tooltip").textContent).toContain("thin listings"),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Line evidence" }));
+  expect(await screen.findByText(data.stops[0].lines[0].text)).toBeTruthy();
+  expect(screen.getAllByText("contested").length).toBeGreaterThan(0);
+});
+it("Route renders while the lever request is unresolved; then the ranked lever appears", async () => {
+  let release: (value: unknown) => void = () => {};
+  const original = fetch;
+  vi.stubGlobal("fetch", (input: URL, init: RequestInit) => {
+    const body = JSON.parse(String(init?.body || "{}"));
+    if (body.view === "level-up")
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    return original(input, init);
+  });
+  mount();
+  await screen.findByText("Craft 2 Robe");
+  expect(screen.queryByLabelText("Biggest lever")).toBeNull();
+  release({
+    ok: true,
+    json: async () => ({
+      ...data,
+      session: {
+        characters: [
+          {
+            character: ["Arille", "Beta", "Alliance"],
+            options_text: [
+              "Craft boots",
+              "Level Blacksmithing 31 → 50 for 4s 5c · unlocks Wristguards at 92s 50c per craft",
+            ],
+            next_steps: [{ kind: "craft" }, { kind: "level_profession" }],
+          },
+        ],
+      },
+    }),
+  });
+  expect((await screen.findByLabelText("Biggest lever")).textContent).toContain(
+    "31 → 50",
+  );
+  expect(screen.getByText("Craft 2 Robe")).toBeTruthy();
+});
+it("unplanned opportunities explain eligibility and reset notes can be dismissed", async () => {
+  data.reset_note = "Queue ticks reset";
+  data.plan.unplanned = [
+    {
+      catalog_id: "fixture",
+      recipe_id: 40,
+      output_item_id: 4,
+      output_name: "Bag",
+      profession: "Tailoring",
+      required_skill: 75,
+      tonight_reason: "rank below required skill",
+      profit_copper: 200,
+    },
+  ];
+  mount();
+  expect(await screen.findByText(/needs Tailoring 75/)).toBeTruthy();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Dismiss reset notice" }),
+  );
+  expect(screen.queryByText("Queue ticks reset")).toBeNull();
+});
+
+it("post quantities retain held outputs beside crafted units", async () => {
+  data.stops[0].lines[0] = {
+    index: 0,
+    text: "Post 2 crafted + 3 held",
+    warnings: "",
+    display: { item_id: 3, quality: 2 },
+    evidence: {
+      stage: "post",
+      name: "Robe",
+      quantity: 2,
+      unit_copper: 100,
+      profit_copper: 50,
+      deposit_copper: 100,
+      held_outputs: [{ units: 3, character: "Basilly", kind: "bank" }],
+    },
+  };
+  mount();
+  expect(await screen.findByText("+ 3 held (Basilly, bank)")).toBeTruthy();
+});
+it("capitalises catalog profession names in unplanned reasons", () => {
+  expect(
+    reasonText({
+      tonight_reason: "rank below required skill",
+      profession: "blacksmithing",
+      required_skill: 175,
+    } as Parameters<typeof reasonText>[0]),
+  ).toBe("needs Blacksmithing 175");
 });

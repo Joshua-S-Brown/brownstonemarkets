@@ -446,7 +446,7 @@ Rules: `requirements.md` → Today. Framework-free calculations.
 - **Plan.** `build_today(catalogs, observations, market, snapshot, settings, *, now, listings, metrics,
   vendor_prices, max_age_hours, auction_cut, choices=None, refill=True, character_data, flood_evidence, holdings_data)` returns
   capped `craft`, `buy`, `sell` and `below_vendor` lists, hidden and remaining counts, shopping total,
-  freshness, `choice_limits`, `dropped_choices`, `queue` and `today_version`. `Ladder` holds prefix
+  freshness, `choice_limits`, `dropped_choices`, `unplanned` Board rows with post-reservation reasons, `queue` and `today_version`. `Ladder` holds prefix
   units/costs for whole-stack quotes; binary search finds the affordable bound and only bound/listing
   breakpoints are quoted for rows using no held item. A row using a held item compares its bounded
   (1–1,000) feasible sizes exactly, including all holding-depletion boundaries; this preserves correctness
@@ -476,7 +476,8 @@ Rules: `requirements.md` → Today. Framework-free calculations.
   choices and ticks. `today_session.queue_with_gold` projects the Queue with transfers using
   `today_funds.recorded_balances` and reserved `craft_details` purchases; `build_today` is untouched.
   Queue tick identity includes these presentation lines, excluding confidence labels (`stable_queue`).
-  `session_plan(arguments,state)` returns result, copied state and reset note; adapters load removals.
+  `session_plan(arguments,state)` returns result, copied state and reset note;
+  `feasible_choices` remembers last accepted sizes for drop wording only; adapters load removals.
   `queue_state` checks identity; `route_stops` groups adjacent Queue lines. The web keeps
   tab/source state in sessionStorage. `api/today.py` caches inputs like `context.explorer`, plus
   settings and state minus ticks/Hide Low; Level up is lazy. Our move reuses Today's query.

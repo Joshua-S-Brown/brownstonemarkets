@@ -426,7 +426,8 @@ def recipe_band(row, rank, catalogs):
         return 'skill-up colour unknown: character rank unknown'
     orange, yellow, green, grey = colors
     color = band_colour(rank, colors)
-    return f'{color} at rank {rank} · orange {orange}, yellow {yellow}, green {green}, grey {grey}'
+    label = f"needs {orange} · you're {rank}" if color == 'not yet' else f'{color} at rank {rank}'
+    return f'{label} · orange {orange}, yellow {yellow}, green {green}, grey {grey}'
 
 
 def band_colour(rank, colors):

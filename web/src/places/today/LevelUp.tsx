@@ -1,3 +1,4 @@
+import { SkillBand } from "../../ui/SkillBand";
 import { CharacterName } from "../../ui/CharacterName";
 import { PlanText } from "./PlanText";
 import { Evidence } from "../../ui/Evidence";
@@ -114,23 +115,7 @@ export function LevelUp({
                       </>
                     )}
                   </h4>
-                  {m.recipes.map((r) => (
-                    <div key={r.output_item_id}>
-                      <ItemLink id={r.output_item_id} name={r.name} />
-                      <p>
-                        {r.skillup_band} · profit per craft{" "}
-                        {r.profit_copper === null ? (
-                          <>unknown · {r.board_reason}</>
-                        ) : (
-                          <Money copper={r.profit_copper} />
-                        )}
-                      </p>
-                      <details>
-                        <summary>Cost and confidence evidence</summary>
-                        <Evidence data={r} />
-                      </details>
-                    </div>
-                  ))}
+                  <TierRecipes recipes={m.recipes} />
                 </section>
               ))}
               <details>
@@ -214,6 +199,55 @@ export function LevelUp({
           }}
         />
       </details>
+    </>
+  );
+}
+
+function RecipeRow({ recipe: r }: { recipe: Recipe }) {
+  return (
+    <div>
+      <ItemLink id={r.output_item_id} name={r.name} />
+      <p>
+        <SkillBand text={r.skillup_band} /> · profit per craft{" "}
+        <Money copper={r.profit_copper} />
+      </p>
+      <details>
+        <summary>Cost and confidence evidence</summary>
+        <Evidence data={r} />
+      </details>
+    </div>
+  );
+}
+function TierRecipes({ recipes }: { recipes: Recipe[] }) {
+  const priced = recipes.filter((r) => r.profit_copper !== null);
+  const missing = recipes.filter((r) => r.profit_copper === null);
+  return (
+    <>
+      {priced.slice(0, 3).map((r) => (
+        <RecipeRow key={r.output_item_id} recipe={r} />
+      ))}
+      {priced.length > 3 && (
+        <details>
+          <summary>{priced.length - 3} more</summary>
+          {priced.slice(3).map((r) => (
+            <RecipeRow key={r.output_item_id} recipe={r} />
+          ))}
+        </details>
+      )}
+      {!!missing.length && (
+        <details>
+          <summary>{missing.length} with missing prices</summary>
+          {missing.map((r) => (
+            <div key={r.output_item_id}>
+              <ItemLink id={r.output_item_id} name={r.name} />
+              <p>
+                <SkillBand text={r.skillup_band} /> · unknown · {r.board_reason}
+              </p>
+              <Evidence data={r} />
+            </div>
+          ))}
+        </details>
+      )}
     </>
   );
 }

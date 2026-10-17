@@ -342,5 +342,7 @@ def test_today_plan_identical_to_before_story070():
     from brownstone.today import TODAY_VERSION
 
     before = json.loads((Path(__file__).parent / 'fixtures/today_story070.json').read_text())
-    assert json.loads(json.dumps(plan(), default=str)) == before
+    current = plan()
+    current.pop('unplanned')  # STORY-088 adds display evidence, not a planning change.
+    assert json.loads(json.dumps(current, default=str)) == before
     assert TODAY_VERSION == before['today_version'] == 14

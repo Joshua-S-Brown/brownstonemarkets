@@ -151,11 +151,19 @@ export function Evidence({ data }: { data: object }) {
   );
 }
 
-export function EvidenceTip({ label, data }: { label: string; data: object }) {
+export function EvidenceTip({
+  label,
+  data,
+  iconOnly = false,
+}: {
+  label: string;
+  data: object;
+  iconOnly?: boolean;
+}) {
   return (
     <Popover.Root>
       <Popover.Trigger aria-label={`${label} evidence`}>
-        {label} ⓘ
+        {!iconOnly && label} ⓘ
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className={styles.popover}>
