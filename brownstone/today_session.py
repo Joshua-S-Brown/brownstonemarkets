@@ -58,14 +58,13 @@ def queue_line_text(line):
         return (f"Buy at {stage}: {name} · {line['purchased_units']} units · "
                 f"highest unit {format_money(line['highest_unit_copper'])} · total {format_money(line['cost_copper'])}")
     if stage == 'take':
-        place = 'bank' if line['kind'] == 'bank' else 'bags'
-        return f"{line['character']}: take {line['units']} {name} from the {place}"
+        return f"{line['character']}: take {line['units']} {name}" + held_note(line)
     if stage == 'mail':
-        return f"{line['character']} mails {line['units']} {name} to {line['to']}"
+        return f"{line['character']}: mail {line['units']} {name} to {line['to']}" + held_note(line)
     if stage == "craft":
         maker = f" · {made_by_label(line)}" if line.get("profession") else ""
         return (f"Craft: {name}{maker} · recipe {line['recipe_id']} ({line['catalog_id']}) · "
-                f"{line['batch_size']} crafts")
+                f"{line['batch_size']} crafts" + held_note(line))
     price = format_money(line["unit_copper"]) if line["unit_copper"] is not None else "unavailable"
     profit = format_money(line["profit_copper"]) if line["profit_copper"] is not None else "unavailable"
     deposit = deposit_text(line)
@@ -77,6 +76,22 @@ def queue_line_text(line):
                 f"({owners}) · undercut unit {price} · profit {profit} · held value "
                 f"{format_money(value) if value is not None else 'unavailable'} · {deposit}")
     return f"Post: {name} · {line['quantity']} units · undercut unit {price} · profit {profit} · {deposit}"
+
+
+def held_note(line):
+    """Shared Route and copied Queue action/purpose suffix."""
+    if line['stage'] == 'craft':
+        items = [f"{a['units']} {a['name']}" for a in line.get('own_bags', [])]
+        return ' · uses ' + ' and '.join(items) + ' you hold' if items else ''
+    purposes = line.get('purposes', [])
+    purpose = ', for ' + ' and '.join(p['name'] for p in purposes) if purposes else ''
+    if line.get('purpose_step'):
+        purpose += f" (step {line['purpose_step']})"
+    if line['stage'] != 'take':
+        return purpose
+    mail = f", then mail them to {line['to']}" if line.get('to') != line['character'] and line.get('to') else ''
+    place = ' out of the bank' if line['kind'] == 'bank' else ' from the bags'
+    return place + purpose + mail
 
 
 def deposit_text(row):
@@ -129,7 +144,21 @@ def queue_with_gold(result, character_data, funds):
     queue = result['queue']
     lines = queue['lines']
     index = next((i for i, line in enumerate(lines) if line['stage'] not in ('take', 'mail')), len(lines))
-    return queue | {'lines': lines[:index] + gold_mail_lines(result, character_data, funds) + lines[index:]}
+    queue = queue | {'lines': deepcopy(lines[:index] + gold_mail_lines(result, character_data, funds) + lines[index:])}
+    if not any(line.get('purposes') for line in queue['lines']):
+        return queue
+    steps = {}
+    for number, stop in enumerate(route_stops(queue, result['craft'], character_data), 1):
+        for entry in stop['lines']:
+            line = entry['evidence']
+            if line['stage'] == 'craft':
+                steps.setdefault((line['catalog_id'], line['recipe_id']), number)
+    for line in queue['lines']:
+        targets = [steps[p['catalog_id'], p['recipe_id']] for p in line.get('purposes', [])
+                   if (p['catalog_id'], p['recipe_id']) in steps]
+        if targets:
+            line['purpose_step'] = min(targets)
+    return queue
 
 
 PLAN_RESET = ("Scan, settings or catalog evidence changed: session choices and queue ticks reset. "
@@ -215,7 +244,8 @@ def route_place(line, crafts, character_data, post=None):
             for p in r['purchases'])})
         character = ', '.join(makers) or character
     character = character or 'Our team'
-    places = {'take': line.get('kind', 'bags'), 'mail': 'mailbox', 'gold mail': 'mailbox',
+    places = {'take': line.get('kind', 'bags'), 'mail': 'bank' if line.get('kind') == 'bank' else 'mailbox',
+              'gold mail': 'mailbox',
               'gold unknown': 'mailbox', 'auction house': 'auction house', 'vendor': 'vendor',
               'post': f"auction house · {line.get('post_duration_hours', 24)}h posts"}
     if stage != 'craft':

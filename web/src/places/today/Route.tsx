@@ -78,6 +78,8 @@ function RouteLine({
   const item = typeof display.item_id === "number" ? display.item_id : null;
   const band =
     typeof display.skillup_band === "string" ? display.skillup_band : "";
+  const actionNote =
+    typeof display.action_note === "string" ? display.action_note : "";
   const verb =
     row.stage === "craft"
       ? "Craft"
@@ -120,7 +122,14 @@ function RouteLine({
                   + {held.units} held ({held.character}, {held.kind})
                 </span>
               ))}
-            {row.stage === "mail" && <span>to {String(line.evidence.to)}</span>}
+            {row.stage === "mail" ? (
+              <span>
+                to {String(line.evidence.to)}
+                {actionNote}
+              </span>
+            ) : (
+              actionNote && <span>{actionNote}</span>
+            )}
           </>
         ) : (
           <PlanText text={line.text} characters={data.characters} />

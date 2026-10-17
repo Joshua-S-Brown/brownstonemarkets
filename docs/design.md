@@ -467,7 +467,8 @@ Rules: `requirements.md` → Today. Framework-free calculations.
   After held-output allocation, `deposits.auction_deposit` adds Sell's nullable `deposit_copper` and
   `post_duration_hours` (Today v11), taking stack size from `stack_sizes` so unlisted outputs still get one. Queue post lines retain these fields; its nullable
   `deposits_to_post_copper` sums the complete post list. Rules remain in requirements → Today.
-  Queue take/mail lines and held post annotations survive `apply_removals` rebuilding;
+  Queue held actions and post annotations survive `apply_removals` rebuilding. Purpose catalog/recipe keys
+  resolve to Route stop numbers after gold mail in `queue_with_gold`.
 
   `purchase_uses(crafts)` groups purchased units per item/route and output (Shopping list For);
   `session_queue` projects reserved shopping, route steps in postorder and posts without re-quoting.

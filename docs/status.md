@@ -85,7 +85,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   requirements including their sources, compresses empty farming history and shares one farming caveat per page;
   hidden-recipe information leads with ordered plain reasons and retains provenance in Details.
   STORY-068 uses scoped Stock bags/bank holdings along the Board route, including intermediates,
-  with held value in profit, purchase gold separate, shared reservation, take/mail lines and held outputs.
+  with held value in profit, purchase gold separate, shared reservation and held outputs.
+  Held Queue actions name their allocated outputs and first craft stop; own bags annotate crafts,
+  other bags mail, and bank withdrawals keep any onward mail in the bank stop (requirements → Today).
   Capture ages/unknown bank appear on Today; stale held counts add a reason without changing confidence.
   UI-11 high outputs use typical-price sell caps before ranking/sizing, with shared signal badges
   on crafts/Sell/posts; shown-output UI-10 history adds Low confidence for no early removals
@@ -234,7 +236,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,928 Python tests pass (one platform skip), plus 85 Vitest tests.
+Expected: 1,934 Python tests pass (one platform skip), plus 88 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

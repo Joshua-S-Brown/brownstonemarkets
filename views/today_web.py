@@ -1,5 +1,6 @@
 """Compact Today line projections; original Queue text and evidence remain intact."""
 from brownstone.today_characters import recipe_rank
+from brownstone.today_session import held_note
 from views import today_rows
 
 
@@ -19,7 +20,8 @@ def route_lines(stops, arguments, qualities, crafts):
                 band = today_rows.recipe_band(row, rank, arguments['catalogs'])
             if row['stage'] == 'post':
                 item = next(posts)['output_item_id']
-            line['display'] = dict(item_id=item, quality=base_quality(qualities, item), skillup_band=band)
+            line['display'] = dict(action_note=held_note(row), item_id=item, quality=base_quality(qualities, item),
+                                   skillup_band=band)
             line['warnings'] = today_rows.warning_text(row)
 
 

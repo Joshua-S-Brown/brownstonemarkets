@@ -133,23 +133,35 @@ def _allocate(item, quantity, maker, pool):
 
 
 def queue_lines(crafts):
+    """Keep allocated output purposes on real held-material actions."""
     lines = []
     for row in sorted(crafts, key=lambda r: r['plan_order']):
+        purpose = {'catalog_id': row['catalog_id'], 'recipe_id': row['recipe_id'], 'name': row['output_name']}
         for allocation in row.get('held_allocations', []):
-            lines.append({**allocation, 'stage': 'take', 'name': row['material_names'][allocation['item_id']]})
-    for row in sorted(crafts, key=lambda r: r['plan_order']):
-        for allocation in row.get('held_allocations', []):
-            if allocation['to'] and allocation['character'] != allocation['to']:
-                lines.append({**allocation, 'stage': 'mail', 'name': row['material_names'][allocation['item_id']]})
+            other = allocation['to'] and allocation['character'] != allocation['to']
+            # Bags need no step for a known crafter; with no crafter, say where the units are.
+            take = allocation['kind'] == 'bank' or not allocation['to']
+            stages = (['take'] if take else []) + (['mail'] if other else [])
+            for stage in stages:
+                lines.append({**allocation, 'stage': stage, 'name': row['material_names'][allocation['item_id']],
+                              'purposes': [purpose]})
     grouped = {}
     for line in lines:
-        key = (line['stage'], line['character'], line['kind'], line['item_id'], line['to'] if line['stage'] == 'mail'
-               else None)
+        key = (line['stage'], line['character'], line['kind'], line['item_id'], line['to'])
         if key in grouped:
             grouped[key]['units'] += line['units']
+            for purpose in line['purposes']:
+                if purpose not in grouped[key]['purposes']:
+                    grouped[key]['purposes'].append(purpose)
         else:
             grouped[key] = dict(line)
-    # First allocation establishes character order; keep each person's places together.
-    order = list(dict.fromkeys((line['stage'], line['character']) for line in lines))
-    return sorted(grouped.values(), key=lambda line: (order.index((line['stage'], line['character'])),
-                                                      line['kind'] != 'bags', line['item_id']))
+    order = list(dict.fromkeys(line['character'] for line in lines))
+    # Bank mail follows its withdrawal in that bank stop; bags mail shares a mailbox.
+    return sorted(grouped.values(), key=lambda line: (order.index(line['character']),
+                  line['kind'] != 'bags', line['item_id'], line['stage'] != 'take'))
+
+
+def own_bags(row, maker):
+    return [{'units': a['units'], 'name': row['material_names'][a['item_id']]}
+            for a in row.get('held_allocations', [])
+            if a['kind'] == 'bags' and a['character'] == a['to'] and a['to'] == maker]

@@ -215,7 +215,7 @@ def test_held_material_output_unknown_bank_and_unreadable_holdings(browser, monk
     monkeypatch.setattr(today_loading, '_load_holdings', lambda *a: (held, None))
     data = request(browser).json()
     assert any('bank not captured' in note for note in data['notes'])
-    assert 'Basilly mails 2' in data['copy_text'] and 'post 5 crafted + 2 held' in data['copy_text']
+    assert 'Basilly: mail 2' in data['copy_text'] and 'post 5 crafted + 2 held' in data['copy_text']
     assert all(r['method'] != 'held' for r in data['plan']['buy'])
     assert 'held count from a stale capture' in data['copy_text']
     monkeypatch.setattr(today_loading, '_load_holdings', lambda *a: (None, 'Unable to read held items: bad capture'))

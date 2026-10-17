@@ -180,10 +180,12 @@ def test_take_mail_allocation_order_and_rebuilt_queue(monkeypatch):
         (1, 1, 'Basilly', 'bags'), (1, 1, 'Arille', 'bags')))
     take = [q for q in result['queue']['lines'] if q['stage'] == 'take']
     assert [(q['character'], q['kind']) for q in take] == [
-        ('Arille', 'bags'), ('Arille', 'bank'), ('Basilly', 'bags'), ('Basilly', 'bank'), ('C', 'bags')]
+        ('Arille', 'bank'), ('Basilly', 'bank')]
     mail = [queue_line_text(q) for q in result['queue']['lines'] if q['stage'] == 'mail']
-    assert mail[:2] == ['Basilly mails 1 Fixture 1 to Arille', 'Basilly mails 2 Fixture 1 to Arille']
-    assert queue_line_text(take[3]) == 'Basilly: take 2 Fixture 1 from the bank'
+    assert mail[:2] == ['Basilly: mail 1 Fixture 1 to Arille, for Fixture 3',
+                       'Basilly: mail 2 Fixture 1 to Arille, for Fixture 3']
+    assert queue_line_text(take[1]) == (
+        'Basilly: take 2 Fixture 1 out of the bank, for Fixture 3, then mail them to Arille')
     assert 'postage is unconfirmed' in result['queue']['mail_note']
     before = deepcopy(result['queue'])
     apply_removals(result, {3: {'pairs': 1, 'units': 1}})
@@ -275,7 +277,7 @@ def test_repeated_take_lines_group_by_character_place():
     result = plan(TodaySettings(1000, 1, 'fixed', max_crafts=1),
                   catalogs=[catalog(), output_catalog(4, 'second')],
                   observations={1: {'min_buyout': 10}, 3: {'min_buyout': 200}, 4: {'min_buyout': 100}},
-                  holdings_data=evidence((1, 4, 'B', 'bags')))
+                  holdings_data=evidence((1, 4, 'B', 'bank')))
     take = [q for q in result['queue']['lines'] if q['stage'] == 'take']
     assert len(take) == 1 and take[0]['units'] == 4
 
@@ -334,14 +336,14 @@ def test_held_input_of_cross_profession_step_goes_to_that_maker():
         {'recipe_id': 50, 'catalog_id': 'smithing', 'made_by': 'Miner'}]}) == {}
     crafts = [{'plan_order': 0, 'made_by': 'Smith', 'holding_consumers': {5: 'Miner'}, 'output_item_id': 3,
                'purchases': [{'method': 'held', 'item_id': 5, 'quantity': 3}], 'material_names': {5: 'Ore'},
-               'confidence_reasons': []}]
+               'confidence_reasons': [], 'catalog_id': 'smithing', 'recipe_id': 30, 'output_name': 'Sword'}]
     _, _, captures, units = evidence((5, 2, 'Smith', 'bags'), (5, 1, 'Miner', 'bags'))
     today_holdings.allocate(crafts, units, captures, 24)
     assert [(a['character'], a['units'], a['to']) for a in crafts[0]['held_allocations']] == [
         ('Miner', 1, 'Miner'), ('Smith', 2, 'Miner')]
     mail = [line for line in today_holdings.queue_lines(crafts) if line['stage'] == 'mail']
     assert [(m['character'], m['units'], m['to']) for m in mail] == [('Smith', 2, 'Miner')]
-    assert queue_line_text(mail[0]) == 'Smith mails 2 Ore to Miner'
+    assert queue_line_text(mail[0]) == 'Smith: mail 2 Ore to Miner, for Sword'
 
 
 def test_capture_label_never_shows_a_missing_bank_as_empty():

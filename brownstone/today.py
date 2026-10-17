@@ -625,12 +625,17 @@ def session_queue(crafts, shopping, sells):
             lines.append({"stage": "craft", "name": step["item_name"], "recipe_id": step["recipe_id"],
                           "catalog_id": step.get("catalog_id", row["catalog_id"]),
                           "profession": step.get("profession"), "made_by": step.get("made_by"),
+                          **({"own_bags": today_holdings.own_bags(row, step.get("made_by"))}
+                             if step.get("made_by") != row.get("made_by")
+                             and today_holdings.own_bags(row, step.get("made_by")) else {}),
                           "batch_size": step["crafts"] * (1 if "reserved_steps" in row else row["batch_size"]),
                           **_confidence_fields(row)})
         lines.append({"stage": "craft", "name": row["output_name"], "recipe_id": row["recipe_id"],
                       "catalog_id": row["catalog_id"], "batch_size": row["batch_size"],
                       "profession": row["profession"],
                       "made_by": row.get("made_by"),
+                      **({"own_bags": today_holdings.own_bags(row, row.get("made_by"))}
+                         if today_holdings.own_bags(row, row.get("made_by")) else {}),
                       **({"made_by_key": row["made_by_key"]} if "made_by_key" in row else {}),
                       **_confidence_fields(row)})
     for row, sell in zip(crafts, sells, strict=True):

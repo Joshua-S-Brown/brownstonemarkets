@@ -445,3 +445,30 @@ it("capitalises catalog profession names in unplanned reasons", () => {
     } as Parameters<typeof reasonText>[0]),
   ).toBe("needs Blacksmithing 175");
 });
+
+it.each([
+  ["craft", " · uses 6 Copper Bar you hold"],
+  ["mail", ", for White Linen Robe and Linen Bag (step 9)"],
+  [
+    "take",
+    " out of the bank, for White Linen Robe (step 9), then mail them to Basilly",
+  ],
+])(
+  "shows the shared held-material wording on compact %s lines",
+  async (stage, note) => {
+    data.stops[0].lines[0] = {
+      index: 0,
+      text: `Action${note}`,
+      warnings: "",
+      display: { item_id: 3, action_note: note },
+      evidence: { stage, name: "Robe", units: 8, to: "Basilly" },
+    };
+    mount();
+    expect(
+      await screen.findByText((text) => text.endsWith(note.trim())),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("checkbox", { name: `Action${note}` }),
+    ).toBeTruthy();
+  },
+);

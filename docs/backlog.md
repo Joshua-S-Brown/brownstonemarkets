@@ -49,57 +49,22 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-095 held materials say what to do and what they're for
-2. STORY-090 Market that leads with what moved
-3. STORY-091 Team and Ledger as the prototype drew them
-4. STORY-092 Supply chains as the prototype drew it
-5. STORY-093 item and character records as the prototype drew them
-6. STORY-094 Level up as the prototype drew it
-7. STORY-087 retire NiceGUI
-8. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-9. STORY-026 scan coverage and rhythm
-10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-11. STORY-006 replay
+1. STORY-090 Market that leads with what moved
+2. STORY-091 Team and Ledger as the prototype drew them
+3. STORY-092 Supply chains as the prototype drew it
+4. STORY-093 item and character records as the prototype drew them
+5. STORY-094 Level up as the prototype drew it
+6. STORY-087 retire NiceGUI
+7. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+8. STORY-026 scan coverage and rhythm
+9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+10. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089 and SPIKE-009/009b.
-
-### STORY-095 — Held materials say what to do and what they're for
-
-Added 2026-10-17 from the owner's first look at the STORY-088 Today. The Route opens with *take* steps that give no instruction: *Baspion · bags: Take 7 × Linen Cloth*, *Take 6 × Rough Stone*. For bags these aren't actions at all: the items are already in the bags. Each take is grouped by item in `today_holdings.queue_lines`, which drops which craft the units are for. The real action is either nothing (the crafter already holds them), a mail (another character holds them; that mail line comes several stops later), or a bank withdrawal. The plan already knows each allocation's craft: every row's `held_allocations` lists holder, location, units and recipient.
-
-On the current beta copy (17 Oct, with Baspion):
-- **Copper Dagger ×3 (Arille)** uses 6 Rough Stone from Baspion's bags and 6 Copper Bar from Arille's own bags.
-- **White Linen Robe ×5 (Basilly)** uses 8 Bolt of Linen Cloth from Basilly's own bags and 7 from Cicelyna's.
-- **Linen Bag ×5 (Basilly)** uses 7 Bolt from Cicelyna, and Linen Cloth from Baspion (7), Cicelyna (3) and Keenagen (6).
-
-UI-18 presentation and the Queue wording only. Allocation, reservations, costs and the held-unit valuation rule are unchanged.
-
-As the owner, I want every held-material step to say what to do and which craft it feeds, so that I never wonder what *take* means.
-
-Acceptance:
-- **No step for what's already in place:** units in the crafter's own bags are not a Queue step. The craft line says so instead (*Craft 3 × Copper Dagger · uses 6 Copper Bar you hold*), and the crafter's take stop disappears.
-- **Mail is the action for another character's bags:** no separate take line. The mail line is the step and names its purpose: *Baspion: mail 6 Rough Stone to Arille, for Copper Dagger*. A holder's mails stay together in one mailbox stop, in today's order.
-- **Bank is a real step:** units in a bank keep a take step, worded *Take 8 Bolt of Linen Cloth out of the bank, for White Linen Robe*. When they're for someone else, the step adds *then mail them to Basilly* and the mail line follows in the same stop.
-- **Purpose:** each held step names the crafts it feeds, by output name, and the step number of the first craft (*for Linen Bag (step 9)*). Use the allocations' crafts, not a guess by item. An item feeding two crafts names both (*for White Linen Robe and Linen Bag*).
-- **Queue text and ticks:** *Copy as text* uses the same wording. The Queue identity changes with the wording, so existing ticks reset once through the existing path. No `today_version` change unless the Today rules require it; if they do, say so under Deviations.
-- **Rule:** `requirements.md` → Today → *Held materials* replaces *Queue starts with take lines by character/place…* with the new behaviour: no step for the crafter's own bags; mail as the step for other bags; bank takes; purpose named. It has 123 bytes of headroom, so rewrite that sentence in place and trim the bullet by at least as much as you add.
-- **Offline tests:**
-  - own-bags units become a craft-line note with no step;
-  - another holder's bags give one mail step, no take step, with its purpose;
-  - a bank take for self and a bank take for another (take then mail, same stop);
-  - one item feeding two crafts;
-  - Queue order otherwise unchanged;
-  - copy text matching the Route;
-  - allocations, costs and reservations byte-for-byte unchanged (compare `build_today` results before and after, minus the line text).
-- **Real data:** beta copy of the current `data/`.
-  - Route expectation: no *bags* take stops; Baspion's mailbox stop shows *mail 7 Linen Cloth to Basilly, for Linen Bag* and *mail 6 Rough Stone to Arille, for Copper Dagger*; Arille's Copper Dagger line says it uses 6 Copper Bar you hold.
-  - The step count drops by the take lines removed. Planned profit and spend are unchanged from the same copy before the change.
-  - Screenshots at 1280 and 390 px.
-- Depends on STORY-088. Rules: Today (*Held materials*, *Queue*, *Presentation (UI-18)*), UI-18. Design: *Today contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 095 and SPIKE-009/009b.
 
 ### STORY-090 — Market that leads with what moved
 
@@ -284,6 +249,8 @@ Acceptance:
 ## Later
 
 **Biggest lever across characters** (found in the STORY-088 review, 2026-10-17): Today's lever card takes the first character whose Level up options include a *Level …* step, read from the option text. With one levelling step on the beta that is right, but with several it is not the team's best. Have UI-12 return a structured best next step (character, profession, cost, unlocked profit per craft) and rank it there, so the web neither parses text nor picks by character order.
+
+**One mailbox stop per holder** (found in the STORY-095 review, 2026-10-17): on the beta Route, Cicelyna and Baspion each get two mailbox stops, one for material mail and a later one for gold mail, and gold mail still reads *Cicelyna mails 8s 87c to Arille* rather than STORY-095's *Cicelyna: mail …*. Fold gold mail into the holder's material mailbox stop and share the wording.
 
 **Lots and cost basis** (deferred from STORY-034 on 2026-10-15): which purchase each sold or crafted unit came from, for realised profit. Needs STORY-034b's item movements and a rule for held stock of unknown cost.
 
