@@ -58,6 +58,11 @@ def team_results(catalogs, data, arguments, window, shared=None):
         **{key: arguments[key] for key in (*BOARD_KEYS, 'listings', 'metrics')}) for c in available_characters(data)}
 
 
+def roster_step(groups):
+    """Best profession action in CRAFT-11 comparison order; keep every step in the record."""
+    return min(groups, key=progression.summary_sort, default=None)
+
+
 def path_result(result):
     """Annotate computed decisions, retaining all original calculation evidence."""
     groups = []
@@ -69,4 +74,4 @@ def path_result(result):
                                'alternative': recipe(group['alternative']) if group.get('alternative') else None,
                                'alternative_kind': alternative_kind(group.get('alternative')),
                                'gathering': gathering(group), 'next_step': next_step(group)['kind']})
-    return result | {'professions': groups}
+    return result | {'professions': groups, 'best_step': roster_step(groups)}

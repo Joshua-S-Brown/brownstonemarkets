@@ -9,3 +9,9 @@ describe("Money parity", () => {
       expect(container.textContent).toBe(row.text);
     });
 });
+it("renders zero muted without coin colour classes", () => {
+  const { container } = render(<Money copper={0} />);
+  expect(container.firstElementChild?.className).toContain("muted");
+  expect(container.querySelector('[class*="coin-"]')).toBeNull();
+  expect(container.textContent).toBe("0c");
+});

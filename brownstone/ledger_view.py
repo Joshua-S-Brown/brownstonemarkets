@@ -56,19 +56,23 @@ def gold_answer(data, bounds):
     movements = [m for m in data["movements"] if in_range(m["at"], bounds)]
     totals = ledger.summarize(movements)
     categories, daily = (
-        defaultdict(lambda: dict(in_copper=0, out_copper=0)),
+        defaultdict(lambda: dict(in_copper=0, out_copper=0, movement_count=0)),
         defaultdict(lambda: dict(in_copper=0, out_copper=0)),
     )
     for row in totals:
         for key in ("in_copper", "out_copper"):
             categories[row["category"]][key] += row[key]
             daily[row["day"]][key] += row[key]
+    for movement in movements:
+        for category in {part["category"] for part in movement["parts"]}:
+            categories[category]["movement_count"] += 1
     team = {key: sum(r[key] for r in totals) for key in ("in_copper", "out_copper")}
     pairs = [r for r in data["reconciliation"] if in_range(r["to"], bounds)]
     return dict(
         team=team | dict(net_copper=team["in_copper"] - team["out_copper"]),
         totals=totals,
-        categories=[dict(category=k, **v) for k, v in sorted(categories.items())],
+        categories=[dict(category=k, net_copper=v["in_copper"] - v["out_copper"], **v)
+                    for k, v in sorted(categories.items())],
         daily=[dict(day=k, **v) for k, v in sorted(daily.items())],
         reconciliation=[r | dict(from_utc=utc(r["from"]), to_utc=utc(r["to"])) for r in pairs],
         pairs=dict(

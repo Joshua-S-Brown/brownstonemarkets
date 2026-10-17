@@ -49,39 +49,20 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-091 Team and Ledger as the prototype drew them
-2. STORY-092 Supply chains as the prototype drew it
-3. STORY-093 item and character records as the prototype drew them
-4. STORY-094 Level up as the prototype drew it
-5. STORY-087 retire NiceGUI
-6. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-7. STORY-026 scan coverage and rhythm
-8. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-9. STORY-006 replay
+1. STORY-092 Supply chains as the prototype drew it
+2. STORY-093 item and character records as the prototype drew them
+3. STORY-094 Level up as the prototype drew it
+4. STORY-087 retire NiceGUI
+5. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+6. STORY-026 scan coverage and rhythm
+7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+8. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 095 and SPIKE-009/009b.
-
-### STORY-091 — Team and Ledger as the prototype drew them
-
-Added 2026-10-16 after the owner walk-through. Team reads as text: no skill bars, profession coverage as a sentence list, *Cost to 300* and *Instead of a new hire* as paragraphs, a look-ahead slider and a caveat paragraph before the answer, and the best line on the page (*Blacksmithing: Cloudy Skyforged Wristguards · +19 points · 4s 5c*) in plain text. Ledger's summary and chart are decent, but zeros print as coin-coloured *0c*, categories are lowercase, and a long per-character table dominates where the prototype has four tiles and a *By category* panel beside the chart. Presentation only, built with STORY-089's components.
-
-As the owner, I want Team and Ledger to answer their questions in the first screen, so that I can see who should do what, and where our gold went, without reading.
-
-Acceptance:
-- **Team roster:** cards like the prototype: initials avatar, name (`CharacterName`), level, last seen and gold; each profession as a skill bar (rank of the tier maximum, with a marker at the next tier); one *next step* line per card (the best one, styled as an action); the other next steps and *incomplete* reasons in the card's `Tip` and record. Characters with no profession say *Learn a profession to see what's in reach* as an action line.
-- **Team coverage:** a matrix (professions × characters, rank in each covered cell, *Not covered* pill in the last column), not a list. Gathering professions without a catalog keep their note in a `Tip`.
-- **Team hiring:** *If we add a character* and *Instead of a new hire* as tables (profession, best per craft at 300, team holder, estimate *Complete*/*Incomplete* pill with its reason in a `Tip`). The look-ahead slider moves into its panel header; the caveat paragraph moves to the evidence footer.
-- **Ledger summary:** four `Tile`s: *Came in*, *Went out*, *Net* (caption: *N of M bags pairs reconcile*) and *Held stock* (caption: *at listed prices · N no-price items*), for the selected days.
-- **Ledger flow:** the daily chart as the prototype's diverging bars (in above, out below the axis), and beside it a *By category* panel: capitalised category names, signed money, and each category's movement count (add the count to `ledger_view`'s category rows, with a test). Zero shows muted, not coin-coloured. The per-character/day table moves behind a *By character and day* disclosure using `CharacterName`.
-- **Ledger Items and Restock:** each a `Panel` with its tiles first and its tables after, keeping STORY-085's filters, provenance and evidence.
-- **Offline tests:** skill bar maths (rank/maximum, unknown maximum shows no bar), matrix cells from Team's existing coverage data, hiring table rows, category counts, zero muted, the disclosure keeping the per-character table.
-- **Docs:** `requirements.md` → UI-18 or the Team/Ledger rules only where wording names the old layout (trim as much as you add); `status.md` → *Team* and *Ledger*.
-- **Real data:** beta copy, newest scan (`20261017T104157Z-ff991e` on 17 Oct; rechecked then, so newer imports may move these): Team shows 8 characters (Lira, Star, Baspion, Cicelyna, Arille, Basilly, Raaem, Keenagen; three with no profession get the *Learn a profession* line), Arille's Blacksmithing 31/75, Mining 48/75, Cooking 2/75 and Fishing 3/75 bars, Basilly's Tailoring 32/75, and Arille's Blacksmithing step *Cloudy Skyforged Chain · +19 points · 90s 50c*; hiring has 9 professions, fishing, herbalism and skinning without a catalog. Ledger with *All* days shows in 6,592c, out 4,324c, net 2,268c, 79 of 79 pairs, 421 movements, nine days of bars, and the category totals with counts summing to the movements they cover. Report any figure that differs and why. Screenshots at 1280 and 390 px beside the prototype's Team and Ledger.
-- Depends on STORY-089. Rules: UI-15, UI-16, UI-18, CRAFT-11, *Stock*. Design: *Web app (UI-18)*, *Stock contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 091, 095 and SPIKE-009/009b.
 
 ### STORY-092 — Supply chains as the prototype drew it
 

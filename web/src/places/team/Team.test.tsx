@@ -8,6 +8,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { SkillBar, skillFraction, MemberCard } from "./Roster";
+import { Coverage, coverageRows } from "./Coverage";
+import { HiringTables } from "./HiringTables";
 import { Team } from "./Team";
 import { Path, Steps } from "./Path";
 import { Hire, HireDetail } from "./Hiring";
@@ -114,7 +117,7 @@ function fixture(): TeamData {
         ],
         history: [],
       },
-      progression: { professions: [group] },
+      progression: { professions: [group], best_step: group },
     })),
     hires: [row],
     no_catalog: ["fishing"],
@@ -175,8 +178,8 @@ it("keeps windows per tab/source, commits only on release, and opens exact same-
   );
   expect(readWindow("one")).toBe(30);
   expect(readWindow("other")).toBe(45);
-  await userEvent.click(screen.getByTitle("Realm 1 · Alliance"));
-  await userEvent.click(screen.getByTitle("Realm 2 · Alliance"));
+  await userEvent.click(screen.getAllByTitle("Realm 1 · Alliance")[0]);
+  await userEvent.click(screen.getAllByTitle("Realm 2 · Alliance")[0]);
   expect(open.mock.calls.map((c) => c[0])).toEqual([
     { character: ["Maker", "Realm 1", "Alliance"] },
     { character: ["Maker", "Realm 2", "Alliance"] },
@@ -190,18 +193,18 @@ it("keeps windows per tab/source, commits only on release, and opens exact same-
   expect(screen.queryByText(/cost to 300: incomplete/)).toBeNull();
   view.unmount();
   wrap(<Team source="one" />);
-  expect((screen.getByRole("slider") as HTMLInputElement).value).toBe("30");
+  expect(((await screen.findByRole("slider")) as HTMLInputElement).value).toBe(
+    "30",
+  );
   sessionStorage.setItem("brownstone-team-one", "101");
   expect(readWindow("one")).toBe(25);
   sessionStorage.setItem("brownstone-team-one", "{");
   expect(readWindow("one")).toBe(25);
 });
 it("loads hire detail only on first opening and retains it when reopened", async () => {
-  wrap(<Hire row={row} source="one" showCost />);
+  wrap(<Hire row={row} source="one" />);
   expect(requests).toHaveLength(0);
-  const disclosure = screen
-    .getByText(/Tailoring · best at 300/)
-    .closest("details")!;
+  const disclosure = screen.getByText("Tailoring").closest("details")!;
   (disclosure as HTMLDetailsElement).open = true;
   fireEvent(disclosure, new Event("toggle"));
   await screen.findByText(/New hire: rank 1/);
@@ -303,4 +306,98 @@ it("renders short character names without the full identity in page text", async
   expect(document.body.textContent).not.toMatch(
     /(?:Maker|Basilly) · (?:Realm(?: [12])?|Beta) · Alliance/,
   );
+});
+
+it("uses rank/tier maths and leaves unknown maxima without a bar", () => {
+  expect(skillFraction(31, 75)).toBe(31 / 75);
+  expect(skillFraction(48, 75)).toBe(48 / 75);
+  expect(skillFraction(90, 75)).toBe(1);
+  expect(skillFraction(2, null)).toBeNull();
+  expect(skillFraction(null, 75)).toBeNull();
+  expect(skillFraction(2, 0)).toBeNull();
+  const view = wrap(<SkillBar name="Blacksmithing" rank={31} maximum={75} />);
+  const bar = screen.getByRole("progressbar", { name: "Blacksmithing" });
+  expect(bar.getAttribute("aria-valuenow")).toBe("31");
+  expect(bar.getAttribute("aria-valuemax")).toBe("75");
+  expect((bar.firstChild as HTMLElement).style.width).toBe(
+    `${(31 / 75) * 100}%`,
+  );
+  expect(screen.getByTitle("Next tier: 75")).toBeTruthy();
+  view.rerender(<SkillBar name="Unknown" rank={31} maximum={null} />);
+  expect(screen.queryByRole("progressbar")).toBeNull();
+});
+it("builds matrix cells with full character identity and gathering coverage", async () => {
+  const data = fixture();
+  data.hires[0].holders = [
+    { character: data.roster[1].character, rank: 32, max_rank: 75 },
+  ];
+  data.roster[0].card.professions[0] = {
+    ...data.roster[0].card.professions[0],
+    name: "Fishing",
+    rank: 3,
+    max_rank: 75,
+  };
+  data.no_catalog.push("herbalism");
+  wrap(<Coverage data={data} />);
+  const rows = screen.getAllByRole("row");
+  expect(rows[1].textContent).toContain("Tailoring·32");
+  expect(rows[2].textContent).toContain("Fishing3·");
+  expect(coverageRows(data)[1].holders[0].character).toEqual(
+    data.roster[0].character,
+  );
+  expect(screen.getByText("Not covered")).toBeTruthy();
+  await userEvent.hover(screen.getByRole("button", { name: "Fishing" }));
+  await screen.findByRole("tooltip", {
+    name: "No catalog: gathering income and supply are not modelled",
+  });
+});
+it("keeps one best action and a learning action when no profession is known", () => {
+  const member = fixture().roster[0];
+  member.progression.professions = [
+    { ...group, best: { ...recipe, profit_copper: 1 } },
+    {
+      ...group,
+      profession: "Tailoring",
+      best: { ...recipe, name: "Best choice", profit_copper: 200 },
+    },
+  ];
+  member.progression.best_step = member.progression.professions[1];
+  const view = wrap(<MemberCard member={member} />);
+  expect(screen.getAllByText(/Next step/)).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Best choice" })).toBeTruthy();
+  expect(view.container.textContent).toContain("2s");
+  expect(
+    screen.getByRole("button", { name: "All next steps and evidence" }),
+  ).toBeTruthy();
+  view.unmount();
+  wrap(
+    <MemberCard
+      member={{ ...member, card: { ...member.card, professions: [] } }}
+    />,
+  );
+  expect(
+    screen.getByText("Learn a profession to see what's in reach"),
+  ).toBeTruthy();
+});
+it("renders hire and holder table rows with complete/incomplete pills and reasons", async () => {
+  const data = fixture();
+  data.hires[0] = {
+    ...row,
+    best: { output_item_id: 10, output_name: "Craft", profit_copper: 200 },
+    estimate: { ...estimate, complete: true, cost_copper: 300 },
+  };
+  data.comparisons = [
+    {
+      character: data.roster[0].character,
+      professions: [{ profession: "cooking", best: { ...recipe, estimate } }],
+    },
+  ];
+  wrap(<HiringTables data={data} source="one" window={25} />);
+  expect(screen.getAllByRole("table")).toHaveLength(2);
+  expect(screen.getByText("Complete")).toBeTruthy();
+  expect(screen.getByText("Incomplete")).toBeTruthy();
+  await userEvent.hover(screen.getByRole("button", { name: "Incomplete" }));
+  await screen.findByRole("tooltip", { name: "training cost unknown" });
+  expect(screen.getByText("Best per craft at 300")).toBeTruthy();
+  expect(screen.getByText("Best per craft in reach")).toBeTruthy();
 });

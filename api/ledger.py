@@ -56,6 +56,8 @@ class ItemTeam(BaseModel):
 
 
 class Category(BaseModel):
+    net_copper: int
+    movement_count: int
     category: str
     in_copper: int
     out_copper: int

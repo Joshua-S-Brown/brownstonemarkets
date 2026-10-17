@@ -1,0 +1,32 @@
+.flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-block: 16px;
+  align-items: start;
+}
+.category {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.category small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 860px) {
+  .flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.captures > span {
+  white-space: normal;
+  flex-wrap: wrap;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}

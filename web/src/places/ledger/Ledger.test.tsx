@@ -8,7 +8,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-import { Ledger } from "./Ledger";
+import { Ledger, leadingCategories } from "./Ledger";
 import { InspectorContext } from "../../app/InspectorContext";
 import { readDays, writeDays } from "./state";
 vi.mock("./Chart", () => ({ Chart: () => <p>Daily chart</p> }));
@@ -27,7 +27,15 @@ const payload = {
     pairs: { reconciled: 1, total: 2, unknown: 1 },
     movement_count: 3,
     daily: [],
-    categories: [],
+    categories: [
+      {
+        category: "auction sale",
+        net_copper: 1023,
+        in_copper: 1023,
+        out_copper: 0,
+        movement_count: 3,
+      },
+    ],
     totals: [
       {
         character: ["Maker", "Realm", "Alliance"],
@@ -162,6 +170,12 @@ it("persists days per source, sends shared filters and loads category provenance
       ),
     ).toBe(true),
   );
+  const disclosure = screen
+    .getByText("By character and day")
+    .closest("details")!;
+  expect(disclosure.open).toBe(false);
+  await user.click(screen.getByText("By character and day"));
+  expect(disclosure.open).toBe(true);
   await user.click(screen.getByRole("button", { name: "auction sale" }));
   await screen.findByText("entry");
   expect(
@@ -239,4 +253,60 @@ it("renders short character names without the full identity in page text", async
   expect(document.body.textContent).not.toMatch(
     /(?:Maker|Basilly) · (?:Realm(?: [12])?|Beta) · Alliance/,
   );
+});
+
+it("shows four tiles, capitalised counted signed categories and retains character rows", async () => {
+  mount();
+  await screen.findByText("3 recorded changes");
+  for (const label of ["Came in", "Went out", "Net", "Held stock"])
+    expect(screen.getByText(label)).toBeTruthy();
+  expect(screen.getByText("1 of 2 bags pairs reconcile")).toBeTruthy();
+  expect(
+    screen.getByText("Net").parentElement?.textContent?.replace(/\s/g, ""),
+  ).toContain("+10s13c");
+  expect(screen.getByText("Mostly auction sale")).toBeTruthy();
+  expect(screen.getByText("at listed prices · 1 no-price items")).toBeTruthy();
+  expect(screen.getByText("Auction sale")).toBeTruthy();
+  expect(screen.getByText("3 movements")).toBeTruthy();
+  expect(screen.getByText("Auction sale").parentElement?.textContent).toContain(
+    "+",
+  );
+  for (const title of ["Items", "Restock"]) {
+    const panel = screen
+      .getByRole("heading", { name: title })
+      .closest("section")!;
+    expect(
+      panel.querySelector('[class*="panel-b"]')?.firstElementChild?.className,
+    ).toContain("kpis");
+  }
+  expect(
+    screen
+      .getByText("By character and day")
+      .closest("details")
+      ?.querySelector("table")?.textContent,
+  ).toContain("Maker");
+});
+
+it("names the two largest categories per side and says None without any", () => {
+  const row = (category: string, in_copper: number, out_copper: number) => ({
+    category,
+    in_copper,
+    out_copper,
+    net_copper: in_copper - out_copper,
+    movement_count: 1,
+  });
+  const rows = [
+    row("vendor sale", 50, 0),
+    row("other", 20, 5),
+    row("auction sale", 90, 0),
+    row("training", 0, 40),
+  ];
+  expect(leadingCategories(rows, "in_copper")).toBe(
+    "Mostly auction sale and vendor sale",
+  );
+  expect(leadingCategories(rows, "out_copper")).toBe(
+    "Mostly training and other",
+  );
+  expect(leadingCategories([], "out_copper")).toBe("None");
+  expect(leadingCategories(undefined, "in_copper")).toBe("None");
 });

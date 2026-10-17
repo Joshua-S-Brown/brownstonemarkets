@@ -1,4 +1,3 @@
-import { CharacterName } from "../../ui/CharacterName";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { get } from "../../api/client";
@@ -79,15 +78,7 @@ export function HireDetail({ data }: { data: HireDetailData }) {
     </>
   );
 }
-export function Hire({
-  row,
-  source,
-  showCost,
-}: {
-  row: HireRow;
-  source: string;
-  showCost: boolean;
-}) {
+export function Hire({ row, source }: { row: HireRow; source: string }) {
   const [open, setOpen] = useState(false);
   const query = useQuery({
     queryKey: [source, "team-hire", row.profession],
@@ -102,33 +93,7 @@ export function Hire({
   });
   return (
     <details onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary>
-        {title(row.profession)} · best at 300:{" "}
-        <Money copper={row.best?.profit_copper ?? null} /> per craft
-        {showCost && (
-          <>
-            {" "}
-            · cost to 300:{" "}
-            {row.estimate.complete ? (
-              <Money copper={row.estimate.cost_copper ?? null} />
-            ) : (
-              "incomplete"
-            )}
-          </>
-        )}
-        <small>
-          Team:{" "}
-          {row.holders.length
-            ? row.holders.map((h, i) => (
-                <span key={i}>
-                  <CharacterName character={h.character} /> ·{" "}
-                  {h.rank ?? "unknown"} / {h.max_rank ?? "unknown"}
-                  {"; "}
-                </span>
-              ))
-            : "no evidenced holder"}
-        </small>
-      </summary>
+      <summary>{title(row.profession)}</summary>
       {open &&
         (query.error ? (
           <ErrorState

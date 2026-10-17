@@ -60,6 +60,7 @@ class Profession(Facts):
 
 
 class Progression(Facts):
+    best_step: Profession | None = None
     professions: list[Profession]
 
 
@@ -116,6 +117,7 @@ class HireRow(BaseModel):
 
 
 class ComparisonBest(Facts):
+    estimate: Estimate | None = None
     name: str
     profit_copper: int | None
 

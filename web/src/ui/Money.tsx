@@ -16,7 +16,12 @@ export function Money({ copper }: { copper: number | null }) {
       {moneyText(copper)
         .split(" ")
         .map((part, i) => (
-          <span key={i} className={styles["coin-" + part.slice(-1)]}>
+          <span
+            key={i}
+            className={
+              copper === 0 ? undefined : styles["coin-" + part.slice(-1)]
+            }
+          >
             {i > 0 ? " " : ""}
             {part}
           </span>

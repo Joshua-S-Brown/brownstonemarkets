@@ -136,11 +136,9 @@ Observed listed supply only, never sales/demand/liquidity/realizable profit or c
 - *How to get there* adds *pays back training in N crafts* when a recipe has a training cost:
   divide that integer copper cost by per-craft profit, rounded up; *never* at zero or negative
   profit, *unknown* without profit. Without a training cost, retain *cost unknown* and no payback.
-- In *Add a character?*, when every profession row's cost to 300 is incomplete, show one note
-  above the rows: *Cost to 300 is incomplete for every profession; open one to see why*;
-  omit *· cost to 300: incomplete* from those row headings. With any complete row, retain
-  individual costs. Team and new-hire cost steps use MONEY-02 formatting, *unknown* when missing,
-  and sort on integer copper, as do Team's per-craft profit columns.
+- Team follows UI-18: roster skill bars and one best action per card (other steps/reasons in a
+  Tip and record), profession coverage matrix, new-hire and existing-holder tables with estimate
+  pills. Cost steps use MONEY-02, *unknown* when missing, and sort on integer copper.
 
 ### ADDON-12 Event journal
 
@@ -379,7 +377,7 @@ preserves original bytes. No third-party Lua/action automation; usage/check in a
 - **Stock:** read-only holdings from the latest readable bags and bank capture per character, selected source and full market (ADDON-11), the same capture Team uses. Holdings key on the exact ADDON-08 identity from each slot's link: variants and unresolved links (such as bound starter items) are separate rows, never pooled with or priced as the base item, and never counted toward a base target. Each location retains its capture time/age; unreadable captures are excluded and disclosed. An unopened or unreadable bank is unknown, never an empty bank. Show all item IDs held, searchable by name/ID with a compatible catalog-chain filter. Value uses CRAFT-04's cautious sale unit price from the newest complete scan in this scope: units × lower positive minimum buyout/market value, or the sole positive price. Label **at listed prices, not what it would sell for**; missing/zero prices are **no price**, excluded from the total with an excluded-item count. Label stale scans under DATA-05.
   - Manual whole-team targets are nonnegative integer units per positive item ID, one entry per item; no name-to-ID guessing. Optional buy limits are positive integer copper per unit or positive integer percent of the same scan's ADDON-03 market value (from its price observations), mutually exclusive. Percentage conversion rounds down to integer copper; absent market value makes the limit unknown and leaves listed units waiting. No limit permits all priced listings. Persist per source in `data/stock_targets.<source_id>.local.json` using watchlist-style validated Save-only atomic replacement; rejected saves preserve the last saved targets, including when the existing file is damaged.
   - Short is max(target − readable held, 0), labelled **at most** when any character's bank or bags is unknown or only partly readable. Quote only targeted items with Today's cheapest-first whole-stack ladder. Split the short into units within the buy limit (**buy now**), listed units above it (**wait**) and unlisted units. Include whole-stack purchase quantities/surplus and costs; insufficient supply never gets a full-fill price. Holdings and captures are not live counts, and target changes do not change Today plans, ranking or `today_version`; Today uses holdings under its held-material rule.
-  - UI-18 presentation: Ledger strip, capture/scan-age chips, held/value/short/cost tiles; short items first. Holdings, target purchases and snapshot/capture/price evidence on demand. Cache snapshots, scan and targets; filter in brownstone.
+  - UI-18 presentation: Ledger summary tiles, Restock held/value/short/cost tiles before capture/scan-age chips and tables; short items first. Holdings, target purchases and snapshot/capture/price evidence on demand. Cache snapshots, scan and targets; filter in brownstone.
 
 ### UI-15 Gold ledger (STORY-034)
 

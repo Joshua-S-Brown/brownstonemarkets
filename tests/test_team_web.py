@@ -252,3 +252,18 @@ def test_hire_detail_reuses_any_window_and_holdings_failure_is_503(browser, monk
     monkeypatch.setattr('brownstone.character_snapshots.latest_data', broken)
     response = get(browser, 'team/character', name=name, realm=realm, faction=faction, window=40)
     assert response.status_code == 503 and 'Unable to read holdings' in response.text
+
+
+def test_roster_best_action_uses_profit_completeness_cost_and_preserves_steps():
+    def group(name, profit, complete, cost):
+        return dict(profession=name, best=dict(profit_copper=profit,
+                    estimate=dict(complete=complete, cost_copper=cost)))
+    groups = [group("unknown", None, False, None), group("cheap", 10, True, 2),
+              group("expensive", 10, True, 20), group("incomplete", 10, False, 1)]
+    original = list(groups)
+    assert team_view.roster_step(groups)["profession"] == "cheap"
+    assert groups == original
+    assert team_view.roster_step([group("profit", 20, False, None), *groups])["profession"] == "profit"
+    assert team_view.roster_step([]) is None
+    assert team_view.roster_step(groups[:1])["profession"] == "unknown"
+    assert team_view.roster_step([dict(profession="Mining", best=None)])["profession"] == "Mining"

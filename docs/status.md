@@ -56,12 +56,15 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Offline: `tests/test_item_ledger.py`, `tests/test_ledger_web.py`, Ledger Vitest.
   Copied beta scan `20261016T113727Z-eb77d0`: 1,007 movements, 46 baselines/gaps, 736 units in,
   596 out, 73/76 bags and 10/10 bank pairs without residuals; 11 own-mail rows, one unmatched send.
-- **Gold ledger (UI-15):** `/app/ledger?source=` shows team in/out/net, daily chart, category totals,
-  character/day/category movements and reconciliation. Days (7/30/all UTC, default 7) persist per
-  tab/source. Evidence loads once until database/config/hour/targets change; failures stay local.
-  Offline: `tests/test_ledger.py`, `tests/test_ledger_web.py`, Ledger Vitest. Copied beta: 385 movements,
-  5,878c in / 4,079c out / 1,799c net; 76/76 bags pairs reconcile, no missing money baselines,
-  three unreadable bags excluded. Quests/flights remain other.
+- **Gold ledger (UI-15, STORY-091):** `/app/ledger?source=` leads with Came in/Went out/Net/Held
+  stock tiles, diverging daily bars beside counted, signed category rows, and a By character and day
+  disclosure. Items and Restock are panels with tiles before tables; shared filters, targets,
+  provenance and reconciliation remain. Days (7/30/all UTC, default 7) persist per tab/source.
+  Offline: `tests/test_ledger.py`, `tests/test_ledger_web.py`, Ledger/Chart/Money Vitest.
+  Copied beta `20261017T104157Z-ff991e`, All: 421 movements, nine days, 6,592c in / 4,324c out /
+  2,268c net; 79/79 bags pairs reconcile. Category counts total 427: six payments each split into
+  auction sale and deposit refund. Held stock 10,096c with 29 no-price items.
+  Quests/flights remain other; current holdings are independent of the selected movement days.
 
 - **App:** STORY-089 shares prototype component styles and page headings, short keyed character
   links, identity/confidence/signal pills, UTC times, panels, tiles and grid options. `/app/kit`
@@ -119,23 +122,21 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   On copied beta data, scan `20261016T113727Z-eb77d0`: 13 Queue lines match NiceGUI verbatim,
   including quantities, gold mail, deposits and copy text. Shopping 1,825c, deposits 411c,
   expected profit 2,583c, captured team funds 1,939c. All five characters' This session options match.
-- **Team (STORY-084):** `/app/team?source=` shows the roster, profession coverage and lazy hiring
-  detail. Roster, Route, Level up and palette links open inspector records by the full character key;
-  characters stay out of URLs. Records expose Professions, Path, Holdings and History, with source,
-  market, scan, capture and machine evidence. The release-only look-ahead persists per tab/source.
-  `team_view` owns shared shaping; `/api/team` caches one shared board per source/window until its
-  database, configuration or hour changes. Character holdings retain exact variant identities.
-  The NiceGUI Team view and its two test files are retired after comparison on copied beta data.
+- **Team (STORY-091):** `/app/team?source=` shows avatar cards with rank/tier bars and one best
+  action, other steps/reasons in Tips and records, a profession coverage matrix and hiring/holder
+  tables with estimate pills. The release-only look-ahead sits in the roster header and persists
+  per tab/source; caveats live in the evidence footer. CharacterName links open full-key records.
+  `team_view` owns shared shaping; `/api/team` caches one board per source/window until database,
+  configuration or hour changes. Hire tier details load on demand. Holdings retain exact variants.
   Rules: [CRAFT-11/13](requirements.md#crafting), [Team character cards](requirements.md#team-character-cards).
-  Offline checks: `test_team_web.py`, `test_progression.py`, `test_hiring.py`, `test_session_options.py`,
-  Team/CharacterRecord Vitest suites and Today/palette/inspector identity tests.
-  Copied Forever scan `20261016T113727Z-eb77d0`, window 25: five characters; Arille's Cooking
-  Kaldorei Spider Kabob 21c / Peace Tea 228c, Blacksmithing Cloudy Skyforged Wristguards 9,250c,
-  Mining Smelt Bronze 67c; Basilly's Blue Linen Vest 289c without alternative. Gathering sentences
-  remain for Arille's Fishing and Keenagen's Mining. Nine hire rows match the story's order and
-  profits, all incomplete; Fishing/Herbalism/Skinning appear once. Desktop 1280 and mobile 390 px
-  checks include open character/hire records; screenshots and baseline are ignored in `work/story-084/`.
-  No collection/import was run. Training, gathering income, demand and tier-fee limits remain as labelled.
+  Offline: Team/CharacterRecord Vitest, `test_team_web.py`, progression/hiring/session-options suites.
+  Copied beta `20261017T104157Z-ff991e`, window 25: eight characters, three learning actions;
+  Arille Blacksmithing 31/75, Mining 48/75, Cooking 2/75, Fishing 3/75; Basilly Tailoring 32/75.
+  Arille's best action is Cloudy Skyforged Chain, +19 points, 9,050c per craft. Nine hire rows,
+  all estimates incomplete; Fishing/Herbalism/Skinning retain no-catalog Tips. Comparisons retain
+  CRAFT-11's reachable window; only new-hire profits are at 300 (CRAFT-13).
+  1280/390 px Team/Ledger comparisons with the prototype are in ignored `work/story-091/`.
+  No collection/import ran. Training, gathering income, demand and tier-fee limits remain labelled.
 
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).

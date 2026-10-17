@@ -509,6 +509,10 @@ export interface components {
             category: string;
             /** In Copper */
             in_copper: number;
+            /** Movement Count */
+            movement_count: number;
+            /** Net Copper */
+            net_copper: number;
             /** Out Copper */
             out_copper: number;
         };
@@ -573,6 +577,7 @@ export interface components {
         };
         /** ComparisonBest */
         ComparisonBest: {
+            estimate?: components["schemas"]["Estimate"] | null;
             /** Name */
             name: string;
             /** Profit Copper */
@@ -1276,6 +1281,7 @@ export interface components {
         };
         /** Progression */
         Progression: {
+            best_step?: components["schemas"]["Profession"] | null;
             /** Professions */
             professions: components["schemas"]["Profession"][];
         } & {

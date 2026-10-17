@@ -99,6 +99,9 @@ def test_gold_cached_categories_reconciliation_lazy_movements(browser, monkeypat
     assert result["team"]["in_copper"] == 1023
     assert result["reconciliation"][0]["unexplained_copper"] == 52
     assert result["evidence"]["excluded_money"] == 1
+    assert {r["category"]: r["movement_count"] for r in result["categories"]} == {
+        "auction sale": 2, "deposit refund": 2
+    }
     total = result["totals"][0]
     movements = (
         browser[0]
@@ -264,3 +267,21 @@ def test_items_filter_uses_catalog_names_and_chains_when_stock_fails():
         loaded["items"], "items", ("a", "r", "f"), "2026-10-16", "other", ledger_view.filter_basis(loaded), "linen"
     )
     assert [m["name"] for m in found] == ["Linen Cloth"]
+
+
+def test_category_counts_once_per_movement_category_in_selected_days():
+    now = datetime(2026, 10, 16, tzinfo=UTC)
+    at = int(now.timestamp())
+    def movement(time, parts):
+        return dict(character=("a", "r", "f"), at=time, parts=[dict(category=k, copper=v) for k, v in parts])
+    movements = [movement(at, [("auction sale", 20), ("auction sale", 10), ("deposit refund", 5)]),
+                 movement(at, [("other", 0)]), movement(at, [("auction sale", 15)]),
+                 movement(at - 10 * 86400, [("auction sale", 99)])]
+    result = ledger_view.gold_answer(dict(movements=movements, reconciliation=[]), ledger_view.day_bounds("7", now))
+    categories = {r["category"]: r for r in result["categories"]}
+    assert categories["auction sale"] == dict(
+        category="auction sale", in_copper=45, out_copper=0, movement_count=2, net_copper=45
+    )
+    assert categories["deposit refund"]["movement_count"] == 1
+    assert categories["other"]["movement_count"] == 1
+    assert result["movement_count"] == 3

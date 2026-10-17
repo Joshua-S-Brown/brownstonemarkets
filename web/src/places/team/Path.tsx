@@ -53,7 +53,7 @@ export function NextStep({ group }: { group: Group }) {
         <>
           <ItemLink id={group.best.output_item_id} name={group.best.name} /> · +
           {group.best.points_needed} points ·{" "}
-          <Cost estimate={group.best.estimate} />
+          <Money copper={group.best.profit_copper} />
         </>
       ) : (
         "no valued recipe in reach"
