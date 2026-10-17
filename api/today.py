@@ -57,7 +57,7 @@ class TodayPlan(BaseModel):
     funds_copper: int
     funds_label: str
     settings: dict[str, Any]
-    characters: list[list[str]]
+    characters: list[tuple[str, str, str]]
     notes: list[str]
     session: dict[str, Any] | None = None
 

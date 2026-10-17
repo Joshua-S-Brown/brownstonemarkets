@@ -1,12 +1,14 @@
+import { ConfidencePill } from "../../ui/ConfidencePill";
+import { PageHead } from "../../ui/PageHead";
+import { CharacterName } from "../../ui/CharacterName";
 import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { post } from "../../api/client";
 import { Money } from "../../ui/Money";
-import { Evidence } from "../../ui/Evidence";
+import { Evidence, EvidenceTip } from "../../ui/Evidence";
 import { ItemLink } from "../../ui/ItemLink";
-import { Pill, Tip, ErrorState } from "../../ui/parts";
-import { useInspector } from "../../app/InspectorContext";
+import { ErrorState } from "../../ui/parts";
 import { type Plan, keepLocal, readState, writeState, todayKey } from "./state";
 import { LevelUp } from "./LevelUp";
 import { PlanText } from "./PlanText";
@@ -25,7 +27,6 @@ export function Today({
   const [params, setParams] = useSearchParams();
   const requested = params.get("view") || "route";
   const view = views.includes(requested) ? requested : "route";
-  const inspect = useInspector();
   const query = useQuery({
     queryKey: todayKey(source),
     queryFn: async ({ signal }) =>
@@ -70,14 +71,12 @@ export function Today({
   const ticks = data.state.ticks || {};
   return (
     <>
-      <div className={styles["section-heading"]}>
-        <div>
-          <p className={styles.eyebrow}>Tonight’s plan</p>
-          <h1>Today</h1>
-          <p>What should I do today to make gold?</p>
-        </div>
-        <Settings source={source} data={data} />
-      </div>
+      <PageHead
+        eyebrow="Tonight’s plan"
+        title="Today"
+        subtitle="What should I do today to make gold?"
+        action={<Settings source={source} data={data} />}
+      />
       <div className={`${styles.tiles} ${styles["today-summary"]}`}>
         <div>
           Planned profit
@@ -129,7 +128,12 @@ export function Today({
         <p key={i}>
           {(data.state.rows || []).find(
             (r) => r.catalog_id === c.catalog_id && r.recipe_id === c.recipe_id,
-          )?.output_name || `Recipe ${c.recipe_id}`}
+          )?.output_name || (
+            <EvidenceTip
+              label="Unavailable recipe"
+              data={{ recipe_id: c.recipe_id, catalog_id: c.catalog_id }}
+            />
+          )}
           : {c.reason}
         </p>
       ))}
@@ -169,14 +173,9 @@ export function Today({
                   {i + 1}.{" "}
                   {(stop.characters || []).length
                     ? stop.characters.map((c) => (
-                        <button
-                          key={c.join("|")}
-                          onClick={() => inspect({ character: c })}
-                        >
-                          {c.join(" · ")}
-                        </button>
+                        <CharacterName character={c} key={c.join("|")} />
                       ))
-                    : stop.character}
+                    : stop.character}{" "}
                   · {stop.place}
                 </h2>
                 {stop.lines.map((line) => (
@@ -201,7 +200,10 @@ export function Today({
                         }}
                       />
                       <span>
-                        <PlanText text={line.text} />
+                        <PlanText
+                          text={line.text}
+                          characters={data.characters}
+                        />
                       </span>
                     </label>
                     {line.warnings && <p>{line.warnings}</p>}
@@ -264,12 +266,16 @@ export function Today({
                 <p>
                   <Money copper={row.headline_per_craft_copper} /> per craft
                   {row.profit_basis} · {row.batch_size} crafts ·{" "}
-                  {row.made_by || "Maker unknown"}
+                  <PlanText
+                    text={row.made_by || "Maker unknown"}
+                    characters={data.characters}
+                  />
                 </p>
                 {row.warnings_text && <p>{row.warnings_text}</p>}
-                <Tip text={row.confidence_reasons.join("; ")}>
-                  <Pill>{row.confidence} confidence</Pill>
-                </Tip>
+                <ConfidencePill
+                  level={row.confidence}
+                  reasons={row.confidence_reasons}
+                />
               </section>
             ))}
           {(data.state.rows || [])

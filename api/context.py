@@ -39,7 +39,7 @@ def resolve(source: str, sources: list[Source] | None = None) -> Source:
 
 def option(source: Source) -> SourceOption:
     return SourceOption(source_id=source['source_id'], label=source.get('label') or navigation.source_label(source),
-                        game_version=source['game_version'])
+                        short_label=navigation.source_label(source), game_version=source['game_version'])
 
 
 def evidence(source: Source, snapshot: dict | None = None) -> Evidence:

@@ -74,7 +74,7 @@ def recipe_rows(catalogs, arguments, characters) -> list[dict]:
         for recipe in catalog['recipes_by_id'].values():
             key = (identity, recipe['recipe_id'])
             valued = ranked.get(key)
-            statuses = [{'character': ' · '.join(c), **recipe_status(recipe, state)}
+            statuses = [{'character': c, **recipe_status(recipe, state)}
                         for c, state in sorted(characters.items())]
             try:
                 routed = route_catalog(catalog, recipe["recipe_id"], buy, graph)
@@ -120,7 +120,8 @@ def routed_materials(catalog, value, buy, sell, crafts=1, depth=0) -> list[dict]
 
 def search_items(result, query: str) -> list[dict]:
     query = query.strip().casefold()
-    return [row for row in result['items'] if query in row['item_name'].casefold() or query in str(row['item_id'])]
+    return [{**row, 'role': search_role(result['catalogs'], row['item_id'])}
+            for row in result['items'] if query in row['item_name'].casefold() or query in str(row['item_id'])]
 
 
 def item_page(result, item_id: int) -> dict:
@@ -346,3 +347,11 @@ def farming_spot(spot, names):
     half = spot['cell_percent'] // 2
     return spot | {'mob': mob(spot['npc_id']), 'also_looted_labels': [mob(n) for n in spot['also_looted']],
                    'position': f'around {cell[0] + half}, {cell[1] + half}' if cell else '—'}
+
+
+def search_role(catalogs, item_id: int) -> str | None:
+    """Display captured compatible catalog roles without inferring from names or prices."""
+    labels = {'finished': 'Craft', 'intermediate': 'Intermediate', 'material': 'Material'}
+    roles = {labels[entry['role']] for catalog in catalogs
+             if (entry := catalog['items_by_id'].get(item_id)) and entry.get('role') in labels}
+    return ' · '.join(sorted(roles)) or None

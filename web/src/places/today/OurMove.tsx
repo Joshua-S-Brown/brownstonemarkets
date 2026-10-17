@@ -1,8 +1,9 @@
+import { CharacterWords } from "../../ui/CharacterWords";
+import { ConfidencePill } from "../../ui/ConfidencePill";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useState, useSyncExternalStore } from "react";
 import { Money } from "../../ui/Money";
-import { Pill, Tip } from "../../ui/parts";
 import { Evidence } from "../../ui/Evidence";
 import { post } from "../../api/client";
 import {
@@ -105,12 +106,17 @@ function Move({
             Reserved profit <Money copper={row.headline_profit_copper} />
             {row.profit_basis}
           </p>
-          <Tip text={row.confidence_reasons.join("; ")}>
-            <Pill>{row.confidence} confidence</Pill>
-          </Tip>
+          <ConfidencePill
+            level={row.confidence}
+            reasons={row.confidence_reasons}
+          />
           {row.warnings_text && <p>{row.warnings_text}</p>}
           <p>
-            {row.made_by || "Maker unknown"} · {row.batch_size} crafts
+            <CharacterWords
+              text={row.made_by || "Maker unknown"}
+              characters={data.characters}
+            />{" "}
+            · {row.batch_size} crafts
           </p>
         </>
       ) : (

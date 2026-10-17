@@ -1,3 +1,6 @@
+import { Identity } from "../../ui/Identity";
+import { PageHead } from "../../ui/PageHead";
+import { CharacterName } from "../../ui/CharacterName";
 import type { ColumnDef } from "@tanstack/react-table";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -8,7 +11,6 @@ import { Evidence } from "../../ui/Evidence";
 import { Money } from "../../ui/Money";
 import { ItemLink } from "../../ui/ItemLink";
 import { ErrorState, Pill } from "../../ui/parts";
-import { useInspector } from "../../app/InspectorContext";
 import { GoldPairs, Residuals } from "./Tables";
 import { Targets } from "./Targets";
 import { readDays, writeDays, type Days } from "./state";
@@ -91,12 +93,7 @@ function CategoryRow({
   );
 }
 function CharacterLink({ character }: { character: [string, string, string] }) {
-  const inspect = useInspector();
-  return (
-    <button onClick={() => inspect({ character })}>
-      {character.join(" · ")}
-    </button>
-  );
+  return <CharacterName character={character} />;
 }
 function Totals({
   source,
@@ -172,12 +169,13 @@ export function Ledger({ source }: { source: string }) {
     gold = data?.gold,
     items = data?.items,
     stock = data?.stock;
-  const inspect = useInspector();
   return (
     <>
-      <p className={styles["eyebrow"]}>Our gold and goods</p>
-      <h1>Ledger</h1>
-      <p>Where did our gold and goods go?</p>
+      <PageHead
+        eyebrow="Our gold and goods"
+        title="Ledger"
+        subtitle="Where did our gold and goods go?"
+      />
       <label>
         Days
         <select
@@ -317,14 +315,8 @@ export function Ledger({ source }: { source: string }) {
               <h3>Own-character mail</h3>
               {items.transfers.map((t, i) => (
                 <div key={i}>
-                  <button onClick={() => inspect({ character: t.sender })}>
-                    {t.sender[0]}
-                  </button>{" "}
-                  →{" "}
-                  <button onClick={() => inspect({ character: t.recipient })}>
-                    {t.recipient[0]}
-                  </button>{" "}
-                  ·{" "}
+                  <CharacterName character={t.sender} /> →{" "}
+                  <CharacterName character={t.recipient} /> ·{" "}
                   <ItemLink
                     id={t.item_id}
                     name={data.names[t.item_id] ?? `Item ${t.item_id}`}
@@ -342,10 +334,7 @@ export function Ledger({ source }: { source: string }) {
                   {p.kind}: {p.reconciled}/{p.total} pairs without residuals
                 </Pill>
               ))}
-              <Residuals
-                rows={items.reconciliation}
-                names={data.names}
-              />
+              <Residuals rows={items.reconciliation} names={data.names} />
               <details>
                 <summary>Item evidence</summary>
                 <Evidence data={items.evidence} />
@@ -359,7 +348,15 @@ export function Ledger({ source }: { source: string }) {
               <div className={styles["summary-strip"]}>
                 {stock.captures.map((c, i) => (
                   <Pill key={i}>
-                    {c.character} · {c.kind} ·{" "}
+                    {typeof c.realm === "string" &&
+                    typeof c.faction === "string" ? (
+                      <CharacterName
+                        character={[c.character, c.realm, c.faction]}
+                      />
+                    ) : (
+                      c.character
+                    )}{" "}
+                    · {c.kind} ·{" "}
                     {c.unknown ? "unknown" : `${c.age_hours?.toFixed(1)}h old`}
                     {c.empty ? " · empty" : ""}
                     {c.partial ? " · partly readable" : ""}
@@ -403,14 +400,20 @@ export function Ledger({ source }: { source: string }) {
                     accessorKey: "name",
                     header: "Item",
                     cell: ({ row: { original: r } }) => (
-                      <ItemLink
-                        id={r.item_id}
-                        name={r.name}
-                        variant={JSON.stringify([
-                          r.variant_state,
-                          r.variant_id,
-                        ])}
-                      />
+                      <>
+                        <ItemLink
+                          id={r.item_id}
+                          name={r.name.replace(
+                            / \(identity (?:unresolved|variant)[^)]*\)$/,
+                            "",
+                          )}
+                          variant={JSON.stringify([
+                            r.variant_state,
+                            r.variant_id,
+                          ])}
+                        />
+                        <Identity state={r.variant_state} />
+                      </>
                     ),
                   },
                   ...[

@@ -1,3 +1,6 @@
+import { SignalPill, isSignal } from "../../ui/SignalPill";
+import { PageHead } from "../../ui/PageHead";
+import { Identity } from "../../ui/Identity";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -6,7 +9,7 @@ import { get } from "../../api/client";
 import type { Market as MarketData, Row, Signal } from "../../api/market";
 import { Money } from "../../ui/Money";
 import { ItemLink } from "../../ui/ItemLink";
-import { Pill, Tip, Sparkline, ErrorState } from "../../ui/parts";
+import { Tip, Sparkline, ErrorState } from "../../ui/parts";
 import { DataGrid } from "../../ui/DataGrid";
 import { Evidence } from "../../ui/Evidence";
 import styles from "../../theme/app.module.css";
@@ -53,7 +56,7 @@ const columns: ColumnDef<Row>[] = [
           variant={identityVariant(r)}
         />
         <small>
-          {r.item_id} · {r.variant_state || "legacy"} {r.variant_id}
+          {r.item_id} <Identity state={r.variant_state} />
         </small>
       </>
     ),
@@ -69,7 +72,19 @@ const columns: ColumnDef<Row>[] = [
         <>
           <Money copper={r[key]} />
           {key === "gap_copper" && r.gap_percent !== null && (
-            <small>{r.gap_percent.toFixed(1)}%</small>
+            <small
+              style={{
+                color:
+                  r.gap_percent > 0
+                    ? "var(--good)"
+                    : r.gap_percent < 0
+                      ? "var(--bad)"
+                      : "var(--muted)",
+              }}
+            >
+              {r.gap_percent > 0 ? "+" : ""}
+              {r.gap_percent.toFixed(1)}%
+            </small>
           )}
         </>
       ),
@@ -95,9 +110,14 @@ const columns: ColumnDef<Row>[] = [
     cell: ({ row: { original: r } }) =>
       r.signal ? (
         <Tip text={signalEvidence(r.signal)}>
-          <Pill>
-            {r.signal.crowding} · {r.signal.overshoot.label}
-          </Pill>
+          <span>
+            {isSignal(r.signal.crowding) && (
+              <SignalPill label={r.signal.crowding} />
+            )}{" "}
+            {isSignal(r.signal.overshoot.label) && (
+              <SignalPill label={r.signal.overshoot.label} />
+            )}
+          </span>
         </Tip>
       ) : (
         "unknown"
@@ -127,13 +147,11 @@ export function Market({ source }: { source: string }) {
     rows = filterRows(data.rows, role, q);
   return (
     <>
-      <p className={styles.eyebrow}>Your saved market</p>
-      <h1>Market</h1>
-      <p className={styles.muted}>
-        What is the market telling me? ·{" "}
-        {chainListed(data.rows).toLocaleString("en-US")} listed now of{" "}
-        {data.chain_count.toLocaleString("en-US")} items in our chains
-      </p>
+      <PageHead
+        eyebrow={`${chainListed(data.rows).toLocaleString("en-US")} listed now of ${data.chain_count.toLocaleString("en-US")} items in our chains`}
+        title="Market"
+        subtitle="What is the market telling me?"
+      />
       <div className={styles.pulse}>
         {(["cheap", "high", "early"] as const).map((key, i) => (
           <section key={key}>
@@ -154,7 +172,7 @@ export function Market({ source }: { source: string }) {
                   variant={identityVariant(r)}
                 />
                 <small>
-                  {r.variant_state || "legacy"} {r.variant_id} ·{" "}
+                  <Identity state={r.variant_state} />{" "}
                   {"early" in r
                     ? `${r.early.units} units`
                     : r.overshoot.ratio

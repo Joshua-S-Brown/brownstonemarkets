@@ -75,8 +75,12 @@ function SettingsForm({
         >
           <option value="">Our team</option>
           {data.characters.map((c) => (
-            <option key={c.join("|")} value={JSON.stringify(c)}>
-              {c.join(" · ")}
+            <option
+              key={c.join("|")}
+              value={JSON.stringify(c)}
+              title={`${c[1]} · ${c[2]}`}
+            >
+              {c[0]}
             </option>
           ))}
         </select>

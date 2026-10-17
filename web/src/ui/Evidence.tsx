@@ -1,3 +1,7 @@
+import { Identity } from "./Identity";
+import * as Popover from "@radix-ui/react-popover";
+import { UtcTime } from "./UtcTime";
+import { CharacterName } from "./CharacterName";
 import { Money } from "./Money";
 import styles from "../theme/app.module.css";
 export function evidenceLabel(key: string) {
@@ -21,6 +25,34 @@ function Value({ name, value }: { name: string; value: unknown }) {
         {/(error|warning|note)$/.test(name) ? "none" : "unknown"}
       </span>
     );
+  if (typeof value === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(value))
+    return <UtcTime value={value} />;
+  if (
+    name === "character" &&
+    typeof value === "string" &&
+    value.split(" · ").length === 3
+  )
+    return (
+      <CharacterName
+        character={value.split(" · ") as [string, string, string]}
+      />
+    );
+  if (
+    name === "character" &&
+    Array.isArray(value) &&
+    value.length === 3 &&
+    value.every((v) => typeof v === "string")
+  )
+    return <CharacterName character={value as [string, string, string]} />;
+  if (name === "variant_state" && typeof value === "string")
+    return <Identity state={value} />;
+  if (
+    typeof value === "number" &&
+    ["at", "from", "to", "captured_at", "newest_sale", "posted_at"].includes(
+      name,
+    )
+  )
+    return <UtcTime value={new Date(value * 1000).toISOString()} />;
   if (copperField(name) && typeof value === "number")
     return <Money copper={value} />;
   if (typeof value === "boolean") return <>{value ? "yes" : "no"}</>;
@@ -84,7 +116,16 @@ function EvidenceTable({ rows }: { rows: Record<string, unknown>[] }) {
             <tr key={i}>
               {keys.map((k) => (
                 <td key={k}>
-                  <Value name={k} value={r[k]} />
+                  {k === "character" &&
+                  typeof r[k] === "string" &&
+                  typeof r.realm === "string" &&
+                  typeof r.faction === "string" ? (
+                    <CharacterName
+                      character={[String(r[k]), r.realm, r.faction]}
+                    />
+                  ) : (
+                    <Value name={k} value={r[k]} />
+                  )}
                 </td>
               ))}
             </tr>
@@ -107,5 +148,20 @@ export function Evidence({ data }: { data: object }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+export function EvidenceTip({ label, data }: { label: string; data: object }) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger aria-label={`${label} evidence`}>
+        {label} ⓘ
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content className={styles.popover}>
+          <Evidence data={data} />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

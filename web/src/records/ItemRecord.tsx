@@ -1,3 +1,6 @@
+import { SignalPill, isSignal } from "../ui/SignalPill";
+import { Identity } from "../ui/Identity";
+import { UtcTime } from "../ui/UtcTime";
 import styles from "../theme/app.module.css";
 import { lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -58,7 +61,7 @@ export function ItemRecord({
       </h1>
       <p className={styles["muted"]}>
         Quality {item.quality ?? "unknown"} ·{" "}
-        {variant ? JSON.parse(variant).join(" · ") : "base-item Overview"}
+        <Identity state={variant ? JSON.parse(variant)[0] : "base"} />
       </p>
       <Tabs.Root defaultValue="overview">
         <Tabs.List aria-label="Item tabs">
@@ -113,8 +116,12 @@ export function ItemRecord({
               </strong>
             </div>
           </div>
-          {item.crowding && <Pill>{item.crowding}</Pill>}{" "}
-          {item.overshoot && <Pill>{item.overshoot}</Pill>}
+          {item.crowding && isSignal(item.crowding) && (
+            <SignalPill label={item.crowding} />
+          )}{" "}
+          {item.overshoot && isSignal(item.overshoot) && (
+            <SignalPill label={item.overshoot} />
+          )}
           <h2>Best use in our catalogs</h2>
           {(["used_in", "made_from"] as const).map((key) => (
             <section key={key}>
@@ -130,7 +137,10 @@ export function ItemRecord({
               ) : (
                 <p>No profitable use known</p>
               )}
-              <p className={styles["muted"]}>{item[key].reason}</p>
+              <details>
+                <summary>Route evidence</summary>
+                <Evidence data={{ reason: item[key].reason }} />
+              </details>
             </section>
           ))}
           {(!variant || ["base", null].includes(JSON.parse(variant)[0])) && (
@@ -181,7 +191,7 @@ export function ItemRecord({
         <p>
           Scan {item.evidence.scan_id ?? "unavailable"}
           <br />
-          Finished {item.evidence.finished_at ?? "unknown"}
+          Finished <UtcTime value={item.evidence.finished_at} />
         </p>
         {item.evidence.freshness && (
           <p>

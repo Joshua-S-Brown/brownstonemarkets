@@ -1,3 +1,5 @@
+import { Icon } from "../ui/Icon";
+import { Kit } from "../places/kit/Kit";
 import styles from "../theme/app.module.css";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -33,15 +35,22 @@ function Theme() {
     localStorage.setItem("brownstone-theme", theme);
   }, [theme]);
   return (
-    <select
-      aria-label="Theme"
-      value={theme}
-      onChange={(e) => setTheme(e.target.value)}
-    >
-      <option value="system">System</option>
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-    </select>
+    <Popover.Root>
+      <Popover.Trigger aria-label="Theme" className={styles["icon-btn"]}>
+        <Icon name="moon" />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content className={styles.popover} aria-label="Theme choices">
+          {["system", "light", "dark"].map((t) => (
+            <Popover.Close asChild key={t}>
+              <button aria-pressed={theme === t} onClick={() => setTheme(t)}>
+                {t[0].toUpperCase() + t.slice(1)}
+              </button>
+            </Popover.Close>
+          ))}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 export function App() {
@@ -60,7 +69,7 @@ export function App() {
     enabled: !!source,
   });
   const waiting = inventory.data?.waiting,
-    waitingError = inventory.data?.waiting_error;
+    waitingError = inventory.data?.waiting_error || inventory.error?.message;
   useEffect(() => {
     if (!source) return;
     let socket: WebSocket | undefined;
@@ -107,16 +116,56 @@ export function App() {
             </span>
           </div>
           {places.map((p) => (
-            <a key={p} className={styles["nav-btn"]} href={placeURL(p, source)}>
+            <a
+              key={p}
+              className={styles["nav-btn"]}
+              href={placeURL(p, source)}
+              aria-current={
+                window.location.pathname === placeURL(p, source).split("?")[0]
+                  ? "page"
+                  : undefined
+              }
+            >
+              <Icon
+                name={
+                  p === "Supply chains"
+                    ? "chain"
+                    : (p.toLowerCase() as
+                        | "today"
+                        | "market"
+                        | "team"
+                        | "ledger")
+                }
+              />
               <span>
-                {p}
+                {p === "Supply chains" ? (
+                  <>
+                    <span className={styles["label-wide"]}>{p}</span>
+                    <span className={styles["label-narrow"]}>Chains</span>
+                  </>
+                ) : (
+                  p
+                )}
                 <small>{data?.questions[p]}</small>
               </span>
             </a>
           ))}
           <Dialog.Root open={sheetOpen} onOpenChange={sheet}>
             <Dialog.Trigger className={styles["data-button"]}>
-              Data <Pill>{waiting ?? "?"}</Pill>
+              <Icon name="data" />
+              Data{" "}
+              <span
+                title={
+                  waitingError ||
+                  (waiting == null
+                    ? "not checked yet"
+                    : `${waiting} scans waiting`)
+                }
+              >
+                <Pill tone={waitingError ? "warn" : "neutral"}>
+                  {waiting ?? "●"}
+                </Pill>
+              </span>
             </Dialog.Trigger>
             <Dialog.Portal>
               <Dialog.Overlay className={styles["shade"]} />
@@ -141,7 +190,10 @@ export function App() {
             <Palette source={source} />
             <Popover.Root>
               <Popover.Trigger className={styles["chip"]}>
-                {data?.selected?.label || "Choose source"} ▾
+                {data?.selected?.short_label ||
+                  data?.selected?.label ||
+                  "Choose source"}{" "}
+                ▾
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content className={styles["popover"]} sideOffset={8}>
@@ -160,36 +212,39 @@ export function App() {
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
-            <Tip
-              onClick={() => sheet(true)}
-              text={
-                data?.evidence
-                  ? `${data.evidence.source_id} · ${data.evidence.market_id} · ${data.evidence.finished_at ?? "No scan"}`
-                  : "Select one source. Open Data to import saved scans."
-              }
-            >
-              <Pill
-                tone={
-                  data?.evidence?.freshness?.stale
-                    ? "warn"
-                    : data?.evidence?.freshness?.upstream_known
-                      ? "good"
-                      : "neutral"
+            <span className={styles["hide-sm"]}>
+              <Tip
+                onClick={() => sheet(true)}
+                text={
+                  data?.evidence
+                    ? `${data.evidence.source_id} · ${data.evidence.market_id} · ${data.evidence.finished_at ?? "No scan"}`
+                    : "Select one source. Open Data to import saved scans."
                 }
               >
-                {!data?.evidence?.freshness
-                  ? "No scan"
-                  : !data.evidence.freshness.upstream_known
-                    ? "Price age unknown"
-                    : data.evidence.freshness.stale
-                      ? "Stale"
-                      : "Fresh"}
-              </Pill>
-            </Tip>
+                <Pill
+                  tone={
+                    data?.evidence?.freshness?.stale
+                      ? "warn"
+                      : data?.evidence?.freshness?.upstream_known
+                        ? "good"
+                        : "neutral"
+                  }
+                >
+                  {!data?.evidence?.freshness
+                    ? "No scan"
+                    : !data.evidence.freshness.upstream_known
+                      ? "Price age unknown"
+                      : data.evidence.freshness.stale
+                        ? "Stale"
+                        : "Fresh"}
+                </Pill>
+              </Tip>
+            </span>
             <Theme />
           </header>
           <main className={styles["workspace"]}>
             {![
+              "/app/kit",
               "/app/chains",
               "/app/market",
               "/app/today",
@@ -199,6 +254,7 @@ export function App() {
               <p className={styles["eyebrow"]}>Your saved market</p>
             )}
             {![
+              "/app/kit",
               "/app/chains",
               "/app/market",
               "/app/today",
@@ -208,6 +264,7 @@ export function App() {
               <h1>Brownstone workspace</h1>
             )}
             {![
+              "/app/kit",
               "/app/chains",
               "/app/market",
               "/app/today",
@@ -218,7 +275,9 @@ export function App() {
                 What should I do today to make gold?
               </p>
             )}
-            {query.error ? (
+            {window.location.pathname === "/app/kit" ? (
+              <Kit />
+            ) : query.error ? (
               <ErrorState
                 source={source}
                 error={query.error}

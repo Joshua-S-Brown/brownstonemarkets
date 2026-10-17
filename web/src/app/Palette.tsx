@@ -1,3 +1,5 @@
+import { Identity } from "../ui/Identity";
+import { CharacterName } from "../ui/CharacterName";
 import styles from "../theme/app.module.css";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -66,10 +68,14 @@ export function Palette({ source }: { source: string }) {
       ),
     enabled: open && !!source && !!search.trim(),
   });
+  const matchingPlaces = places.filter((p) =>
+    p.toLowerCase().includes(q.toLowerCase()),
+  );
   return (
     <>
       <button className={styles["search-btn"]} onClick={() => setOpen(true)}>
-        Search items, characters, places <kbd>⌘K</kbd>
+        <span>Search items, characters, places</span>
+        <kbd>⌘K</kbd>
       </button>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
@@ -95,10 +101,9 @@ export function Palette({ source }: { source: string }) {
                       ? "Choose a source to search items and characters."
                       : "No matches. Try a name or item ID."}
                 </Command.Empty>
-                <Command.Group heading="Places">
-                  {places
-                    .filter((p) => p.toLowerCase().includes(q.toLowerCase()))
-                    .map((p) => (
+                {matchingPlaces.length > 0 && (
+                  <Command.Group heading="Go to">
+                    {matchingPlaces.map((p) => (
                       <Command.Item
                         key={p}
                         value={p}
@@ -109,7 +114,8 @@ export function Palette({ source }: { source: string }) {
                         {p}
                       </Command.Item>
                     ))}
-                </Command.Group>
+                  </Command.Group>
+                )}
                 {query.error && (
                   <ErrorState
                     source={source}
@@ -119,35 +125,68 @@ export function Palette({ source }: { source: string }) {
                     }}
                   />
                 )}
-                <Command.Group heading="Saved records">
-                  {query.data?.map((hit, i) => (
-                    <Command.Item
-                      key={i}
-                      value={hit.kind + hit.name + i}
-                      onSelect={() => {
-                        inspect(
-                          hit.item_id
-                            ? {
-                                item: hit.item_id,
-                                variant: JSON.stringify([
-                                  hit.variant_state,
-                                  hit.variant_id,
-                                ]),
-                              }
-                            : { character: hit.character! },
-                        );
-                        setOpen(false);
-                      }}
-                    >
-                      {hit.name}
-                      <small>
-                        {hit.kind === "item"
-                          ? `${hit.item_id} · ${hit.variant_state || "legacy"}${hit.variant_id ? " · " + hit.variant_id : ""}`
-                          : "Team"}
-                      </small>
-                    </Command.Item>
-                  ))}
-                </Command.Group>
+                {(["item", "character"] as const).map((kind) => {
+                  const hits = query.data?.filter((h) => h.kind === kind) || [];
+                  return (
+                    hits.length > 0 && (
+                      <Command.Group
+                        key={kind}
+                        heading={kind === "item" ? "Items" : "Characters"}
+                      >
+                        {hits.map((hit, i) => (
+                          <Command.Item
+                            key={i}
+                            value={hit.kind + hit.name + i}
+                            title={hit.variant_id || undefined}
+                            onSelect={() => {
+                              inspect(
+                                hit.item_id
+                                  ? {
+                                      item: hit.item_id,
+                                      variant: JSON.stringify([
+                                        hit.variant_state,
+                                        hit.variant_id,
+                                      ]),
+                                    }
+                                  : { character: hit.character! },
+                              );
+                              setOpen(false);
+                            }}
+                          >
+                            {kind === "item" ? (
+                              <>
+                                <span>
+                                  <span
+                                    style={
+                                      hit.quality != null
+                                        ? { color: `var(--q-${hit.quality})` }
+                                        : undefined
+                                    }
+                                  >
+                                    {hit.name}
+                                  </span>{" "}
+                                  <Identity state={hit.variant_state} />
+                                </span>
+                                <small>
+                                  {hit.role ? `${hit.role} · ` : ""}
+                                  {hit.item_id}
+                                </small>
+                              </>
+                            ) : (
+                              <>
+                                <CharacterName
+                                  character={hit.character!}
+                                  onOpen={() => setOpen(false)}
+                                />
+                                <small>Character</small>
+                              </>
+                            )}
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )
+                  );
+                })}
               </Command.List>
             </Command>
           </Dialog.Content>

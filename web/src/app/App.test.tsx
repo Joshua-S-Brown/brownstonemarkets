@@ -65,10 +65,57 @@ it("requires explicit source choice, preserves it in place links and remembers t
         .getAttribute("href"),
     ).toContain("source=one"),
   );
-  await user.selectOptions(screen.getByLabelText("Theme"), "light");
+  await user.click(screen.getByLabelText("Theme"));
+  await user.click(screen.getByRole("button", { name: "Light" }));
   expect(localStorage.getItem("brownstone-theme")).toBe("light");
   expect(document.documentElement.dataset.theme).toBe("light");
   expect(sockets[0]?.url.searchParams.get("source")).toBe("one");
   rendered.unmount();
   expect(sockets.every((s) => s.closed)).toBe(true);
 });
+
+it.each([null, "Inventory unreadable"])(
+  "Data badge explains unchecked/error inventory: %s",
+  async (error) => {
+    vi.stubGlobal(
+      "WebSocket",
+      class {
+        close() {}
+      },
+    );
+    const option = {
+      source_id: "one",
+      label: "Full configured label",
+      short_label: "Short source",
+      game_version: "forever",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          sources: [option],
+          selected: option,
+          evidence: null,
+          waiting: null,
+          waiting_error: error,
+          questions: {},
+        }),
+      }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("button", { name: "Short source ▾" });
+    const dot = await screen.findByTitle(error || "not checked yet");
+    expect(dot.textContent).toBe("●");
+    expect(dot.firstElementChild?.getAttribute("data-tone")).toBe(
+      error ? "warn" : "neutral",
+    );
+    expect(screen.queryByText("?")).toBeNull();
+  },
+);

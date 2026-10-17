@@ -1,15 +1,15 @@
+import { UtcTime } from "../../ui/UtcTime";
+import { CharacterName } from "../../ui/CharacterName";
 import { DataGrid } from "../../ui/DataGrid";
 import { ItemLink } from "../../ui/ItemLink";
 import { Money } from "../../ui/Money";
 import { Pill } from "../../ui/parts";
-import { useInspector } from "../../app/InspectorContext";
 import type { components } from "../../api/schema";
 export function GoldPairs({
   rows,
 }: {
   rows: components["schemas"]["GoldPair"][];
 }) {
-  const inspect = useInspector();
   return (
     <DataGrid
       rows={rows}
@@ -18,13 +18,19 @@ export function GoldPairs({
           accessorKey: "character",
           header: "Character",
           cell: ({ row: { original: r } }) => (
-            <button onClick={() => inspect({ character: r.character })}>
-              {r.character.join(" · ")}
-            </button>
+            <CharacterName character={r.character} />
           ),
         },
-        { accessorKey: "from_utc", header: "From UTC" },
-        { accessorKey: "to_utc", header: "To UTC" },
+        {
+          accessorKey: "from_utc",
+          header: "From UTC",
+          cell: ({ row: { original: r } }) => <UtcTime value={r.from_utc} />,
+        },
+        {
+          accessorKey: "to_utc",
+          header: "To UTC",
+          cell: ({ row: { original: r } }) => <UtcTime value={r.to_utc} />,
+        },
         ...["actual_copper", "recorded_copper", "unexplained_copper"].map(
           (k) => ({
             accessorKey: k,
@@ -48,7 +54,6 @@ export function Residuals({
   rows: components["schemas"]["ItemResidual"][];
   names: Record<string, string>;
 }) {
-  const inspect = useInspector();
   return (
     <DataGrid
       rows={rows}
@@ -57,9 +62,7 @@ export function Residuals({
           accessorKey: "character",
           header: "Character",
           cell: ({ row: { original: r } }) => (
-            <button onClick={() => inspect({ character: r.character })}>
-              {r.character.join(" · ")}
-            </button>
+            <CharacterName character={r.character} />
           ),
         },
         {
@@ -76,8 +79,16 @@ export function Residuals({
         { accessorKey: "residual_units", header: "Residual units" },
         { accessorKey: "actual_units", header: "Actual units" },
         { accessorKey: "recorded_units", header: "Recorded units" },
-        { accessorKey: "from_utc", header: "From UTC" },
-        { accessorKey: "to_utc", header: "To UTC" },
+        {
+          accessorKey: "from_utc",
+          header: "From UTC",
+          cell: ({ row: { original: r } }) => <UtcTime value={r.from_utc} />,
+        },
+        {
+          accessorKey: "to_utc",
+          header: "To UTC",
+          cell: ({ row: { original: r } }) => <UtcTime value={r.to_utc} />,
+        },
         {
           accessorKey: "possibly_incomplete",
           header: "Evidence",

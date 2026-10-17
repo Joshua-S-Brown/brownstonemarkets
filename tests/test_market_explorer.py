@@ -103,6 +103,7 @@ def test_board_reasons_missing_routes_character_status_and_duplicate_catalogs(tm
     assert shirt['value']['profit_copper'] is None
     assert any(m['unit_cost_copper'] is None for m in shirt['materials'])
     assert shirt['characters'][0]['craft_status'] == 'Unknown'
+    assert len(shirt['characters'][0]['character']) == 3
     other = deepcopy(catalog)
     other['catalog_id'] = 'other-tailoring'
     assert len(me.recipe_rows([catalog, other], arguments, {})) == len(rows) * 2

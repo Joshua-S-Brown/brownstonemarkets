@@ -85,7 +85,7 @@ export type Recipe = {
     maker?: string;
   }[];
   characters: {
-    character: string;
+    character: [string, string, string];
     craft_status: string;
     character_reason: string;
   }[];

@@ -1,3 +1,6 @@
+import { UtcTime } from "../ui/UtcTime";
+import { Identity } from "../ui/Identity";
+import { CharacterName } from "../ui/CharacterName";
 import { lazy, Suspense, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
@@ -52,13 +55,14 @@ export function CharacterRecord({
   const c = data.card;
   return (
     <>
-      <h1>{c.name}</h1>
+      <h1>
+        <CharacterName character={character} />
+      </h1>
       <p>
-        {c.realm} · {c.faction} · Level {c.level ?? "unknown"} · Gold{" "}
-        <Money copper={c.gold_copper} />
+        Level {c.level ?? "unknown"} · Gold <Money copper={c.gold_copper} />
       </p>
       <p>
-        {c.last_seen_relative} · {c.machine ?? "machine unknown"}
+        <UtcTime value={c.last_seen_utc} /> · {c.machine ?? "machine unknown"}
         {c.stale && (
           <>
             {" "}
@@ -126,7 +130,11 @@ export function CharacterRecord({
                 variant={JSON.stringify([item.variant_state, item.variant_id])}
               />{" "}
               · {String(item.units)} · {String(item.kind)} ·{" "}
-              {String(item.variant_state ?? "legacy")}
+              <Identity
+                state={
+                  item.variant_state == null ? null : String(item.variant_state)
+                }
+              />
             </p>
           ))}
         </Tabs.Content>

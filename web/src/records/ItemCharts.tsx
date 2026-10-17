@@ -1,3 +1,5 @@
+import { UtcTime, utcLabel } from "../ui/UtcTime";
+import { Identity } from "../ui/Identity";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -17,8 +19,7 @@ import { DataGrid } from "../ui/DataGrid";
 import { Money, moneyText } from "../ui/Money";
 import { ErrorState } from "../ui/parts";
 import { Evidence } from "../ui/Evidence";
-export const scanLabel = (time: string) =>
-  `${new Date(time).toISOString()} UTC · ${new Date(time).toLocaleString()} local`;
+export const scanLabel = (time: string) => `${utcLabel(time)} UTC`;
 export function historyData(history: History) {
   return history.points.map((p) => ({
     time: Date.parse(p.finished_at),
@@ -264,7 +265,7 @@ export function ItemCharts({
             >
               {h.scans.map((s) => (
                 <option key={s.scan_id} value={s.scan_id}>
-                  {scanLabel(s.finished_at)}
+                  <UtcTime value={s.finished_at} />
                 </option>
               ))}
             </select>
@@ -299,14 +300,14 @@ export function RemovalHistory({ h }: { h: History }) {
       {(all ? pairs : pairs.slice(0, 3)).map((p, i) => (
         <section key={i}>
           <h3>
-            {scanLabel(p.earlier.finished_at)} →{" "}
-            {scanLabel(p.later.finished_at)}
+            <UtcTime value={p.earlier.finished_at} /> →{" "}
+            <UtcTime value={p.later.finished_at} />
           </h3>
           <p>Gap {(p.gap / 3600).toFixed(2)} hours</p>
           {p.items.map((r, j) => (
             <section key={j}>
               <p>
-                {r.variant_state || "legacy"} {r.variant_id}
+                <Identity state={r.variant_state} />
               </p>
               {(["early", "expiry", "unknown"] as const).map((k, i) => (
                 <p key={k}>

@@ -1,8 +1,9 @@
+import { CharacterName } from "../../ui/CharacterName";
 import { PlanText } from "./PlanText";
 import { Evidence } from "../../ui/Evidence";
 import { Money } from "../../ui/Money";
 import { ItemLink } from "../../ui/ItemLink";
-import { type CharacterKey, useInspector } from "../../app/InspectorContext";
+import { type CharacterKey } from "../../app/InspectorContext";
 import type { Plan } from "./state";
 import styles from "../../theme/app.module.css";
 type Recipe = {
@@ -68,7 +69,6 @@ export function LevelUp({
 }: {
   session: NonNullable<Plan["session"]>;
 }) {
-  const inspect = useInspector();
   const characters = (session.characters || []) as Character[];
   return (
     <>
@@ -86,14 +86,12 @@ export function LevelUp({
       {characters.map((c) => (
         <section key={c.character.join("|")} className={styles["route-stop"]}>
           <h2>
-            <button onClick={() => inspect({ character: c.character })}>
-              {c.character[0]}
-            </button>{" "}
-            · level {c.level ?? "unknown"}
+            <CharacterName character={c.character} /> · level{" "}
+            {c.level ?? "unknown"}
           </h2>
           {c.options_text.map((s, i) => (
             <p key={i}>
-              → <PlanText text={s} />
+              → <PlanText text={s} characters={[c.character]} />
             </p>
           ))}
           {c.professions.map((g) => (
@@ -110,7 +108,10 @@ export function LevelUp({
                     {m.estimate.complete ? (
                       <Money copper={m.estimate.cost_copper} />
                     ) : (
-                      <>unknown · {m.estimate.reasons.join("; ")}</>
+                      <>
+                        unknown ·{" "}
+                        <PlanText text={m.estimate.reasons.join("; ")} />
+                      </>
                     )}
                   </h4>
                   {m.recipes.map((r) => (

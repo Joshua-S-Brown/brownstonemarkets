@@ -1,3 +1,4 @@
+import { PageHead } from "../../ui/PageHead";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import styles from "../../theme/app.module.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -118,7 +119,10 @@ export function Data({ source }: { source: string }) {
                   syncing, check again in a minute.
                 </p>
               </details>
-              <h2>Bring in new scans</h2>
+              <PageHead
+                title="Bring in new scans"
+                subtitle="What evidence do I have, and how do I bring it up to date?"
+              />
               <p>
                 Reads this Mac’s game file and the drop folder. Nothing is saved
                 until you choose Import.

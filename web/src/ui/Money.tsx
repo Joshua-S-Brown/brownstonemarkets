@@ -12,7 +12,7 @@ export function moneyText(copper: number | null): string {
 }
 export function Money({ copper }: { copper: number | null }) {
   return (
-    <span className={styles["money"]}>
+    <span className={`${styles.money} ${copper === 0 ? styles.muted : ""}`}>
       {moneyText(copper)
         .split(" ")
         .map((part, i) => (

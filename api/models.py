@@ -15,6 +15,7 @@ class Evidence(BaseModel):
 class SourceOption(BaseModel):
     source_id: str
     label: str
+    short_label: str
     game_version: str
 
 
@@ -28,6 +29,7 @@ class Sources(BaseModel):
 
 
 class SearchHit(BaseModel):
+    role: str | None = None
     character: tuple[str, str, str] | None = None
     kind: str
     name: str

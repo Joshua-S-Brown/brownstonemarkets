@@ -1362,6 +1362,8 @@ export interface components {
             name: string;
             /** Quality */
             quality?: number | null;
+            /** Role */
+            role?: string | null;
             /** Variant Id */
             variant_id?: string | null;
             /** Variant State */
@@ -1437,6 +1439,8 @@ export interface components {
             game_version: string;
             /** Label */
             label: string;
+            /** Short Label */
+            short_label: string;
             /** Source Id */
             source_id: string;
         };
@@ -1578,7 +1582,11 @@ export interface components {
         /** TodayPlan */
         TodayPlan: {
             /** Characters */
-            characters: string[][];
+            characters: [
+                string,
+                string,
+                string
+            ][];
             /** Copy Text */
             copy_text: string;
             /**

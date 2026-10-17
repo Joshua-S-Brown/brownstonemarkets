@@ -19,7 +19,7 @@ const entry = {
   buy_percent: null,
 };
 const payload = {
-  evidence: {source_id:"one", market_id:"market"},
+  evidence: { source_id: "one", market_id: "market" },
   errors: {},
   names: { 2589: "Linen Cloth" },
   gold: {
@@ -167,9 +167,7 @@ it("persists days per source, sends shared filters and loads category provenance
   expect(
     calls.filter((c) => c.url.pathname.endsWith("/movements")),
   ).toHaveLength(1);
-  await user.click(
-    screen.getAllByRole("button", { name: "Maker · Realm · Alliance" })[0],
-  );
+  await user.click(screen.getAllByRole("button", { name: "Maker" })[0]);
   expect(inspect).toHaveBeenCalledWith({
     character: ["Maker", "Realm", "Alliance"],
   });
@@ -233,4 +231,12 @@ it("tolerates bad or blocked session storage", () => {
   });
   writeDays("one", "30");
   spy.mockRestore();
+});
+
+it("renders short character names without the full identity in page text", async () => {
+  mount();
+  await screen.findAllByRole("button", { name: "Maker" });
+  expect(document.body.textContent).not.toMatch(
+    /(?:Maker|Basilly) · (?:Realm(?: [12])?|Beta) · Alliance/,
+  );
 });

@@ -164,7 +164,7 @@ function wrap(child: React.ReactNode) {
 it("keeps windows per tab/source, commits only on release, and opens exact same-name identities", async () => {
   writeWindow("other", 45);
   const view = wrap(<Team source="one" />);
-  await screen.findByRole("button", { name: "Maker · Realm 1" });
+  await screen.findAllByRole("button", { name: "Maker" });
   expect(requests.filter((r) => r.pathname === "/api/team")).toHaveLength(1);
   expect(requests.some((r) => r.pathname.includes("/hire/"))).toBe(false);
   fireEvent.change(screen.getByRole("slider"), { target: { value: "30" } });
@@ -175,12 +175,8 @@ it("keeps windows per tab/source, commits only on release, and opens exact same-
   );
   expect(readWindow("one")).toBe(30);
   expect(readWindow("other")).toBe(45);
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Maker · Realm 1" }),
-  );
-  await userEvent.click(
-    screen.getByRole("button", { name: "Maker · Realm 2" }),
-  );
+  await userEvent.click(screen.getByTitle("Realm 1 · Alliance"));
+  await userEvent.click(screen.getByTitle("Realm 2 · Alliance"));
   expect(open.mock.calls.map((c) => c[0])).toEqual([
     { character: ["Maker", "Realm 1", "Alliance"] },
     { character: ["Maker", "Realm 2", "Alliance"] },
@@ -299,4 +295,12 @@ it("shows tier feed savings, fees, levels, incomplete reasons and empty cost ste
     2,
   );
   expect(screen.getByText("Rank 75 · character level 10")).toBeTruthy();
+});
+
+it("renders short character names without the full identity in page text", async () => {
+  wrap(<Team source="one" />);
+  await screen.findAllByRole("button", { name: "Maker" });
+  expect(document.body.textContent).not.toMatch(
+    /(?:Maker|Basilly) · (?:Realm(?: [12])?|Beta) · Alliance/,
+  );
 });

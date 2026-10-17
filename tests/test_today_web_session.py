@@ -1,5 +1,6 @@
 """Rule regressions moved from native Today/session/card tests to the web boundary."""
 from copy import deepcopy
+from unittest.mock import Mock
 
 import pytest
 from app_helpers import team_app
@@ -99,7 +100,12 @@ def test_cross_profession_queue_postorder_names_and_context_reset():
 
 @pytest.mark.parametrize('invalid', [{'gold_text':'12'}, {'max_crafts':1.5}, {'percent_basis_points':10001},
     {'post_duration_hours':12}, {'gold_copper':True}, {'include_unknown':1}])
-def test_settings_refusal_keeps_file_and_plan(browser, invalid):
+def test_settings_refusal_keeps_file_and_plan(browser, invalid, monkeypatch):
+    from api import today
+
+    # This checks refusal, not freshness changes across an hourly cache rollover.
+    fixed_now = today.datetime.now(today.UTC)
+    monkeypatch.setattr(today, 'datetime', Mock(now=Mock(return_value=fixed_now)))
     original = request(browser).json()
     before = browser[2].read_bytes()
     response = browser[0].post('/api/today/settings', json={'settings': original['settings'] | invalid}, headers=TOKEN)

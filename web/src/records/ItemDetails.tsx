@@ -1,3 +1,6 @@
+import { CharacterWords } from "../ui/CharacterWords";
+import { UtcTime } from "../ui/UtcTime";
+import { CharacterName } from "../ui/CharacterName";
 import { useQuery } from "@tanstack/react-query";
 import { get } from "../api/client";
 import type { Activity, Chain, Recipe } from "../api/market";
@@ -36,7 +39,7 @@ function RecipeRow({
       )}
       {used && <p>{r.quantity} units per craft</p>}
       <p>
-        Board profit per craft: <Money copper={r.profit_copper} /> · {r.reason}
+        Board profit per craft: <Money copper={r.profit_copper} />
       </p>
       {r.vendor_capped && (
         <p>
@@ -51,8 +54,11 @@ function RecipeRow({
           <p key={i} style={{ paddingLeft: m.depth * 16 }}>
             <ItemLink id={m.item_id} name={m.item_name} /> × {m.quantity} ·{" "}
             {m.method} · <Money copper={m.unit_cost_copper} /> / unit ·{" "}
-            <Money copper={m.total_cost_copper} /> total {m.maker}{" "}
-            {m.route_note}
+            <Money copper={m.total_cost_copper} /> total{" "}
+            <CharacterWords
+              text={m.maker ?? ""}
+              characters={r.characters.map((c) => c.character)}
+            />{" "}
           </p>
         ))}
       {!used && (
@@ -66,12 +72,24 @@ function RecipeRow({
         </details>
       )}
       <details>
+        <summary>Route evidence</summary>
+        <Evidence
+          data={{
+            recipe_id: r.recipe_id,
+            catalog_id: r.catalog_id,
+            route_reason: r.reason,
+            route_notes: r.materials.map((m) => m.route_note),
+          }}
+        />
+      </details>
+      <details>
         <summary>Team eligibility</summary>
         {r.characters.length === 0
           ? "Team: Unknown"
           : r.characters.map((c, i) => (
               <p key={i}>
-                {c.character}: {c.craft_status} · {c.character_reason}
+                <CharacterName character={c.character} />: {c.craft_status} ·{" "}
+                {c.character_reason}
               </p>
             ))}
       </details>
@@ -152,7 +170,11 @@ export function ItemActivity({ source, id }: { source: string; id: number }) {
       {!a.your_sales.length && <p>none resolved yet</p>}
       {a.your_sales.map((s, i) => (
         <section key={i}>
-          <h3>{s.character.join(" · ")}</h3>
+          <h3>
+            <CharacterName
+              character={[s.character[0], s.character[1], s.character[2]]}
+            />
+          </h3>
           <p>
             {s.sold + s.expired + s.cancelled
               ? `${s.sold} of ${s.sold + s.expired + s.cancelled} sold`
@@ -162,9 +184,11 @@ export function ItemActivity({ source, id }: { source: string; id: number }) {
           <p>
             {s.posted} posted · {s.expired} expired · {s.cancelled} cancelled ·
             newest sale{" "}
-            {s.newest_sale
-              ? new Date(s.newest_sale * 1000).toISOString()
-              : "none yet"}
+            {s.newest_sale ? (
+              <UtcTime value={new Date(s.newest_sale * 1000).toISOString()} />
+            ) : (
+              "none yet"
+            )}
           </p>
         </section>
       ))}
@@ -211,7 +235,11 @@ export function ItemGathering({ source, id }: { source: string; id: number }) {
       {a.farming.length === 0 && <p>not gathered yet</p>}
       {a.farming.map((c, i) => (
         <section key={i}>
-          <h3>{c.character.join(" · ")}</h3>
+          <h3>
+            <CharacterName
+              character={[c.character[0], c.character[1], c.character[2]]}
+            />
+          </h3>
           {c.farming.rows.map((r, j) => (
             <p key={j}>
               {r.zone || "unknown zone"} · {r.source_kind} ·{" "}

@@ -168,7 +168,7 @@ it("Opportunities retain ranking, money, reasons and Hide Low leaves Route compl
   data.plan.freshness.stale = true;
   mount("opportunities");
   await screen.findByRole("button", { name: "Robe" });
-  expect(screen.getByText("Low confidence")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Low" })).toBeTruthy();
   expect(
     screen.getByRole("link", { name: "Open Data" }).getAttribute("href"),
   ).toBe("?source=one&view=opportunities&sheet=data");
@@ -304,14 +304,20 @@ it("renders each purchase crafter as its own full-key character link", async () 
     ["Maker", "Second", "Horde"],
   ];
   mount();
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Maker · First · Alliance" }),
-  );
-  await userEvent.click(
-    screen.getByRole("button", { name: "Maker · Second · Horde" }),
-  );
+  const first = (await screen.findAllByRole("button", { name: "Maker" }))[0]!;
+  expect(first.parentElement!.textContent).toMatch(/Maker\s+·/);
+  await userEvent.click(first);
+  await userEvent.click(screen.getByTitle("Second · Horde"));
   expect(inspect.mock.calls.map((c) => c[0])).toEqual([
     { character: ["Maker", "First", "Alliance"] },
     { character: ["Maker", "Second", "Horde"] },
   ]);
+});
+
+it("renders short character names without the full identity in page text", async () => {
+  mount();
+  await screen.findByText("Craft 2 Robe");
+  expect(document.body.textContent).not.toMatch(
+    /(?:Maker|Basilly) · (?:Realm(?: [12])?|Beta) · Alliance/,
+  );
 });

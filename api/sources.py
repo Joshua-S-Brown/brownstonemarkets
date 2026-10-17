@@ -19,7 +19,7 @@ def waiting(source):
             preview = scan_inputs.preview_inputs(source)
             ids = {sid for file in preview.files if file.preview for sid in file.preview.new_ids}
             errors = '; '.join(file.error for file in preview.files if file.error)
-            return len(ids), errors or None
+            return (None, errors) if errors else (len(ids), None)
         return len(pipeline.preview_scans(source).new_ids), None
     except (OSError, ValueError, RuntimeError) as error:
         return None, f'Unable to check new scans: {error}. Open Data to review.'

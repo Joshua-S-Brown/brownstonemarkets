@@ -1,3 +1,4 @@
+import { CharacterName } from "../../ui/CharacterName";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { get } from "../../api/client";
@@ -118,12 +119,13 @@ export function Hire({
         <small>
           Team:{" "}
           {row.holders.length
-            ? row.holders
-                .map(
-                  (h) =>
-                    `${h.character.join(" · ")} · ${h.rank ?? "unknown"} / ${h.max_rank ?? "unknown"}`,
-                )
-                .join("; ")
+            ? row.holders.map((h, i) => (
+                <span key={i}>
+                  <CharacterName character={h.character} /> ·{" "}
+                  {h.rank ?? "unknown"} / {h.max_rank ?? "unknown"}
+                  {"; "}
+                </span>
+              ))
             : "no evidenced holder"}
         </small>
       </summary>

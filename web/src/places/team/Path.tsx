@@ -1,3 +1,4 @@
+import { PlanText } from "../today/PlanText";
 import { Evidence } from "../../ui/Evidence";
 import { Money } from "./Money";
 import { ItemLink } from "../../ui/ItemLink";
@@ -8,7 +9,9 @@ export function Cost({ estimate }: { estimate: Estimate }) {
   return estimate.complete ? (
     <Money copper={estimate.cost_copper ?? null} />
   ) : (
-    <>incomplete: {estimate.reasons?.join("; ")}</>
+    <>
+      incomplete: <PlanText text={estimate.reasons?.join("; ") ?? ""} />
+    </>
   );
 }
 export function Steps({ estimate }: { estimate: Estimate }) {

@@ -1,3 +1,4 @@
+import kit from "./components.module.css";
 import styles from "../theme/app.module.css";
 import type { ReactNode } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -9,7 +10,7 @@ export function Pill({
   tone?: "neutral" | "good" | "warn" | "bad";
 }) {
   return (
-    <span className={styles["pill"]} data-tone={tone}>
+    <span className={`${kit.pill} ${kit[tone]}`} data-tone={tone}>
       {children}
     </span>
   );

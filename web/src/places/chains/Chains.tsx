@@ -1,3 +1,5 @@
+import { PageHead } from "../../ui/PageHead";
+import { CharacterName } from "../../ui/CharacterName";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -11,7 +13,6 @@ import { get } from "../../api/client";
 import { Money, moneyText } from "../../ui/Money";
 import { ItemLink } from "../../ui/ItemLink";
 import { Evidence } from "../../ui/Evidence";
-import { useInspector } from "../../app/InspectorContext";
 import { addToTonight } from "../today/state";
 import styles from "./chains.module.css";
 import appStyles from "../../theme/app.module.css";
@@ -55,8 +56,11 @@ export function Chains({ source }: { source: string }) {
   }, [catalog, first, setParams]);
   return (
     <>
-      <h1>Supply chains</h1>
-      <p>Where does the margin come from?</p>
+      <PageHead
+        eyebrow="Recipe routes"
+        title="Supply chains"
+        subtitle="Where does the margin come from?"
+      />
       <p>
         Cautious basis · Forcing is exploration only: Today still costs with the
         cheapest routes.
@@ -246,7 +250,6 @@ export function Graph({
   route: Route;
   force: (id: number, method?: string) => void;
 }) {
-  const inspect = useInspector();
   const max = Math.max(0, ...route.nodes.map((n) => n.column));
   const positions = new Map<number, { x: number; y: number }>();
   const counts = new Map<number, number>();
@@ -340,7 +343,10 @@ export function Graph({
                 </button>
               )}
               {n.method === "craft" && <p>{n.maker}</p>}
-              <p>{n.route_note}</p>
+              <details>
+                <summary>Route evidence</summary>
+                <Evidence data={{ route_note: n.route_note }} />
+              </details>
               <p>
                 {n.held == null
                   ? "Held: unknown"
@@ -355,12 +361,8 @@ export function Graph({
                   <summary>Team recipe status</summary>
                   {n.characters.map((c) => (
                     <p key={c.character.join(":")}>
-                      <button
-                        onClick={() => inspect({ character: c.character })}
-                      >
-                        {c.character[0]}
-                      </button>{" "}
-                      · {c.craft_status} · {c.character_reason}
+                      <CharacterName character={c.character} /> ·{" "}
+                      {c.craft_status} · {c.character_reason}
                     </p>
                   ))}
                 </details>

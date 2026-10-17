@@ -82,8 +82,8 @@ def test_recorded_gold_rows_show_capture_beside_entered_budget_without_making_mi
             ('Other', 'Beta', 'Alliance'): {'bags': {'gold_copper': 0, 'captured_at': 1791716241}},
             ('Missing', 'Beta', 'Alliance'): {}}
     assert recorded_gold_rows(data, CHARACTER) == [
-        {'Character': 'Basilly · Beta · Alliance', 'Recorded gold': '2s 55c',
-         'Captured (UTC)': '2026-10-11 10:57 UTC'}]
+        {'Character': 'Basilly', 'Recorded gold': '2s 55c',
+         'Captured (UTC)': '2026-10-11T10:57:21+00:00'}]
     rows = recorded_gold_rows(data, None)
     assert len(rows) == 3 and sum(r['Recorded gold'] == 'unknown' for r in rows) == 2
     assert data[CHARACTER]['bags']['gold_copper'] == 255

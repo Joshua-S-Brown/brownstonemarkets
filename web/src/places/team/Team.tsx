@@ -1,3 +1,6 @@
+import { UtcTime } from "../../ui/UtcTime";
+import { PageHead } from "../../ui/PageHead";
+import { CharacterName } from "../../ui/CharacterName";
 import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { get } from "../../api/client";
@@ -27,9 +30,11 @@ export function Team({ source }: { source: string }) {
   const data = query.data;
   return (
     <>
-      <p className={styles["eyebrow"]}>Our team</p>
-      <h1>Team</h1>
-      <p>Who makes what, and where are the gaps?</p>
+      <PageHead
+        eyebrow="Our team"
+        title="Team"
+        subtitle="Who makes what, and where are the gaps?"
+      />
       <label>
         Look ahead · {draft} points
         <input
@@ -94,16 +99,11 @@ export function Team({ source }: { source: string }) {
                 }}
                 key={character.join("|")}
               >
-                <button
-                  className={styles["team-name"]}
-                  onClick={() => inspect({ character })}
-                >
-                  {card.name} · {card.realm}
-                </button>
+                <CharacterName character={character} avatar />
                 <Tip
                   text={`${card.last_seen_utc} · ${card.machine ?? "machine unknown"}`}
                 >
-                  <span>{card.last_seen_relative}</span>
+                  <UtcTime value={card.last_seen_utc} />
                 </Tip>
                 <p>
                   Level {card.level ?? "unknown"} · Gold{" "}
@@ -147,12 +147,13 @@ export function Team({ source }: { source: string }) {
             <p key={r.profession}>
               {title(r.profession)} ·{" "}
               {r.holders.length
-                ? r.holders
-                    .map(
-                      (h) =>
-                        `${h.character.join(" · ")} ${h.rank ?? "unknown"} / ${h.max_rank ?? "unknown"}`,
-                    )
-                    .join("; ")
+                ? r.holders.map((h, i) => (
+                    <span key={i}>
+                      <CharacterName character={h.character} />{" "}
+                      {h.rank ?? "unknown"} / {h.max_rank ?? "unknown"}
+                      {"; "}
+                    </span>
+                  ))
                 : "not covered"}
             </p>
           ))}
@@ -190,9 +191,7 @@ export function Team({ source }: { source: string }) {
           )}
           {data.comparisons.map((c) => (
             <section key={c.character.join("|")}>
-              <button onClick={() => inspect({ character: c.character })}>
-                {c.character.join(" · ")}
-              </button>
+              <CharacterName character={c.character} />
               {c.professions.map((p) => (
                 <p key={p.profession}>
                   {title(p.profession)} ·{" "}

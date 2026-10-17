@@ -31,10 +31,10 @@ def closeness(row, query):
 def search(source: str = '', q: str = ''):
     result = context.explorer(context.resolve(source))
     rows = sorted(me.search_items(result, q), key=lambda r: closeness(r, q.strip().casefold()))
-    items = [SearchHit(kind='item', name=r['item_name'], item_id=r['item_id'], quality=quality(r),
+    items = [SearchHit(kind='item', name=r['item_name'], item_id=r['item_id'], quality=quality(r), role=r.get('role'),
                         variant_state=r['variant_state'], variant_id=r['variant_id'])
              for r in rows[:SEARCH_LIMIT]]
-    characters = [SearchHit(kind='character', name=' · '.join(identity), character=identity)
+    characters = [SearchHit(kind='character', name=identity[0], character=identity)
                   for identity in result['characters'] if q.casefold() in ' · '.join(identity).casefold()]
     return items + characters
 

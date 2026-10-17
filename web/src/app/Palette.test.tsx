@@ -14,7 +14,8 @@ it("filters places and records, navigates with keys, and closes with Escape", as
       { kind: "item", name: "Linen Cloth", item_id: 2589, quality: null },
       {
         kind: "character",
-        name: "Maker · Realm · Alliance",
+        name: "Maker",
+        character: ["Maker", "Realm", "Alliance"],
         item_id: null,
         quality: null,
       },
@@ -48,18 +49,16 @@ it("passes exact character keys from search hits and opens the Team web place", 
   const open = vi.fn();
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => [
-          {
-            kind: "character",
-            name: "Maker · Other realm · Horde",
-            character: ["Maker", "Other realm", "Horde"],
-          },
-        ],
-      }),
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          kind: "character",
+          name: "Maker · Other realm · Horde",
+          character: ["Maker", "Other realm", "Horde"],
+        },
+      ],
+    }),
   );
   render(
     <QueryClientProvider
@@ -74,9 +73,93 @@ it("passes exact character keys from search hits and opens the Team web place", 
   );
   await userEvent.click(screen.getByRole("button", { name: /Search items/ }));
   await userEvent.type(screen.getByRole("combobox"), "Maker");
-  await userEvent.click(await screen.findByText("Maker · Other realm · Horde"));
+  await userEvent.click(await screen.findByText("Maker"));
   expect(open).toHaveBeenCalledWith({
     character: ["Maker", "Other realm", "Horde"],
   });
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("combobox")).toBeNull();
   expect(placeURL("Team", "one")).toBe("/app/team?source=one");
+});
+
+it("groups matching items and characters, hides empty groups and keeps variant keys in tooltips", async () => {
+  const key = "v1:e41:g0,0,0,0:s0:b";
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          kind: "item",
+          name: "Linen Cloth",
+          item_id: 2589,
+          quality: 1,
+          role: "Material",
+          variant_state: "base",
+        },
+        {
+          kind: "item",
+          name: "Linen Bag",
+          item_id: 4238,
+          quality: 2,
+          role: "Craft",
+          variant_state: "base",
+        },
+        {
+          kind: "item",
+          name: "Barbaric Linen Vest",
+          item_id: 2578,
+          quality: 2,
+          role: "Craft",
+          variant_state: "variant",
+          variant_id: key,
+        },
+      ],
+    }),
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Palette source="one" />
+    </QueryClientProvider>,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /Search items/ }));
+  await userEvent.type(screen.getByRole("combobox"), "linen");
+  await screen.findByText("Linen Cloth");
+  expect(screen.getByText("Items")).toBeTruthy();
+  expect(screen.queryByText("Go to")).toBeNull();
+  expect(screen.queryByText("Characters")).toBeNull();
+  expect(screen.getByText(/Material · 2589/)).toBeTruthy();
+  expect(screen.getByText(/Craft · 4238/)).toBeTruthy();
+  expect(screen.getByText("Linen Cloth").style.color).toBe("var(--q-1)");
+  expect(screen.queryByText("base")).toBeNull();
+  expect(document.body.textContent).not.toContain(key);
+  expect(screen.getByTitle(key).textContent).toContain("variant");
+});
+it("shows only the ID for an item outside the catalogs, with its identity beside the name", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          kind: "item",
+          name: "Hearthstone",
+          item_id: 6948,
+          quality: 1,
+          role: null,
+          variant_state: "unresolved",
+        },
+      ],
+    }),
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Palette source="one" />
+    </QueryClientProvider>,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /Search items/ }));
+  await userEvent.type(screen.getByRole("combobox"), "hearth");
+  const name = await screen.findByText("Hearthstone");
+  expect(screen.getByText("6948").textContent).toBe("6948");
+  expect(name.parentElement!.textContent).toContain("unresolved");
 });

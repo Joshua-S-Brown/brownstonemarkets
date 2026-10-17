@@ -66,7 +66,12 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   5,878c in / 4,079c out / 1,799c net; 76/76 bags pairs reconcile, no missing money baselines,
   three unreadable bags excluded. Quests/flights remain other.
 
-- **App:** Today, Team, Market and Ledger are web places; Data is a lazy sheet opened from
+- **App:** STORY-089 shares prototype component styles and page headings, short keyed character
+  links, identity/confidence/signal pills, UTC times, panels, tiles and grid options. `/app/kit`
+  previews unknown/zero/variant/error states; it is absent from navigation and search. The shell
+  keeps a single-line top bar, icon theme menu and narrow bottom navigation. Search shows captured
+  quality and compatible catalog roles, keeping variant keys in tooltips.
+  Today, Team, Market and Ledger are web places; Data is a lazy sheet opened from
   the rail, status chip or `?sheet=data`. All legacy NiceGUI places redirect with source; Stock
   redirects to Ledger, Data to Today with the sheet. NiceGUI remains the loopback server for STORY-087.
   `Open Brownstone App.command` / `.cmd` uses authenticated reuse/restart, native window or browser fallback.
@@ -224,7 +229,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,919 Python tests pass (one platform skip), plus 58 Vitest tests.
+Expected: 1,921 Python tests pass (one platform skip), plus 77 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

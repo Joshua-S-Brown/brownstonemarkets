@@ -228,9 +228,9 @@ def recorded_gold_rows(data, character):
         bags = data[identity].get('bags', {})
         gold, captured = bags.get('gold_copper'), bags.get('captured_at')
         readable = type(gold) is int and gold > 0 and type(captured) is int
-        rows.append({'Character': ' · '.join(identity),
+        rows.append({'Character': identity[0],
                      'Recorded gold': format_money(gold) if readable else 'unknown',
-                     'Captured (UTC)': datetime.fromtimestamp(captured, UTC).strftime('%Y-%m-%d %H:%M UTC')
+                     'Captured (UTC)': datetime.fromtimestamp(captured, UTC).isoformat()
                      if type(captured) is int else 'unknown'})
     return rows
 

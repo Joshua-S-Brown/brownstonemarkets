@@ -126,7 +126,7 @@ def test_waiting_inventory_deduplicates_new_scans_and_reports_errors(monkeypatch
         SimpleNamespace(preview=SimpleNamespace(new_ids=['two']), error=''),
         SimpleNamespace(preview=None, error='file unreadable')])
     monkeypatch.setattr(sources.scan_inputs, 'preview_inputs', lambda source: preview)
-    assert sources.waiting({'provider': 'addon', 'drop_folder': 'drops'}) == (2, 'file unreadable')
+    assert sources.waiting({'provider': 'addon', 'drop_folder': 'drops'}) == (None, 'file unreadable')
     assert sources.waiting({'provider': 'tsm'}) == (0, None)
     monkeypatch.setattr(sources.pipeline, 'preview_scans', lambda source: SimpleNamespace(new_ids=['one']))
     assert sources.waiting({'provider': 'addon'}) == (1, None)
@@ -141,7 +141,7 @@ def test_search_returns_only_scoped_roster(client):
     browser, _ = client
     assert browser.get('/api/search?q=Scoped').json() == [
         {'character': ['Scoped Maker', 'Beta', 'Alliance'],
-         'kind': 'character', 'name': 'Scoped Maker · Beta · Alliance', 'item_id': None, 'quality': None,
+         'role': None, 'kind': 'character', 'name': 'Scoped Maker', 'item_id': None, 'quality': None,
          'variant_state': None, 'variant_id': None}]
 
 
@@ -421,3 +421,26 @@ def test_market_cache_rebuilds_on_config_file_and_source_setting_change(client, 
     source['flood_min_days'] = 1
     browser.get('/api/market')
     assert len(builds) == 3
+
+
+def test_source_short_label_keeps_configured_menu_label(client):
+    from brownstone import navigation
+
+    browser, source = client
+    selected = browser.get('/api/sources?inventory=false').json()['selected']
+    assert selected['short_label'] == navigation.source_label(source)
+    assert selected['label'] == (source.get('label') or navigation.source_label(source))
+
+
+def test_search_role_uses_catalog_evidence_and_joins_disagreements():
+    from brownstone.market_explorer import search_items, search_role
+
+    catalogs = [{'items_by_id': {1: {'role': 'finished'}, 2: {'role': 'intermediate'}}},
+                {'items_by_id': {1: {'role': 'material'}, 3: {'role': 'vendor_material'}}}]
+    assert search_role(catalogs, 1) == 'Craft · Material'
+    assert search_role(catalogs, 2) == 'Intermediate'
+    assert search_role(catalogs, 3) is None
+    assert search_role(catalogs, 999) is None
+    result = {'catalogs': catalogs, 'items': [{'item_id': 1, 'item_name': 'Cloth', 'variant_state': 'variant',
+                                            'variant_id': 'exact-key'}]}
+    assert search_items(result, 'cloth') == [result['items'][0] | {'role': 'Craft · Material'}]
