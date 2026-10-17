@@ -49,39 +49,17 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-094 Level up as the prototype drew it
-2. STORY-087 retire NiceGUI
-3. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-4. STORY-026 scan coverage and rhythm
-5. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-6. STORY-006 replay
+1. STORY-087 retire NiceGUI
+2. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+3. STORY-026 scan coverage and rhythm
+4. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+5. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 091, 092, 093, 095 and SPIKE-009/009b.
-
-### STORY-094 — Level up as the prototype drew it
-
-Added 2026-10-17 from the STORY-088 review. Today's Route and Opportunities now follow the prototype, but Level up is still a long text column: each character's `→` lines, then every tier with every recipe and its evidence disclosure, below the fold. The prototype's Level up view (`docs/prototype/web-app.html` → Today → *Level up*, the `LevelUp` component and `.lvl-grid`) gives one card per character and profession instead:
-- the profession and rank, and an *about +N skill* pill;
-- *Make N* with the recipe as an `ItemLink`;
-- the skill-up colour band (orange, yellow, green, grey) with *you are at N* marked;
-- *Materials* and *Net after selling* in copper, and a one-line note.
-
-Presentation only, built with STORY-089's components (`Panel`, `CharacterName` avatar, `SkillBand`, `Money`, `ItemLink`). UI-12, UI-13, CRAFT-10 and CRAFT-11 numbers are unchanged.
-
-As a gold maker, I want each character's best levelling step as one card, so that I can see who should level what tonight without reading a list.
-
-Acceptance:
-- **Cards:** `.lvl-grid` of cards, one per character and profession that has a next step: avatar and name, profession and rank (`rank / tier maximum`), and an *about +N skill* pill from the existing UI-12 points estimate. Then *Make N* `ItemLink`, the `SkillBand` with the four colour ranges and the character's rank marked, *Materials* (`Money`), *Net after selling* (signed `Money`, *unknown* when a price is missing) and the existing note (*Sells for a profit while it levels*, *uses held …*, *a small loss*) where Level up has one. Characters or professions without a valued step get a short card saying why (*no valued recipe in reach*, *learn a profession*).
-- **Detail stays reachable:** the current tier list (each *Reach N* group with its recipes, *N with missing prices* and evidence) moves behind *All tiers and recipes* on each card. Farming rates and the *your own past sessions, not a promise* caveat stay, the caveat once in the panel header.
-- **Order:** cards in the order UI-12 already ranks next steps across the team; the STORY-088 *Biggest lever* card links to the matching card.
-- **UI-08 and UI-18 screenshots:** 1280 and 390 px beside the prototype's Level up view; at 1280×860 the first row of cards is above the fold.
-- **Offline tests:** card per character and profession, the band marker at the rank, missing price as *unknown* never 0, the no-step card, tiers behind the disclosure, and ranking order.
-- **Real data:** beta copy, scan `20261016T113727Z-eb77d0`. Arille's Blacksmithing card shows 31 / 75 and *Cloudy Skyforged Wristguards* with +19 points for 4s 5c; Basilly's Tailoring card shows 32 / 75 and *Blue Linen Vest* with +23 points for 14s 43c (Team's next steps on the same load). Keenagen's Mining card says *no valued recipe in reach*.
-- Depends on STORY-088 and STORY-089. Rules: UI-12, UI-13, CRAFT-10, CRAFT-11, UI-18. Design: *Web app (UI-18)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 091, 092, 093, 094, 095 and SPIKE-009/009b.
 
 ### STORY-087 — Retire NiceGUI
 

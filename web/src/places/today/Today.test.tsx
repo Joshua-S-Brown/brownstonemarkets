@@ -358,7 +358,7 @@ it("compact lines link items and keep confidence reasons and original recipe tex
   expect(await screen.findByText(data.stops[0].lines[0].text)).toBeTruthy();
   expect(screen.getAllByText("contested").length).toBeGreaterThan(0);
 });
-it("Route renders while the lever request is unresolved; then the ranked lever appears", async () => {
+it("Route renders while the lever request is unresolved; then Biggest lever scrolls to and focuses its card", async () => {
   let release: (value: unknown) => void = () => {};
   const original = fetch;
   vi.stubGlobal("fetch", (input: URL, init: RequestInit) => {
@@ -372,6 +372,26 @@ it("Route renders while the lever request is unresolved; then the ranked lever a
   mount();
   await screen.findByText("Craft 2 Robe");
   expect(screen.queryByLabelText("Biggest lever")).toBeNull();
+  const group = {
+    profession: "Blacksmithing",
+    rank: 31,
+    max_rank: 75,
+    best: {
+      catalog_id: "fixture",
+      recipe_id: 1,
+      output_item_id: 2,
+      name: "Wristguards",
+      points_needed: 19,
+      required_skill: 50,
+      profit_copper: 9250,
+      confidence: "Low",
+      estimate: { complete: true, cost_copper: 405, steps: [], reasons: [] },
+    },
+    recipes: [],
+    milestones: [],
+  };
+  const scroll = vi.fn();
+  vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scroll);
   release({
     ok: true,
     json: async () => ({
@@ -384,7 +404,18 @@ it("Route renders while the lever request is unresolved; then the ranked lever a
               "Craft boots",
               "Level Blacksmithing 31 → 50 for 4s 5c · unlocks Wristguards at 92s 50c per craft",
             ],
-            next_steps: [{ kind: "craft" }, { kind: "level_profession" }],
+            next_steps: [
+              { kind: "craft" },
+              { kind: "level_profession", group },
+            ],
+            professions: [group],
+            crafts: [],
+            farming: {
+              rows: [],
+              spots: [],
+              recorded_seconds: 0,
+              excluded_stretches: 0,
+            },
           },
         ],
       },
@@ -394,6 +425,14 @@ it("Route renders while the lever request is unresolved; then the ranked lever a
     "31 → 50",
   );
   expect(screen.getByText("Craft 2 Robe")).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "Open Level up" }));
+  const card = await screen.findByRole("region", {
+    name: "Arille Blacksmithing",
+  });
+  await waitFor(() => expect(document.activeElement).toBe(card));
+  expect(scroll).toHaveBeenCalledWith({ block: "start" });
+  expect(screen.getByTestId("url").textContent).toContain("view=level-up");
+  vi.restoreAllMocks();
 });
 it("unplanned opportunities explain eligibility and reset notes can be dismissed", async () => {
   data.reset_note = "Queue ticks reset";

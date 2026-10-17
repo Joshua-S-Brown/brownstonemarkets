@@ -1,3 +1,7 @@
+import { useEffect, useRef } from "react";
+import { Panel } from "../../ui/Panel";
+import { Pill, Tip } from "../../ui/parts";
+import kit from "../../ui/components.module.css";
 import { SkillBand } from "../../ui/SkillBand";
 import { CharacterName } from "../../ui/CharacterName";
 import { PlanText } from "./PlanText";
@@ -8,6 +12,12 @@ import { type CharacterKey } from "../../app/InspectorContext";
 import type { Plan } from "./state";
 import styles from "../../theme/app.module.css";
 type Recipe = {
+  recipe_id: number;
+  catalog_id: string;
+  points_needed: number;
+  confidence: string;
+  needs_pattern: boolean;
+  skillup_colors?: number[] | null;
   output_item_id: number;
   name: string;
   profit_copper: number | null;
@@ -18,10 +28,13 @@ type Recipe = {
     complete: boolean;
     cost_copper: number | null;
     reasons: string[];
+    steps: { recipe: string }[];
   };
 };
 type Estimate = Recipe["estimate"];
 type Group = {
+  best: Recipe | null;
+  note: string;
   profession: string;
   rank: number | null;
   max_rank: number | null;
@@ -55,6 +68,7 @@ type Spot = {
 type Character = {
   character: CharacterKey;
   options_text: string[];
+  next_steps: { kind: string; group?: Group }[];
   professions: Group[];
   crafts: object[];
   level: number | null;
@@ -67,64 +81,217 @@ type Character = {
 };
 export function LevelUp({
   session,
+  focusCard = false,
 }: {
   session: NonNullable<Plan["session"]>;
+  focusCard?: boolean;
 }) {
   const characters = (session.characters || []) as Character[];
+  const firstCard = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (focusCard) {
+      firstCard.current?.scrollIntoView?.({ block: "start" });
+      firstCard.current?.focus();
+    }
+  }, [focusCard]);
+  let cardIndex = 0;
   return (
-    <>
-      <h2>This session</h2>
-      <p>
-        Your own past sessions, not a promise; launch respawn competition
-        differs; listings are not sales.
-      </p>
+    <Panel
+      title="Level up"
+      subtitle="Your own past sessions, not a promise; launch respawn competition differs; listings are not sales."
+    >
       {!characters.length && (
         <p>
           No scoped Today characters imported. Open each profession window next
           login.
         </p>
       )}
+      <div className={kit["lvl-grid"]}>
+        {characters.flatMap((c) =>
+          (c.next_steps || [])
+            .filter((s) => s.kind === "level_profession")
+            .map((step, i) => {
+              const g = c.professions.find(
+                (g) => g.profession === step.group?.profession,
+              )!;
+              const best = g.best!;
+              const row = g.recipes.find(
+                (r) =>
+                  r.catalog_id === best.catalog_id &&
+                  r.recipe_id === best.recipe_id,
+              );
+              const colors = row?.skillup_colors;
+              const start = Math.min(g.rank ?? 0, colors?.[0] ?? 0);
+              const end = colors
+                ? colors[3] + Math.max(1, colors[3] - colors[2])
+                : 1;
+              return (
+                <section
+                  key={c.character.join("|") + i}
+                  ref={cardIndex++ === 0 ? firstCard : undefined}
+                  tabIndex={-1}
+                  aria-label={`${c.character[0]} ${g.profession}`}
+                  className={kit["level-card"]}
+                >
+                  <header className={kit["panel-h"]}>
+                    <div>
+                      <CharacterName character={c.character} avatar />
+                      <div className={kit.muted}>
+                        {g.profession} {g.rank ?? "unknown"} /{" "}
+                        {g.max_rank ?? "unknown"}
+                      </div>
+                    </div>
+                    <Pill>about +{best.points_needed} skill</Pill>
+                  </header>
+                  <div className={kit["level-body"]}>
+                    <div>
+                      Reach {best.required_skill} to make{" "}
+                      <ItemLink id={best.output_item_id} name={best.name} />
+                    </div>
+                    <div className={kit.muted}>
+                      Levels on{" "}
+                      {[
+                        ...new Set(best.estimate.steps.map((s) => s.recipe)),
+                      ].join(", ")}
+                    </div>
+                    <Tip text={row?.skillup_band || "skill-up range unknown"}>
+                      {colors && g.rank !== null ? (
+                        <>
+                          <span
+                            className={kit["level-band"]}
+                            role="meter"
+                            aria-label="Skill-up colour bands"
+                            aria-valuemin={start}
+                            aria-valuemax={end}
+                            aria-valuenow={g.rank}
+                          >
+                            {colors[0] > start && (
+                              <span style={{ flex: colors[0] - start }} />
+                            )}
+                            {colors.map((n, j) => (
+                              <span
+                                key={j}
+                                style={{
+                                  flex: (colors[j + 1] ?? end) - n,
+                                  background: `var(--sk-${["orange", "yellow", "green", "grey"][j]})`,
+                                }}
+                              />
+                            ))}
+                            <i
+                              style={{
+                                left: `${(100 * (g.rank - start)) / (end - start)}%`,
+                              }}
+                            />
+                          </span>
+                          <span className={kit["level-scale"]}>
+                            <span>{start}</span>
+                            <span>you are at {g.rank}</span>
+                            <span>{end}</span>
+                          </span>
+                        </>
+                      ) : (
+                        "skill-up range unknown"
+                      )}
+                    </Tip>
+                    <dl className={kit.kv}>
+                      <dt>Materials to reach</dt>
+                      <dd>
+                        {best.estimate.complete &&
+                        best.estimate.cost_copper !== null ? (
+                          <Money copper={best.estimate.cost_copper} />
+                        ) : (
+                          <>
+                            unknown ·{" "}
+                            <PlanText text={best.estimate.reasons.join("; ")} />
+                          </>
+                        )}
+                      </dd>
+                      <dt>Earns per craft</dt>
+                      <dd>
+                        {best.profit_copper === null ? (
+                          "unknown"
+                        ) : (
+                          <>
+                            {best.profit_copper > 0 && "+"}
+                            <Money copper={best.profit_copper} />
+                          </>
+                        )}
+                      </dd>
+                    </dl>
+                    <div className={kit.muted}>
+                      {best.confidence} confidence
+                      {best.needs_pattern && " · needs a pattern"}
+                    </div>
+                    <details>
+                      <summary>All tiers and recipes</summary>
+                      <Tiers group={g} />
+                    </details>
+                  </div>
+                </section>
+              );
+            }),
+        )}
+      </div>
+      <h3>No levelling step</h3>
+      <ul aria-label="No levelling step">
+        {characters.flatMap((c) => {
+          const groups = c.professions.filter(
+            (g) =>
+              !c.next_steps?.some(
+                (s) =>
+                  s.kind === "level_profession" &&
+                  s.group?.profession === g.profession,
+              ),
+          );
+          return (c.professions.length ? groups : [null]).map((g) => (
+            <li key={c.character.join("|") + g?.profession}>
+              <CharacterName character={c.character} /> ·{" "}
+              {g?.profession || "no profession seen"} ·{" "}
+              <PlanText
+                text={
+                  c.options_text.find(
+                    (_, i) =>
+                      c.next_steps?.[i]?.kind === "nothing" ||
+                      c.next_steps?.[i]?.kind === "evidence",
+                  ) ||
+                  g?.best?.estimate.reasons.join("; ") ||
+                  g?.note ||
+                  c.options_text
+                    .filter(
+                      (_, i) =>
+                        c.next_steps?.[i]?.group?.profession === g?.profession,
+                    )
+                    .join("; ") ||
+                  c.options_text.join("; ")
+                }
+                characters={[c.character]}
+              />
+              {g && (
+                <details>
+                  <summary>All tiers and recipes · {g.profession}</summary>
+                  <Tiers group={g} />
+                </details>
+              )}
+            </li>
+          ));
+        })}
+      </ul>
       {characters.map((c) => (
         <section key={c.character.join("|")} className={styles["route-stop"]}>
-          <h2>
-            <CharacterName character={c.character} /> · level{" "}
-            {c.level ?? "unknown"}
-          </h2>
-          {c.options_text.map((s, i) => (
-            <p key={i}>
-              → <PlanText text={s} characters={[c.character]} />
-            </p>
-          ))}
-          {c.professions.map((g) => (
-            <section key={g.profession}>
-              <h3>
-                {g.profession} · {g.rank ?? "unknown"} /{" "}
-                {g.max_rank ?? "unknown"}
-              </h3>
-              {g.capped && <p>Capped · train the next tier first.</p>}
-              {g.milestones.map((m) => (
-                <section key={m.skill}>
-                  <h4>
-                    Reach {m.skill} · cost{" "}
-                    {m.estimate.complete ? (
-                      <Money copper={m.estimate.cost_copper} />
-                    ) : (
-                      <>
-                        unknown ·{" "}
-                        <PlanText text={m.estimate.reasons.join("; ")} />
-                      </>
-                    )}
-                  </h4>
-                  <TierRecipes recipes={m.recipes} />
-                </section>
+          <h3>
+            <CharacterName character={c.character} /> · Farming
+          </h3>
+          <details>
+            <summary>Other session options</summary>
+            {c.options_text
+              .filter((_, i) => c.next_steps?.[i]?.kind !== "level_profession")
+              .map((text, i) => (
+                <p key={i}>
+                  <PlanText text={text} characters={[c.character]} />
+                </p>
               ))}
-              <details>
-                <summary>Tier steps and profession evidence</summary>
-                <Evidence data={g} />
-              </details>
-            </section>
-          ))}
-          <h3>Farming</h3>
+          </details>
+
           {!c.farming.rows.length && (
             <p>
               Not enough farming history ·{" "}
@@ -199,10 +366,36 @@ export function LevelUp({
           }}
         />
       </details>
-    </>
+    </Panel>
   );
 }
 
+function Tiers({ group: g }: { group: Group }) {
+  return (
+    <>
+      {g.capped && <p>Capped · train the next tier first.</p>}
+      {g.milestones.map((m) => (
+        <section key={m.skill}>
+          <h4>
+            Reach {m.skill} · cost{" "}
+            {m.estimate.complete ? (
+              <Money copper={m.estimate.cost_copper} />
+            ) : (
+              <>
+                unknown · <PlanText text={m.estimate.reasons.join("; ")} />
+              </>
+            )}
+          </h4>
+          <TierRecipes recipes={m.recipes} />
+        </section>
+      ))}
+      <details>
+        <summary>Tier steps and profession evidence</summary>
+        <Evidence data={g} />
+      </details>
+    </>
+  );
+}
 function RecipeRow({ recipe: r }: { recipe: Recipe }) {
   return (
     <div>

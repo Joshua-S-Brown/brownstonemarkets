@@ -28,6 +28,7 @@ export function Today({
   const requested = params.get("view") || "route";
   const view = views.includes(requested) ? requested : "route";
   const [dismissed, dismiss] = useState("");
+  const [focusLevel, setFocusLevel] = useState(false);
   const opportunities = useRef<HTMLDivElement>(null);
   const query = useQuery({
     queryKey: todayKey(source),
@@ -191,7 +192,10 @@ export function Today({
             role="tab"
             data-view={v}
             aria-selected={view === v}
-            onClick={() => setView(v)}
+            onClick={() => {
+              setFocusLevel(false);
+              setView(v);
+            }}
           >
             {v === "level-up"
               ? "Level up"
@@ -233,7 +237,10 @@ export function Today({
                 data={data}
                 source={source}
                 session={data.session || level.data?.session}
-                openLevel={() => setView("level-up")}
+                openLevel={() => {
+                  setFocusLevel(true);
+                  setView("level-up");
+                }}
                 hideLow={(hide_low) => update({ ...data.state, hide_low })}
               />
             </Panel>
@@ -242,7 +249,10 @@ export function Today({
       )}
       {view === "level-up" &&
         (data.session || level.data?.session ? (
-          <LevelUp session={(data.session || level.data?.session)!} />
+          <LevelUp
+            session={(data.session || level.data?.session)!}
+            focusCard={focusLevel}
+          />
         ) : (
           <p role="status">Loading Level up…</p>
         ))}

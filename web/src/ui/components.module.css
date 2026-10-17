@@ -470,7 +470,7 @@ tbody tr:last-child td {
 /* level */
 .lvl-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 .skillbar {
@@ -1331,4 +1331,50 @@ button.chip:hover {
   background: transparent;
   border: 0;
   padding: 2px 0;
+}
+
+.level-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+  min-width: 0;
+  scroll-margin-top: 16px;
+}
+.level-card:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.level-card .panel-h {
+  padding: 12px;
+  justify-content: space-between;
+}
+.level-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.level-band {
+  display: flex;
+  position: relative;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--sunken);
+}
+.level-band > span {
+  height: 100%;
+}
+.level-band > i {
+  position: absolute;
+  top: -3px;
+  height: 14px;
+  width: 2px;
+  background: var(--fg);
+}
+.level-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
 }

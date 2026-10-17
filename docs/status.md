@@ -112,8 +112,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 - **Today web (STORY-083/088):** `/app/today` pairs compact Route stops with Opportunities
   (stacked below 1100px), plus a Level up tab. Adjacent character/place stops merge; item links,
   confidence tips and line evidence keep the complete Queue readable. Opportunities adds five
-  unplanned Board rows with reasons/history and a lazy best Level up lever. Level up shows three
-  recipes per reach, with expandable extras and missing prices. Reset notices require dropped
+  unplanned Board rows with reasons/history and a lazy best Level up lever that focuses its card.
+  Level up shows one card per levelling step; tiers, extra recipes and missing prices expand on
+  each card, a no-step list keeps reasons, and farming follows. Reset notices require dropped
   saved choices/ticks; refused batches explain the maximum that fits.
   The complete Queue supplies stop lines, copy/totals and tick identity; choices and ticks persist
   per tab/source in sessionStorage. Item Overview's Our move shares the Today query and adjusts
