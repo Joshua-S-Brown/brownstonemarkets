@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import tomllib
 from collections import defaultdict
+from collections.abc import Mapping
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from pathlib import Path
 
@@ -216,8 +217,9 @@ def _to_copper(amount: Decimal, rounding: str) -> int:
 Route = tuple[int | None, str, dict[int, int]]  # Unit cost (None: no usable route), method, leaves per unit.
 
 
-def _cheapest_route(catalog: dict, prices: dict[int, int], item_id: int, trail: tuple[int, ...]) -> Route:
-    """The cheapest valid buy, vendor or craft route for one unit; equal costs resolve by method name."""
+def route_options(catalog: dict, prices: dict[int, int], item_id: int, trail: tuple[int, ...],
+                  forced: Mapping[int, str] | None = None) -> list[tuple[int, str, dict[int, int]]]:
+    """Every valid unit route; child costs respect exploration overrides."""
     item = catalog["items_by_id"][item_id]
     candidates: list[tuple[int, str, dict[int, int]]] = []
     if _positive(prices.get(item_id)):
@@ -226,21 +228,34 @@ def _cheapest_route(catalog: dict, prices: dict[int, int], item_id: int, trail: 
         candidates.append((item["vendor_price_copper"], "vendor", {item_id: 1}))
     nested_id = catalog["recipe_for_output"].get(item_id)
     if nested_id is not None:
-        craft = _craft_route(catalog, prices, nested_id, trail)
+        craft = _craft_route(catalog, prices, nested_id, trail, forced)
         if craft is not None:
             candidates.append(craft)
+    return candidates
+
+
+def _cheapest_route(catalog: dict, prices: dict[int, int], item_id: int, trail: tuple[int, ...],
+                    forced: Mapping[int, str] | None = None) -> Route:
+    """Choose by cost then method; an override restricts selection to that method."""
+    candidates = route_options(catalog, prices, item_id, trail, forced)
+    if forced and item_id in forced:
+        candidates = [c for c in candidates if c[1] == forced[item_id]]
+        if not candidates:
+            raise ValueError(f"Item {item_id}: unavailable forced method {forced[item_id]}")
     if not candidates:
         return None, "missing", {item_id: 1}
-    return min(candidates, key=lambda candidate: candidate[:2])  # Cost, then method name.
+    return min(candidates, key=lambda candidate: candidate[:2])
 
 
-def unit_route(catalog: dict, prices: dict[int, int], item_id: int, trail: tuple[int, ...]) -> Route:
+def unit_route(catalog: dict, prices: dict[int, int], item_id: int, trail: tuple[int, ...],
+               forced: Mapping[int, str] | None = None) -> Route:
     """Public form of the per-unit route walk: (unit cost, method, leaf units per unit)."""
-    return _cheapest_route(catalog, prices, item_id, trail)
+    return _cheapest_route(catalog, prices, item_id, trail, forced)
 
 
 def _craft_route(catalog: dict, prices: dict[int, int], recipe_id: int,
-                 trail: tuple[int, ...]) -> tuple[int, str, dict[int, int]] | None:
+                 trail: tuple[int, ...], forced: Mapping[int, str] | None = None
+                 ) -> tuple[int, str, dict[int, int]] | None:
     """Unit cost of crafting through ``recipe_id``; None when any input has no usable route."""
     if recipe_id in trail:
         raise ValueError("Recipe cycle detected")
@@ -248,7 +263,7 @@ def _craft_route(catalog: dict, prices: dict[int, int], recipe_id: int,
     subtotal = 0
     leaves: defaultdict[int, int] = defaultdict(int)
     for ingredient in recipe["inputs"]:
-        cost, _, nested_leaves = _cheapest_route(catalog, prices, ingredient["item_id"], trail + (recipe_id,))
+        cost, _, nested_leaves = _cheapest_route(catalog, prices, ingredient["item_id"], trail + (recipe_id,), forced)
         if cost is None:
             return None
         subtotal += cost * ingredient["quantity"]
@@ -269,13 +284,14 @@ def _cost_row(item_id: int, quantity: int, route: Route) -> dict:
 
 
 def _intermediate_steps(catalog: dict, prices: dict[int, int], recipe_id: int,
-                        quantity: int = 1, depth: int = 1, trail: tuple[int, ...] = ()) -> list[dict]:
+                        quantity: int = 1, depth: int = 1, trail: tuple[int, ...] = (),
+                        forced: Mapping[int, str] | None = None) -> list[dict]:
     """Retain only craft branches chosen by the same catalog-local cost routing."""
     steps = []
     recipe = catalog["recipes_by_id"][recipe_id]
     for ingredient in recipe["inputs"]:
         item_id = ingredient["item_id"]
-        route = _cheapest_route(catalog, prices, item_id, trail + (recipe_id,))
+        route = _cheapest_route(catalog, prices, item_id, trail + (recipe_id,), forced)
         if route[1] != "craft":
             continue
         nested_id = catalog["recipe_for_output"][item_id]
@@ -286,12 +302,12 @@ def _intermediate_steps(catalog: dict, prices: dict[int, int], recipe_id: int,
         steps.append({"item_id": item_id, "item_name": catalog["items_by_id"][item_id]["name"],
                       "recipe_id": nested_id, "quantity": units, "crafts": units // made, "depth": depth})
         steps.extend(_intermediate_steps(catalog, prices, nested_id, units // made, depth + 1,
-                                         trail + (recipe_id,)))
+                                         trail + (recipe_id,), forced))
     return steps
 
 
 def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], auction_cut: float = 0.05,
-                    sale_prices: dict[int, int] | None = None) -> dict:
+                    sale_prices: dict[int, int] | None = None, forced: Mapping[int, str] | None = None) -> dict:
     """Cost a recipe, choosing the cheaper valid buy or craft path for intermediates.
 
     ``prices`` are unit purchase prices; ``sale_prices`` (default: ``prices``) price the output.
@@ -301,10 +317,11 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     recipe = catalog["recipes_by_id"].get(recipe_id)
     if recipe is None:
         raise ValueError(f"Unknown recipe {recipe_id}")
+    _validate_forced(catalog, recipe_id, prices, forced)
     choices = []
     shopping: defaultdict[int, int] = defaultdict(int)
     for ingredient in recipe["inputs"]:
-        route = _cheapest_route(catalog, prices, ingredient["item_id"], (recipe_id,))
+        route = _cheapest_route(catalog, prices, ingredient["item_id"], (recipe_id,), forced)
         choices.append({**_cost_row(ingredient["item_id"], ingredient["quantity"], route),
                         "item_name": catalog["items_by_id"][ingredient["item_id"]]["name"]})
         for leaf_id, quantity in route[2].items():
@@ -326,7 +343,7 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     break_even = (_to_copper(Decimal(total) / (retained * recipe["output_quantity"]), ROUND_CEILING)
                   if not missing else None)
     profit = net_revenue - total if valid and net_revenue is not None else None
-    shopping_choices = [_cost_row(item_id, quantity, _cheapest_route(catalog, prices, item_id, (recipe_id,)))
+    shopping_choices = [_cost_row(item_id, quantity, _cheapest_route(catalog, prices, item_id, (recipe_id,), forced))
                         for item_id, quantity in sorted(shopping.items())]
     return {
         "recipe_id": recipe_id, "output_item_id": output_id,
@@ -338,10 +355,36 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
         **({"vendor_price_cap_copper": vendor_cap, "vendor_capped": vendor_capped} if _positive(vendor_cap) else {}),
         "net_revenue_copper": net_revenue, "profit_copper": profit,
         "choices": choices,
-        "intermediate_steps": _intermediate_steps(catalog, prices, recipe_id),
+        "intermediate_steps": _intermediate_steps(catalog, prices, recipe_id, forced=forced),
         "shopping_list": dict(sorted(shopping.items())),
         "shopping_choices": shopping_choices,
         "expanded_materials": material_plan(catalog, recipe_id),
         "margin": profit / net_revenue if profit is not None and net_revenue else None,
         "break_even_copper": break_even,
     }
+
+
+def _validate_forced(catalog, recipe_id, prices, forced):
+    if not forced:
+        return
+    root = catalog['recipes_by_id'][recipe_id]['output_item_id']
+    if root in forced:
+        raise ValueError('Cannot force the root output')
+    reachable: set[int] = set()
+
+    def visit(rid, trail):
+        if rid in trail:
+            raise ValueError('Recipe cycle detected')
+        for ingredient in catalog['recipes_by_id'][rid]['inputs']:
+            item = ingredient['item_id']
+            reachable.add(item)
+            nested = catalog['recipe_for_output'].get(item)
+            if nested is not None:
+                visit(nested, (*trail, rid))
+
+    visit(recipe_id, ())
+    for item, method in forced.items():
+        if item not in reachable:
+            raise ValueError(f'Item {item} is outside the route')
+        if method not in {option[1] for option in route_options(catalog, prices, item, (recipe_id,), forced)}:
+            raise ValueError(f'Item {item}: unavailable forced method {method}')

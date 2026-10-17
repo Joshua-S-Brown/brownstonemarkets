@@ -5,13 +5,35 @@ import { ItemLink } from "../ui/ItemLink";
 import { Money } from "../ui/Money";
 import { ErrorState } from "../ui/parts";
 import { Evidence } from "../ui/Evidence";
-function RecipeRow({ r, used }: { r: Recipe; used: boolean }) {
+function RecipeRow({
+  r,
+  used,
+  source,
+}: {
+  r: Recipe;
+  used: boolean;
+  source: string;
+}) {
   return (
     <section>
       <h3>
         <ItemLink id={r.item_id} name={r.name} /> × {r.output_quantity} ·{" "}
         {r.profession}
       </h3>
+      {!used && (
+        <a
+          href={
+            "/app/chains?" +
+            new URLSearchParams({
+              source,
+              catalog: r.catalog_id || "",
+              recipe: String(r.recipe_id || ""),
+            })
+          }
+        >
+          Open in Supply chains
+        </a>
+      )}
       {used && <p>{r.quantity} units per craft</p>}
       <p>
         Board profit per craft: <Money copper={r.profit_copper} /> · {r.reason}
@@ -88,7 +110,7 @@ export function ItemChain({ source, id }: { source: string; id: number }) {
             </p>
           )}
           {c[key].map((r, i) => (
-            <RecipeRow key={i} r={r} used={key === "used_in"} />
+            <RecipeRow key={i} r={r} used={key === "used_in"} source={source} />
           ))}
         </section>
       ))}

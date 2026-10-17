@@ -19,6 +19,8 @@ function host(ui: React.ReactNode) {
   );
 }
 const recipe: Recipe = {
+  catalog_id: "tailoring",
+  recipe_id: 2963,
   item_id: 2996,
   name: "Bolt",
   quantity: 2,
@@ -65,6 +67,11 @@ it("renders linked routes, quantities, unknown intermediate profit and team elig
   expect(screen.getAllByText("Team: Unknown")).toHaveLength(2);
   expect(screen.getByText("22c")).toBeTruthy();
   expect(screen.getByText("Tailoring: 1–45")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Open in Supply chains" })
+      .getAttribute("href"),
+  ).toBe("/app/chains?source=one&catalog=tailoring&recipe=2963");
 });
 it("renders sales outcomes, lower-bound holdings and gathering for every scoped character", async () => {
   const data = {

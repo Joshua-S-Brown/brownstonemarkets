@@ -9,6 +9,9 @@ import { Market } from "../places/market/Market";
 import { Inspector } from "./Inspector";
 import { Palette, places, placeURL } from "./Palette";
 import { EmptyState, ErrorState, Pill, Tip } from "../ui/parts";
+const Chains = lazy(() =>
+  import("../places/chains/Chains").then((m) => ({ default: m.Chains })),
+);
 const Today = lazy(() =>
   import("../places/today/Today").then((m) => ({ default: m.Today })),
 );
@@ -187,6 +190,7 @@ export function App() {
           </header>
           <main className={styles["workspace"]}>
             {![
+              "/app/chains",
               "/app/market",
               "/app/today",
               "/app/team",
@@ -195,6 +199,7 @@ export function App() {
               <p className={styles["eyebrow"]}>Your saved market</p>
             )}
             {![
+              "/app/chains",
               "/app/market",
               "/app/today",
               "/app/team",
@@ -203,6 +208,7 @@ export function App() {
               <h1>Brownstone workspace</h1>
             )}
             {![
+              "/app/chains",
               "/app/market",
               "/app/today",
               "/app/team",
@@ -239,6 +245,10 @@ export function App() {
             ) : window.location.pathname === "/app/ledger" ? (
               <Suspense fallback={<p>Loading Ledger…</p>}>
                 <Ledger key={source} source={source} />
+              </Suspense>
+            ) : window.location.pathname === "/app/chains" ? (
+              <Suspense fallback={<p>Loading Supply chains…</p>}>
+                <Chains key={source} source={source} />
               </Suspense>
             ) : window.location.pathname === "/app/market" ? (
               <Market source={source} />

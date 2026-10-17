@@ -64,6 +64,8 @@ export type History = Omit<
 };
 export type Ladder = components["schemas"]["Ladder"];
 export type Recipe = {
+  catalog_id?: string;
+  recipe_id?: number;
   item_id: number;
   name: string;
   output_quantity: number;

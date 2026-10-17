@@ -1,3 +1,5 @@
+import type { QueryClient } from "@tanstack/react-query";
+import { post } from "../../api/client";
 import type { components } from "../../api/schema";
 export type Choice = {
   catalog_id: string;
@@ -95,5 +97,32 @@ export function keepLocal(source: string, plan: Plan): Plan {
       ticks: local.ticks ?? plan.state.ticks,
       hide_low: local.hide_low ?? plan.state.hide_low,
     },
+  };
+}
+
+export async function addToTonight(
+  source: string,
+  choice: Choice,
+  client: QueryClient,
+) {
+  const current = await post<Plan>("today/plan", source, {
+    state: readState(source),
+  });
+  const choices = choicesFor(current).filter(
+    (c) =>
+      c.catalog_id !== choice.catalog_id || c.recipe_id !== choice.recipe_id,
+  );
+  choices.push(choice);
+  const result = await post<Plan>("today/plan", source, {
+    state: { ...current.state, choices },
+  });
+  writeState(source, result.state);
+  await client.invalidateQueries({ queryKey: todayKey(source) });
+  return {
+    batch_size: choice.batch_size,
+    reason: result.plan.dropped_choices.find(
+      (c) =>
+        c.catalog_id === choice.catalog_id && c.recipe_id === choice.recipe_id,
+    )?.reason,
   };
 }

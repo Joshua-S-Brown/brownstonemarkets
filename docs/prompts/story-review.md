@@ -15,7 +15,7 @@ Review the implementation of <STORY_ID> below, then close it. Follow AGENTS.md. 
    - missing or zero prices are gaps, never free or 0;
    - real-data access is read-only, or writes only to a copy of data/.
 5. Gates: `.venv/bin/python -m brownstone gates` (ruff, mypy, parallel tests at or above the coverage floor), plus `/code-review high` on the diff.
-6. Real data. Re-run the story's real-data check (its expected numbers) against the configured Forever source, read-only or on a copy of data/, and compare with the report. Look at screenshots only where the story asks for a visual judgement.
+6. Real data. Re-run the story's real-data check (its expected numbers) against the configured Forever source, read-only or on a copy of data/, and compare with the report. For a story that changes a web page, compare its 1280 and 390 px screenshots with the matching prototype view (`docs/prototype/web-app.html`, UI-18) and treat unexplained structural gaps as findings; otherwise look at screenshots only where the story asks.
 7. Fix confirmed findings and re-run the gates. List plausible but unconfirmed ones for me rather than guessing.
 8. Close. Run `python -m brownstone close-story <STORY_ID>` (removes the section, adds it to *Done*, renumbers *Order*), put follow-ups under Later, and update requirements.md, design.md and status.md as `story-closure.md` step 6 says.
 9. Hand-off: what changed, findings fixed, findings left for me, files to commit (and any to leave out), and a suggested commit message. Don't commit.

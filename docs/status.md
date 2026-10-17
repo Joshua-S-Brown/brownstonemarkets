@@ -5,6 +5,21 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Implemented
 
+- **Supply chains (STORY-086):** `/app/chains?source=&catalog=&recipe=` explores compatible
+  outputs using Market's cached routes, opening on the top ranked craft. Ranked chips and name/ID
+  search (only while searching, at most 50 hits) include intermediates;
+  item Made from rows link to their recipes. Buy/vendor/craft overrides use the shared engine,
+  with cheapest-route reset, per-craft copper waterfall and server-sized batch leaves/depth.
+  Team makers, recipe status, held units and postage evidence remain inspectable. Add to tonight
+  shares Today's tab session choices; exploration overrides never enter Today.
+  The lazy graph uses SVG edges and item cards, becoming an indented list below 768 px.
+  Offline: `test_supply_chain.py`, `test_chains_api.py`, Chains Vitest; unforced routes equal the
+  cheapest option across every catalog. Copied beta scan `20261016T113727Z-eb77d0` matches Market:
+  Linen Bag 156c/34c cost/profit (Bolt bought: 180c/10c), Blue Linen Vest 186c/289c
+  (210c/265c), Sandpaper 840c/1,250c with Basilly's Tailoring Bolt. Linen Bag ×5 is
+  30 Linen Cloth +15 Coarse Thread, 780c spend, 170c profit. Screenshots and read-only
+  comparison evidence are ignored under `work/story-086/`.
+
 - **Web foundation (STORY-081):** `/app` serves the React shell beside NiceGUI; source-scoped
   `/api/sources`, `/api/search` and `/api/items/{id}` adapt existing read-only projections.
   Routes reuse one explorer build per source until the database, config or hourly bucket
@@ -209,7 +224,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,899 Python tests pass (one platform skip), plus 50 Vitest tests.
+Expected: 1,919 Python tests pass (one platform skip), plus 58 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

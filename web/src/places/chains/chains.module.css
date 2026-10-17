@@ -1,0 +1,78 @@
+.panel {
+  overflow: auto;
+  max-height: 760px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+.graph {
+  position: relative;
+  width: var(--graph-width);
+  height: var(--graph-height);
+}
+.edges {
+  position: absolute;
+  color: var(--muted);
+}
+.edges text {
+  fill: currentColor;
+}
+.nodes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.node {
+  position: absolute;
+  width: 280px;
+  height: 336px;
+  overflow: auto;
+  padding: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.node h3 {
+  margin-top: 0;
+}
+.node p {
+  margin: 8px 0;
+}
+.node button {
+  min-height: 32px;
+}
+.node button[aria-pressed="true"] {
+  outline: 2px solid currentColor;
+}
+.waterfall {
+  max-width: 620px;
+}
+.waterfall p {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  padding: 8px;
+}
+@media (max-width: 767px) {
+  .panel {
+    max-height: none;
+  }
+  .graph {
+    width: auto;
+    height: auto;
+  }
+  .edges {
+    display: none;
+  }
+  .node {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 12px 0 12px var(--indent);
+  }
+  .node button {
+    min-height: 44px;
+  }
+}

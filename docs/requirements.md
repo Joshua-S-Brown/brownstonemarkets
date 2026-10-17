@@ -499,7 +499,7 @@ UI-15, holdings/targets, Today and Your sales retain their contracts. No prices 
 
 ### UI-18 Web app (decided 2026-10-16)
 
-Prototype: `docs/prototype/web-app.html`; STORY-081–087.
+Prototype: `docs/prototype/web-app.html`. A page story's report puts 1280/390 px screenshots beside its matching view and review compares them; structure follows it unless the story says why.
 
 - **Migration:** React/TypeScript in `web/`, Vite-built, loopback `/app`, JSON `/api`. Unmoved places retain NiceGUI/UI-07 rail links. A story removes the NiceGUI view it replaces only after a side-by-side real-data check; nothing is removed 28 October–5 November unless its web page was used in a real play session. UI-01, UI-04, UI-05, UI-08 1–6 and the UI-07 URL rules (characters never in the URL) apply.
 - **Shell:** rail: Today, Market, Supply chains, Team, Ledger, then Data badge/sheet; top bar: ⌘K search, source and data chips. Only work scrolls; narrow screens use bottom tabs. Ledger days (7 default, 30, all UTC) persist per tab/source. Data keeps one source/config-bound review on the server; explicit POST review replaces it; import consumes it before writing under a non-blocking process lock. Source switches discard it.

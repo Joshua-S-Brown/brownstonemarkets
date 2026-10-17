@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: Team in the web app (STORY-084). Market and Today moved to the web app in STORY-082 and STORY-083.
+Nothing in progress; the next story is the top of *Order* under Next: shared page components (STORY-089). Every place is in the web app (STORY-082 to STORY-086); STORY-088 to STORY-092 bring each page to the prototype.
 
 **Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
@@ -49,34 +49,125 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-086 Supply chains
-2. STORY-087 retire NiceGUI
-3. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-4. STORY-026 scan coverage and rhythm
-5. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-6. STORY-006 replay
+1. STORY-089 shared page components
+2. STORY-088 Today that reads like a plan
+3. STORY-090 Market that leads with what moved
+4. STORY-091 Team and Ledger as the prototype drew them
+5. STORY-092 Supply chains as the prototype drew it
+6. STORY-087 retire NiceGUI
+7. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+8. STORY-026 scan coverage and rhythm
+9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+10. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086 and SPIKE-009/009b.
 
-### STORY-086 — Supply chains
+### STORY-089 — Shared page components
 
-Added 2026-10-16. A new place: the prototype's recipe graph. Built after the moves, so it adds a feature rather than delaying them.
+Added 2026-10-16 after an owner walk-through of every web page against the prototype (`docs/prototype/web-app.html`). The pages are correct but read as prose: no shared panel, tile or name components, so each page invents its own layout, prints the full character key (*Arille · Classic Beta PvE 2 · Alliance*) everywhere, and shows evidence terms inline (*base*, *unresolved*, *recipe 3319 (forever-blacksmithing)*). This story builds the kit the next three stories (STORY-088, STORY-090, STORY-091) use, and applies only the cross-cutting fixes. Presentation only: no API calculation, ranking or version changes.
 
-As a gold maker, I want to follow a craft back to its raw materials and see where the margin is made, so that I can choose between buying and crafting each step.
+As the owner, I want every page built from the same clear pieces, so that each one looks like the prototype and leads with its answer.
 
 Acceptance:
-- **Graph:** for a chosen output (the ranked crafts first, then search), the CRAFT-03/CRAFT-12 route as columns from raw materials to the output, with quantities on the edges, each node's unit cost and route (buy, craft by whom, vendor, held), and the team's ability to make each step. Cross-profession steps show the other character.
-- **Buy or craft:** each intermediate shows both costs where both exist, the chosen route highlighted. Switching a step recalculates through the existing route functions with that step forced; if the engine can't force a route yet, add that option to `crafting` with tests, never a second costing path (*Value-add chart*, Later).
-- **Per craft:** a waterfall from sale price through the cut and each leaf material to profit, all in copper; a missing price stops the waterfall with the reason, never zero.
-- **Batch:** a slider (1 to the Today craft cap) showing leaf quantities, spend and profit, without listing-depth claims beyond CRAFT-09.
-- **Add to tonight:** adds the craft to Today's choices through STORY-083's choices endpoint.
-- **Offline tests:** forced routes, a missing price, a cross-profession route, a vendor ceiling (CRAFT-04) and choice handoff.
-- **Real data:** Linen Bag and Blue Linen Vest routes match the Market record's *Made from* costs; screenshots at 1280 and 390 px.
-- Depends on STORY-082 and STORY-083. Rules: CRAFT-03, CRAFT-04, CRAFT-09, CRAFT-12, UI-18. Design: *Crafting calculation*, *Team recipe graph (STORY-015b)*, *Web app (UI-18)*.
+- **Components** in `web/src/ui`, each with a Vitest test, matching the prototype's look (`docs/prototype/web-app.html` CSS: `.panel`, `.panel-h`, `.tile`, `.pill`, `.node`, `.wf-row`):
+  - `PageHead`: eyebrow (scan or scope · age), title, the place's question as subtitle, optional right-side action.
+  - `Panel`: header with title, muted subtitle and optional action or control; body; optional evidence footer through `Evidence`.
+  - `Tile`: label, big value (usually `Money`), caption, optional progress bar (0–1, never shown for unknown values) — the summary strip's tile.
+  - `CharacterName`: the character's name only, opening the STORY-084 record by the full `(name, realm, faction)` key, with realm and faction in its tooltip. Initials avatar variant for roster cards.
+  - `ConfidencePill` (High good, Medium warn, Low bad) with its reasons in a `Tip`; `SignalPill` for UI-11 labels (*steady*, *contested*, *cheap*, *high*, *thin*, *removed early*) with one colour each.
+  - `Identity`: shows nothing for `base`; a muted *variant* or *unresolved* pill with ADDON-08's explanation in a `Tip` otherwise. Variant identities stay separate rows wherever they are now.
+  - `DataGrid` options: right-aligned tabular numbers for money, units and percentages; signed percentages coloured by sign only; a compact row density; a `muted` style for zero values (zero stays a real 0, never *unknown*).
+  - `ItemLink` gains an optional two-letter initials badge, as the prototype's item squares (no downloaded icons).
+- **Cross-cutting fixes:** every character mention in Today, Team, Ledger and records uses `CharacterName` (no full key in page text); every *base*/*unresolved* label uses `Identity`; every place's top uses `PageHead`. Recipe IDs, catalog IDs, rule versions and route reasons that are currently inline move into `Evidence` (UI-08 4). Nothing is removed: each moved fact is still reachable.
+- **Screenshot rule (UI-18):** from this story on, a page story's report includes 1280 and 390 px screenshots beside the prototype's matching view, and the review compares them. This story's report shows each component in both themes.
+- **Offline tests:** each component (unknown values, zero muted, tooltip text, record opening by full key, identity variants); a check that no rendered page text contains a full character key (Today, Team, Ledger Vitest fixtures).
+- **Docs:** `design.md` → *Web app (UI-18)*'s `web/src/ui` row lists the new parts (trim the table or text by as much as you add: under 100 bytes of headroom); `status.md` → *App* and the test count.
+- **Real data:** beta source on a copy of `data/`; screenshots of Today, Team and Ledger at 1280 and 390 px showing short names and identity pills, beside the prototype. No numbers change from STORY-085's real-data check.
+- Depends on STORY-086 (shares `web/src`). Rules: UI-08, UI-18, ADDON-08. Design: *Web app (UI-18)*.
+
+### STORY-088 — Today that reads like a plan
+
+Added 2026-10-16 after an owner walk-through of the web Today page (STORY-083) against the approved prototype (`docs/prototype/web-app.html` → *Tonight's run*). The numbers and rules are right, but the page reads like an evidence log: 12 full-width cards for 13 steps (about five screens at 1280×860), the full character key in every header, confidence reasons repeated inline on every line, items not clickable, Opportunities in a separate tab with only the two planned crafts, a reset notice on every fresh tab, and the evening's biggest lever buried in Level up (on the beta copy: *Level Blacksmithing 31 → 50 for 4s 5c · unlocks Cloudy Skyforged Wristguards at 92s 50c per craft*, against a 25s 83c plan). Presentation only: no calculation, ranking, reservation or `today_version` change; every number and piece of evidence stays, behind UI-08 4's disclosures where it is evidence.
+
+As the owner, I want Today to look like the evening I'm about to play, so that I can follow it at a glance and see the one thing worth doing differently.
+
+Acceptance:
+- **Layout:** at 1100 px and wider, Route on the left and Opportunities beside it (the prototype's two columns), Level up stays a tab. Narrower, Route first, then Opportunities below it; the tabs remain. On the beta copy the 13-step route fits within two screen heights at 1280×860, and at 390×844 the first Route stop starts on the first screen.
+- **Summary strip:** the four tiles keep their numbers, drawn like the prototype: *Gold to spend 18s 25c of 19s 39c* with a bar and who holds it (team or character); *Progress N of M steps* with a bar; data age with the waiting-scans count; planned profit with its basis caption. Money through `Money`.
+- **Route stops:** consecutive Queue lines with the same character and place merge into one stop (Cicelyna's two mailbox lines become one), keeping Queue order; stops are numbered. A stop header shows the character's name only (an inspector link; realm and faction in its tooltip and record), the place, and profession and rank for craft stops; the mail note sits on mailbox stops, not above the Route.
+- **Route lines:** checkbox, verb, quantity, item as `ItemLink` with its quality colour, the line's key money (unit and total for buys, per-unit and profit for posts, deposit with *back on sale*) right-aligned; craft lines add the skill-up colour at the crafter's rank (`today_rows.recipe_band`, already computed for Level up). Confidence is a coloured `Pill` (High, Medium, Low) with its reasons in a `Tip`, not inline text; recipe ID, catalog, route reasons and the rest of today's line text move into the line's `Evidence`. Price warnings (*pricier than usual…*, *contested*) stay visible as warn pills. Ticks, copy-as-text and its text are unchanged.
+- **Opportunities:** the planned crafts first (reserved profit per craft, batch, maker, confidence pill), then up to five next-best Action Board rows Today did not plan, each with the reason it isn't tonight's (*needs Tailoring 75*, *pattern not learned*, *one craft exceeds funds*, *below minimum*, *Low confidence hidden*), taken from Today's existing hidden-reason and eligibility evidence. If per-row reasons aren't in the plan payload, expose them from `brownstone` without changing which rows are chosen. Each row shows a small price sparkline from UI-17 stored history when it has two or more points (`Sparkline`), otherwise none. Hide Low confidence and *Our move* stay where they are.
+- **Biggest lever:** a card at the top of Opportunities with the single best Level up next step for the team (the first `→` line UI-12 already ranks, with its cost and what it unlocks per craft), labelled as Level up labels it (*your own past sessions, not a promise*), linking to Level up. It loads after the Route renders and never blocks it; none when Level up has none.
+- **Drop reasons:** a choice Today refuses says why in plain words and, where Today has one, the largest batch that fits (the plan's `choice_limits` maximum: *at most N fit tonight*). Found in the STORY-086 review: Linen Bag ×5 added from Supply chains came back *Choice is no longer feasible; dropped, not resized* although it had never been planned, while ×1 was accepted. Keep *no longer feasible* for a choice that was feasible before. Today's drop decisions are unchanged; only the wording changes.
+- **Reset notice:** shown only when the request carried earlier choices or ticks that were actually dropped, as a dismissible notice naming what reset; a fresh tab with no saved Today state shows none. The server's reset logic is unchanged; only when the note is sent or shown changes.
+- **Level up readability:** *not yet at rank 31* reads *needs 35 · you're 31*; each tier shows its first three recipes with *N more* to expand, and recipes with missing prices collapse into one *N with missing prices* line per tier. Same rows and evidence, display only.
+- **UI-08:** checked on screenshots: answer first, one primary action (Copy as text or the first unticked step), status as pills not sentences, evidence on demand, 44 px targets and wrapping at 390 px.
+- **Offline tests:** stop merging (adjacent only, order kept), confidence pill and tip, line evidence holding the moved text, Opportunities' unplanned rows and reasons, lever card absent and present and not blocking the Route, reset notice only with dropped state, Level up wording and collapsing. Existing Today API tests stay green; any new per-row reason field gets a `brownstone` test.
+- **Docs:** `requirements.md` → Today's *Presentation (UI-18)* bullet describes the two columns, merged stops, Opportunities' unplanned rows and the lever card; `requirements.md` has about 240 bytes of headroom, so trim that bullet or its neighbours by at least as much as you add. `status.md` → *Today* and the test count.
+- **Real data:** beta source on a copy of `data/`, scan `20261016T113727Z-eb77d0`, a fresh tab (read 2026-10-16): planned profit 25s 83c, gold 18s 25c of 19s 39c across 4 characters, 13 steps, crafts Copper Chain Boots ×4 (Arille) and White Linen Robe ×5 (Basilly), lever *Blacksmithing 31 → 50 for 4s 5c* unlocking Cloudy Skyforged Wristguards at 92s 50c per craft; no reset notice. If newer scans were imported, compare with the current page on the same copy and explain each difference. Screenshots at 1280 and 390 px of Route, Opportunities and Level up, beside the prototype at the same width.
+- Depends on STORY-083, STORY-086 (which adds an Add-to-tonight helper to `web/src/places/today/state.ts`) and STORY-089 (its components: `PageHead`, `Panel`, `Tile`, `CharacterName`, `ConfidencePill`). Rules: Today (*Presentation (UI-18)*, *Confidence*, *Choices/refill*, *Hidden/caps*), UI-08, UI-12, UI-17, UI-18. Design: *Web app (UI-18)*, *Today contracts*.
+
+### STORY-090 — Market that leads with what moved
+
+Added 2026-10-16 after the owner walk-through. Market's data is right but the page doesn't answer *What is the market telling me?* at a glance: the signal cards show bare percentages with no price or trend, *Left early* leads with ammunition (6,929 Crafted Heavy Shot), and the grid opens alphabetically (*Accurate Scope*, *Anti-Venom*…) with most items listed twice (*base* and *unresolved*), 1,204 rows over 41 pages, and a *Stored lowest* column that is empty on the beta copy. Presentation only: UI-09, UI-11 and ADDON-08 selection and ordering rules are unchanged. Built with STORY-089's components.
+
+As the owner, I want Market to show me what moved and why it matters to our chains, so that I can spot a buy or a sell in seconds.
+
+Acceptance:
+- **Head:** `PageHead` with the scan, item count and age (*779 listed now of 2,290 items in our chains* stays as the subtitle's fact).
+- **Signal cards:** *Cheaper than usual*, *Dearer than usual* and *Left early* as three `Panel`s like the prototype: the top three rows each (UI-11's existing order and selection), *N more* expanding to the rest. Each row: `ItemLink` with badge, price now and typical (`Money`), the signed % vs typical, and a sparkline from UI-17 stored history when it has two or more points. *Left early* rows show units and its caption *bought or cancelled; an upper bound on sales*. Rows outside our chains are marked so.
+- **Grid:** one row per item: the base (or legacy) identity is the row; other identities of the same item sit under it, collapsed behind *+N variants/unresolved*, each still its own row with its own prices when opened (ADDON-08: never pooled, never summed). Default sort is the absolute gap to typical, largest first, unknown gaps last; columns as the prototype: Item, Lowest, Typical, vs typical, history sparkline (replacing *Stored lowest*: if the column is empty because of a bug, say so in the report and fix it or drop it), Listings, Units, Signal (`SignalPill`). Filter chips (*All in our chains*, *Materials*, *Crafts and intermediates*, *With a signal*) and a name-or-ID filter in the grid's panel header. Sorting and grouping happen in `brownstone`/`api` projections, not the web.
+- **Caveat:** *Listings are supply, not sales* once in the subtitle; the rest of today's caveats move to the page's evidence footer.
+- **Offline tests:** grouping keeps identities separate (prices and units per identity unchanged, none summed); default sort with unknown gaps last; cards' three-plus-more with UI-11 order kept; sparkline absent below two points.
+- **Docs:** UI-09's presentation sentence describes the grouped grid and cards; trim `requirements.md` by at least as much as you add. `status.md` → *Market*.
+- **Real data:** beta copy, scan `20261016T113727Z-eb77d0`: report the item-row count against the 1,204 identity rows, the top three of each card, and the first ten grid rows; open Linen Cloth's record from the grid. Screenshots at 1280 and 390 px beside the prototype's Market.
+- Depends on STORY-089. Rules: UI-09, UI-11, UI-17, ADDON-08, UI-18. Design: *Web app (UI-18)*.
+
+### STORY-091 — Team and Ledger as the prototype drew them
+
+Added 2026-10-16 after the owner walk-through. Team reads as text: no skill bars, profession coverage as a sentence list, *Cost to 300* and *Instead of a new hire* as paragraphs, a look-ahead slider and a caveat paragraph before the answer, and the best line on the page (*Blacksmithing: Cloudy Skyforged Wristguards · +19 points · 4s 5c*) in plain text. Ledger's summary and chart are decent, but zeros print as coin-coloured *0c*, categories are lowercase, and a long per-character table dominates where the prototype has four tiles and a *By category* panel beside the chart. Presentation only, built with STORY-089's components.
+
+As the owner, I want Team and Ledger to answer their questions in the first screen, so that I can see who should do what, and where our gold went, without reading.
+
+Acceptance:
+- **Team roster:** cards like the prototype: initials avatar, name (`CharacterName`), level, last seen and gold; each profession as a skill bar (rank of the tier maximum, with a marker at the next tier); one *next step* line per card (the best one, styled as an action); the other next steps and *incomplete* reasons in the card's `Tip` and record. Characters with no profession say *Learn a profession to see what's in reach* as an action line.
+- **Team coverage:** a matrix (professions × characters, rank in each covered cell, *Not covered* pill in the last column), not a list. Gathering professions without a catalog keep their note in a `Tip`.
+- **Team hiring:** *If we add a character* and *Instead of a new hire* as tables (profession, best per craft at 300, team holder, estimate *Complete*/*Incomplete* pill with its reason in a `Tip`). The look-ahead slider moves into its panel header; the caveat paragraph moves to the evidence footer.
+- **Ledger summary:** four `Tile`s: *Came in*, *Went out*, *Net* (caption: *N of M bags pairs reconcile*) and *Held stock* (caption: *at listed prices · N no-price items*), for the selected days.
+- **Ledger flow:** the daily chart as the prototype's diverging bars (in above, out below the axis), and beside it a *By category* panel: capitalised category names, signed money, and each category's movement count (add the count to `ledger_view`'s category rows, with a test). Zero shows muted, not coin-coloured. The per-character/day table moves behind a *By character and day* disclosure using `CharacterName`.
+- **Ledger Items and Restock:** each a `Panel` with its tiles first and its tables after, keeping STORY-085's filters, provenance and evidence.
+- **Offline tests:** skill bar maths (rank/maximum, unknown maximum shows no bar), matrix cells from Team's existing coverage data, hiring table rows, category counts, zero muted, the disclosure keeping the per-character table.
+- **Docs:** `requirements.md` → UI-18 or the Team/Ledger rules only where wording names the old layout (trim as much as you add); `status.md` → *Team* and *Ledger*.
+- **Real data:** beta copy, scan `20261016T113727Z-eb77d0`: Team shows 5 characters, Arille's Blacksmithing 31/75 and Mining 48/75 bars, Basilly's Tailoring 32/75, and Arille's next step *Cloudy Skyforged Wristguards +19 points 4s 5c*; Ledger with *All* days shows in 5,878c, out 4,079c, net 1,799c, 76 of 76 pairs, and STORY-085's category totals with counts. Screenshots at 1280 and 390 px beside the prototype's Team and Ledger.
+- Depends on STORY-089. Rules: UI-15, UI-16, UI-18, CRAFT-11, *Stock*. Design: *Web app (UI-18)*, *Stock contracts*.
+
+### STORY-092 — Supply chains as the prototype drew it
+
+Added 2026-10-16 from the STORY-086 review's usability pass on the beta copy. The engine, numbers and Add to tonight are right (Linen Bag 156c/34c; forcing Bolt to buy gives 180c/10c; Add to tonight puts Linen Bag in Today's route). But the page:
+- opens on Azure Skyforged Pauldrons, which nobody on the team can make: all ten ranked chips are top Board profits, none from the team's professions at its ranks;
+- has ten chips that fill the whole first screen at 390 px;
+- draws fixed 360 px node cards, so a three-material route like Linen Bag needs about two screens of mostly empty card;
+- draws a waterfall of unlabelled bars above a separate text list;
+- puts Batch and Add to tonight below the fold, in one long column.
+
+Presentation and ordering only: no costing change. Built with STORY-089's components.
+
+As a gold maker, I want the route, its margin and the batch on one screen, starting from something we can make, so that I can decide buy-or-craft without scrolling.
+
+Acceptance:
+- **Starting point:** ranked chips put crafts the team can make tonight first (any character Known or Train now, from the same `recipe_status` evidence the nodes show), then the rest marked *no one on the team can make this yet* with the reason in a `Tip`. The page opens on the first makeable one; with none, it opens on the first ranked and says so. Ordering within each group stays the Board's. Chips scroll horizontally on narrow screens (one row), with the search beside them.
+- **Layout:** the prototype's two columns at 1100 px and wider: the route `Panel` on the left; *Per craft* and *Batch* `Panel`s stacked on the right. Narrower: route, then Per craft, then Batch. `PageHead` with the basis and scan in the eyebrow and the forcing note as a muted line.
+- **Nodes:** cards size to their content (the prototype's ~210 × 110 px), with name, unit cost, the route toggle (or *Vendor* / *Auction House · N listings*), maker and held count; team recipe status in a `Tip`, not an open list. Edges are curves with ×N labels, solid along the chosen craft path and dashed into unchosen branches, as in the prototype. The output node says *Sells at* with the sale price and an *Output* pill.
+- **Waterfall:** one list of rows, each with its label, quantity × unit cost and signed amount, and a bar inside the row scaled to the sale price; the profit row is a total row. No separate unlabelled chart. A missing price still stops it at that row with its reason.
+- **Batch:** the slider with the number shown big beside it, leaf quantities, spend and profit, and *Add to tonight* as the panel's primary action. The result names Today's reason in plain words.
+- **UI-08 and UI-18 screenshots:** 1280 and 390 px beside the prototype's Supply chains; the route, Per craft and Batch for Linen Bag fit in one screen at 1280×860.
+- **Offline tests:** makeable-first ordering, keeping the Board order within each group; the opening choice with and without a makeable craft; waterfall rows summing to profit as now; edge styles for chosen and unchosen branches; layout breakpoints in Vitest.
+- **Real data:** beta copy, scan `20261016T113727Z-eb77d0`: the first chip is a craft Basilly or Arille can make (report which), Linen Bag and Sandpaper match STORY-086's numbers, and the 1280 px screenshot shows the whole Linen Bag answer without scrolling.
+- Depends on STORY-086 and STORY-089. Rules: CRAFT-03, CRAFT-12, UI-08, UI-18. Design: *Web app (UI-18)*.
 
 ### STORY-087 — Retire NiceGUI
 
@@ -89,7 +180,7 @@ Acceptance:
 - **Docs:** UI-07's NiceGUI rules are replaced by UI-18 (keep its URL and back-link rules there), UI-08 7's NiceGUI clause goes, and *App and modules* describes the web app. `requirements.md` and `design.md` end below their current ceilings, and the ceilings in `brownstone/gates.py` drop to match.
 - **Tests:** `tests/ui_trial` is gone; `test_retirement.py` checks NiceGUI is absent; coverage settings name `api` instead of `views` and NiceGUI entries.
 - **Real data:** a full play-evening walk-through on the beta or live source (import, Today route, Market, Team, Ledger), with screenshots.
-- Depends on STORY-082 to STORY-086 (STORY-086 may follow if the owner prefers). Rules: UI-05, UI-07, UI-08, UI-18, OPS-01. Design: *App and modules*, *Web app (UI-18)*, *Quality gates*.
+- Depends on STORY-082 to STORY-086 and STORY-088 to STORY-092. Rules: UI-05, UI-07, UI-08, UI-18, OPS-01. Design: *App and modules*, *Web app (UI-18)*, *Quality gates*.
 
 ### STORY-026 — Scan coverage and your play rhythm
 

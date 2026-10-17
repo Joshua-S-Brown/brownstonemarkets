@@ -22,7 +22,9 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
     selected = compatible_catalogs(catalogs, config)
     characters, warning = load_today_characters(config)
     manifest, arguments = load_today(config, selected, TodaySettings(), characters, now)
-    result = {'config': config, 'catalogs': selected,
+    holdings, holdings_warning = _load_holdings(config, now)
+    result = {'holdings': holdings or ({}, {}, [], []), 'holdings_warning': holdings_warning, 'config': config,
+              'catalogs': selected,
               'incompatible': [c for c in catalogs if c not in selected], 'warning': warning, 'snapshot': None,
               'observations': {}, 'characters': characters, 'items': [], 'metrics': [],
               'vendors': {}, 'recipes': [], 'demand': [], 'freshness': None,
@@ -298,7 +300,8 @@ def chain_recipe(row, item_id):
     """UI-09 facts formerly assembled only in the NiceGUI crafting panel."""
     recipe, value, catalog = row['recipe'], row['value'], row['catalog']
     output = recipe['output_item_id']
-    return {'item_id': output, 'name': catalog['items_by_id'][output]['name'],
+    return {'catalog_id': catalog_identity(catalog), 'recipe_id': recipe['recipe_id'],
+            'item_id': output, 'name': catalog['items_by_id'][output]['name'],
             'output_quantity': recipe['output_quantity'], 'profession': catalog['profession'],
             'quantity': sum(i['quantity'] for i in recipe['inputs'] if i['item_id'] == item_id),
             'profit_copper': value['profit_copper'], 'reason': value['action'],

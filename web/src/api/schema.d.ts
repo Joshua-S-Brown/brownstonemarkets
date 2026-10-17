@@ -1,4 +1,38 @@
 export interface paths {
+    "/api/chains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Outputs */
+        get: operations["outputs_api_chains_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chains/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Route */
+        get: operations["route_api_chains_route_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/data": {
         parameters: {
             query?: never;
@@ -511,6 +545,21 @@ export interface components {
             holdings: components["schemas"]["Holdings"];
             progression: components["schemas"]["Progression"];
         };
+        /** CharacterStatus */
+        CharacterStatus: {
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Character Reason */
+            character_reason: string;
+            /** Craft Status */
+            craft_status: string;
+            /** Training Cost Copper */
+            training_cost_copper: number | null;
+        };
         /** Comparison */
         Comparison: {
             /** Character */
@@ -563,6 +612,15 @@ export interface components {
         Discard: {
             /** Review Id */
             review_id?: string | null;
+        };
+        /** Edge */
+        Edge: {
+            /** Child */
+            child: number;
+            /** Parent */
+            parent: number;
+            /** Quantity */
+            quantity: number;
         };
         /** Estimate */
         Estimate: {
@@ -902,6 +960,23 @@ export interface components {
             /** Units */
             units: number;
         };
+        /** Leaf */
+        Leaf: {
+            /** Depth */
+            depth: string;
+            /** Item Id */
+            item_id: number;
+            /** Method */
+            method: string;
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Total Cost Copper */
+            total_cost_copper: number | null;
+            /** Unit Cost Copper */
+            unit_cost_copper: number | null;
+        };
         /** Ledger */
         Ledger: {
             /** Errors */
@@ -919,6 +994,21 @@ export interface components {
                 [key: string]: string;
             };
             stock: components["schemas"]["Stock"] | null;
+        };
+        /** Line */
+        Line: {
+            /** Amount Copper */
+            amount_copper: number | null;
+            /** End Copper */
+            end_copper: number | null;
+            /** Label */
+            label: string;
+            /** Quantity */
+            quantity?: number | null;
+            /** Start Copper */
+            start_copper: number;
+            /** Unit Cost Copper */
+            unit_cost_copper?: number | null;
         };
         /** Market */
         Market: {
@@ -1008,6 +1098,68 @@ export interface components {
             utc: string;
         } & {
             [key: string]: unknown;
+        };
+        /** Node */
+        Node: {
+            /** At Least */
+            at_least: boolean;
+            /** Characters */
+            characters: components["schemas"]["CharacterStatus"][];
+            /** Column */
+            column: number;
+            /** Forced */
+            forced: boolean;
+            /** Held */
+            held: number | null;
+            /** Item Id */
+            item_id: number;
+            /** Maker */
+            maker: string;
+            /** Method */
+            method: string;
+            /** Name */
+            name: string;
+            /** Options */
+            options: components["schemas"]["Option"][];
+            /** Quality */
+            quality?: number | null;
+            /** Route Note */
+            route_note: string;
+            /** Unit Cost Copper */
+            unit_cost_copper: number | null;
+            /** Units */
+            units: number;
+        };
+        /** Option */
+        Option: {
+            /** Method */
+            method: string;
+            /** Unit Cost Copper */
+            unit_cost_copper: number;
+        };
+        /** Output */
+        Output: {
+            /** Catalog Id */
+            catalog_id: string;
+            /** Item Id */
+            item_id: number;
+            /** Name */
+            name: string;
+            /** Profession */
+            profession: string;
+            /** Profit Copper */
+            profit_copper: number | null;
+            /** Recipe Id */
+            recipe_id: number;
+        };
+        /** Outputs */
+        Outputs: {
+            /** Hit Count */
+            hit_count: number;
+            /** Hits */
+            hits: components["schemas"]["Output"][];
+            /** Ranked */
+            ranked: components["schemas"]["Output"][];
         };
         /** Pairs */
         Pairs: {
@@ -1126,6 +1278,40 @@ export interface components {
              * @default false
              */
             success: boolean;
+        };
+        /** Route */
+        Route: {
+            /** Batch */
+            batch: number;
+            /** Can Add */
+            can_add: boolean;
+            /** Catalog Id */
+            catalog_id: string;
+            /** Edges */
+            edges: components["schemas"]["Edge"][];
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Leaves */
+            leaves: components["schemas"]["Leaf"][];
+            /** Max Crafts */
+            max_crafts: number;
+            /** Name */
+            name: string;
+            /** Nodes */
+            nodes: components["schemas"]["Node"][];
+            /** Profit Copper */
+            profit_copper: number | null;
+            /** Reason */
+            reason: string;
+            /** Recipe Id */
+            recipe_id: number;
+            source_evidence: components["schemas"]["Evidence"];
+            /** Spend Copper */
+            spend_copper: number | null;
+            /** Waterfall */
+            waterfall: components["schemas"]["Line"][];
         };
         /** RouteLine */
         RouteLine: {
@@ -1476,6 +1662,73 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    outputs_api_chains_get: {
+        parameters: {
+            query?: {
+                source?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Outputs"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    route_api_chains_route_get: {
+        parameters: {
+            query: {
+                catalog_id: string;
+                recipe_id: number;
+                source?: string;
+                batch?: number;
+                force?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Route"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     data_api_data_get: {
         parameters: {
             query?: {

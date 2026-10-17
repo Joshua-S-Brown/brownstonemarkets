@@ -14,7 +14,7 @@ Report back with the whole report inside one fenced block opened with four backt
 2. Files changed
 3. Each acceptance criterion with the test that proves it
 4. Gate results (the summary `brownstone gates` prints)
-5. A real-data check against the Forever beta source (config/market.local.toml), using a copy of data/ if anything writes; describe what the page shows
+5. A real-data check against the Forever beta source (config/market.local.toml), using a copy of data/ if anything writes; describe what the page shows; for a story that changes a web page, screenshots at 1280 and 390 px beside the matching view of docs/prototype/web-app.html, with what differs and why (UI-18)
 6. Deviations from the story and why
 7. Open risks
 8. A suggested commit message
