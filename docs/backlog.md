@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: held materials say what to do and what they're for (STORY-095). Every place is in the web app (STORY-082 to STORY-086), the shared components exist (STORY-089: `web/src/ui`, kit at `/app/kit`) and Today follows the prototype (STORY-088); STORY-090 to STORY-094 bring the remaining pages and records to it.
+Nothing in progress; the next story is the top of *Order* under Next: Team and Ledger as the prototype drew them (STORY-091). Every place is in the web app (STORY-082 to STORY-086), the shared components exist (STORY-089: `web/src/ui`, kit at `/app/kit`), and Today (STORY-088) and Market (STORY-090) follow the prototype; STORY-091 to STORY-094 bring the remaining pages and records to it.
 
 **Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
@@ -80,7 +80,7 @@ Acceptance:
 - **Ledger Items and Restock:** each a `Panel` with its tiles first and its tables after, keeping STORY-085's filters, provenance and evidence.
 - **Offline tests:** skill bar maths (rank/maximum, unknown maximum shows no bar), matrix cells from Team's existing coverage data, hiring table rows, category counts, zero muted, the disclosure keeping the per-character table.
 - **Docs:** `requirements.md` → UI-18 or the Team/Ledger rules only where wording names the old layout (trim as much as you add); `status.md` → *Team* and *Ledger*.
-- **Real data:** beta copy, scan `20261016T113727Z-eb77d0`: Team shows 5 characters, Arille's Blacksmithing 31/75 and Mining 48/75 bars, Basilly's Tailoring 32/75, and Arille's next step *Cloudy Skyforged Wristguards +19 points 4s 5c*; Ledger with *All* days shows in 5,878c, out 4,079c, net 1,799c, 76 of 76 pairs, and STORY-085's category totals with counts. Screenshots at 1280 and 390 px beside the prototype's Team and Ledger.
+- **Real data:** beta copy, newest scan (`20261017T104157Z-ff991e` on 17 Oct; rechecked then, so newer imports may move these): Team shows 8 characters (Lira, Star, Baspion, Cicelyna, Arille, Basilly, Raaem, Keenagen; three with no profession get the *Learn a profession* line), Arille's Blacksmithing 31/75, Mining 48/75, Cooking 2/75 and Fishing 3/75 bars, Basilly's Tailoring 32/75, and Arille's Blacksmithing step *Cloudy Skyforged Chain · +19 points · 90s 50c*; hiring has 9 professions, fishing, herbalism and skinning without a catalog. Ledger with *All* days shows in 6,592c, out 4,324c, net 2,268c, 79 of 79 pairs, 421 movements, nine days of bars, and the category totals with counts summing to the movements they cover. Report any figure that differs and why. Screenshots at 1280 and 390 px beside the prototype's Team and Ledger.
 - Depends on STORY-089. Rules: UI-15, UI-16, UI-18, CRAFT-11, *Stock*. Design: *Web app (UI-18)*, *Stock contracts*.
 
 ### STORY-092 — Supply chains as the prototype drew it
