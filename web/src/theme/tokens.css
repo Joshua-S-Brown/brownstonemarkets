@@ -167,3 +167,41 @@
   --q-7: var(--gold);
   --q-8: var(--gold);
 }
+
+:root {
+  --chart-1: var(--accent);
+  --chart-2: #ab6116;
+  --chart-3: #7275c4;
+  --chart-4: #b84d82;
+  --chart-5: #38838a;
+  --chart-6: #926eb4;
+  --chart-7: #7d8332;
+  --chart-8: #bb5843;
+  --chart-9: #4874a8;
+  --chart-10: #8a633f;
+}
+/* Chart series lighten on dark surfaces; --chart-1 follows --accent. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --chart-2: #e0954a;
+    --chart-3: #9da0f0;
+    --chart-4: #e58ab5;
+    --chart-5: #5fc3cb;
+    --chart-6: #bd9be0;
+    --chart-7: #b8bf5a;
+    --chart-8: #ec8b74;
+    --chart-9: #7fa9df;
+    --chart-10: #c99a6e;
+  }
+}
+:root[data-theme="dark"] {
+  --chart-2: #e0954a;
+  --chart-3: #9da0f0;
+  --chart-4: #e58ab5;
+  --chart-5: #5fc3cb;
+  --chart-6: #bd9be0;
+  --chart-7: #b8bf5a;
+  --chart-8: #ec8b74;
+  --chart-9: #7fa9df;
+  --chart-10: #c99a6e;
+}

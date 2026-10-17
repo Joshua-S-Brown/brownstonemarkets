@@ -134,11 +134,13 @@ export type Activity = Omit<
         map_id?: number;
         npc_id?: number | null;
         mob?: string;
+        mob_name?: string | null;
         value_per_hour_copper?: number | null;
         seconds?: number;
         stretches?: number;
         position?: string;
         also_looted_labels?: string[];
+        also_looted_names?: (string | null)[];
         coin_copper?: number | null;
         no_price_items?: number;
         no_price_units?: number;

@@ -482,6 +482,8 @@ export interface components {
             history: {
                 [key: string]: unknown;
             }[];
+            /** Known Recipes */
+            known_recipes: number;
             /** Last Seen Relative */
             last_seen_relative: string;
             /** Last Seen Utc */
@@ -496,6 +498,8 @@ export interface components {
             professions: components["schemas"]["Skill"][];
             /** Realm */
             realm: string;
+            /** Recipes At Least */
+            recipes_at_least: boolean;
             /** Skills Status */
             skills_status: string;
             /** Stale */
@@ -838,6 +842,8 @@ export interface components {
             at_least: boolean;
             /** Crowding */
             crowding: string | null;
+            /** Deposit Copper */
+            deposit_copper: number | null;
             /** Details */
             details: {
                 [key: string]: unknown;
@@ -858,6 +864,8 @@ export interface components {
             price_copper: number | null;
             /** Quality */
             quality: number | null;
+            /** Role */
+            role: string | null;
             /** Typical Copper */
             typical_copper: number | null;
             /** Units */

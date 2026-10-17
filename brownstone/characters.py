@@ -29,6 +29,8 @@ def _card(key: tuple, state: dict, now: datetime) -> dict:
             "gold_copper": bags.get("gold_copper"),
             "stale": bool(bags and now - datetime.fromtimestamp(bags["captured_at"], UTC) > timedelta(days=STALE_DAYS)),
             "skills_status": skills[0]["skills_status"],
+            "known_recipes": sum(row["known_count"] or 0 for row in skills),
+            "recipes_at_least": any(row["known_count"] is None for row in skills),
             "professions": [_profession(row) for row in skills if row["name"] is not None],
             "history": history_rows(state["history"])}
 

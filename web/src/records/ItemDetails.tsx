@@ -1,3 +1,4 @@
+import { Panel } from "../ui/Panel";
 import { CharacterWords } from "../ui/CharacterWords";
 import { UtcTime } from "../ui/UtcTime";
 import { CharacterName } from "../ui/CharacterName";
@@ -8,6 +9,9 @@ import { ItemLink } from "../ui/ItemLink";
 import { Money } from "../ui/Money";
 import { ErrorState } from "../ui/parts";
 import { Evidence } from "../ui/Evidence";
+// The Board's CRAFT-05 label in words; meaning unchanged.
+export const actionWords = (label: string | null | undefined) =>
+  label === "potential craft" ? "Could craft for profit" : label;
 function RecipeRow({
   r,
   used,
@@ -21,9 +25,9 @@ function RecipeRow({
     <section>
       <h3>
         <ItemLink id={r.item_id} name={r.name} /> × {r.output_quantity} ·{" "}
-        {r.profession}
+        {r.profession.charAt(0).toUpperCase() + r.profession.slice(1)}
       </h3>
-      {!used && (
+      {
         <a
           href={
             "/app/chains?" +
@@ -36,8 +40,13 @@ function RecipeRow({
         >
           Open in Supply chains
         </a>
+      }
+      {used && (
+        <p>
+          {r.quantity} {r.quantity === 1 ? "unit" : "units"} per craft
+        </p>
       )}
-      {used && <p>{r.quantity} units per craft</p>}
+      <p>{actionWords(r.reason)}</p>
       <p>
         Board profit per craft: <Money copper={r.profit_copper} />
       </p>
@@ -77,7 +86,7 @@ function RecipeRow({
           data={{
             recipe_id: r.recipe_id,
             catalog_id: r.catalog_id,
-            route_reason: r.reason,
+            route_reason: actionWords(r.reason),
             route_notes: r.materials.map((m) => m.route_note),
           }}
         />
@@ -88,8 +97,8 @@ function RecipeRow({
           ? "Team: Unknown"
           : r.characters.map((c, i) => (
               <p key={i}>
-                <CharacterName character={c.character} />: {c.craft_status} ·{" "}
-                {c.character_reason}
+                <CharacterName character={c.character} />:{" "}
+                {actionWords(c.craft_status)} · {c.character_reason}
               </p>
             ))}
       </details>
@@ -168,30 +177,55 @@ export function ItemActivity({ source, id }: { source: string; id: number }) {
       <h2>Your sales</h2>
       {a.sales_error && <p>Sales evidence unavailable: {a.sales_error}</p>}
       {!a.your_sales.length && <p>none resolved yet</p>}
-      {a.your_sales.map((s, i) => (
-        <section key={i}>
-          <h3>
-            <CharacterName
-              character={[s.character[0], s.character[1], s.character[2]]}
-            />
-          </h3>
-          <p>
-            {s.sold + s.expired + s.cancelled
-              ? `${s.sold} of ${s.sold + s.expired + s.cancelled} sold`
-              : "none resolved yet"}{" "}
-            · <Money copper={s.average_copper} /> each after cut
-          </p>
-          <p>
-            {s.posted} posted · {s.expired} expired · {s.cancelled} cancelled ·
-            newest sale{" "}
-            {s.newest_sale ? (
-              <UtcTime value={new Date(s.newest_sale * 1000).toISOString()} />
-            ) : (
-              "none yet"
-            )}
-          </p>
-        </section>
-      ))}
+      {!!a.your_sales.length && (
+        <div style={{ overflowX: "auto" }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Character</th>
+                <th>Sold of posted</th>
+                <th>Each after cut</th>
+                <th>Newest</th>
+              </tr>
+            </thead>
+            <tbody>
+              {a.your_sales.map((s, i) => (
+                <tr key={i}>
+                  <td>
+                    <CharacterName
+                      character={[
+                        s.character[0],
+                        s.character[1],
+                        s.character[2],
+                      ]}
+                    />
+                  </td>
+                  <td>
+                    {s.sold} of {s.posted} sold
+                    <details>
+                      <summary>Outcomes</summary>
+                      {s.expired} expired · {s.cancelled} cancelled ·{" "}
+                      {s.sold + s.expired + s.cancelled} resolved
+                    </details>
+                  </td>
+                  <td>
+                    <Money copper={s.average_copper} />
+                  </td>
+                  <td>
+                    {s.newest_sale ? (
+                      <UtcTime
+                        value={new Date(s.newest_sale * 1000).toISOString()}
+                      />
+                    ) : (
+                      "none yet"
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <p>
         Unidentified seller invoices in this source and market:{" "}
         {a.unidentified_sales}
@@ -199,7 +233,8 @@ export function ItemActivity({ source, id }: { source: string; id: number }) {
       <h2>Holdings</h2>
       <p>
         {a.at_least ? "at least " : ""}
-        {a.held ?? "unknown"} held · {a.holdings_warning}
+        {a.held ?? "unknown"} held
+        {a.holdings_warning ? ` · ${a.holdings_warning}` : ""}
       </p>
       {a.holdings.map((h, i) => (
         <p key={i}>
@@ -258,7 +293,7 @@ export function ItemGathering({ source, id }: { source: string; id: number }) {
           ))}
           <h3>Farming spots</h3>
           {c.farming.spots.map((s, j) => (
-            <section key={j}>
+            <Panel key={j} title={s.zone || `Map ${s.map_id}`}>
               <p>
                 {s.zone || `Map ${s.map_id}`} ·{" "}
                 {s.npc_id ? (
@@ -267,7 +302,7 @@ export function ItemGathering({ source, id }: { source: string; id: number }) {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {s.mob}
+                    {s.mob_name ?? "Unknown creature"}
                   </a>
                 ) : (
                   s.mob
@@ -277,7 +312,9 @@ export function ItemGathering({ source, id }: { source: string; id: number }) {
               <p>
                 {((s.seconds ?? 0) / 60).toFixed(1)} minutes · {s.stretches}{" "}
                 stretches · {s.position} · also looted:{" "}
-                {s.also_looted_labels?.join(", ") || "—"}
+                {s.also_looted_names
+                  ?.map((name) => name ?? "Unknown creature")
+                  .join(", ") || "—"}
               </p>
               <p>
                 {s.coin_copper === null
@@ -289,7 +326,7 @@ export function ItemGathering({ source, id }: { source: string; id: number }) {
                 · no price: {s.no_price_items ?? 0} items /{" "}
                 {s.no_price_units ?? 0} units
               </p>
-            </section>
+            </Panel>
           ))}
           <p>{c.farming.excluded_stretches ?? 0} skipped stretches</p>
           <details>

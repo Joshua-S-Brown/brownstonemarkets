@@ -45,12 +45,19 @@ def test_cards_two_machines_history_unreadable_and_recipe_union(tmp_path):
     assert bob["name"] == "Bob" and bob["machine"] == "windows-pc" and bob["skills_status"] == "skills unknown"
     assert character_snapshots.latest_data(config)[("Alice", "Beta", "Alliance")]["observations"][0][1] == "mac"
     tailoring = alice["professions"][0]
+    assert alice["known_recipes"] == 2 and not alice["recipes_at_least"]
+    assert bob["known_recipes"] == 0 and bob["recipes_at_least"]
     assert tailoring["known_count"] == 2 and tailoring["recipe_source"] == "window list + seen crafted"
     assert tailoring["listed_count"] == 1 and tailoring["seen_ids"] == [3755] and tailoring["possibly_incomplete"]
     assert not tailoring["at_cap"] and tailoring["progress"] == 76 / 150
     assert [r["Value"] for r in alice["history"] if r["Series"] == "Level"] == [8, 9]
     assert [r["Value"] for r in alice["history"] if r["Series"] == "Tailoring"] == [75, 76]
     assert professions.latest_rows(config)[0]["Level"] == 9  # Import table contract retained.
+    state = professions.latest_data(config)[("Alice", "Beta", "Alliance")]
+    state["bags"]["skills"]["modern"]["rows"].append(
+        {"name": "Cooking", "skill_id": 185, "rank": 1, "max_rank": 75})
+    mixed = characters._card(("Alice", "Beta", "Alliance"), state, NOW)
+    assert mixed["known_recipes"] == 2 and mixed["recipes_at_least"]
 
 
 def test_at_cap_staleness_boundary_unknown_gold_and_no_readable_bags(tmp_path):

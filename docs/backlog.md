@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: Supply chains as the prototype drew it (STORY-092). Every place is in the web app (STORY-082 to STORY-086), the shared components exist (STORY-089: `web/src/ui`, kit at `/app/kit`), and Today (STORY-088), Market (STORY-090), Team and Ledger (STORY-091) follow the prototype; STORY-092 to STORY-094 bring the remaining pages and records to it.
+Nothing in progress; the next story is the top of *Order* under Next: Level up as the prototype drew it (STORY-094). Every place is in the web app (STORY-082 to STORY-086), the shared components exist (STORY-089: `web/src/ui`, kit at `/app/kit`), and Today (STORY-088), Market (STORY-090), Team and Ledger (STORY-091), Supply chains (STORY-092) and the item and character records (STORY-093) follow the prototype; STORY-094 brings Level up to it.
 
 **Before STORY-081:** done 2026-10-16. Node.js 24 LTS (v24.22.0, npm 11.19.1) is installed on the Mac in `/usr/local/bin`. The Windows PC needs nothing: it only plays and drops scans (OPS-03).
 
@@ -49,54 +49,18 @@ Scan format 3 (STORY-023) and the reload/clear buttons (STORY-029) are accepted 
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-13 after Claude's player walkthrough of the beta data, 2026-10-14 after the addon comparison, and 2026-10-15):
-1. STORY-093 item and character records as the prototype drew them
-2. STORY-094 Level up as the prototype drew it
-3. STORY-087 retire NiceGUI
-4. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
-5. STORY-026 scan coverage and rhythm
-6. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
-7. STORY-006 replay
+1. STORY-094 Level up as the prototype drew it
+2. STORY-087 retire NiceGUI
+3. STORY-062 sales speed and suggested stock levels (STORY-027's time-left bounds accepted 2026-10-16; refine first)
+4. STORY-026 scan coverage and rhythm
+5. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+6. STORY-006 replay
 
 **Web app lane (decided 2026-10-16, product owner):** NiceGUI still felt like stacked, scrolling containers rather than an application. The owner approved the clickable prototype in `docs/prototype/web-app.html` (open it in a browser; its figures are examples) as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Each story moves one place and removes its NiceGUI view, so the app works at every step and launch never waits on the whole migration. Each web story keeps calculations, `today_version` and rules unchanged unless it says otherwise. Its real-data check is a side-by-side comparison with the NiceGUI page on the same source and scan: same numbers, same evidence.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 091, 092, 095 and SPIKE-009/009b.
-
-### STORY-093 — Item and character records as the prototype drew them
-
-Added 2026-10-16 from the full owner review of the inspector records against the prototype's `ItemInspector` and `CharInspector`. Both records hold the right evidence but read as dumps.
-- **Item record:**
-  - seven large tiles push the tabs down, and the tabs wrap onto two lines;
-  - the subtitle says *Quality 1 · base-item Overview* on every tab;
-  - Price history plots three similar-coloured lines on two unlabelled axes;
-  - Listings' scan picker shows *2026-10-16T11:37:31.000Z UTC*;
-  - Our activity prints *newest sale 2026-10-11T10:56:31.000Z*, and its holdings line ends in a stray *·*;
-  - Used in reads *1 units per craft · potential craft*.
-- **Character record:**
-  - Professions prints *Window list: 2026-10-15T10:54:16+00:00 · window list + seen crafted* and a stray *observed*;
-  - Path's seven-column table is crushed into the record, wrapping *Cloudy Skyforged Wristguards* a few letters per line;
-  - Holdings opens with a raw capture dump (*Snapshot id 6:Arille18:…*, *Age hours 38.006*, *Partial no*) before the items;
-  - History's chart uses one colour for every series, and its table leads with ISO times and a *Sequence* column.
-
-Presentation only, built with STORY-089's components. Every fact stays reachable, the evidence in footers and tips.
-
-As the owner, I want a record to tell me what an item or character is and what to do with it at a glance, so that clicking a name is worth it.
-
-Acceptance:
-- **Shared:** the record panel keeps the prototype's width at 1280 px and goes full-screen under 600 px. Its header is the badge or avatar, name and one muted line (item: role from compatible catalogs, *Material*, *Craft* or *Intermediate*, and the ID; character: level, last seen and machine), then a three-fact strip, then tabs on one line (scrolling on narrow screens), then the tab body, then an evidence footer. Times use STORY-089's `UtcTime`.
-- **Item Overview:** facts *Lowest*, *Typical* and *Listings · units*, plus the UI-11 signal as a `SignalPill` in the header. Then the stored-history price line with *typical* as a dashed reference and units as bars, as the prototype draws it. Then a key-value list: where to get it, vendor buy and sell, the post deposit, and team holdings with the *at least* rule. *Best use* and farming spots follow as panels, with NPC names where known and *NPC N* only in evidence. The fixed subtitle bug: the header never names the tab.
-- **Item tabs:** Price history gets one colour per series with a legend, labelled axes (unit price; units listed) and `UtcTime` ticks. Listings' scan picker uses `UtcTime`. Made from and used in shows profession names capitalised, *N units per craft* (singular and plural), the Board's action label in words (*potential craft* becomes the UI-09 wording, unchanged in meaning), and STORY-086's *Open in Supply chains* link. Our activity: `UtcTime`, no trailing separators, sales as a small table (character, sold of posted, each after cut, newest).
-- **Character Professions:** facts *Gold*, *Professions* and *Known recipes*. Each profession is a `skillbar` with *N points before this tier caps*. The window-list and seen-crafted evidence moves into a `Tip`.
-- **Character Path:** per profession, the best next recipe as a highlighted row (recipe, skill needed, cost to reach, earns per craft, where learned), then the other reachable recipes as a compact list with at most four columns (recipe, skill, cost to reach, earns per craft). Points, confidence and where learned sit in each row's `Tip`. No column narrower than its longest word.
-- **Character Holdings:** items first, grouped by location (bags, bank) with units and `Identity` pills, *at least* where a location is unknown or partial. Each capture's metadata (snapshot, age, machine, partial, excluded) goes to the evidence footer.
-- **Character History:** one colour per series with a legend and `UtcTime` axis ticks. The table goes behind *All readings* with `UtcTime` and no *Sequence* column (that moves to evidence).
-- **Offline tests:** header facts for item and character, the subtitle not naming the tab, unit pluralisation, Path rows within four columns, Holdings ordering before evidence, distinct series colours, and no ISO timestamp in rendered record text (Vitest fixtures).
-- **Real data:** beta copy, scan `20261016T113727Z-eb77d0`.
-  - Linen Cloth 2589: lowest 20c, typical 20c, 219 listings · 5,538 units, *contested*, held at least 11.
-  - Arille: Blacksmithing 31/75, Mining 48/75; Path's best next recipe is Cloudy Skyforged Wristguards (skill 50, 4s 5c to reach, 92s 50c per craft); Holdings has 75 bag units and an unknown bank.
-  - Screenshots at 1280 and 390 px beside the prototype's item and character records.
-- Depends on STORY-089. Rules: UI-09, UI-11, UI-13, UI-14, UI-17, UI-18, CRAFT-11, ADDON-08. Design: *Web app (UI-18)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 088, 089, 090, 091, 092, 093, 095 and SPIKE-009/009b.
 
 ### STORY-094 — Level up as the prototype drew it
 

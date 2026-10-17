@@ -11,6 +11,9 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  Bar,
+  Legend,
+  ReferenceLine,
 } from "recharts";
 import type { ColumnDef } from "@tanstack/react-table";
 import { get } from "../api/client";
@@ -163,10 +166,14 @@ export function ItemCharts({
   source,
   id,
   listings = false,
+  overview = false,
+  typical = null,
 }: {
   source: string;
   id: number;
   listings?: boolean;
+  overview?: boolean;
+  typical?: number | null;
 }) {
   const [scan, setScan] = useState("");
   const query = useQuery({
@@ -188,10 +195,12 @@ export function ItemCharts({
   const h = query.data;
   return (
     <>
-      <p>
-        {h.points.length} eligible scans · Base/compatible legacy history only.{" "}
-        {h.other_identities} other newest identities excluded.
-      </p>
+      {!overview && (
+        <p>
+          {h.points.length} eligible scans · Base/compatible legacy history
+          only. {h.other_identities} other newest identities excluded.
+        </p>
+      )}
       {h.note && <p>{h.note}</p>}
       {!listings && (
         <>
@@ -200,11 +209,11 @@ export function ItemCharts({
               More scans with compatible item evidence are needed for a trend.
             </p>
           )}
-          <div style={{ width: "100%", height: 340 }}>
+          <div style={{ width: "100%", height: overview ? 220 : 340 }}>
             <ResponsiveContainer>
               <ComposedChart
                 data={historyData(h)}
-                margin={{ left: 5, right: 5, bottom: 35 }}
+                margin={{ left: 5, right: 25, bottom: 35 }}
               >
                 <CartesianGrid stroke="var(--line)" />
                 <XAxis
@@ -212,10 +221,30 @@ export function ItemCharts({
                   type="number"
                   domain={["dataMin", "dataMax"]}
                   scale="time"
-                  tickFormatter={(v) => new Date(v).toLocaleDateString()}
+                  tickFormatter={(v) => utcLabel(new Date(v).toISOString())}
                 />
-                <YAxis yAxisId="price" tickFormatter={moneyText} width={85} />
-                <YAxis yAxisId="supply" orientation="right" width={45} />
+                <YAxis
+                  yAxisId="price"
+                  tickFormatter={moneyText}
+                  width={70}
+                  label={{
+                    value: "Unit price",
+                    angle: -90,
+                    position: "insideLeft",
+                  }}
+                />
+                <YAxis
+                  yAxisId="supply"
+                  orientation="right"
+                  width={45}
+                  label={{
+                    value: "Units listed",
+                    angle: 90,
+                    position: "right",
+                    offset: 8,
+                  }}
+                />
+                <Legend />
                 <Tooltip
                   labelFormatter={(v, p) =>
                     `Scan ${p[0]?.payload.scan ?? ""} · ${scanLabel(new Date(Number(v)).toISOString())}`
@@ -232,25 +261,38 @@ export function ItemCharts({
                   connectNulls={false}
                   stroke="var(--accent)"
                 />
-                <Line
-                  yAxisId="price"
-                  dataKey="p25"
-                  name="Market value (p25)"
-                  connectNulls={false}
-                  stroke="var(--gold)"
-                />
-                <Line
+                {!overview && (
+                  <Line
+                    yAxisId="price"
+                    dataKey="p25"
+                    name="Market value (p25)"
+                    connectNulls={false}
+                    stroke="var(--chart-2)"
+                  />
+                )}
+                {overview && typical !== null && (
+                  <ReferenceLine
+                    yAxisId="price"
+                    y={typical}
+                    ifOverflow="extendDomain"
+                    stroke="var(--chart-2)"
+                    strokeDasharray="5 4"
+                    label="Typical"
+                  />
+                )}
+                <Bar
                   yAxisId="supply"
                   dataKey="units"
                   name="Units listed"
-                  connectNulls={false}
-                  stroke="var(--muted)"
+                  fill="var(--chart-3)"
                 />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
           <p>
-            Lowest unit buyout · Market value (p25) · Units listed (right axis)
+            {overview
+              ? "Stored scan prices · dashed reference: typical earlier price"
+              : "Lowest unit buyout · Market value (p25) · Units listed (right axis)"}
           </p>
         </>
       )}
@@ -265,7 +307,7 @@ export function ItemCharts({
             >
               {h.scans.map((s) => (
                 <option key={s.scan_id} value={s.scan_id}>
-                  <UtcTime value={s.finished_at} />
+                  {scanLabel(s.finished_at)}
                 </option>
               ))}
             </select>
@@ -279,7 +321,7 @@ export function ItemCharts({
         </>
       )}
       <p>Units listed are supply, never sales, demand or volume.</p>
-      {!listings && <RemovalHistory h={h} />}
+      {!listings && !overview && <RemovalHistory h={h} />}
     </>
   );
 }

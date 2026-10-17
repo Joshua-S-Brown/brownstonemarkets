@@ -1,3 +1,6 @@
+import record from "./records.module.css";
+import { Tile } from "../ui/Tile";
+import { Panel } from "../ui/Panel";
 import { SignalPill, isSignal } from "../ui/SignalPill";
 import { Identity } from "../ui/Identity";
 import { UtcTime } from "../ui/UtcTime";
@@ -5,14 +8,20 @@ import styles from "../theme/app.module.css";
 import { lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
+import type { Activity } from "../api/market";
 import { get, type Item } from "../api/client";
 import { Money } from "../ui/Money";
 import { ItemLink } from "../ui/ItemLink";
 import { ErrorState, Pill } from "../ui/parts";
 import { OurMove } from "../places/today/OurMove";
 import { Evidence } from "../ui/Evidence";
-import { ItemChain, ItemActivity, ItemGathering } from "./ItemDetails";
-// Recharts loads only when a chart tab opens, keeping it out of the shell's first bundle.
+import {
+  ItemChain,
+  ItemActivity,
+  ItemGathering,
+  actionWords,
+} from "./ItemDetails";
+// Recharts loads with the record, keeping it out of the shell's first bundle.
 const ItemCharts = lazy(() =>
   import("./ItemCharts").then((m) => ({ default: m.ItemCharts })),
 );
@@ -36,6 +45,12 @@ export function ItemRecord({
       ),
     enabled: !!source,
   });
+  const activity = useQuery({
+    queryKey: [source, "activity", id],
+    queryFn: ({ signal }) =>
+      get<Activity>(`items/${id}/activity`, source, signal),
+    enabled: !!source,
+  });
   if (query.error)
     return (
       <ErrorState
@@ -48,21 +63,38 @@ export function ItemRecord({
     );
   if (!query.data) return <p role="status">Loading saved item…</p>;
   const item = query.data;
-  const counts = [
-    ["Units listed", item.units],
-    ["Listings", item.listings],
-    ["Held by the team", item.held],
-  ] as const;
   return (
     <>
-      <p className={styles["eyebrow"]}>Item record · {item.item_id}</p>
-      <h1>
-        <ItemLink id={id} name={item.name} quality={item.quality} />
-      </h1>
-      <p className={styles["muted"]}>
-        Quality {item.quality ?? "unknown"} ·{" "}
-        <Identity state={variant ? JSON.parse(variant)[0] : "base"} />
-      </p>
+      <header className={record.header}>
+        <h1>
+          <ItemLink id={id} name={item.name} quality={item.quality} badge />
+        </h1>
+        <p>
+          {item.role ?? "Outside compatible catalogs"} · {item.item_id}
+          {variant && (
+            <>
+              {" "}
+              · <Identity state={JSON.parse(variant)[0]} />
+            </>
+          )}
+        </p>
+        <div>
+          {item.crowding && isSignal(item.crowding) && (
+            <SignalPill label={item.crowding} />
+          )}{" "}
+          {item.overshoot && isSignal(item.overshoot) && (
+            <SignalPill label={item.overshoot} />
+          )}
+        </div>
+      </header>
+      <div className={record.facts} aria-label="Item facts">
+        <Tile label="Lowest" value={<Money copper={item.price_copper} />} />
+        <Tile label="Typical" value={<Money copper={item.typical_copper} />} />
+        <Tile
+          label="Listings · units"
+          value={`${item.listings?.toLocaleString() ?? "unknown"} · ${item.units?.toLocaleString() ?? "unknown"}`}
+        />
+      </div>
       <Tabs.Root defaultValue="overview">
         <Tabs.List aria-label="Item tabs">
           <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
@@ -72,81 +104,95 @@ export function ItemRecord({
           <Tabs.Trigger value="activity">Our activity</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="overview">
-          <div className={styles["tiles"]}>
-            <div>
-              Price now / unit
-              <strong>
-                <Money copper={item.price_copper} />
-              </strong>
-            </div>
-            <div>
-              Typical / unit
-              <strong>
-                <Money copper={item.typical_copper} />
-              </strong>
-            </div>
-            {counts.map(([label, value]) => (
-              <div key={label}>
-                {label}
-                <strong>
-                  {label === "Held by the team" && item.at_least
-                    ? "at least "
-                    : ""}
-                  {value ?? "unknown"}
-                </strong>
-              </div>
+          <Suspense fallback={loadingCharts}>
+            <ItemCharts
+              source={source}
+              id={id}
+              overview
+              typical={item.typical_copper}
+            />
+          </Suspense>
+          <dl className={record.kv}>
+            <dt>Where to get it</dt>
+            <dd>
+              {item.vendor_buy.length ? "Vendor · " : ""}
+              {[
+                ...new Set(
+                  activity.data?.farming.flatMap((c) =>
+                    c.farming.rows.map((r) => r.zone || "unknown zone"),
+                  ) ?? [],
+                ),
+              ].join(" · ") || "not gathered yet"}{" "}
+              · <a href="#item-gathering">Gathering evidence below</a>
+            </dd>
+            <dt>Vendor buy</dt>
+            <dd>
+              {item.vendor_buy.length
+                ? item.vendor_buy.map((v, i) => (
+                    <span key={i}>
+                      {i ? " / " : ""}
+                      <Money copper={v} />
+                    </span>
+                  ))
+                : "unknown"}
+            </dd>
+            <dt>Vendor sell</dt>
+            <dd>
+              <Money copper={item.vendor_sell} />
+            </dd>
+            <dt>24h post deposit, one</dt>
+            <dd>
+              <Money copper={item.deposit_copper ?? null} /> · refunded on sale,
+              lost if it expires
+            </dd>
+            <dt>Team holdings</dt>
+            <dd>
+              {item.at_least ? "at least " : ""}
+              {item.held ?? "unknown"} units
+              {item.held !== null &&
+                !!activity.data?.holdings.length &&
+                ` · ${activity.data.holdings
+                  .map(
+                    (h) =>
+                      `${h.character}${h.kind === "bags" ? "" : ` ${h.kind}`} ${h.units}`,
+                  )
+                  .join(", ")}`}
+            </dd>
+          </dl>
+          <Panel title="Best use">
+            {(["used_in", "made_from"] as const).map((key) => (
+              <section key={key}>
+                <h3>{key === "used_in" ? "Used in" : "Made from"}</h3>
+                {item[key].item_id ? (
+                  <>
+                    <ItemLink id={item[key].item_id!} name={item[key].name!} />
+                    <p>
+                      Profit per craft:{" "}
+                      <Money copper={item[key].profit_copper ?? null} />
+                    </p>
+                  </>
+                ) : (
+                  <p>No profitable use known</p>
+                )}
+                <details>
+                  <summary>Route evidence</summary>
+                  <Evidence
+                    data={{
+                      reason: actionWords(item[key].reason),
+                    }}
+                  />
+                </details>
+              </section>
             ))}
-            <div>
-              Vendor buy / unit
-              <strong>
-                {item.vendor_buy.length
-                  ? item.vendor_buy.map((v, i) => (
-                      <span key={i}>
-                        {i ? " / " : ""}
-                        <Money copper={v} />
-                      </span>
-                    ))
-                  : "unknown"}
-              </strong>
-            </div>
-            <div>
-              Vendor sell / unit
-              <strong>
-                <Money copper={item.vendor_sell} />
-              </strong>
-            </div>
-          </div>
-          {item.crowding && isSignal(item.crowding) && (
-            <SignalPill label={item.crowding} />
-          )}{" "}
-          {item.overshoot && isSignal(item.overshoot) && (
-            <SignalPill label={item.overshoot} />
-          )}
-          <h2>Best use in our catalogs</h2>
-          {(["used_in", "made_from"] as const).map((key) => (
-            <section key={key}>
-              <h3>{key === "used_in" ? "Used in" : "Made from"}</h3>
-              {item[key].item_id ? (
-                <>
-                  <ItemLink id={item[key].item_id!} name={item[key].name!} />
-                  <p>
-                    Profit per craft:{" "}
-                    <Money copper={item[key].profit_copper ?? null} />
-                  </p>
-                </>
-              ) : (
-                <p>No profitable use known</p>
-              )}
-              <details>
-                <summary>Route evidence</summary>
-                <Evidence data={{ reason: item[key].reason }} />
-              </details>
-            </section>
-          ))}
+          </Panel>
           {(!variant || ["base", null].includes(JSON.parse(variant)[0])) && (
             <OurMove source={source} id={id} />
           )}
-          <ItemGathering source={source} id={id} />
+          <div id="item-gathering">
+            <Panel title="Farming spots">
+              <ItemGathering source={source} id={id} />
+            </Panel>
+          </div>
         </Tabs.Content>
         <Tabs.Content value="history">
           <Suspense fallback={loadingCharts}>

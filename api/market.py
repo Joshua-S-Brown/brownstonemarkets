@@ -70,7 +70,8 @@ def item(item_id: int, source: str = '', variant: str = ''):
         summary = summary | {'held': None, 'at_least': False}
         summary = summary | {k: {'recipe': None, 'reason': 'Separate identity; base-item routes excluded'}
                              for k in ('made_from', 'used_in')}
-    return Item(item_id=item_id, name=observed.get('item_name') or page['name'], quality=quality(observed),
+    return Item(role=summary['role'], deposit_copper=summary['deposit_copper'], item_id=item_id,
+                name=observed.get('item_name') or page['name'], quality=quality(observed),
                 price_copper=observed.get('min_buyout'),
                 typical_copper=signal.get('overshoot', {}).get('typical_copper'),
                 units=metrics.get('units'), listings=metrics.get('listings'),

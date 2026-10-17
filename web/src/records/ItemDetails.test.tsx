@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
@@ -53,7 +53,15 @@ it("renders linked routes, quantities, unknown intermediate profit and team elig
       json: async () => ({
         in_chain: true,
         made_from: [recipe],
-        used_in: [{ ...recipe, profit_copper: 123 }],
+        used_in: [
+          {
+            ...recipe,
+            quantity: 1,
+            profession: "tailoring",
+            profit_copper: 123,
+          },
+          { ...recipe, profit_copper: 123 },
+        ],
         demand: [{ professions: ["Tailoring"], bands: ["1–45"] }],
       }),
     })),
@@ -64,12 +72,13 @@ it("renders linked routes, quantities, unknown intermediate profit and team elig
   });
   expect(screen.getAllByText("Linen")).toHaveLength(2);
   expect(screen.getByText("2 units per craft")).toBeTruthy();
-  expect(screen.getAllByText("Team: Unknown")).toHaveLength(2);
+  expect(screen.getAllByText("Team: Unknown")).toHaveLength(3);
+  expect(screen.getByText("1 unit per craft")).toBeTruthy();
   expect(screen.getByText("22c")).toBeTruthy();
   expect(screen.getByText("Tailoring: 1–45")).toBeTruthy();
   expect(
     screen
-      .getByRole("link", { name: "Open in Supply chains" })
+      .getAllByRole("link", { name: "Open in Supply chains" })[0]
       .getAttribute("href"),
   ).toBe("/app/chains?source=one&catalog=tailoring&recipe=2963");
 });
@@ -104,7 +113,16 @@ it("renders sales outcomes, lower-bound holdings and gathering for every scoped 
             value_per_hour_copper: null,
           },
         ],
-        spots: [{ map_id: 1 }],
+        spots: [
+          {
+            map_id: 1,
+            npc_id: 20,
+            mob: "Kobold (NPC 20)",
+            mob_name: "Kobold",
+            also_looted_labels: ["NPC 30"],
+            also_looted_names: [null],
+          },
+        ],
       },
     })),
     wowhead_url: "https://www.wowhead.com/forever/item=2589",
@@ -125,9 +143,11 @@ it("renders sales outcomes, lower-bound holdings and gathering for every scoped 
   expect(screen.getByText("Alpha")).toBeTruthy();
   expect(screen.getByText("Beta")).toBeTruthy();
   expect(screen.getAllByText(/36 units\/hour/)).toHaveLength(2);
+  expect(screen.getAllByRole("link", { name: "Kobold" })).toHaveLength(2);
+  expect(screen.getAllByText(/also looted: Unknown creature/)).toHaveLength(2);
   expect(screen.getByText(/Your own past sessions/)).toBeTruthy();
 });
-it("opens Overview, exposes all record tabs and footer, reads selected identity in request", async () => {
+function stubRecord(held: number | null) {
   const requests: URL[] = [];
   vi.stubGlobal(
     "fetch",
@@ -136,38 +156,60 @@ it("opens Overview, exposes all record tabs and footer, reads selected identity 
       return {
         ok: true,
         json: async () =>
-          url.pathname.endsWith("activity")
-            ? {
-                farming: [],
-                wowhead_url: "https://www.wowhead.com/forever/item=1",
-              }
-            : {
-                item_id: 1,
-                name: "Selected robe",
-                quality: 2,
-                price_copper: 999,
-                typical_copper: null,
-                units: 3,
-                listings: 1,
-                held: null,
-                at_least: false,
-                vendor_buy: [],
-                vendor_sell: null,
-                crowding: null,
-                overshoot: null,
-                used_in: { reason: "No compatible catalog recipe" },
-                made_from: { reason: "No compatible catalog recipe" },
-                details: { variant: '["variant","suffix"]' },
-                evidence: {
-                  freshness: null,
-                  scan_id: "scan",
-                  finished_at: "2026-10-16T00:00:00Z",
-                  market_id: "forever",
+          url.pathname.endsWith("history")
+            ? { points: [], scans: [], other_identities: 0, note: "" }
+            : url.pathname.endsWith("activity")
+              ? {
+                  farming: [],
+                  holdings: [
+                    {
+                      character: "Basilly",
+                      realm: "R",
+                      kind: "bags",
+                      units: 22,
+                    },
+                    {
+                      character: "Keenagen",
+                      realm: "R",
+                      kind: "bank",
+                      units: 14,
+                    },
+                  ],
+                  wowhead_url: "https://www.wowhead.com/forever/item=1",
+                }
+              : {
+                  role: "Craft",
+                  deposit_copper: 100,
+                  item_id: 1,
+                  name: "Selected robe",
+                  quality: 2,
+                  price_copper: 999,
+                  typical_copper: null,
+                  units: 3,
+                  listings: 1,
+                  held,
+                  at_least: false,
+                  vendor_buy: [],
+                  vendor_sell: null,
+                  crowding: null,
+                  overshoot: null,
+                  used_in: { reason: "No compatible catalog recipe" },
+                  made_from: { reason: "No compatible catalog recipe" },
+                  details: { variant: '["variant","suffix"]' },
+                  evidence: {
+                    freshness: null,
+                    scan_id: "scan",
+                    finished_at: "2026-10-16T00:00:00Z",
+                    market_id: "forever",
+                  },
                 },
-              },
       };
     }),
   );
+  return requests;
+}
+it("opens Overview, exposes all record tabs and footer, reads selected identity in request", async () => {
+  const requests = stubRecord(null);
   host(<ItemRecord source="one" id={1} variant={'["variant","suffix"]'} />);
   expect(await screen.findByText("Selected robe")).toBeTruthy();
   expect(
@@ -184,7 +226,30 @@ it("opens Overview, exposes all record tabs and footer, reads selected identity 
       .find((r) => r.pathname.endsWith("/1"))
       ?.searchParams.get("variant"),
   ).toBe('["variant","suffix"]');
-  expect(await screen.findByText("not gathered yet")).toBeTruthy();
+  expect(
+    (await screen.findAllByText(/not gathered yet/)).length,
+  ).toBeGreaterThan(0);
+  const facts = screen.getByLabelText("Item facts");
+  expect(facts.textContent).toContain(
+    "Lowest9s 99cTypical—Listings · units1 · 3",
+  );
+  const header = screen.getByRole("heading", {
+    name: "Selected robe",
+  }).parentElement!;
+  expect(header.textContent).toContain("Craft · 1 · variant");
+  expect(header.textContent).not.toContain("Overview");
+  expect(document.body.textContent).not.toContain("Basilly");
+  await userEvent.click(screen.getByRole("tab", { name: "Price history" }));
+  expect(header.textContent).not.toContain("Price history");
+  expect(within(facts).getByText("Lowest")).toBeTruthy();
+  expect(document.body.textContent).not.toMatch(/\d{4}-\d\d-\d\dT\d\d:/);
   await userEvent.click(screen.getByText("Identity and evidence"));
   expect(screen.getAllByText(/"variant"/).length).toBeGreaterThan(0);
+});
+it("lists each base-item holder beside team holdings, but not on a variant", async () => {
+  stubRecord(36);
+  host(<ItemRecord source="one" id={1} />);
+  expect(
+    await screen.findByText(/36 units · Basilly 22, Keenagen bank 14/),
+  ).toBeTruthy();
 });

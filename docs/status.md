@@ -139,6 +139,15 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   1280/390 px Team/Ledger comparisons with the prototype are in ignored `work/story-091/`.
   No collection/import ran. Training, gathering income, demand and tier-fee limits remain labelled.
 
+- **Inspector records (STORY-093):** prototype-width item/character panels use three persistent facts,
+  scrolling tabs, UTC times and evidence footers. Item Overview pairs stored prices/typical with supply
+  bars, vendor/deposit/holdings facts and best-use/farming panels. Character records show profession
+  bars, projected known-recipe totals, four-column reachable recipes, location-first holdings and
+  distinct history series with All readings. Offline: ItemDetails/ItemCharts/CharacterRecord Vitest,
+  character projection and web API tests. Copied Forever beta `20261017T104157Z-ff991e` matches
+  STORY-093's Linen Cloth and Arille figures; comparisons at 1280/390 px are in ignored
+  `work/story-093/`. No collection/import ran; unknown bank remains a lower bound.
+
 - **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
   Item pages lead with a base-item decision summary, scoped holdings and own item farming evidence;
@@ -235,7 +244,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,945 Python tests pass (one platform skip), plus 88 Vitest tests.
+Expected: 1,957 Python tests pass (one platform skip), plus 103 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

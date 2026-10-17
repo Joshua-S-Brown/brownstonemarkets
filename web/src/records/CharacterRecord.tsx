@@ -1,3 +1,8 @@
+import record from "./records.module.css";
+import { Tile } from "../ui/Tile";
+import { Panel } from "../ui/Panel";
+import { SkillBar } from "../places/team/Roster";
+import { utcLabel } from "../ui/UtcTime";
 import { UtcTime } from "../ui/UtcTime";
 import { Identity } from "../ui/Identity";
 import { CharacterName } from "../ui/CharacterName";
@@ -9,7 +14,7 @@ import type { CharacterKey } from "../app/InspectorContext";
 import { Evidence } from "../ui/Evidence";
 import { Money } from "../places/team/Money";
 import { ItemLink } from "../ui/ItemLink";
-import { ErrorState, Pill } from "../ui/parts";
+import { ErrorState, Pill, Tip } from "../ui/parts";
 import { Path } from "../places/team/Path";
 import { readWindow } from "../places/team/state";
 import type { RecordData } from "../places/team/types";
@@ -55,21 +60,29 @@ export function CharacterRecord({
   const c = data.card;
   return (
     <>
-      <h1>
-        <CharacterName character={character} />
-      </h1>
-      <p>
-        Level {c.level ?? "unknown"} · Gold <Money copper={c.gold_copper} />
-      </p>
-      <p>
-        <UtcTime value={c.last_seen_utc} /> · {c.machine ?? "machine unknown"}
-        {c.stale && (
-          <>
-            {" "}
-            · <Pill tone="warn">stale</Pill>
-          </>
-        )}
-      </p>
+      <header className={record.header}>
+        <h1>
+          <CharacterName character={character} avatar />
+        </h1>
+        <p>
+          Level {c.level ?? "unknown"} · last seen{" "}
+          <UtcTime value={c.last_seen_utc} /> · {c.machine ?? "machine unknown"}
+          {c.stale && (
+            <>
+              {" "}
+              · <Pill tone="warn">stale</Pill>
+            </>
+          )}
+        </p>
+      </header>
+      <div className={record.facts} aria-label="Character facts">
+        <Tile label="Gold" value={<Money copper={c.gold_copper} />} />
+        <Tile label="Professions" value={c.professions.length} />
+        <Tile
+          label="Known recipes"
+          value={`${c.recipes_at_least ? "at least " : ""}${c.known_recipes}`}
+        />
+      </div>
       <Tabs.Root value={tab} onValueChange={setTab}>
         <Tabs.List aria-label="Character record">
           {["Professions", "Path", "Holdings", "History"].map((t) => (
@@ -81,20 +94,22 @@ export function CharacterRecord({
         <Tabs.Content value="Professions">
           {!c.professions.length && <p>No profession reported yet.</p>}
           {c.professions.map((p) => (
-            <section key={p.name}>
-              <h2>
-                {p.name} · {p.rank ?? "unknown"} / {p.max_rank ?? "unknown"}
-              </h2>
+            <section key={p.name} className={record.profession}>
+              <SkillBar name={p.name} rank={p.rank} maximum={p.max_rank} />
               {p.at_cap && <Pill tone="warn">at cap: train the next tier</Pill>}
               <p>
-                Known recipes: {p.known_count ?? "unknown"} · {p.recipe_source}{" "}
-                · Window list: {p.recipes_at}
+                {p.rank != null && p.max_rank != null
+                  ? p.max_rank - p.rank
+                  : "unknown"}{" "}
+                points before this tier caps
               </p>
-              {p.possibly_incomplete && <p>possibly incomplete</p>}
-              <p>Seen crafted: {p.seen_at ?? "unknown"}</p>
+              <Tip
+                text={`Known recipes: ${p.known_count ?? "unknown"} · ${p.recipe_source} · Window list: ${Number.isFinite(Date.parse(p.recipes_at)) ? utcLabel(p.recipes_at) + " UTC" : "unknown"} · Seen crafted: ${p.seen_at && Number.isFinite(Date.parse(p.seen_at)) ? utcLabel(p.seen_at) + " UTC" : "unknown"}${p.possibly_incomplete ? " · possibly incomplete" : ""}`}
+              >
+                Recipe evidence
+              </Tip>
             </section>
           ))}
-          <p>{c.skills_status}</p>
         </Tabs.Content>
         <Tabs.Content value="Path">
           <Path groups={data.progression.professions} window={window} />
@@ -110,33 +125,57 @@ export function CharacterRecord({
           {!data.holdings.captures.length && (
             <p>Bags and bank capture unknown.</p>
           )}
-          {data.holdings.captures.map((capture, i) => (
-            <section key={i}>
-              <h3>
-                {String(capture.kind)} ·{" "}
-                {capture.unknown
-                  ? "unknown"
-                  : `${Number(capture.age_hours).toFixed(1)} hours old`}
-                {Boolean(capture.partial) && " · partial"}
-              </h3>
-              <Evidence data={capture} />
-            </section>
-          ))}
-          {data.holdings.items.map((item, i) => (
-            <p key={i}>
-              <ItemLink
-                id={Number(item.item_id)}
-                name={String(item.name)}
-                variant={JSON.stringify([item.variant_state, item.variant_id])}
-              />{" "}
-              · {String(item.units)} · {String(item.kind)} ·{" "}
-              <Identity
-                state={
-                  item.variant_state == null ? null : String(item.variant_state)
+          {["bags", "bank"].map((kind) => {
+            const captures = data.holdings.captures.filter(
+              (capture) => capture.kind === kind,
+            );
+            const atLeast =
+              !captures.length ||
+              captures.some((capture) => capture.unknown || capture.partial);
+            return (
+              <Panel
+                key={kind}
+                title={kind === "bags" ? "Bags" : "Bank"}
+                subtitle={
+                  atLeast
+                    ? "at least · location unknown or partial"
+                    : "Captured items"
                 }
-              />
-            </p>
-          ))}
+              >
+                {data.holdings.items
+                  .filter((item) => item.kind === kind)
+                  .map((item, i) => (
+                    <p key={i}>
+                      <ItemLink
+                        id={Number(item.item_id)}
+                        name={String(item.name)}
+                        variant={JSON.stringify([
+                          item.variant_state,
+                          item.variant_id,
+                        ])}
+                      />{" "}
+                      · {atLeast ? "at least " : ""}
+                      {String(item.units)} {item.units === 1 ? "unit" : "units"}{" "}
+                      {item.variant_state !== "base" && (
+                        <>
+                          ·{" "}
+                          <Identity
+                            state={
+                              item.variant_state == null
+                                ? null
+                                : String(item.variant_state)
+                            }
+                          />
+                        </>
+                      )}
+                    </p>
+                  ))}
+                {!data.holdings.items.some((item) => item.kind === kind) && (
+                  <p>{atLeast ? "Contents unknown" : "No items captured"}</p>
+                )}
+              </Panel>
+            );
+          })}
         </Tabs.Content>
         <Tabs.Content value="History">
           <Suspense fallback={<p>Loading history…</p>}>
@@ -146,6 +185,14 @@ export function CharacterRecord({
       </Tabs.Root>
       <footer>
         <h2>Character evidence</h2>
+        <details>
+          <summary>Capture evidence</summary>
+          <Evidence data={{ captures: data.holdings.captures }} />
+        </details>
+        <details>
+          <summary>History evidence</summary>
+          <Evidence data={{ history: c.history }} />
+        </details>
         <Evidence data={data.evidence} />
       </footer>
     </>

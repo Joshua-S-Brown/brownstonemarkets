@@ -305,7 +305,7 @@ def test_selected_variant_prices_units_quality_and_refresh_never_use_base(client
 
 
 def test_activity_sales_holdings_failures_and_farming_preserve_other_evidence(client, monkeypatch):
-    from test_farming import loot
+    from test_farming import mob_loot, named_window
     from test_sales import invoice, posted, returned
 
     from brownstone import market_explorer as me
@@ -313,7 +313,7 @@ def test_activity_sales_holdings_failures_and_farming_preserve_other_evidence(cl
     browser, source = client
     result = context.explorer(source)
     result['characters'] = {('Alpha', 'Realm', 'Alliance'): {'observations':
-        loot(0, item=2589) + loot(150, item=2589) + loot(300, item=2589)}}
+        mob_loot(0, 475) + mob_loot(150, 475) + mob_loot(300, 475) + [named_window(400)]}}
     data = sales.project([*posted(), invoice(), returned(at=2200), invoice(name='Unknown', at=2300)],
                          {2589: {'Linen Cloth'}})
     monkeypatch.setattr(me.sales, 'load', lambda c: data)
@@ -321,6 +321,8 @@ def test_activity_sales_holdings_failures_and_farming_preserve_other_evidence(cl
     assert activity['your_sales'][0]['sold'] == 5 and activity['your_sales'][0]['expired'] == 1
     assert activity['unidentified_sales'] == 1
     assert activity['farming'][0]['farming']['rows'][0]['units_per_hour'] == 36
+    spot = activity['farming'][0]['farming']['spots'][0]
+    assert spot['mob'] == 'Kobold Tunneler (NPC 475)' and spot['mob_name'] == 'Kobold Tunneler'
     assert activity['wowhead_url'] == 'https://www.wowhead.com/forever/item=2589'
     def broken(*args):
         raise OSError('busy fixture')
@@ -369,6 +371,7 @@ def test_summary_best_use_vendor_prices_and_holdings_keep_exact_base(client, mon
     browser, source = client
     r = context.explorer(source)
     r['vendors'][2589] = 5
+    r['stack_sizes'][2589] = 20
     r['catalogs'][0]['items_by_id'][2589]['vendor_price_copper'] = 8
     for recipe in r['recipes']:
         recipe['value']['profit_copper'] = 123 if recipe['recipe']['output_item_id'] == 2996 else 456
@@ -387,6 +390,7 @@ def test_summary_best_use_vendor_prices_and_holdings_keep_exact_base(client, mon
     item = browser.get('/api/items/2589').json()
     assert item['price_copper'] == 11 and item['held'] == 7 and item['at_least']
     assert item['vendor_buy'] == [8] and item['vendor_sell'] == 5
+    assert item['role'] == 'Material' and item['deposit_copper'] == 100
     assert item['used_in']['profit_copper'] == 123
     assert len(item['details']['identities']) == 2
     selected = browser.get('/api/items/2589', params={'variant': '["variant", "suffix"]'}).json()

@@ -101,6 +101,8 @@ function fixture(): TeamData {
         level: null,
         gold_copper: null,
         stale: false,
+        known_recipes: 3,
+        recipes_at_least: false,
         skills_status: "unknown",
         professions: [
           {
@@ -225,7 +227,10 @@ it("retains alternatives, learning columns, gathering IDs and empty catalog sent
   expect(
     screen.getByText("reliable while you look for the pattern"),
   ).toBeTruthy();
-  expect(screen.getByRole("button", { name: /Learn from/ })).toBeTruthy();
+  expect(
+    screen.getByRole("columnheader", { name: "Skill" }).closest("tr")?.children,
+  ).toHaveLength(4);
+  expect(screen.queryByRole("columnheader", { name: /Learn from/ })).toBeNull();
   expect(
     screen.getAllByText("pays back training in 1 crafts", { exact: false })
       .length,

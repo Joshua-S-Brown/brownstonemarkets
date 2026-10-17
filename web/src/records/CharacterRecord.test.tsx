@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -23,11 +23,13 @@ function data(realm = "First"): RecordData {
       faction: "Alliance",
       machine: null,
       last_seen_relative: "unknown",
-      last_seen_utc: "unknown",
+      last_seen_utc: "2026-10-17T10:00:00Z",
       level: null,
       gold_copper: null,
       stale: false,
       skills_status: "skills unknown",
+      known_recipes: 3,
+      recipes_at_least: true,
       professions: [
         {
           name: "Tailoring",
@@ -35,7 +37,7 @@ function data(realm = "First"): RecordData {
           max_rank: null,
           known_count: null,
           recipe_source: "unknown",
-          recipes_at: "unknown",
+          recipes_at: "2026-10-17T09:00:00Z",
           seen_at: null,
           possibly_incomplete: true,
           at_cap: false,
@@ -43,7 +45,41 @@ function data(realm = "First"): RecordData {
       ],
       history: [],
     },
-    progression: { professions: [] },
+    progression: {
+      professions: [
+        {
+          profession: "Tailoring",
+          rank: 1,
+          max_rank: 75,
+          note: "",
+          best: null,
+          alternative: null,
+          alternative_kind: null,
+          gathering: false,
+          next_step: "none",
+          recipes: [
+            {
+              recipe_id: 2,
+              catalog_id: "tailoring",
+              name: "Linen shirt",
+              output_item_id: 2,
+              required_skill: 2,
+              points_needed: 1,
+              confidence: "Low",
+              learn_from: "trainer",
+              profit_copper: 40,
+              estimate: {
+                complete: true,
+                cost_copper: 20,
+                reasons: [],
+                steps: [],
+              },
+              payback: { status: "absent", crafts: null },
+            },
+          ],
+        },
+      ],
+    },
     holdings: {
       captures: [
         { kind: "bank", unknown: true, age_hours: null, partial: false },
@@ -143,20 +179,44 @@ it("renders unknown values, recipe provenance, partial captures, exact variants 
   );
   await screen.findByRole("heading", { name: "Maker" });
   expect(screen.getByText(/Level unknown/).textContent).toContain(
-    "Gold unknown",
+    "17 Oct 10:00 UTC",
   );
+  const facts = screen.getByLabelText("Character facts");
+  expect(facts.textContent).toContain(
+    "GoldunknownProfessions1Known recipesat least 3",
+  );
+  await userEvent.hover(
+    screen.getByRole("button", { name: "Recipe evidence" }),
+  );
+  expect(await screen.findByRole("tooltip")).toHaveProperty(
+    "textContent",
+    expect.stringContaining("possibly incomplete"),
+  );
+  await userEvent.click(screen.getByRole("tab", { name: "Path" }));
+  const path = screen.getByRole("tabpanel");
   expect(
-    screen.getByRole("heading", { name: "Tailoring · unknown / unknown" }),
-  ).toBeTruthy();
-  expect(screen.getByText(/Known recipes: unknown/)).toBeTruthy();
-  expect(screen.getByText("possibly incomplete")).toBeTruthy();
+    within(path).getByRole("columnheader", { name: "Skill" }).closest("tr")
+      ?.children,
+  ).toHaveLength(4);
+  await userEvent.hover(within(path).getByRole("button", { name: "ⓘ" }));
+  expect(await screen.findByRole("tooltip")).toHaveProperty(
+    "textContent",
+    expect.stringContaining("1 points · Low confidence · trainer"),
+  );
   fireEvent.mouseDown(screen.getByRole("tab", { name: "Holdings" }), {
     button: 0,
     ctrlKey: false,
   });
   fireEvent.click(screen.getByRole("tab", { name: "Holdings" }));
-  await waitFor(() => expect(screen.getByText("bank · unknown")).toBeTruthy());
-  expect(screen.getByText("bags · 2.0 hours old · partial")).toBeTruthy();
+  expect(screen.getByText("Contents unknown")).toBeTruthy();
+  expect(screen.getByText(/at least 2 units/)).toBeTruthy();
+  const item = screen.getByRole("button", { name: "Monkey robe" });
+  const capture = screen.getByText("Capture evidence");
+  expect(
+    item.compareDocumentPosition(capture) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(within(facts).queryByText("Holdings")).toBeNull();
+  expect(document.body.textContent).not.toMatch(/\d{4}-\d\d-\d\dT\d\d:/);
   expect(screen.getByRole("button", { name: "Monkey robe" })).toBeTruthy();
   fireEvent.mouseDown(screen.getByRole("tab", { name: "History" }), {
     button: 0,

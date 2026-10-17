@@ -87,6 +87,8 @@ class Card(Facts):
     gold_copper: int | None
     stale: bool
     skills_status: str
+    known_recipes: int
+    recipes_at_least: bool
     professions: list[Skill]
     history: list[dict[str, Any]]
 

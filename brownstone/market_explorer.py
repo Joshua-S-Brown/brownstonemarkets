@@ -6,6 +6,7 @@ import duckdb
 from . import analysis, farming, flood_signals, item_history, removed_listings, sales, scan_changes
 from .action_board import catalog_identity, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices, evaluate_recipe
+from .deposits import auction_deposit
 from .freshness import assess
 from .metrics import read_scan_metrics
 from .recipe_graph import RecipeGraph, label_routes, made_by_label, route_catalog
@@ -27,7 +28,7 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
               'catalogs': selected,
               'incompatible': [c for c in catalogs if c not in selected], 'warning': warning, 'snapshot': None,
               'observations': {}, 'characters': characters, 'items': [], 'metrics': [],
-              'vendors': {}, 'recipes': [], 'demand': [], 'freshness': None,
+              'vendors': {}, 'stack_sizes': {}, 'recipes': [], 'demand': [], 'freshness': None,
               'movement': {'note': 'No earlier scan', 'rows': [], 'comparison': None},
               'removals': {'pair': None, 'rows': [], 'note': 'Fewer than two eligible scans.'}}
     if manifest is None:
@@ -49,7 +50,8 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
                         for k in ('min_buyout', 'market_value')}} for row in items]
     result.update(observations=arguments['observations'], snapshot=snapshot, items=items, metrics=metrics,
                   movement=movement, removals=removals, floods=floods,
-                  vendors=arguments['vendor_prices'], freshness=assess(snapshot, now, config['max_age_hours']),
+                  vendors=arguments['vendor_prices'], stack_sizes=arguments['stack_sizes'],
+                  freshness=assess(snapshot, now, config['max_age_hours']),
                   recipes=recipe_rows(selected, arguments, characters),
                   demand=skill_demand(selected))
     result["market"] = market_page(result, histories)
@@ -227,7 +229,10 @@ def item_summary(config, result, page, now):
         own_sales, sales_error = sales.load(config), None
     except Exception as error:  # A sales read failure keeps the rest of the summary, like floods.
         own_sales, sales_error = {'items': [], 'unidentified': 0}, str(error)
-    return {'your_sales': [r for r in own_sales['items'] if r['item_id'] == page['item_id']],
+    return {'role': search_role(result['catalogs'], page['item_id']),
+            'deposit_copper': auction_deposit(page['vendor_sell'], 1,
+                                             result.get('stack_sizes', {}).get(page['item_id']), 24, config['faction']),
+            'your_sales': [r for r in own_sales['items'] if r['item_id'] == page['item_id']],
             'unidentified_sales': own_sales['unidentified'], 'sales_error': sales_error,
             'observed': observed, 'metrics': metrics, 'signal': signal, 'floods': floods,
             'floods_error': floods_error,
@@ -346,7 +351,10 @@ def farming_spot(spot, names):
         return (f'{names[npc]} (NPC {npc})' if npc in names else f'NPC {npc}') if npc else 'Gathering · zone only'
     cell = spot.get('cell')
     half = spot['cell_percent'] // 2
+    # Names alone for display, None when unknown; the NPC-numbered labels stay as evidence.
     return spot | {'mob': mob(spot['npc_id']), 'also_looted_labels': [mob(n) for n in spot['also_looted']],
+                   'mob_name': names.get(spot['npc_id']),
+                   'also_looted_names': [names.get(n) for n in spot['also_looted']],
                    'position': f'around {cell[0] + half}, {cell[1] + half}' if cell else '—'}
 
 

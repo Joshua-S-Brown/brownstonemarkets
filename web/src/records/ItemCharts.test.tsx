@@ -1,3 +1,4 @@
+import { CharacterHistory } from "./CharacterHistory";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
@@ -9,18 +10,18 @@ import {
   RemovalHistory,
 } from "./ItemCharts";
 import type { History } from "../api/market";
-vi.mock("recharts", () => ({
-  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  ComposedChart: () => null,
-  LineChart: () => null,
-  Line: () => null,
-  XAxis: () => null,
-  YAxis: () => null,
-  Tooltip: () => null,
-  CartesianGrid: () => null,
-}));
+vi.mock("recharts", async (original) => {
+  const actual = await original<typeof import("recharts")>();
+  const { cloneElement } = await import("react");
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: React.ReactElement }) =>
+      cloneElement(
+        children as React.ReactElement<{ width: number; height: number }>,
+        { width: 440, height: 300 },
+      ),
+  };
+});
 afterEach(() => vi.unstubAllGlobals());
 const h: History = {
   scans: [
@@ -163,4 +164,53 @@ it("shows three qualifying removal gaps, skipped count, and expands the rest", a
     screen.getByRole("button", { name: "Show all scan gaps" }),
   );
   expect(screen.getAllByText("Gap 1.00 hours")).toHaveLength(5);
+});
+
+it("renders distinct chart series, labelled axes, UTC ticks and a dashed typical reference", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => h })),
+  );
+  const { container, unmount } = host(<ItemCharts source="one" id={2589} />);
+  await screen.findByText("Unit price");
+  expect(screen.getAllByText("Units listed").length).toBeGreaterThan(0);
+  const colors = [...container.querySelectorAll(".recharts-legend-item")].map(
+    (item) =>
+      item.querySelector(".recharts-legend-item-text")?.getAttribute("style"),
+  );
+  expect(colors).toHaveLength(3);
+  expect(new Set(colors).size).toBe(3);
+  expect(container.textContent).toContain("15 Oct");
+  expect(container.textContent).not.toMatch(/\d{4}-\d\d-\d\dT\d\d:/);
+  unmount();
+  const overview = host(
+    <ItemCharts source="one" id={2589} overview typical={200} />,
+  );
+  await screen.findByText("Typical");
+  expect(
+    overview.container
+      .querySelector(".recharts-reference-line line")
+      ?.getAttribute("stroke-dasharray"),
+  ).toBe("5 4");
+  overview.unmount();
+  const character = host(
+    <CharacterHistory
+      rows={[
+        { UTC: "2026-10-16T12:00:00Z", Series: "Level", Value: 8, Sequence: 2 },
+        {
+          UTC: "2026-10-16T12:00:00Z",
+          Series: "Mining",
+          Value: 48,
+          Sequence: 2,
+        },
+      ]}
+    />,
+  );
+  const strokes = [
+    ...character.container.querySelectorAll(".recharts-legend-item-text"),
+  ].map((p) => p.getAttribute("style"));
+  expect(new Set(strokes).size).toBe(2);
+  expect(screen.getByText("All readings")).toBeTruthy();
+  expect(screen.queryByRole("columnheader", { name: "Sequence" })).toBeNull();
+  expect(character.container.textContent).not.toMatch(/\d{4}-\d\d-\d\dT\d\d:/);
 });

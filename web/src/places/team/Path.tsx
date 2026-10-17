@@ -3,7 +3,8 @@ import { Evidence } from "../../ui/Evidence";
 import { Money } from "./Money";
 import { ItemLink } from "../../ui/ItemLink";
 import { DataGrid } from "../../ui/DataGrid";
-import { Pill } from "../../ui/parts";
+import { Tip } from "../../ui/parts";
+import record from "../../records/records.module.css";
 import type { Estimate, Group, Recipe } from "./types";
 export function Cost({ estimate }: { estimate: Estimate }) {
   return estimate.complete ? (
@@ -99,9 +100,14 @@ export function Path({ groups, window }: { groups: Group[]; window: number }) {
             {g.profession} · {g.rank ?? "unknown"} / {g.max_rank ?? "unknown"}
           </h2>
           {g.best && (
-            <section>
+            <section className={record.best}>
               <h3>Best next recipe</h3>
-              <ItemLink id={g.best.output_item_id} name={g.best.name} />
+              <ItemLink id={g.best.output_item_id} name={g.best.name} />{" "}
+              <Tip
+                text={`${g.best.points_needed} points · ${g.best.confidence ?? "unknown"} confidence · ${g.best.learn_from}`}
+              >
+                ⓘ
+              </Tip>
               <p>
                 needs skill {g.best.required_skill ?? "unknown"} ·{" "}
                 {g.best.learn_from}
@@ -142,20 +148,31 @@ export function Path({ groups, window }: { groups: Group[]; window: number }) {
             <>
               <h3>Reachable recipes</h3>
               <DataGrid
-                rows={g.recipes}
+                rows={g.recipes.filter(
+                  (r) =>
+                    r.recipe_id !== g.best?.recipe_id ||
+                    r.catalog_id !== g.best?.catalog_id,
+                )}
+                density="compact"
                 columns={[
                   {
                     accessorKey: "name",
                     header: "Recipe",
                     cell: (c) => (
-                      <ItemLink
-                        id={c.row.original.output_item_id}
-                        name={c.row.original.name}
-                      />
+                      <>
+                        <ItemLink
+                          id={c.row.original.output_item_id}
+                          name={c.row.original.name}
+                        />
+                        <Tip
+                          text={`${c.row.original.points_needed} points · ${c.row.original.confidence} confidence · ${c.row.original.learn_from}`}
+                        >
+                          ⓘ
+                        </Tip>
+                      </>
                     ),
                   },
                   { accessorKey: "required_skill", header: "Skill" },
-                  { accessorKey: "points_needed", header: "Points" },
                   {
                     accessorKey: "profit_copper",
                     header: "Earns per craft",
@@ -169,12 +186,6 @@ export function Path({ groups, window }: { groups: Group[]; window: number }) {
                     accessorFn: (r) => r.estimate.cost_copper,
                     cell: (c) => <Cost estimate={c.row.original.estimate} />,
                   },
-                  {
-                    accessorKey: "learn_from",
-                    header: "Learn from",
-                    cell: (c) => <Pill>{c.row.original.learn_from}</Pill>,
-                  },
-                  { accessorKey: "confidence", header: "Confidence" },
                 ]}
               />
               {g.recipes.map((r) => (

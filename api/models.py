@@ -47,6 +47,8 @@ class BestUse(BaseModel):
 
 
 class Item(BaseModel):
+    role: str | None
+    deposit_copper: int | None
     item_id: int
     name: str
     quality: int | None

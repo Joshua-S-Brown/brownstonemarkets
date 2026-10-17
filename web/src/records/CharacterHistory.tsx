@@ -7,7 +7,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Evidence } from "../ui/Evidence";
+import { UtcTime, utcLabel } from "../ui/UtcTime";
 export function CharacterHistory({
   rows,
 }: {
@@ -21,16 +21,18 @@ export function CharacterHistory({
         <ResponsiveContainer width="100%" height={260}>
           <LineChart>
             <XAxis
+              tickFormatter={(v) => utcLabel(String(v))}
               dataKey="UTC"
               type="category"
               allowDuplicatedCategory={false}
             />
             <YAxis />
-            <Tooltip />
+            <Tooltip labelFormatter={(v) => utcLabel(String(v)) + " UTC"} />
             <Legend />
-            {series.map((s) => (
+            {series.map((s, i) => (
               <Line
                 key={s}
+                stroke={`var(--chart-${(i % 10) + 1})`}
                 name={s}
                 data={rows.filter((r) => r.Series === s)}
                 dataKey="Value"
@@ -54,7 +56,29 @@ export function CharacterHistory({
           </tbody>
         </table>
       )}
-      <Evidence data={{ history: rows }} />
+      <details>
+        <summary>All readings</summary>
+        <table>
+          <thead>
+            <tr>
+              <th>UTC</th>
+              <th>Series</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td>
+                  <UtcTime value={String(r.UTC)} />
+                </td>
+                <td>{String(r.Series)}</td>
+                <td>{String(r.Value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
     </>
   );
 }
