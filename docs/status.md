@@ -184,7 +184,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Limitations
 
-- Twenty-five complete Normal Alliance scans and one stopped scan are imported; no RP/neutral scans.
+- Thirty-one complete Normal Alliance scans (4–17 October) and one stopped scan are imported; no RP/neutral scans.
   Bulk API supplies no sellers (ADDON-07), blocking seller analysis.
 - Catalog yields/availability still need game evidence; no multi-yield support.
   Bolt of Linen Cloth's yield of 1 was confirmed on 2026-10-15 (17 crafts, 34 Linen Cloth).
