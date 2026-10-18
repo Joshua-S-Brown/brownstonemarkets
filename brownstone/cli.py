@@ -179,7 +179,23 @@ def skillups_main(argv: list[str]) -> None:
         parser.exit(1, f'Skill-up evidence failed: {error}\n')
 
 
-SUBCOMMANDS = {"recipes": recipes_main, "skillups": skillups_main,
+def rebuild_main(argv: list[str]) -> None:
+    """Rebuild silver and DuckDB from every source's bronze archive into a new directory."""
+    from .rebuild import rebuild
+    parser = argparse.ArgumentParser(prog="python -m brownstone rebuild", description=rebuild_main.__doc__)
+    parser.add_argument('--config', type=Path, default=ROOT / 'config/market.toml')
+    parser.add_argument('--output', type=Path, required=True, help='New directory; must not already exist')
+    args = parser.parse_args(argv)
+    try:
+        lines = rebuild(read_sources(args.config, args.config.with_name(LOCAL_OVERRIDES)), args.output)
+    except (ValueError, OSError) as error:
+        parser.exit(1, f'Rebuild failed: {error}\n')
+    print('\n'.join(lines))
+    if len(lines) > 1:
+        sys.exit(1)
+
+
+SUBCOMMANDS = {"recipes": recipes_main, "skillups": skillups_main, "rebuild": rebuild_main,
                "beta-report": beta_report_main, "after-play": after_play_main,
                "rules": rules_main, "gates": gates_main, "close-story": close_story_main}
 

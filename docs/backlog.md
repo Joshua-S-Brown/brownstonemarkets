@@ -34,17 +34,16 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 
 **Order** (regroomed 2026-10-17, product owner):
 1. STORY-062 sales speed and suggested stock levels (refine first)
-2. STORY-006 replay (before launch)
-3. STORY-101 frozen beta test corpus
-4. STORY-102 beta prices as a launch-week reference
-5. STORY-011a survey third-party scan sources
-6. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+2. STORY-101 frozen beta test corpus
+3. STORY-102 beta prices as a launch-week reference
+4. STORY-011a survey third-party scan sources
+5. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100 and SPIKE-009/009b.
 
 ### STORY-062 — Sales speed and suggested stock levels
 
@@ -58,16 +57,6 @@ Acceptance:
 - **Suggested target** beside Ledger's stock targets (STORY-061): removal rate × the days of cover the owner chooses (one setting), capped at a share of typical listed supply so we never plan to hold more than the market moves. Shown next to the manual target, never replacing it.
 - **Shown** on the Market explorer's item page (STORY-055) and beside held stock and targets in Ledger (STORY-061).
 - Feeds *Sales speed instead of a fixed cap* (Later) for Today, which stays a separate story.
-
-### STORY-006 — Replay and rebuild local data
-
-As the product owner, I want derived data rebuildable from the raw archive, so that schema changes and validation fixes never strand old scans.
-
-Acceptance:
-- **Deterministic rebuild.** One command rebuilds silver and DuckDB from bronze into a fresh database without modifying bronze. Running it twice gives identical results.
-- **Every source.** Covers TSM CSVs and addon scans (bronze `.lua` and `.lua.gz` files; silver already holds per-scan listings and prices).
-- **Documented.** It's the recovery procedure for partial runs referenced in `status.md`. Backup is STORY-016.
-- Groomed 2026-10-17: do before launch, so a schema change after 4 November never strands live scans. Rules: DATA-01, DATA-02, DATA-04. Design: *Data contracts*, *Schema migrations*.
 
 ### STORY-101 — Frozen beta test corpus
 

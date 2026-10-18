@@ -111,3 +111,50 @@ def test_cli_says_when_a_file_has_no_complete_scan(tmp_path, monkeypatch, capsys
     out = capsys.readouterr().out
     assert "Scan cut-short: stopped, 0 listings, empty" in out
     assert "No complete scan among the imported scans; prices are unchanged" in out
+
+
+def test_rebuild_command_reports_invalid_archives_and_preserves_inputs(tmp_path, monkeypatch, capsys):
+    import hashlib
+    import json
+
+    import duckdb
+
+    config = tsm_config(tmp_path, ('off', 'false'))
+    config.write_text(config.read_text().replace('1000000', '24'))
+    folder = tmp_path / 'data/bronze/off'
+    folder.mkdir(parents=True)
+    good = b'itemId,name,marketValue,minBuyout,recent,historical,updatedAt\n1,Ore,100,50,100,100,2020-10-01T00:00:00Z\n'
+    for sid, raw, digest in [('good', good, hashlib.sha256(good).hexdigest()),
+                             ('invalid', b'not a CSV', hashlib.sha256(b'not a CSV').hexdigest()),
+                             ('corrupt', good, 'wrong')]:
+        (folder / f'{sid}.csv').write_bytes(raw)
+        (folder / f'{sid}.json').write_text(json.dumps(dict(
+            snapshot_id=sid, source_id='off', collected_at='2020-10-01T00:00:00+00:00',
+            sha256=digest, status='failed')))
+    before = {p: p.read_bytes() for p in folder.iterdir()}
+    output = tmp_path / 'rebuilt'
+    with pytest.raises(SystemExit) as error:
+        run_cli(monkeypatch, 'rebuild', '--config', config, '--output', output)
+    assert error.value.code == 1
+    text = capsys.readouterr().out
+    assert 'Rebuilt 1/3 collections' in text and 'SHA-256 mismatch' in text and 'Missing source columns' in text
+    with duckdb.connect(str(output / 'brownstone.duckdb')) as db:
+        assert db.execute('SELECT snapshot_id FROM market_snapshots').fetchall() == [('good',)]
+    assert {p: p.read_bytes() for p in folder.iterdir()} == before
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, 'rebuild', '--config', config, '--output', output)
+    assert 'Rebuild failed' in capsys.readouterr().err
+    for sid in ('invalid', 'corrupt'):
+        (folder / f'{sid}.json').unlink()
+        (folder / f'{sid}.csv').unlink()
+    run_cli(monkeypatch, 'rebuild', '--config', config, '--output', tmp_path / 'clean')
+    assert 'Rebuilt 1/1 collections' in capsys.readouterr().out
+    folder.rename(folder.with_name('unknown'))
+    for metadata in folder.with_name('unknown').glob('*.json'):
+        row = json.loads(metadata.read_text())
+        row['source_id'] = 'unknown'
+        metadata.write_text(json.dumps(row))
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, 'rebuild', '--config', config, '--output', tmp_path / 'missing-source')
+    assert 'needs configuration' in capsys.readouterr().err
+    assert not (tmp_path / 'missing-source').exists()

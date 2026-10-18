@@ -298,7 +298,9 @@ a TypedDict; other records remain plain dictionaries.
 - Offline tests mock network downloads; configuration/upgrade errors retain partial coverage.
 - completed_snapshots reads all manifests on page load; scans retain listings in DB and silver.
 - Bronze/silver/DB/gold/manifest writes are not jointly atomic; Drive local rename does not prove
-  remote sync completion. Recovery/replay limitations live in status.
+  remote sync completion. `rebuild.py` replays bronze manifests into a fresh directory with the
+  same validation as import, using each manifest's identity, time and scan selection; procedure
+  and limitations live in status.
 
 ## Variant-aware scan reads (STORY-023)
 

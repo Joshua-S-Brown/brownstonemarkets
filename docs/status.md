@@ -5,6 +5,14 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Implemented
 
+- **Replay (STORY-006):** `python -m brownstone rebuild --output work/rebuilt-data` replays
+  all configured sources' bronze manifests (including disabled sources) into fresh silver and
+  DuckDB, using recorded collection times, market identities, hashes and addon selections.
+  Both `.lua` and `.lua.gz` archives are supported; no downloads or bronze writes occur.
+  Invalid collections are listed, rolled back and return exit code 1; valid collections still
+  rebuild, including valid bytes from failed/unfinished runs. Missing source configuration
+  stops before creating output. Results are deterministic for unchanged archives/config/catalogs.
+
 - **Supply chains (STORY-086, STORY-092):** `/app/chains?source=&catalog=&recipe=` explores
   compatible outputs using Market's cached routes. Ranked chips open on the first makeable craft;
   the projection groups all valued Board recipes by team eligibility before the ten-chip cut.
@@ -245,7 +253,16 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 - TSM lacks listing depth; Mankrik lacks upstream time (age is since collection) and historical
   discount prices. Legacy TSM rows have no source hash or retrospective deduplication.
 - Bronze/silver/DB/gold are not jointly atomic; failed post-commit runs need preserved evidence
-  for recovery; replay is pending. Run one writer. Synced drops can change during read: retry.
+  for recovery. Stop the app and other writers, then run the replay command above (add
+  `--config path/to/market.toml` for another configuration; adjacent local overrides apply).
+  The output directory must not exist. Inspect every reported failure before adopting results;
+  fix configuration/validation as appropriate and retry into another fresh directory.
+  With writers stopped, retain the old derived files, then replace `data/silver/` and
+  `data/brownstone.duckdb` with the output's equivalents. Keep the original bronze in place;
+  its manifests and raw bytes remain untouched. Gold screening exports are not rebuilt.
+  Manifests are required for provenance; recovered failed collections enter DuckDB but their
+  original failed manifests remain excluded from completed-manifest page selection. Backup is
+  STORY-016. Run one writer. Synced drops can change during read: retry.
 - App reads on load: reload after imports elsewhere. Native clipboard/appearance and phone-width
   behavior still need manual checks. Vendor lists, trainer lists, mob names and the panel
   were confirmed on 2026-10-15. A scan 46 minutes after the last answered one got no reply within 30 s and
@@ -270,7 +287,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,987 Python tests pass (one platform skip), plus 104 Vitest tests.
+Expected: 1,990 Python tests pass (one platform skip), plus 104 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

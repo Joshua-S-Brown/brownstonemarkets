@@ -147,3 +147,105 @@ def test_single_source_file_and_per_source_validation(tmp_path):
     path.write_text(shared + "[[sources]]\nsource_id = \"a\"\n")
     with pytest.raises(ValueError, match="missing"):
         read_sources(path)
+
+
+def test_rebuild_replays_all_sources_deterministically_without_touching_archive(tmp_path):
+    import gzip
+
+    from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
+
+    from brownstone.pipeline import import_scans
+    from brownstone.rebuild import rebuild
+
+    data = tmp_path / 'data'
+    tsm = make_source(data, game_version='classic', realm='mankrik', faction='alliance', enabled=False)
+    raw = csv([(1, 100, 50, 100, 100, '')])
+    tsm['allow_missing_updated_at'] = True
+    path = tmp_path / 'input.csv'
+    path.write_bytes(raw)
+    run(tsm, path)
+    run(tsm, path)  # Same content and upstream time reuse one snapshot.
+    other = {**tsm, 'source_id': 'other'}
+    run(other, path)  # Same house, separate observer.
+    addon = addon_source(data)
+    records = [scan('full', FINISHED, [listing(1, 3, 10), listing(2, 1, 0)]),
+               scan('partial', FINISHED + 1, [listing(3, 1, 50)], reported=2)]
+    path = write_scans(tmp_path / 'scan.lua', *records)
+    first = import_scans(addon, path, scan_ids=['full'], now=NOW)
+    import_scans(addon, path, scan_ids=['partial'], now=NOW)
+    # Exercise historical uncompressed bronze and legacy environment inference.
+    folder = data / 'bronze/my-scans'
+    archived = folder / first['bronze_file']
+    archived.with_suffix('').write_bytes(gzip.decompress(archived.read_bytes()))
+    for metadata in folder.glob('*.json'):
+        manifest = json.loads(metadata.read_text())
+        manifest['bronze_file'] = archived.with_suffix('').name
+        manifest.pop('environment')
+        metadata.write_text(json.dumps(manifest))
+    # Recover a valid raw collection whose run failed before its derived writes finished.
+    extra = write_scans(tmp_path / 'new.lua', scan('recovered', FINISHED + 2, [listing(4, 2, 30)]))
+    recovered = import_scans(addon, extra, now=NOW)
+    metadata = folder / f"{recovered['snapshot_id']}.json"
+    manifest = json.loads(metadata.read_text())
+    manifest.pop('scans')
+    manifest['status'] = 'failed'
+    metadata.write_text(json.dumps(manifest))
+    before = {p.relative_to(data): p.read_bytes() for p in data.rglob('*') if p.is_file()}
+    outputs = [tmp_path / 'one', tmp_path / 'two']
+    # Current settings must not relabel historic scans or use today's clock for freshness.
+    addon['environment'] = 'beta'
+    addon['market_id'] += '-beta'
+    addon['machine'] = 'different-machine'
+    for output in outputs:
+        assert rebuild([tsm, other, addon], output) == [f'Rebuilt 6/6 collections into {output}']
+        with duckdb.connect(str(output / 'brownstone.duckdb')) as db:
+            assert db.execute('SELECT count(*) FROM market_snapshots').fetchone()[0] == 5
+            assert db.execute('SELECT count(*) FROM addon_scans').fetchone()[0] == 3
+            assert db.execute('SELECT count(*) FROM scan_listings').fetchone()[0] == 4
+            assert db.execute("SELECT priced FROM addon_scans WHERE scan_id='partial'").fetchone() == (False,)
+            assert db.execute("SELECT min_buyout FROM market_snapshots WHERE item_id=1 AND source_id='my-scans'"
+                              ).fetchone() == (4,)
+            assert db.execute("SELECT min_buyout FROM market_snapshots WHERE item_id=2").fetchone() == (0,)
+            assert db.execute('SELECT DISTINCT environment, machine FROM addon_scans').fetchall() == [('live', 'mac')]
+            with duckdb.connect(str(data / 'brownstone.duckdb'), read_only=True) as original:
+                for (table,) in db.execute('SHOW TABLES').fetchall():
+                    assert db.execute(f'SELECT * FROM "{table}" ORDER BY ALL').fetchall() == original.execute(
+                        f'SELECT * FROM "{table}" ORDER BY ALL').fetchall()
+    with duckdb.connect(str(outputs[0] / 'brownstone.duckdb')) as a, \
+            duckdb.connect(str(outputs[1] / 'brownstone.duckdb')) as b:
+        for (table,) in a.execute('SHOW TABLES').fetchall():
+            assert a.execute(f'SELECT * FROM "{table}" ORDER BY ALL').fetchall() == b.execute(
+                f'SELECT * FROM "{table}" ORDER BY ALL').fetchall()
+    left = {p.relative_to(outputs[0]): p.read_bytes() for p in (outputs[0] / 'silver').rglob('*.parquet')}
+    right = {p.relative_to(outputs[1]): p.read_bytes() for p in (outputs[1] / 'silver').rglob('*.parquet')}
+    assert left == right
+    assert {p.relative_to(data): p.read_bytes() for p in data.rglob('*') if p.is_file()} == before
+    with pytest.raises(FileExistsError):
+        rebuild([tsm, other, addon], outputs[0])
+    with pytest.raises(ValueError, match='outside bronze'):
+        rebuild([tsm, other, addon], data / 'bronze/new')
+
+
+def test_rebuild_reports_house_mismatch_and_drops_failed_silver(tmp_path, monkeypatch):
+    from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
+
+    from brownstone import rebuild as replay
+    from brownstone.pipeline import import_scans
+
+    data = tmp_path / 'data'
+    addon = addon_source(data)
+    import_scans(addon, write_scans(tmp_path / 'scan.lua', scan('full', FINISHED, [listing(1, 1, 10)])), now=NOW)
+    moved = {**addon, 'scan_evidence': {**addon['scan_evidence'], 'zone': 'Ironforge'}}
+    lines = replay.rebuild([moved], tmp_path / 'house')
+    assert lines[0].startswith('Rebuilt 0/1') and 'does not match the configured market' in lines[1]
+    tsm = make_source(data, source_id='tsm', allow_missing_updated_at=True)
+    path = tmp_path / 'input.csv'
+    path.write_bytes(csv([(1, 100, 50, 100, 100, '')]))
+    run(tsm, path)
+
+    def fail(*args):
+        raise duckdb.Error('load failed')
+    monkeypatch.setattr(replay, 'load_snapshot', fail)
+    output = tmp_path / 'load'
+    assert 'load failed' in replay.rebuild([addon, tsm], output)[1]
+    assert not list((output / 'silver/tsm').iterdir())
