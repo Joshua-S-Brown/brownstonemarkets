@@ -288,29 +288,18 @@ def test_incomplete_pre_launch_manifest_is_skipped_not_fatal(tmp_path):
     assert completed_snapshots(source) == []
 
 
-def test_reference_source_validates_after_all_sources_including_disabled(tmp_path):
+@pytest.mark.parametrize('placement', ['shared', 'source', 'local'])
+def test_reference_source_is_retired(tmp_path, placement):
     from brownstone.config import read_sources
     shared = 'max_age_hours=24\nauction_cut=0.05\nmin_discount=0.2\ntop_n=20\n'
-    live = ('[[sources]]\nsource_id="live"\nprovider="addon"\nmachine="mac"\nscan_path="scan.lua"\n'
-            'game_version="forever"\nenvironment="live"\nregion="us"\nscope="house"\n'
-            'server_type="normal"\nfaction="alliance"\nreference_source="beta"\n')
-    beta = live.replace('source_id="live"', 'source_id="beta"').replace('environment="live"',
-                'environment="beta"').replace('reference_source="beta"\n', 'enabled=false\n')
+    entry = ('[[sources]]\nsource_id="beta"\nprovider="addon"\nmachine="mac"\nscan_path="scan.lua"\n'
+             'game_version="forever"\nenvironment="beta"\nregion="us"\nscope="house"\n'
+             'server_type="normal"\nfaction="alliance"\nenabled=false\n')
+    setting = 'reference_source="old-beta"\n'
     path = tmp_path / 'market.toml'
-    path.write_text(shared + live + beta)
-    sources = read_sources(path)
-    assert sources[0]['reference_source'] == 'beta' and not sources[1]['enabled']
-    cases = [
-        (live.replace('reference_source="beta"', 'reference_source="unknown"'), beta, 'unknown'),
-        (live.replace('reference_source="beta"', 'reference_source="live"'), beta, 'live'),
-        (live, beta.replace('environment="beta"', 'environment="live"'), 'beta'),
-        (live.replace('environment="live"', 'environment="beta"'), beta, 'beta'),
-        (live, beta.replace('region="us"', 'region="eu"'), 'beta'),
-        (live, beta.replace('provider="addon"', 'provider="tsm"').replace('machine="mac"\n', '')
-         .replace('scan_path="scan.lua"', 'source_url="https://example.com/prices"'), 'beta'),
-    ]
-    for entry, reference, reference_id in cases:
-        path.write_text(shared + entry + reference)
-        with pytest.raises(ValueError) as error:
-            read_sources(path)
-        assert 'live' in str(error.value) and reference_id in str(error.value)
+    path.write_text(shared + (setting if placement == 'shared' else '') + entry +
+                    (setting if placement == 'source' else ''))
+    local = tmp_path / 'market.local.toml'
+    local.write_text('[sources.beta]\n' + setting if placement == 'local' else '')
+    with pytest.raises(ValueError, match='reference_source.*retired.*remove'):
+        read_sources(path, local)

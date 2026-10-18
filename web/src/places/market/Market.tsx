@@ -11,8 +11,7 @@ import { SignalPill, isSignal } from "../../ui/SignalPill";
 import { Identity } from "../../ui/Identity";
 import { Money } from "../../ui/Money";
 import { ItemLink } from "../../ui/ItemLink";
-import { BetaQuote } from "../../ui/BetaQuote";
-import { UtcTime, utcLabel } from "../../ui/UtcTime";
+import { UtcTime } from "../../ui/UtcTime";
 import { Tip, Sparkline, ErrorState } from "../../ui/parts";
 import { DataGrid } from "../../ui/DataGrid";
 import { Evidence } from "../../ui/Evidence";
@@ -273,36 +272,7 @@ export function Market({ source }: { source: string }) {
         </p>
         <DataGrid
           rows={data.rows}
-          columns={
-            data.reference &&
-            data.rows.some(
-              (r) => !r.beta_faded || r.variants.some((v) => !v.beta_faded),
-            )
-              ? [
-                  ...columns.slice(0, 3),
-                  {
-                    id: "beta_typical_copper",
-                    header: "Beta typical",
-                    enableSorting: false,
-                    cell: ({ row: { original: r } }) =>
-                      r.beta_faded ? null : (
-                        <Tip
-                          text={`beta reference, a different market · ${data.reference!.label} · newest scan ${data.reference!.newest_scan ? `${utcLabel(data.reference!.newest_scan)} UTC` : "unknown"}`}
-                        >
-                          <span>
-                            <BetaQuote
-                              copper={r.beta_typical_copper}
-                              livePrice={r.price_copper}
-                              ratio={r.beta_ratio}
-                            />
-                          </span>
-                        </Tip>
-                      ),
-                  },
-                  ...columns.slice(3),
-                ]
-              : columns
-          }
+          columns={columns}
           subRows={(r) => r.variants as Row[]}
           rowKey={(r) => `${r.item_id}:${identityVariant(r)}`}
           onSort={setSorting}

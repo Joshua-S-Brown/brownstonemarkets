@@ -33,40 +33,21 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-103 retire the beta reference
-2. STORY-107 planned roster
-3. STORY-108 biggest lever across characters
-4. STORY-111 profession record
-5. STORY-112 level from what we hold, or farm it
-6. STORY-104 vendor value as a floor
-7. STORY-105 sell raw or craft?
-8. STORY-106 gold reserve and capital
-9. STORY-109 Route and Ledger tidy-up
-10. STORY-110 records polish
+1. STORY-107 planned roster
+2. STORY-108 biggest lever across characters
+3. STORY-111 profession record
+4. STORY-112 level from what we hold, or farm it
+5. STORY-104 vendor value as a floor
+6. STORY-105 sell raw or craft?
+7. STORY-106 gold reserve and capital
+8. STORY-109 Route and Ledger tidy-up
+9. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102 and SPIKE-009/009b.
-
-### STORY-103 — Retire the beta reference
-
-Added 2026-10-18 (grooming, product owner): live starts fresh in an empty `data/` (`requirements.md` → *Product direction*, Markets), so STORY-102's beta reference can never read the beta, and the owner doesn't want beta prices relied on.
-
-As the owner, I want the beta reference removed, so that the app carries no code, setting or label for a market it can no longer see.
-
-Decisions:
-- Remove `brownstone/beta_reference.py`, `load_explorer`'s `reference` argument and the `reference`, `beta_prices` and `live_typicals` result keys, the extra noncatalog `flood_signals` read, the grid and item fields (`beta_typical_copper`, `beta_ratio`, `beta_faded`, `reference`, item `details.beta_*`), `api.context.explorer`'s reference resolution, `BetaReference` in `api/models.py`, `web/src/ui/BetaQuote.tsx`, the Market *Beta typical* column and the item Overview tile, and their tests. Regenerate `schema.d.ts`.
-- `config.read_sources` refuses a source that still sets `reference_source`, saying the setting was retired (the same pattern as `flood_min_scans`).
-- Docs: drop UI-09's last sentence, the *Beta reference (STORY-102)* section in `design.md` and the STORY-102 bullet in `status.md`.
-
-Acceptance:
-- **Gone:** no beta field in any API response or page; a source setting `reference_source` is refused with the retirement message.
-- **Unchanged:** Market rows, item pages, Today and the Board are the same as before STORY-102.
-- **Offline tests:** the refusal; existing explorer, API and Market tests pass without beta fields.
-- **Real data:** `python -m api.beta_check check work/beta-corpus/2026-10-18/` exits 0 with no headline differences.
-- Depends on nothing. Rules: UI-09, DATA-03. Design: *Market explorer (STORY-055)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103 and SPIKE-009/009b.
 
 ### STORY-104 — Vendor value as a floor
 
