@@ -50,16 +50,21 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 
 ### STORY-099 — A profession for every empty slot
 
-Added 2026-10-17. On the beta Lira, Cicelyna and Raaem end with *Learn a profession to see what's in reach*, while CRAFT-13 already prices every profession for a rank-one hire.
+Added 2026-10-17; refined 2026-10-18 from the copied beta. On the beta Lira, Cicelyna and Raaem (no professions) end with *Learn a profession to see what's in reach*, and Star, Baspion and Keenagen (Mining only, no reachable recipe) have no recipe action either. CRAFT-13 already prices every profession for a rank-one hire (`hiring.summaries` rows in Team's `hires`).
 
 As the owner, I want each character with a free profession slot to get a suggested profession, so that every roster card ends in an action.
 
+**Decided (2026-10-18, Claude for the owner):**
+- *Free slots:* a character with observed skills (`skills_status = "observed"`) has 2 minus its held primaries free; Cooking, First Aid and Fishing take none (CRAFT-13; the two-primary limit stays labelled unconfirmed). Without observed skills, no suggestion: *professions unknown*.
+- *Numbers are CRAFT-13's, unchanged:* the suggestion reuses the existing hire rows (a rank-one hire with no known recipes), in CRAFT-13's existing order, leaving out professions the character already holds and Cooking/First Aid (no slot). No new calculation, price query or per-character walk. CRAFT-13 gives *best at 300*, not a window profit, so the wording says *at 300*.
+- *Where it shows:* the roster card's action becomes *Take up Blacksmithing: best at 300 earns 2g 61s 31c per craft* only when the card has no recipe action now (no professions, or no best recipe). A card with a best recipe (Arille, Basilly) keeps it; its suggestion appears in the record only.
+
 Acceptance:
-- **Suggestion per free slot:** run CRAFT-13's rank-one comparison for that character (its free primary slots; Cooking, First Aid and Fishing take none) and show the best profession by its existing sort, with best per craft at the window, cost to reach it, and what it would feed for the current team (*What it feeds*). Professions the team already covers are shown, labelled, not hidden.
-- **Card and record:** the roster card's action reads *Take up Tailoring: best within 25 points earns X per craft*; the record's Next tab (STORY-097) lists the top three.
-- **Honest gaps:** incomplete estimates keep their pill and reasons; no suggestion when every option has no profit, saying why.
-- **Offline tests:** free-slot counting with two primaries, one, or only secondaries; ordering matches CRAFT-13; incomplete stays incomplete.
-- **Real data:** copied beta, three characters with free slots get a suggestion; report each.
+- **Suggestion per free slot:** for each character with a free slot, the record's Next tab (STORY-097) lists the top three CRAFT-13 rows it could take, each with best at 300 (recipe, per-craft profit), cost to 300 with its estimate pill and reasons, and *What it feeds* (CRAFT-13 detail, lazy as now). Professions someone on the team already holds stay listed, labelled *Arille has it*, never hidden.
+- **Card:** the action rule above, with UI-18's one-action card; other steps go in the Tip/record.
+- **Honest gaps:** incomplete estimates keep their pill and reasons; when no candidate has profit > 0, no suggestion and the card says why (*no profession has a priced recipe at 300*). Gathering-only professions (Herbalism, Skinning) are never suggested.
+- **Offline tests** (extend the Team/hiring tests): free slots for two primaries (none), one primary (one, held profession excluded), only secondaries (two), skills not observed (none, *professions unknown*); order equals the CRAFT-13 rows; an incomplete row stays incomplete; no-profit case; card action replaced only without a best recipe.
+- **Real data** (copied beta, `forever-us-normal-alliance-addon`): Lira, Cicelyna, Raaem, Star, Baspion and Keenagen show *Take up Blacksmithing* (Green Iron Helm, 2g 61s 31c per craft at 300; cost *unknown*, incomplete), Leatherworking (2g 43s 50c) then Tailoring (1g 45s) next; Basilly keeps her Tailoring action and lists Blacksmithing, Leatherworking, Engineering; Arille gets none. Screenshots at 1280 and 390 px of Team and one record beside the prototype (UI-18).
 - Depends on STORY-097 (Next tab) and works better after STORY-098. Rules: CRAFT-13, CRAFT-11, *Team character cards*, UI-18. Design: *Team contracts*.
 
 ### STORY-062 — Sales speed and suggested stock levels
