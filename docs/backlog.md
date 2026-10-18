@@ -45,17 +45,41 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 
 ### STORY-102 — Beta prices as a launch-week reference
 
-Added 2026-10-17; replaces STORY-012 (Forever against Classic) under Later. On launch day the live market has no typical prices; the beta's do exist. They are a different market (DATA-03), so they may only be shown, labelled, never used.
+Added 2026-10-17. Refined 2026-10-18. Replaces STORY-012 (Forever against Classic) under Later. On launch day the live market has no typical prices, but the beta's exist. The beta is a different market (DATA-03), so its prices may only be shown, labelled, and never used.
 
 As the owner, I want to see an item's beta typical price beside its live price in the first weeks, so that I can tell a bargain or a mispriced listing from noise before live history exists.
 
+Decisions (2026-10-18, from checking the code):
+- **"Typical" is UI-11's typical earlier price,** which is `flood_signals.signals(...)['rows'][i]['overshoot']['typical_copper']`, the median of daily medians over `flood_window_days`. It is not an ADDON-10 metric. The beta's typical is measured back from the beta's own newest eligible scan, so pass the beta's newest `finished_at` as `now` for its read.
+- **The fade-out point is the live identity's own UI-11 typical.** Once it is non-null (at least `flood_min_days` priced days, 3 by default), the reference leaves the grid and the record's Overview and stays in on-demand evidence. There is no new setting.
+- **Config:** a source entry may set `reference_source = "<source_id>"`. `config.read_sources` validates it after building every source, because `build_source` sees one entry at a time. The value must name another configured addon source whose market fields equal this source's except `environment`, and that source must be `beta` while this one is `live`. Otherwise it raises a `ValueError` naming both IDs. The reference may be disabled, since it is only read. All sources share one `data_dir` and DuckDB, so reading it is a scoped read with the reference's own `scope_predicate`. No new folder or database is involved.
+- **Code path:**
+  - A new `brownstone/beta_reference.py` reads the reference's UI-11 signals for the requested identities and returns, per exact identity `(item_id, variant_id, variant_state)`, the typical copper, **N days, M scans**, and the reference's newest scan time. It never joins on item ID alone (ADDON-08), and a missing or null price stays null.
+  - `market_explorer.load_explorer(source, catalogs, now, reference=None)` attaches it.
+  - `grid_rows` adds `beta_typical_copper` and a `beta_ratio` `{numerator, denominator}` (live lowest over beta typical, the same shape as UI-11's ratio). Both are null when either side is missing or nonpositive, or when the live typical exists.
+  - The page gets one `reference` block (`source_id`, label, `market_id`, newest scan UTC), or null.
+  - `api.context.explorer` resolves the reference from all configured sources (not only enabled ones) and passes it in. Its cache key already covers the config files and the shared database.
+  - Nothing is added to `SORT_FIELDS`, Today, the Board, flood labels, crafting or `today_loading`.
+- **Web:** the Market grid shows a *Beta typical* column, and the item record's Overview shows a *Beta typical* tile with the ratio and *beta reference, a different market · newest scan …*. When the live typical exists, both hide and the item record keeps the values in its evidence details. Money goes through the existing `Money` component, and null renders as *no beta price*, never 0.
+- **Rules:** add one sentence (at most 300 bytes) to UI-09 in `requirements.md`, which has about 1,500 bytes left, and add a short *Beta reference (STORY-102)* section to `design.md`.
+
 Acceptance:
-- **Explicit pairing:** in config, a live source names one reference source (the beta). Items pair on full identity inside this view only; the view says *beta reference, a different market*. Nothing from it feeds crafting, Today, the Board, flood labels or any price basis (DATA-03, DATA-08).
-- **Shown with care:** the Market item record's Overview and the grid show *beta typical* and the ratio beside the live price, with the beta's newest scan time. Items missing or unpriced on either side say so, never 0.
-- **Fades out:** once the live item has its own typical price from enough scans (ADDON-10's threshold), the reference moves behind evidence on demand.
-- **Offline tests:** no calculation reads the reference; missing on either side; the switch to evidence once live typical exists.
-- **Real data:** pair the beta source with a copy of itself under a test `source_id` to check the wiring; the live check happens after go-live.
-- Depends on the live source being configured after go-live (*Launch-day checklist* under Later); buildable now. Rules: DATA-03, DATA-08, ADDON-10, UI-09, UI-18. Design: *Market metrics layer (STORY-024)*, *Market explorer (STORY-055)*.
+- **Config:** a live source with a valid `reference_source` loads. Each of these is refused with a message naming both IDs: an unknown ID, the source itself, a reference that is not beta, a source that is not live, a mismatched market field, and a non-addon reference.
+- **Explicit pairing:** reference values pair on full identity inside this view only. A variant never borrows the base identity's reference, and the base never borrows a variant's. Nothing from the reference feeds crafting, Today, the Board, flood labels or any price basis (DATA-03, DATA-08).
+- **Shown with care:** the grid and the item record's Overview show the beta typical, the ratio and the beta's newest scan time while the live typical is null. An identity missing or unpriced on either side says so, never 0.
+- **Fades out:** once the live identity has its own UI-11 typical, the reference leaves the grid and the Overview and remains in the item record's evidence.
+- **Offline tests** (Python plus Vitest), extending the existing explorer and Market tests where possible:
+  - the config validation cases above;
+  - exact-identity pairing;
+  - missing on either side;
+  - the fade-out switch;
+  - Today's plan and the Board are unchanged with and without a reference;
+  - no reference configured means `reference` is null and every beta field is null.
+- **Real data** (on a copy of `data/`):
+  - Call `load_explorer(beta, catalogs, now, reference=beta)` directly. This bypasses config validation and only checks the wiring. Report how many identities carry a beta typical, and that Linen Cloth's (2589) beta typical equals its own UI-11 typical and is therefore behind evidence.
+  - `python -m api.beta_check check work/beta-corpus/2026-10-18/` exits 0 with no headline differences, because no reference is configured.
+  - Screenshots aren't possible until a live source exists. The live check happens after go-live.
+- Depends on nothing to build. Live use needs the live source configured after go-live (*Launch-day checklist* under Later). Rules: DATA-03, DATA-08, ADDON-08, UI-09, UI-11, UI-18. Design: *Market metrics layer (STORY-024)*, *Market explorer (STORY-055)*.
 
 ### STORY-011a — Survey third-party scan sources
 
