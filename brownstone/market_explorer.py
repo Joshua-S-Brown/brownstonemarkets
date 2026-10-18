@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import duckdb
 
-from . import analysis, farming, flood_signals, item_history, removed_listings, sales, scan_changes
+from . import analysis, beta_reference, farming, flood_signals, item_history, removed_listings, sales, scan_changes
 from .action_board import catalog_identity, compatible_catalogs, rank_catalogs
 from .crafting import basis_prices, evaluate_recipe
 from .deposits import auction_deposit
@@ -19,19 +19,22 @@ from .today_loading import _load_holdings, load_today, load_today_characters
 from .today_settings import TodaySettings
 
 
-def load_explorer(config, catalogs, now: datetime) -> dict:
+def load_explorer(config, catalogs, now: datetime, reference=None) -> dict:
     selected = compatible_catalogs(catalogs, config)
     characters, warning = load_today_characters(config)
     manifest, arguments = load_today(config, selected, TodaySettings(), characters, now)
     holdings, holdings_warning = _load_holdings(config, now)
     result = {'holdings': holdings or ({}, {}, [], []), 'holdings_warning': holdings_warning, 'config': config,
-              'catalogs': selected,
+              'catalogs': selected, 'reference': None, 'beta_prices': {}, 'live_typicals': {},
               'incompatible': [c for c in catalogs if c not in selected], 'warning': warning, 'snapshot': None,
               'observations': {}, 'characters': characters, 'items': [], 'metrics': [],
               'vendors': {}, 'stack_sizes': {}, 'recipes': [], 'demand': [], 'freshness': None,
               'movement': {'note': 'No earlier scan', 'rows': [], 'comparison': None},
               'removals': {'pair': None, 'rows': [], 'note': 'Fewer than two eligible scans.'}}
     if manifest is None:
+        if reference is not None:
+            with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
+                result['reference'], result['beta_prices'] = beta_reference.read(db, reference, set())
         result["market"] = market_page(result, {})
         return result
     snapshot = arguments['snapshot']
@@ -41,6 +44,12 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
         metrics = read_scan_metrics(db, config, snapshot['snapshot_id']) or []
         roles = flood_signals.catalog_roles(selected)
         floods = flood_signals.top_lists(flood_signals.signals(db, config, sorted(roles), now), roles)
+        if reference is not None:
+            result['reference'], result['beta_prices'] = beta_reference.read(
+                db, reference, {identity(r) for r in items})
+            noncatalog = sorted({r['item_id'] for r in items} - roles.keys())
+            live_rows = floods['rows'] + flood_signals.signals(db, config, noncatalog, now)['rows']
+            result['live_typicals'] = {identity(r): r['overshoot']['typical_copper'] for r in live_rows}
         histories = item_history.histories(db, config, sorted({r['item_id'] for r in items}))
         movement = scan_movement(db, config, selected, now)
         removals = removed_listings.top_removals(db, config, sorted(
@@ -278,6 +287,8 @@ def grid_rows(result, histories):
         rows.append({'item_id': observed['item_id'], 'name': observed['item_name'],
                      'variant_id': key[1], 'variant_state': key[2], 'quality': observed.get('quality'),
                      'price_copper': price, 'typical_copper': typical,
+                     **beta_reference.project(result.get('beta_prices', {}).get(key), price,
+                                              result.get('live_typicals', {}).get(key, typical)),
                      'gap_copper': price - typical if price and typical else None,
                      'gap_percent': (price - typical) * 100 / typical if price and typical else None,
                      'roles': (['materials'] if 'material' in role else []) +
@@ -292,7 +303,7 @@ def market_page(result, histories):
     floods = result.get('floods', {})
     overshoots = floods.get('overshoots', [])
     chain_ids = sorted(flood_signals.catalog_roles(result['catalogs']))
-    return {'rows': grid_rows(result, histories),
+    return {'rows': grid_rows(result, histories), 'reference': result.get('reference'),
             'pulse': {'cheap': [r for r in overshoots if r['overshoot']['label'] == 'cheap'],
                       'high': [r for r in overshoots if r['overshoot']['label'] == 'high'],
                       'early': result['removals']['rows']},

@@ -88,6 +88,7 @@ class Source(TypedDict):
     speed_min_hours: int
     speed_cover_days: int
     speed_cap_percent: int
+    reference_source: NotRequired[str]
     label: NotRequired[str]
     rules_version: NotRequired[str]  # Required for crafting; matches a catalog's rules_version.
     allow_missing_updated_at: NotRequired[bool]
@@ -213,7 +214,21 @@ def read_sources(path: Path, local: Path | None = None) -> list[Source]:
     sources = [build_source(raw, entry) for entry in entries]
     if len({source["source_id"] for source in sources}) != len(sources):
         raise ValueError("Source IDs must be unique")
+    _validate_references(sources)
     return sources
+
+
+def _validate_references(sources) -> None:
+    for source in sources:
+        if 'reference_source' not in source:
+            continue
+        reference_id = source['reference_source']
+        reference = next((s for s in sources if s['source_id'] == reference_id), None)
+        if (reference is None or reference is source or source['environment'] != 'live' or
+                reference['environment'] != 'beta' or reference['provider'] != ADDON_PROVIDER or
+                any(source[k] != reference[k] for k in MARKET_KEYS if k not in ('environment', 'market_id'))):
+            raise ValueError(f"{source['source_id']}: invalid reference_source {reference_id!r}; "
+                             "choose another addon beta source for the same live house")
 
 
 def _validate_farming_cell(source: dict) -> None:

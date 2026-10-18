@@ -1,4 +1,5 @@
 """Public, integer-copper web contracts."""
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -58,7 +59,15 @@ class Speed(BaseModel):
     settings: dict[str, int]
 
 
+class BetaReference(BaseModel):
+    source_id: str
+    label: str
+    market_id: str
+    newest_scan: datetime | None
+
+
 class Item(BaseModel):
+    reference: BetaReference | None = None
     speed: Speed | None = None
     role: str | None
     deposit_copper: int | None
@@ -67,6 +76,9 @@ class Item(BaseModel):
     quality: int | None
     price_copper: int | None
     typical_copper: int | None
+    beta_typical_copper: int | None = None
+    beta_ratio: dict[str, int] | None = None
+    beta_faded: bool = False
     units: int | None
     listings: int | None
     vendor_buy: list[int]
@@ -89,6 +101,9 @@ class MarketRow(BaseModel):
     quality: int | None
     price_copper: int | None
     typical_copper: int | None
+    beta_typical_copper: int | None = None
+    beta_ratio: dict[str, int] | None = None
+    beta_faded: bool = False
     gap_copper: int | None
     gap_percent: float | None
     roles: list[str]
@@ -119,6 +134,7 @@ class MarketCard(BaseModel):
 
 
 class Market(BaseModel):
+    reference: BetaReference | None = None
     rows: list[MarketRow]
     cards: dict[str, MarketCard]
     item_count: int

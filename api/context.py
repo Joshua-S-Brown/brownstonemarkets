@@ -78,7 +78,11 @@ def explorer(source: Source) -> dict:
         if cached and cached[0] == key:
             return cached[1]
         catalogs, errors = recipe_catalogs.parse_catalogs(recipe_catalogs.find_catalogs(ROOT / 'config'))
-        result = market_explorer.load_explorer(source, catalogs, now)
+        reference = None
+        if 'reference_source' in source:
+            sources = config.read_sources(ROOT / 'config/market.toml', ROOT / 'config' / config.LOCAL_OVERRIDES)
+            reference = next(s for s in sources if s['source_id'] == source['reference_source'])
+        result = market_explorer.load_explorer(source, catalogs, now, reference=reference)
         result['catalog_errors'] = errors
         _cache[source['source_id']] = (key, result)
         return result

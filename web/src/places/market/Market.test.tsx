@@ -29,6 +29,9 @@ const row = (id: number, name: string, price: number | null): Row => ({
   name,
   price_copper: price,
   typical_copper: 300,
+  beta_typical_copper: null,
+  beta_ratio: null,
+  beta_faded: true,
   gap_copper: price === null ? null : price - 300,
   gap_percent: price === null ? null : (price - 300) / 3,
   quality: 2,
@@ -206,3 +209,79 @@ it("renders head, three-plus-more cards, history threshold, separate collapsed i
     expect(String(fetch.mock.calls.at(-1)?.[0])).toContain("q=2589"),
   );
 });
+
+it.each(["shown", "missing", "faded", "unconfigured"])(
+  "shows beta reference only before live history: %s",
+  async (state) => {
+    const reference = {
+      source_id: "beta",
+      label: "Frozen beta",
+      market_id: "forever-us-normal-alliance-beta",
+      newest_scan: "2026-10-17T10:42:01Z",
+    };
+    const r = {
+      ...row(1, "Material", state === "missing" ? null : 90),
+      typical_copper: state === "faded" ? 100 : null,
+      beta_faded: state === "faded",
+      beta_typical_copper: state === "shown" ? 300 : null,
+      beta_ratio:
+        state === "shown" ? { numerator: 90, denominator: 300 } : null,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          rows: [r],
+          reference: state === "unconfigured" ? null : reference,
+          cards: Object.fromEntries(
+            ["cheap", "high", "early"].map((k) => [
+              k,
+              { preview: [], more: [] },
+            ]),
+          ),
+          chain_count: 1,
+          listed_chain_count: 1,
+          item_count: 1,
+          evidence: {},
+          note: "",
+          warning: null,
+        }),
+      })),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <Market source="one" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("table");
+    if (state === "shown" || state === "missing") {
+      expect(
+        screen.getByRole("columnheader", { name: "Beta typical" }),
+      ).toBeTruthy();
+      if (state === "shown") {
+        expect(
+          screen.getByText("30.0% of beta", { exact: false }),
+        ).toBeTruthy();
+        await userEvent.hover(
+          screen.getByText("30.0% of beta", { exact: false }),
+        );
+        expect(await screen.findByRole("tooltip")).toHaveProperty(
+          "textContent",
+          expect.stringContaining(
+            "beta reference, a different market · Frozen beta · newest scan 17 Oct 10:42 UTC",
+          ),
+        );
+      } else {
+        expect(screen.getByText(/no beta price/)).toBeTruthy();
+        expect(screen.getByText(/no live price/)).toBeTruthy();
+      }
+    } else {
+      expect(
+        screen.queryByRole("columnheader", { name: "Beta typical" }),
+      ).toBeNull();
+    }
+  },
+);

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 
-from brownstone import item_history, market_presentation, sales_speed
+from brownstone import beta_reference, item_history, market_presentation, sales_speed
 from brownstone import market_explorer as me
 
 from . import context
@@ -76,7 +76,11 @@ def item(item_id: int, source: str = '', variant: str = ''):
         speed = sales_speed.select(sales_speed.load(chosen, [item_id]), item_id, variant_id, state, chosen)
     except Exception:  # Like floods, a removal-speed read failure keeps the rest of the item page.
         speed = None
-    return Item(speed=speed, role=summary['role'], deposit_copper=summary['deposit_copper'], item_id=item_id,
+    beta = result.get('beta_prices', {}).get((item_id, variant_id, state))
+    beta_fields = beta_reference.project(beta, observed.get('min_buyout'),
+                                         signal.get('overshoot', {}).get('typical_copper'))
+    return Item(reference=result.get('reference'), **beta_fields, speed=speed, role=summary['role'],
+                deposit_copper=summary['deposit_copper'], item_id=item_id,
                 name=observed.get('item_name') or page['name'], quality=quality(observed),
                 price_copper=observed.get('min_buyout'),
                 typical_copper=signal.get('overshoot', {}).get('typical_copper'),
@@ -87,7 +91,9 @@ def item(item_id: int, source: str = '', variant: str = ''):
                 made_from=best_use(summary['made_from']), evidence=context.evidence(chosen, result['snapshot'] or {}),
                 details={k: summary[k] for k in ('captures', 'holdings', 'holdings_warning',
                                                'floods_error', 'signal')} |
-                {'catalog_errors': result['catalog_errors'], 'identities': page['observed'],
+                {'beta_reference': result.get('reference'), 'beta_price': beta,
+                 'beta_ratio': beta_reference.project(beta, observed.get('min_buyout'), None)['beta_ratio'],
+                 'catalog_errors': result['catalog_errors'], 'identities': page['observed'],
                  'catalogs': [c['catalog_id'] for c in result['catalogs']],
                  'incompatible': [c['catalog_id'] for c in result['incompatible']],
                  'rules_version': chosen.get('rules_version'), 'variant': variant,

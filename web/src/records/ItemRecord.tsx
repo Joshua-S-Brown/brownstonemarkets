@@ -5,6 +5,7 @@ import { Panel } from "../ui/Panel";
 import { SignalPill, isSignal } from "../ui/SignalPill";
 import { Identity } from "../ui/Identity";
 import { UtcTime } from "../ui/UtcTime";
+import { BetaQuote } from "../ui/BetaQuote";
 import styles from "../theme/app.module.css";
 import { lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -105,6 +106,24 @@ export function ItemRecord({
           <Tabs.Trigger value="activity">Our activity</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="overview">
+          {item.reference && !item.beta_faded && (
+            <Tile
+              label="Beta typical"
+              value={
+                <>
+                  <BetaQuote
+                    copper={item.beta_typical_copper}
+                    livePrice={item.price_copper}
+                    ratio={item.beta_ratio}
+                  />
+                  <small>
+                    beta reference, a different market · newest scan{" "}
+                    <UtcTime value={item.reference.newest_scan} />
+                  </small>
+                </>
+              }
+            />
+          )}
           <Suspense fallback={loadingCharts}>
             <ItemCharts
               source={source}

@@ -172,6 +172,11 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   STORY-093's Linen Cloth and Arille figures; comparisons at 1280/390 px are in ignored
   `work/story-093/`. No collection/import ran; unknown bank remains a lower bound.
 
+- **Beta reference (STORY-102):** Market and item Overview support an explicit live-to-beta
+  `reference_source`; validation and exact-identity evidence follow
+  [UI-09](requirements.md#interface) and [Beta reference](design.md#beta-reference-story-102).
+  Offline config/explorer/API and Market/ItemRecord tests cover missing prices and fading.
+  Live-source page verification remains pending go-live; current beta config has no reference.
 - **Market:** opens with For our levels; All in our chains remains one click away.
   Card selection and catalog-band filtering follow [UI-09/11](requirements.md#interface).
   Scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
@@ -293,7 +298,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 2,003 Python tests pass (one platform skip), plus 105 Vitest tests.
+Expected: 2,007 Python tests pass (one platform skip), plus 113 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

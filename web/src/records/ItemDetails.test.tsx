@@ -148,7 +148,10 @@ it("renders sales outcomes, lower-bound holdings and gathering for every scoped 
   expect(screen.getAllByText(/also looted: Unknown creature/)).toHaveLength(2);
   expect(screen.getByText(/Your own past sessions/)).toBeTruthy();
 });
-function stubRecord(held: number | null) {
+function stubRecord(
+  held: number | null,
+  overrides: Record<string, unknown> = {},
+) {
   const requests: URL[] = [];
   vi.stubGlobal(
     "fetch",
@@ -214,7 +217,11 @@ function stubRecord(held: number | null) {
                   overshoot: null,
                   used_in: { reason: "No compatible catalog recipe" },
                   made_from: { reason: "No compatible catalog recipe" },
-                  details: { variant: '["variant","suffix"]' },
+                  ...overrides,
+                  details: {
+                    beta_price: { typical_copper: 300, days: 3, scans: 5 },
+                    variant: '["variant","suffix"]',
+                  },
                   evidence: {
                     freshness: null,
                     scan_id: "scan",
@@ -313,3 +320,50 @@ it("shows zero removal evidence without numeric turnover and leaves insufficient
   expect(screen.getByText("Suggested: — units")).toBeTruthy();
   expect(screen.getByText("not enough scan gaps (4, 24.0 h)")).toBeTruthy();
 });
+
+it.each(["shown", "missing", "faded", "unconfigured"])(
+  "keeps beta item evidence while Overview fades: %s",
+  async (state) => {
+    stubRecord(null, {
+      reference:
+        state === "unconfigured"
+          ? null
+          : {
+              source_id: "beta",
+              label: "Frozen beta",
+              market_id: "forever-beta",
+              newest_scan: "2026-10-17T10:42:01Z",
+            },
+      typical_copper: state === "faded" ? 100 : null,
+      beta_faded: state === "faded",
+      price_copper: state === "missing" ? null : 90,
+      beta_typical_copper: state === "shown" ? 300 : null,
+      beta_ratio:
+        state === "shown" ? { numerator: 90, denominator: 300 } : null,
+    });
+    host(<ItemRecord source="one" id={1} variant={'["variant","suffix"]'} />);
+    await screen.findByText("Selected robe");
+    if (state === "shown" || state === "missing") {
+      const tile = screen.getByText("Beta typical").parentElement!;
+      expect(
+        within(tile).getByText(
+          /beta reference, a different market · newest scan/,
+        ),
+      ).toBeTruthy();
+      expect(within(tile).getByText("17 Oct 10:42 UTC")).toBeTruthy();
+      if (state === "shown") {
+        expect(tile.textContent).toContain("3s");
+        expect(tile.textContent).toContain("30.0% of beta");
+      } else {
+        expect(tile.textContent).toContain("no beta price · no live price");
+      }
+    } else {
+      expect(screen.queryByText("Beta typical")).toBeNull();
+    }
+    await userEvent.click(screen.getByText("Identity and evidence"));
+    const evidence = screen.getByText("Beta price").parentElement!;
+    expect(within(evidence).getByText("3s")).toBeTruthy();
+    expect(within(evidence).getByText("Days")).toBeTruthy();
+    expect(within(evidence).getByText("Scans")).toBeTruthy();
+  },
+);

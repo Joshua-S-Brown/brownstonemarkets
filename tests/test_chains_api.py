@@ -8,9 +8,9 @@ def test_outputs_route_cache_and_contract(client, monkeypatch):
     from api import context
     calls = []
     original = context.market_explorer.load_explorer
-    def load(*args):
+    def load(*args, **kwargs):
         calls.append(True)
-        return original(*args)
+        return original(*args, **kwargs)
     monkeypatch.setattr(context.market_explorer, 'load_explorer', load)
     assert browser.get('/api/chains?q=2996').json()['hits'][0]['recipe_id'] == 2963
     r = browser.get('/api/chains/route?catalog_id=tailoring&recipe_id=2393').json()

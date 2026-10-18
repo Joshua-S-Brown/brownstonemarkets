@@ -470,6 +470,17 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** BetaReference */
+        BetaReference: {
+            /** Label */
+            label: string;
+            /** Market Id */
+            market_id: string;
+            /** Newest Scan */
+            newest_scan: string | null;
+            /** Source Id */
+            source_id: string;
+        };
         /** Capture */
         Capture: {
             /** Age Hours */
@@ -908,6 +919,17 @@ export interface components {
         Item: {
             /** At Least */
             at_least: boolean;
+            /**
+             * Beta Faded
+             * @default false
+             */
+            beta_faded: boolean;
+            /** Beta Ratio */
+            beta_ratio?: {
+                [key: string]: number;
+            } | null;
+            /** Beta Typical Copper */
+            beta_typical_copper?: number | null;
             /** Crowding */
             crowding: string | null;
             /** Deposit Copper */
@@ -932,6 +954,7 @@ export interface components {
             price_copper: number | null;
             /** Quality */
             quality: number | null;
+            reference?: components["schemas"]["BetaReference"] | null;
             /** Role */
             role: string | null;
             speed?: components["schemas"]["Speed"] | null;
@@ -1125,6 +1148,7 @@ export interface components {
                     [key: string]: unknown;
                 }[];
             };
+            reference?: components["schemas"]["BetaReference"] | null;
             /** Removals */
             removals: {
                 [key: string]: unknown;
@@ -1168,6 +1192,17 @@ export interface components {
         };
         /** MarketRow */
         MarketRow: {
+            /**
+             * Beta Faded
+             * @default false
+             */
+            beta_faded: boolean;
+            /** Beta Ratio */
+            beta_ratio?: {
+                [key: string]: number;
+            } | null;
+            /** Beta Typical Copper */
+            beta_typical_copper?: number | null;
             /** Gap Copper */
             gap_copper: number | null;
             /** Gap Percent */

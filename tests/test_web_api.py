@@ -181,7 +181,7 @@ def test_explorer_is_reused_until_its_inputs_change(client, monkeypatch, tmp_pat
     browser, source = client
     builds = []
     real = context.market_explorer.load_explorer
-    monkeypatch.setattr(context.market_explorer, 'load_explorer', lambda *a: builds.append(1) or real(*a))
+    monkeypatch.setattr(context.market_explorer, 'load_explorer', lambda *a, **k: builds.append(1) or real(*a, **k))
     browser.get('/api/search?q=linen')
     browser.get('/api/items/2589')
     assert len(builds) == 1  # Search and the item record share one build.
@@ -427,7 +427,7 @@ def test_market_cache_rebuilds_on_config_file_and_source_setting_change(client, 
     folder.mkdir()
     builds = []
     real = context.market_explorer.load_explorer
-    monkeypatch.setattr(context.market_explorer, 'load_explorer', lambda *a: builds.append(1) or real(*a))
+    monkeypatch.setattr(context.market_explorer, 'load_explorer', lambda *a, **k: builds.append(1) or real(*a, **k))
     browser.get('/api/market')
     browser.get('/api/market')
     assert len(builds) == 1
@@ -474,3 +474,33 @@ def test_market_api_server_sort_role_filter_and_card_contract(client):
     assert [r['name'] for r in crafts] == sorted(r['name'] for r in crafts)
     rows = browser.get('/api/market?sort=price_copper&descending=true').json()['rows']
     assert [r['price_copper'] for r in rows] == sorted((r['price_copper'] for r in rows), reverse=True)
+
+
+def test_reference_resolution_item_quotes_fade_and_retained_evidence(client, monkeypatch, tmp_path):
+    from test_scans import FINISHED, NOW, addon_source, listing, scan, write_scans
+
+    from brownstone.pipeline import import_scans
+    browser, source = client
+    beta = addon_source(source['data_dir'], source_id='beta', environment='beta', enabled=False)
+    records = [scan(f'beta-{i}', FINISHED - (15 - i) * 86400,
+                    [listing(2589, 1, 30), listing(99999, 1, 20)]) for i in range(4)]
+    import_scans(beta, write_scans(tmp_path / 'beta.lua', *records), now=NOW)
+    assert browser.get('/api/items/2589').json()['reference'] is None
+    assert browser.get('/api/market?q=2589').json()['reference'] is None
+    source['reference_source'] = 'beta'
+    monkeypatch.setattr(context.config, 'read_sources', lambda *args: [source, beta])
+    item = browser.get('/api/items/2589').json()
+    assert item['reference']['source_id'] == 'beta'
+    assert item['reference']['newest_scan'] == (NOW - timedelta(days=12, minutes=10)).isoformat().replace('+00:00', 'Z')
+    assert item['beta_typical_copper'] == 30 and item['beta_ratio'] == {'numerator': 11, 'denominator': 30}
+    grid = browser.get('/api/market?q=2589').json()
+    assert grid['reference'] == item['reference'] and grid['rows'][0]['beta_ratio'] == item['beta_ratio']
+    for item_id in (99999, 123456):
+        missing = browser.get(f'/api/items/{item_id}').json()
+        assert missing['beta_typical_copper'] is None and missing['beta_ratio'] is None
+    import_scans(source, write_scans(tmp_path / 'earlier.lua', *[
+        scan(f'live-{i}', FINISHED - (i + 1) * 86400, [listing(2589, 1, 15)]) for i in range(3)]), now=NOW)
+    faded = browser.get('/api/items/2589').json()
+    assert faded['typical_copper'] == 15 and faded['beta_typical_copper'] is None and faded['beta_ratio'] is None
+    assert faded['details']['beta_price'] == {'typical_copper': 30, 'days': 3, 'scans': 3}
+    assert faded['details']['beta_ratio'] == {'numerator': 11, 'denominator': 30}

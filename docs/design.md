@@ -596,6 +596,16 @@ Legacy `/` item URLs redirect to `/app/market`; the inspector retains UI-07 orig
 The palette renders up to 50 identity hits; the grid searches every snapshot item by name/ID. IDs, incompatible catalog versions,
 expanded quantities and comparison evidence remain on demand. No writes.
 
+## Beta reference (STORY-102)
+
+UI-09 owns display policy. `config.read_sources` validates `reference_source` after all sources
+are built, including disabled references. `beta_reference.read` uses the reference's scoped
+eligible scans and newest scan clock for UI-11, returning exact-identity typical/day/scan evidence.
+`load_explorer` attaches it without changing price inputs, Board rows or flood labels; noncatalog
+live typicals are read only for fading and never shown. `grid_rows` and the item adapter project nullable
+quotes, ratios and a `beta_faded` flag the web hides on, retaining raw beta evidence in item details. API context resolves all configured sources;
+its existing database/config cache invalidation covers the reference. No additional database or setting.
+
 ## Stock contracts
 
 `brownstone/stock.py` composes `character_snapshots.latest_data` once, validated per-source
