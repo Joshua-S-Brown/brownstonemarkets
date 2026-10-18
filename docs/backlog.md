@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: the character record (STORY-097). Regroomed 2026-10-17 (product owner): the web app is complete (STORY-081 to STORY-095, NiceGUI retired in STORY-087), and **beta testing is wrapped**: 31 complete scans and the character captures are the data we build on, with no further in-game test sessions before go-live. The work now is making the app as useful as possible on that data; the launch-day checklist and remaining in-game checks wait until after go-live (*Launch-day checklist* under Later). Team's job is set as *what should each character do next, and is it paying off?* (STORY-097, STORY-099; *Is it paying off?* under Later).
+Nothing in progress; the next story is the top of *Order* under Next: a profession for every empty slot (STORY-099). Regroomed 2026-10-17 (product owner): the web app is complete (STORY-081 to STORY-095, NiceGUI retired in STORY-087), and **beta testing is wrapped**: 31 complete scans and the character captures are the data we build on, with no further in-game test sessions before go-live. The work now is making the app as useful as possible on that data; the launch-day checklist and remaining in-game checks wait until after go-live (*Launch-day checklist* under Later). Team's job is set as *what should each character do next, and is it paying off?* (STORY-097, STORY-099; *Is it paying off?* under Later).
 
 **Scanning:** keep the usual routine (scan, `/reload`, import, then `/bscan clear` and `/reload`) whenever you happen to be at the auction house; nothing else is needed (STORY-026 dropped 2026-10-17).
 
@@ -33,35 +33,20 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-17, product owner):
-1. STORY-098 hiring and levelling evidence from our own captures
-2. STORY-099 a profession for every empty slot
-3. STORY-062 sales speed and suggested stock levels (refine first)
-4. STORY-100 a Market front page worth reading
-5. STORY-006 replay (before launch)
-6. STORY-101 frozen beta test corpus
-7. STORY-102 beta prices as a launch-week reference
-8. STORY-011a survey third-party scan sources
-9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+1. STORY-099 a profession for every empty slot
+2. STORY-062 sales speed and suggested stock levels (refine first)
+3. STORY-100 a Market front page worth reading
+4. STORY-006 replay (before launch)
+5. STORY-101 frozen beta test corpus
+6. STORY-102 beta prices as a launch-week reference
+7. STORY-011a survey third-party scan sources
+8. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097 and SPIKE-009/009b.
-
-### STORY-098 — Hiring and levelling evidence from our own captures
-
-Added 2026-10-17. On the beta every *Cost to 300* in Team's *If we add a character* reads *unknown* and every estimate *Incomplete* (`status.md` → *Limitations*: hiring walks complete only for Tailoring, Alchemy and Blacksmithing; Smelt Copper sits at skill 25 without a colour). The addon already saves each recipe's difficulty in the profession window at the captured rank, and trainer lists, but no Brownstone code reads difficulty yet.
-
-As the owner, I want the catalogs' skill-up colours and starter recipes confirmed from what our characters actually saw, so that levelling and hiring costs become numbers instead of *unknown*.
-
-Acceptance:
-- **Evidence report first:** a read-only report (beta-report section or CLI command) lists, per profession and recipe, each captured (rank, difficulty) observation and each trainer-list recipe with its skill and cost, against the catalog's colour ranks and learning source: *confirms*, *contradicts* or *not observed*.
-- **Catalog changes need that evidence:** confirmed values are recorded in the Forever selection files with the capture as source; contradictions are listed for the owner, not applied silently (AGENTS: catalog value changes need source evidence). Classic estimates stay marked as estimates where nothing was observed.
-- **Effect shown:** after regeneration, the report states how many Team hire rows and CRAFT-11 paths moved from incomplete to complete, per profession.
-- **Offline tests:** difficulty parsing from a fixture profession window (orange/yellow/green/grey and missing); observations never override a catalog value without a recorded change; an unobserved recipe stays as before.
-- **Real data:** run on the copied beta; report the counts per profession. Expected at least: Smelt Copper's colour at Arille's captured Mining ranks.
-- Depends on nothing: uses the captures already imported. Rules: CRAFT-08, CRAFT-10, CRAFT-11, CRAFT-13, ADDON-12. Design: *Recipe import*, *Skill-up map contracts*, *Team contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098 and SPIKE-009/009b.
 
 ### STORY-099 — A profession for every empty slot
 
@@ -164,6 +149,8 @@ Acceptance:
 - Depends on seller capture, which the beta's bulk scan does not provide (*Seller capture* under Later), and the implemented market metrics layer (ADDON-10).
 
 ## Later
+
+**Captured colours: remaining gaps** (found in the STORY-098 review, 2026-10-18): the copied beta has only 26 learned recipes, so captures fill two colour gaps (Smelt Copper, Copper Rod) and no hire or window-25 path becomes complete; starter, training and price evidence still block costs. Four learned recipes contradict their Wowhead colours and await owner review (`python -m brownstone skillups --source forever-us-normal-alliance-addon`). The catalog's `required_skill` 25 for Smelt Copper also looks wrong for Forever (learned and orange at rank 3). `--write` updates only existing picks; a derived intermediate with no pick of its own is listed, not written (adding a pick would make it a selected recipe), so capturing intermediates' colours needs a decision.
 
 **Chosen-route column placement** (found in the STORY-092 review, 2026-10-17): Supply chains places each card at its deepest column across chosen *and* unchosen branches, so an item the chosen route uses directly can be pushed right by an unchosen path that also reaches it, leaving its solid edge to cross an empty column. Lay out columns from the chosen path first and only then place unchosen-only nodes.
 

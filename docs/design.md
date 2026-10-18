@@ -315,14 +315,14 @@ discards obsolete choices and ticks.
 
 ## Recipe import
 
-`recipe_import` extracts saved Wowhead `listviewspells`/item data, validates selection/game/
-profession, selects single fixed-yield nonseasonal makers, expands intermediates and generates
-TOML through `prepare_catalog`. `archive_page` preserves exact bytes/provenance; changed values
-are listed by the CLI and require the CRAFT-01/08 version policy. No downloads.
-`recipe_catalogs.find_catalogs` discovers tracked selections, loads generated catalogs;
-`parse_catalogs` isolates malformed entries. `profession_title`, `PROFESSIONS` and
-`learning_label` supply team metadata/verified code labels. CLI shares CONFIG_DIR/ARCHIVE_DIR.
-Tests compare generated tracked catalogs against offline saved-page extracts.
+`recipe_import.prepare_catalog` validates saved Wowhead/selection scope and expands single
+fixed-yield nonseasonal intermediates. `archive_page` keeps exact bytes/provenance; CLI changes
+follow CRAFT-01/08, no downloads. `recipe_catalogs.find_catalogs` discovers selections; `parse_catalogs`
+isolates errors. `profession_title`/`PROFESSIONS`/`learning_label` supply metadata.
+Shared CONFIG_DIR/ARCHIVE_DIR.
+`skillup_evidence` compares scoped colours/trainers (CRAFT-10), writes derived picks on `--write`,
+compares regenerated hiring/progression against catalogs without captured colours.
+Import uses picks only without Wowhead colours; retain captured basis/journal IDs. No ranking/version/schema changes.
 
 ## Switching to WoW Forever
 

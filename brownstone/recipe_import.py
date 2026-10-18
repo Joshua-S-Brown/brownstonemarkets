@@ -346,8 +346,15 @@ def _catalog_recipe(extract: dict, profession: str, recipe_id: str, defaults: di
     entry.update(defaults)
     entry.update({key: value for key, value in pick.items() if key != "recipe_id"})
     entry.pop("skillup_colors", None)
+    entry.pop("skillup_colors_basis", None)
+    entry.pop("captured_skillup_colors", None)
+    entry.pop("captured_colors_source", None)
     if valid_skillup_colors(recipe.get("skillup_colors")):
         entry["skillup_colors"] = recipe["skillup_colors"]
+    elif valid_skillup_colors(pick.get("captured_skillup_colors")) and pick.get("captured_colors_source"):
+        entry["skillup_colors"] = pick["captured_skillup_colors"]
+        entry["skillup_colors_basis"] = "captured"
+        entry["captured_colors_source"] = pick["captured_colors_source"]
     for key, validator in (("learned_from", valid_learned_from), ("training_cost_copper", valid_training_cost)):
         entry.pop(key, None)
         if validator(recipe.get(key)):

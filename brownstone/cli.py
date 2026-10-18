@@ -165,7 +165,22 @@ def close_story_main(argv: list[str]) -> None:
     print("\n".join(changes))
 
 
-SUBCOMMANDS = {"recipes": recipes_main, "beta-report": beta_report_main, "after-play": after_play_main,
+def skillups_main(argv: list[str]) -> None:
+    """Compare captured recipe colours and trainer facts; write derived picks only with --write."""
+    from .skillup_evidence import run
+    parser = argparse.ArgumentParser(prog="python -m brownstone skillups", description=skillups_main.__doc__)
+    parser.add_argument('--config', type=Path, default=ROOT / 'config/market.toml')
+    parser.add_argument('--source', help='Configured source_id (defaults to the first enabled source)')
+    parser.add_argument('--write', action='store_true', help='Record only derived colours in recipe selections')
+    args = parser.parse_args(argv)
+    try:
+        print('\n'.join(run(_select_source(args), args.config.parent, args.write)))
+    except (ValueError, OSError) as error:
+        parser.exit(1, f'Skill-up evidence failed: {error}\n')
+
+
+SUBCOMMANDS = {"recipes": recipes_main, "skillups": skillups_main,
+               "beta-report": beta_report_main, "after-play": after_play_main,
                "rules": rules_main, "gates": gates_main, "close-story": close_story_main}
 
 

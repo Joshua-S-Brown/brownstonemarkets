@@ -1,0 +1,155 @@
+[
+  {
+    "entry_id": "modern-0",
+    "family": "craft",
+    "character": "Alice",
+    "realm": "Beta",
+    "faction": "Alliance",
+    "known_recipes": {
+      "api": "C_TradeSkillUI",
+      "name": "Mining",
+      "rank": "14",
+      "rows": [
+        {
+          "recipe_id": 10,
+          "info": {
+            "relativeDifficulty": 0,
+            "maxTrivialLevel": 70,
+            "numSkillUps": 1
+          }
+        },
+        {
+          "recipe_id": 11,
+          "info": {}
+        }
+      ]
+    }
+  },
+  {
+    "entry_id": "modern-1",
+    "family": "craft",
+    "character": "Alice",
+    "realm": "Beta",
+    "faction": "Alliance",
+    "known_recipes": {
+      "api": "C_TradeSkillUI",
+      "name": "Mining",
+      "rank": "25",
+      "rows": [
+        {
+          "recipe_id": 10,
+          "info": {
+            "relativeDifficulty": 1,
+            "maxTrivialLevel": 70,
+            "numSkillUps": 1
+          }
+        },
+        {
+          "recipe_id": 11,
+          "info": {}
+        }
+      ]
+    }
+  },
+  {
+    "entry_id": "modern-2",
+    "family": "craft",
+    "character": "Alice",
+    "realm": "Beta",
+    "faction": "Alliance",
+    "known_recipes": {
+      "api": "C_TradeSkillUI",
+      "name": "Mining",
+      "rank": "47",
+      "rows": [
+        {
+          "recipe_id": 10,
+          "info": {
+            "relativeDifficulty": 2,
+            "maxTrivialLevel": 70,
+            "numSkillUps": 1
+          }
+        },
+        {
+          "recipe_id": 11,
+          "info": {}
+        }
+      ]
+    }
+  },
+  {
+    "entry_id": "modern-3",
+    "family": "craft",
+    "character": "Alice",
+    "realm": "Beta",
+    "faction": "Alliance",
+    "known_recipes": {
+      "api": "C_TradeSkillUI",
+      "name": "Mining",
+      "rank": "70",
+      "rows": [
+        {
+          "recipe_id": 10,
+          "info": {
+            "relativeDifficulty": 3,
+            "maxTrivialLevel": 70,
+            "numSkillUps": 1
+          }
+        },
+        {
+          "recipe_id": 11,
+          "info": {}
+        }
+      ]
+    }
+  },
+  {
+    "entry_id": "legacy",
+    "family": "craft",
+    "character": "Alice",
+    "realm": "Beta",
+    "faction": "Alliance",
+    "known_recipes": {
+      "api": "GetTradeSkillInfo",
+      "name": "Mining",
+      "rank": 1,
+      "rows": [
+        {
+          "recipe_id": 10,
+          "difficulty": "optimal"
+        }
+      ]
+    }
+  },
+  {
+    "entry_id": "trainer",
+    "family": "vendor",
+    "character": "Alice",
+    "realm": "Beta",
+    "faction": "Alliance",
+    "trainer_services": [
+      {
+        "info": {
+          "1": "Craft 10"
+        },
+        "skill_required": {
+          "1": "Mining",
+          "2": 25
+        },
+        "cost": {
+          "1": 100
+        }
+      },
+      {
+        "info": {
+          "1": "Other service"
+        },
+        "skill_required": {
+          "1": "Mining",
+          "2": 0
+        },
+        "cost": {}
+      }
+    ]
+  }
+]

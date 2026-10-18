@@ -187,6 +187,14 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 - **Catalogs:** twelve generated catalogs; nine Forever professions (1,930 recipes) and Classic
   Alchemy/Enchanting/Tailoring. Board policy 0.3, team-aware graph routes (CRAFT-12), learning
   evidence and training costs. Generation is offline from manually saved pages (CRAFT-08).
+- **Skill-up evidence (STORY-098):** `python -m brownstone skillups --source <source_id>` reports
+  captured colours and trainer facts; `--write` records derived picks for normal recipe regeneration.
+  Derivation/provenance: [CRAFT-10](requirements.md#crafting). Offline checks: `test_skillup_evidence.py`
+  and `test_skillup_catalogs.py`. Only learned rows from the open window count (the game reports
+  unlearned recipes as orange); captured colours re-derive each run rather than confirm. The copied beta has 26 learned recipes: 13 confirm, 4 contradict and 2 derive (Smelt Copper
+  1/15/26/70 with required skill still 25; Copper Rod 1/2/11/15). No rank-300 hires or window-25 paths
+  became complete; green-only Mining and unknown starter, training and price evidence still block
+  costs. Tracked selections/catalogs are unchanged; the copied run is in ignored `work/story-098-review/`.
 - **Sources:** local overrides enable `forever-us-normal-alliance-addon` beta; tracked config
   keeps it disabled. Mankrik Alliance is development data; Retail is regression-only.
 - **Addon:** 0.12.8 (0.12.7 stopped re-saving vendor lists when only the player moves; 0.12.8 waits 120 s for the
@@ -256,7 +264,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,966 Python tests pass (one platform skip), plus 104 Vitest tests.
+Expected: 1,981 Python tests pass (one platform skip), plus 104 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

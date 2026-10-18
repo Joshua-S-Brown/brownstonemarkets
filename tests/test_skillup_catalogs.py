@@ -14,12 +14,22 @@ from brownstone.recipe_import import build_catalog, dumps_catalog, extract_page
 def test_generator_colors_copied_or_omitted(colors):
     import json
     text = PAGE.replace('"learnedat":45,', f'"learnedat":45,"colors":{json.dumps(colors)},')
-    result = build_catalog(extract_page(text, 'sha', '2026-10-08'), selection())
+    picks = [{'recipe_id': 3755, 'captured_skillup_colors': [45, 46, 47, 75],
+              'captured_colors_source': ['journal:1']}]
+    result = build_catalog(extract_page(text, 'sha', '2026-10-08'), selection(recipes=picks))
     recipe = result['recipes'][1]
     if colors == [1, 25, 37, 50]:
         assert recipe['skillup_colors'] == colors
+        assert 'skillup_colors_basis' not in recipe and 'captured_colors_source' not in recipe
     else:
-        assert 'skillup_colors' not in recipe
+        assert recipe['skillup_colors'] == [45, 46, 47, 75]
+        assert recipe['skillup_colors_basis'] == 'captured'
+        assert recipe['captured_colors_source'] == ['journal:1']
+    import tomllib
+    parsed = parse_recipe_catalog(tomllib.loads(dumps_catalog(result)))
+    assert parsed['recipes_by_id'][3755] == recipe
+    # Unobserved intermediate remains exactly as normal generation made it.
+    assert result['recipes'][0] == build_catalog(extract_page(text, 'sha', '2026-10-08'), selection())['recipes'][0]
 
 
 def test_page_coverage_and_unchanged_page_regeneration_changes_only_new_fields():
