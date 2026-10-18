@@ -134,7 +134,8 @@ def summaries(context, *, window=25):
     names = sorted({c['profession'] for c in context['catalogs']})
     for name in names:
         walk = cost_walk(context, name)
-        rows.append({'profession': name, 'best': _best(context, name, 300), 'walk': walk,
+        rows.append({'profession': name, 'best': _best(context, name, 300),
+                     'best_now': _best(context, name, 1 + window), 'walk': walk,
                      'holders': _holders(context['catalogs'], context['data'], name),
                      'estimate': progression.estimate_cost([], {}, 1, 300, 300, context['prices'], walk)})
     return {'rows': sorted(rows, key=summary_sort),

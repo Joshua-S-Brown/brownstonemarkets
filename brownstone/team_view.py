@@ -65,6 +65,22 @@ def roster_step(groups):
     return min(groups, key=progression.summary_sort, default=None)
 
 
+def profession_suggestions(card, rows):
+    """Filter the shared hire order by observed primary slots; never walk per character."""
+    if card['skills_status'] != 'observed':
+        return dict(free_slots=None, suggestions=[], suggestion_note='professions unknown')
+    held = {p['skill_id'] for p in card['professions'] if p.get('skill_id') is not None}
+    slots = max(0, 2 - len(held & (set(hiring.SKILL_IDS.values()) - hiring.SECONDARY)))
+    if not slots:
+        return dict(free_slots=0, suggestions=[], suggestion_note='')
+    candidates = [r for r in rows if hiring.SKILL_IDS.get(r['profession']) not in held | hiring.SECONDARY
+                  and r['profession'] not in ('herbalism', 'skinning')]
+    if not any(r['best'] and r['best']['profit_copper'] > 0 for r in candidates):
+        return dict(free_slots=slots, suggestions=[],
+                    suggestion_note='no profession has a priced recipe at 300')
+    return dict(free_slots=slots, suggestions=candidates[:3], suggestion_note='')
+
+
 def path_result(result):
     """Annotate computed decisions, retaining all original calculation evidence."""
     groups = []

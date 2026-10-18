@@ -95,12 +95,6 @@ class Card(Facts):
     history: list[dict[str, Any]]
 
 
-class Member(BaseModel):
-    character: tuple[str, str, str]
-    card: Card
-    progression: Progression
-
-
 class Holder(BaseModel):
     character: tuple[str, str, str]
     rank: int | None
@@ -117,7 +111,17 @@ class HireRow(BaseModel):
     profession: str
     holders: list[Holder]
     best: HireBest | None
+    best_now: HireBest | None
     estimate: Estimate
+
+
+class Member(BaseModel):
+    character: tuple[str, str, str]
+    card: Card
+    progression: Progression
+    free_slots: int | None
+    suggestions: list[HireRow]
+    suggestion_note: str
 
 
 class ComparisonBest(Facts):
@@ -205,7 +209,8 @@ def build(chosen, window, now):
     for card in cards:
         key = (card['name'], card['realm'], card['faction'])
         result = results.get(key, {'professions': []})
-        roster.append(dict(character=key, card=card, progression=team_view.path_result(result)))
+        roster.append(dict(character=key, card=card, progression=team_view.path_result(result),
+                           **team_view.profession_suggestions(card, summaries['rows'])))
     payload = dict(roster=roster, hires=summaries['rows'], no_catalog=summaries['no_catalog'],
                    comparisons=summaries['comparisons'], all_incomplete=team_view.all_incomplete(summaries['rows']),
                    notes=notes, labels=team_view.HONESTY, hiring_labels=team_view.HIRING_LABELS,

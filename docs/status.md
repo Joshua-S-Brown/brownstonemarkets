@@ -132,12 +132,16 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   configuration or hour changes. Hire tier details load on demand. Holdings retain exact variants.
   Rules: [CRAFT-11/13](requirements.md#crafting), [Team character cards](requirements.md#team-character-cards).
   Offline: Team/CharacterRecord Vitest, `test_team_web.py`, progression/hiring/session-options suites.
-  Copied beta `20261017T104157Z-ff991e`, window 25: eight characters, three learning actions;
+  Copied beta `20261017T104157Z-ff991e`, window 25: eight characters, two recipe actions and six take-up actions;
   Arille Blacksmithing 31/75, Mining 48/75, Cooking 2/75, Fishing 3/75; Basilly Tailoring 32/75.
   Arille's best action is Cloudy Skyforged Chain, +19 points, 9,050c per craft. Nine hire rows,
   all estimates incomplete; Fishing/Herbalism/Skinning retain no-catalog Tips. Comparisons retain
   CRAFT-11's reachable window; only new-hire profits are at 300 (CRAFT-13).
-  1280/390 px Team/Ledger comparisons with the prototype are in ignored `work/story-091/`.
+  Free-slot suggestions (STORY-099) appear in Next with best-now/best-at-300 recipes, unknown
+  costs, estimate reasons and lazy feeds. Six beta cards lead with Blacksmithing (172c now,
+  26,131c at 300); Basilly keeps her recipe action, Arille has no free slot.
+  1280/390 px Team/Next comparisons and copied-data evidence: ignored `work/story-099/`.
+  Earlier Team/Ledger comparisons: ignored `work/story-091/`.
   No collection/import ran. Training, gathering income, demand and tier-fee limits remain labelled.
 
 - **Character Next (STORY-097):** records open on the character's numbered Today Route stops,
@@ -264,7 +268,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,981 Python tests pass (one platform skip), plus 104 Vitest tests.
+Expected: 1,986 Python tests pass (one platform skip), plus 104 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

@@ -18,6 +18,9 @@ afterEach(() => {
 });
 function data(realm = "First"): RecordData {
   return {
+    free_slots: null,
+    suggestions: [],
+    suggestion_note: "professions unknown",
     character: ["Maker", realm, "Alliance"],
     card: {
       name: "Maker",
@@ -268,6 +271,31 @@ it("renders unknown values, recipe provenance, partial captures, exact variants 
 
 it("opens Next with the shared Today query, original Route numbers and per-profession best", async () => {
   const record = data();
+  record.free_slots = 1;
+  record.suggestion_note = "";
+  record.suggestions = ["blacksmithing", "leatherworking", "engineering"].map(
+    (profession, i) => ({
+      profession,
+      holders: [
+        { character: ["Arille", "First", "Alliance"], rank: 31, max_rank: 75 },
+      ],
+      best: { output_item_id: 10, output_name: "Helm", profit_copper: 26131 },
+      best_now:
+        i === 2
+          ? null
+          : {
+              output_item_id: 11,
+              output_name: "Mace",
+              profit_copper: i === 1 ? -80 : 172,
+            },
+      estimate: {
+        complete: false,
+        cost_copper: null,
+        reasons: ["unknown starter"],
+        steps: [],
+      },
+    }),
+  );
   const g = record.progression.professions[0];
   g.best = {
     ...g.recipes[0],
@@ -321,6 +349,33 @@ it("opens Next with the shared Today query, original Route numbers and per-profe
     screen.getByRole("tab", { name: "Next" }).getAttribute("aria-selected"),
   ).toBe("true");
   expect(screen.getByText("Buy 12 Copper Bar")).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "1 free profession slot" }),
+  ).toBeTruthy();
+  expect(
+    screen
+      .getAllByRole("heading", { name: /^Take up/ })
+      .map((h) => h.textContent),
+  ).toEqual([
+    "Take up Blacksmithing",
+    "Take up Leatherworking",
+    "Take up Engineering",
+  ]);
+  expect(
+    screen.getByText("Best now: nothing priced within 25 points"),
+  ).toBeTruthy();
+  expect(screen.getAllByText(/Best now:/)[1].textContent).toContain("-80c");
+  expect(screen.getAllByText("Incomplete")).toHaveLength(3);
+  await userEvent.click(screen.getAllByText("Estimate reasons")[0]);
+  expect(screen.getAllByText("unknown starter")).toHaveLength(3);
+  expect(
+    screen.getAllByText("unknown starter")[0].closest("details")?.open,
+  ).toBe(true);
+  expect(screen.getAllByText(/has it/)).toHaveLength(3);
+  expect(
+    fetcher.mock.calls.some(([url]) => url.pathname.includes("/hire/")),
+  ).toBe(false);
+
   expect(screen.getByText("needs skill 2 · trainer")).toBeTruthy();
   expect(screen.getByText("pays back training in 3 crafts")).toBeTruthy();
   expect(screen.getByText(/Came in/).textContent).toContain("Net: 70c");

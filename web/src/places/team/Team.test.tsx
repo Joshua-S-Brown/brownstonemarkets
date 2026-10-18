@@ -66,7 +66,13 @@ const group: Group = {
   next_step: "best",
   note: "",
 };
-const row = { profession: "tailoring", holders: [], best: null, estimate };
+const row = {
+  profession: "tailoring",
+  holders: [],
+  best: null,
+  best_now: null,
+  estimate,
+};
 const detail = {
   profession: "tailoring",
   needs_pattern: 1,
@@ -90,6 +96,9 @@ const detail = {
 function fixture(): TeamData {
   return {
     roster: [1, 2].map((i) => ({
+      free_slots: null,
+      suggestions: [],
+      suggestion_note: "professions unknown",
       character: ["Maker", "Realm " + i, "Alliance"],
       card: {
         name: "Maker",
@@ -384,7 +393,7 @@ it("builds matrix cells with full character identity and gathering coverage", as
     name: "No catalog: gathering income and supply are not modelled",
   });
 });
-it("keeps one best action and a learning action when no profession is known", () => {
+it("keeps a best recipe action and replaces only missing recipe actions with a suggestion or honest gap", () => {
   const member = fixture().roster[0];
   member.progression.professions = [
     { ...group, best: { ...recipe, profit_copper: 1 } },
@@ -402,15 +411,35 @@ it("keeps one best action and a learning action when no profession is known", ()
   expect(
     screen.getByRole("button", { name: "All next steps and evidence" }),
   ).toBeTruthy();
-  view.unmount();
-  wrap(
-    <MemberCard
-      member={{ ...member, card: { ...member.card, professions: [] } }}
-    />,
+  member.suggestions = [
+    {
+      ...row,
+      profession: "blacksmithing",
+      best: { output_item_id: 10, output_name: "Helm", profit_copper: 26131 },
+      best_now: { output_item_id: 11, output_name: "Mace", profit_copper: 172 },
+    },
+  ];
+  view.rerender(<MemberCard member={member} />);
+  expect(screen.queryByText(/Take up/)).toBeNull();
+  member.progression.best_step = { ...group, best: null };
+  member.card.professions = [];
+  view.rerender(<MemberCard member={member} />);
+  expect(screen.getByText(/Take up Blacksmithing/).textContent).toBe(
+    "Take up Blacksmithing: 1s 72c per craft now, 2g 61s 31c at 300",
   );
-  expect(
-    screen.getByText("Learn a profession to see what's in reach"),
-  ).toBeTruthy();
+  member.card.professions = fixture().roster[0].card.professions;
+  member.suggestions[0].best_now = null;
+  view.rerender(<MemberCard member={member} />);
+  expect(screen.getByText(/Take up Blacksmithing/).textContent).toContain(
+    "nothing priced within the selected window",
+  );
+  member.suggestions = [];
+  member.suggestion_note = "no profession has a priced recipe at 300";
+  view.rerender(<MemberCard member={member} />);
+  expect(screen.getByText(member.suggestion_note)).toBeTruthy();
+  member.suggestion_note = "professions unknown";
+  view.rerender(<MemberCard member={member} />);
+  expect(screen.getByText("professions unknown")).toBeTruthy();
 });
 it("renders hire and holder table rows with complete/incomplete pills and reasons", async () => {
   const data = fixture();

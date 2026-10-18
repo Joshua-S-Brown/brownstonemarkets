@@ -577,8 +577,14 @@ export interface components {
             evidence: {
                 [key: string]: unknown;
             };
+            /** Free Slots */
+            free_slots: number | null;
             holdings: components["schemas"]["Holdings"];
             progression: components["schemas"]["Progression"];
+            /** Suggestion Note */
+            suggestion_note: string;
+            /** Suggestions */
+            suggestions: components["schemas"]["HireRow"][];
         };
         /** CharacterStatus */
         CharacterStatus: {
@@ -815,6 +821,7 @@ export interface components {
         /** HireRow */
         HireRow: {
             best: components["schemas"]["HireBest"] | null;
+            best_now: components["schemas"]["HireBest"] | null;
             estimate: components["schemas"]["Estimate"];
             /** Holders */
             holders: components["schemas"]["Holder"][];
@@ -1205,7 +1212,13 @@ export interface components {
                 string,
                 string
             ];
+            /** Free Slots */
+            free_slots: number | null;
             progression: components["schemas"]["Progression"];
+            /** Suggestion Note */
+            suggestion_note: string;
+            /** Suggestions */
+            suggestions: components["schemas"]["HireRow"][];
         };
         /** Movement */
         Movement: {

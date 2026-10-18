@@ -549,15 +549,15 @@ expected_crafts/estimate_cost use rational yellow expectations. One skillup_walk
 listing ladders serve all targets at their prefix. Confidence reuses Today quotes;
 no funding/reservation/sales credit or changed Board profit.
 
-Hiring prepare reuses scoped evidence/current board. summaries returns compatible professions,
+Hiring reuses scoped evidence/Board. summaries returns compatible professions,
 holders, rank-300 estimate/best/shared rank-one walk; no-catalog/two-primary comparisons stay separate.
 Synthetic hires have unlearned trainer recipes. Own routes use trainer/current-team recipes;
-other-profession routes use current team. Summary cost resolves sort ties; lazy detail reuses
+other-profession routes use team. Best-now uses 1+window; team_view filters free slots. Cost breaks ties; detail reuses
 prefixes/tier maker maps. feeds evaluates eligible Board roots with the cost walker;
 unknown/unsupported baselines claim no savings. Top consumers retain savings/hire-made material
 without nested double count. Team caches per source/window until database/config/hour changes;
 hire detail loads on expansion. Empty characters allow hire comparison; absent scans explain.
-No new price SQL or Today state changes.
+No price SQL/Today changes.
 
 ## Beta evidence report
 

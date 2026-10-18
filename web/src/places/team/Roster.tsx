@@ -4,6 +4,7 @@ import { CharacterName } from "../../ui/CharacterName";
 import { Tip } from "../../ui/parts";
 import { Icon } from "../../ui/Icon";
 import { Money } from "./Money";
+import { title } from "./Hiring";
 import { NextStep } from "./Path";
 import type { Member } from "./types";
 import styles from "./team.module.css";
@@ -51,6 +52,7 @@ export function MemberCard({ member }: { member: Member }) {
   const { character, card, progression } = member;
   const inspect = useInspector();
   const best = progression.best_step;
+  const suggestion = member.suggestions[0];
   const evidence = progression.professions
     .map(
       (g) =>
@@ -84,8 +86,23 @@ export function MemberCard({ member }: { member: Member }) {
       <div className={styles.action}>
         <div className={styles.step}>
           <Icon name="arrow" />
-          {!card.professions.length ? (
-            <p>Learn a profession to see what's in reach</p>
+          {best?.best ? (
+            <NextStep group={best} />
+          ) : suggestion ? (
+            <p>
+              Take up {title(suggestion.profession)}:{" "}
+              {suggestion.best_now ? (
+                <>
+                  <Money copper={suggestion.best_now.profit_copper} /> per craft
+                  now
+                </>
+              ) : (
+                "nothing priced within the selected window"
+              )}
+              , <Money copper={suggestion.best?.profit_copper ?? null} /> at 300
+            </p>
+          ) : member.suggestion_note ? (
+            <p>{member.suggestion_note}</p>
           ) : best ? (
             <NextStep group={best} />
           ) : (

@@ -65,6 +65,9 @@ def test_roster_progression_matches_shared_build_and_window(browser):
     assert result['roster'][0]['card']['gold_copper'] == 255
     assert result['roster'][0]['card']['stale']
     assert result['all_incomplete']
+    for member in result['roster']:
+        assert member['suggestions'] == team_view.profession_suggestions(
+            member['card'], result['hires'])['suggestions']
     assert 'listings never sales' in result['hiring_labels']
     _, args = today_loading.load_today(browser[1], [browser[2]], TodaySettings(), browser[3], datetime.now(UTC))
     expected = team_view.team_results([browser[2]], browser[3], args, 25)
@@ -376,3 +379,31 @@ def test_character_next_reuses_today_plan_numbering_settings_and_holdings_read(b
     assert response['stops'] == [s | {'number': i} for i, s in enumerate(changed['stops'], 1)
                                  if list(CHARACTER) in s['characters']]
     assert len(calls) == 2
+
+
+@pytest.mark.parametrize('status,ids,slots', [
+    ('observed', [164, 186], 0), ('observed', [164], 1),
+    ('observed', [185, 129, 356, 95], 2), ('skills unknown', [], None),
+    ('possibly incomplete', [164], None)])
+def test_profession_suggestions_observed_slots_hire_order_gaps_and_no_profit(status, ids, slots):
+    rows = [dict(profession=name, best=dict(profit_copper=profit), best_now=now,
+                 estimate=dict(complete=False, cost_copper=None, reasons=['unknown starter']))
+            for name, profit, now in [('blacksmithing', 300, dict(profit_copper=-80)),
+                                      ('tailoring', 200, None), ('engineering', 100, dict(profit_copper=309)),
+                                      ('mining', 50, None), ('cooking', 500, None),
+                                      ('first-aid', 400, None), ('herbalism', 400, None), ('skinning', 400, None)]]
+    card = dict(skills_status=status, professions=[dict(skill_id=i, name='Misleading name') for i in ids])
+    result = team_view.profession_suggestions(card, rows)
+    assert result['free_slots'] == slots
+    if slots:
+        expected = [r for r in rows[:4] if hiring.SKILL_IDS[r['profession']] not in ids][:3]
+        assert result['suggestions'] == expected
+        assert all(not r['estimate']['complete'] for r in result['suggestions'])
+        assert result['suggestions'][0] is expected[0]
+        for r in rows:
+            r['best']['profit_copper'] = 0
+        gap = team_view.profession_suggestions(card, rows)
+        assert not gap['suggestions'] and gap['suggestion_note'] == 'no profession has a priced recipe at 300'
+    else:
+        assert not result['suggestions']
+        assert result['suggestion_note'] == ('professions unknown' if slots is None else '')

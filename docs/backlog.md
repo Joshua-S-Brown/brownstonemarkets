@@ -33,39 +33,19 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-17, product owner):
-1. STORY-099 a profession for every empty slot
-2. STORY-062 sales speed and suggested stock levels (refine first)
-3. STORY-100 a Market front page worth reading
-4. STORY-006 replay (before launch)
-5. STORY-101 frozen beta test corpus
-6. STORY-102 beta prices as a launch-week reference
-7. STORY-011a survey third-party scan sources
-8. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+1. STORY-062 sales speed and suggested stock levels (refine first)
+2. STORY-100 a Market front page worth reading
+3. STORY-006 replay (before launch)
+4. STORY-101 frozen beta test corpus
+5. STORY-102 beta prices as a launch-week reference
+6. STORY-011a survey third-party scan sources
+7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098 and SPIKE-009/009b.
-
-### STORY-099 — A profession for every empty slot
-
-Added 2026-10-17; refined 2026-10-18 from the copied beta. On the beta Lira, Cicelyna and Raaem (no professions) end with *Learn a profession to see what's in reach*, and Star, Baspion and Keenagen (Mining only, no reachable recipe) have no recipe action either. CRAFT-13 already prices every profession for a rank-one hire (`hiring.summaries` rows in Team's `hires`).
-
-As the owner, I want each character with a free profession slot to get a suggested profession, so that every roster card ends in an action.
-
-**Decided (2026-10-18, Claude for the owner):**
-- *Free slots:* a character with observed skills (`skills_status = "observed"`) has 2 minus its held primaries free; Cooking, First Aid and Fishing take none (CRAFT-13; the two-primary limit stays labelled unconfirmed). Without observed skills, no suggestion: *professions unknown*.
-- *Numbers are CRAFT-13's, unchanged:* the suggestion reuses the existing hire rows (a rank-one hire with no known recipes), in CRAFT-13's existing order, leaving out professions the character already holds and Cooking/First Aid (no slot). No new calculation, price query or per-character walk. CRAFT-13 gives *best at 300*, not a window profit, so the wording says *at 300*.
-- *Where it shows:* the roster card's action becomes *Take up Blacksmithing: best at 300 earns 2g 61s 31c per craft* only when the card has no recipe action now (no professions, or no best recipe). A card with a best recipe (Arille, Basilly) keeps it; its suggestion appears in the record only.
-
-Acceptance:
-- **Suggestion per free slot:** for each character with a free slot, the record's Next tab (STORY-097) lists the top three CRAFT-13 rows it could take, each with best at 300 (recipe, per-craft profit), cost to 300 with its estimate pill and reasons, and *What it feeds* (CRAFT-13 detail, lazy as now). Professions someone on the team already holds stay listed, labelled *Arille has it*, never hidden.
-- **Card:** the action rule above, with UI-18's one-action card; other steps go in the Tip/record.
-- **Honest gaps:** incomplete estimates keep their pill and reasons; when no candidate has profit > 0, no suggestion and the card says why (*no profession has a priced recipe at 300*). Gathering-only professions (Herbalism, Skinning) are never suggested.
-- **Offline tests** (extend the Team/hiring tests): free slots for two primaries (none), one primary (one, held profession excluded), only secondaries (two), skills not observed (none, *professions unknown*); order equals the CRAFT-13 rows; an incomplete row stays incomplete; no-profit case; card action replaced only without a best recipe.
-- **Real data** (copied beta, `forever-us-normal-alliance-addon`): Lira, Cicelyna, Raaem, Star, Baspion and Keenagen show *Take up Blacksmithing* (Green Iron Helm, 2g 61s 31c per craft at 300; cost *unknown*, incomplete), Leatherworking (2g 43s 50c) then Tailoring (1g 45s) next; Basilly keeps her Tailoring action and lists Blacksmithing, Leatherworking, Engineering; Arille gets none. Screenshots at 1280 and 390 px of Team and one record beside the prototype (UI-18).
-- Depends on STORY-097 (Next tab) and works better after STORY-098. Rules: CRAFT-13, CRAFT-11, *Team character cards*, UI-18. Design: *Team contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099 and SPIKE-009/009b.
 
 ### STORY-062 — Sales speed and suggested stock levels
 

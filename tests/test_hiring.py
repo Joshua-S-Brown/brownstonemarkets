@@ -84,6 +84,20 @@ def test_best_profit_limited_by_tier_required_skill_and_trainer():
         catalogs[0]['items_by_id'][rid] = {'item_id': rid, 'name': str(rid), 'role': 'finished'}
     ctx = context(catalogs, prices={1: 5, 2: 100, 3: 1000, 11: 200, 12: 300, 13: 400, 14: 10000})
     assert [t['best']['recipe_id'] for t in hiring.detail(ctx, row(ctx))['tiers']] == [10, 11, 12, 13]
+    assert (
+        [r['profession'] for r in hiring.summaries(ctx, window=74)['rows']] ==
+        [r['profession'] for r in hiring.summaries(ctx, window=75)['rows']])
+    assert next(r for r in hiring.summaries(ctx, window=74)['rows']
+                if r['profession'] == 'mining')['best_now']['recipe_id'] == 10
+    assert next(r for r in hiring.summaries(ctx, window=75)['rows']
+                if r['profession'] == 'mining')['best_now']['recipe_id'] == 11
+    ctx = context(catalogs, prices={1: 100, 2: 100, 3: 1000, 11: 2000})
+    rows = hiring.summaries(ctx)['rows']
+    assert rows[0]['profession'] == 'mining'  # At 300 beats smith; now it loses money.
+    assert rows[0]['best_now']['profit_copper'] < 0 < rows[1]['best_now']['profit_copper']
+    catalogs[0]['recipes_by_id'][10]['required_skill'] = 27
+    assert next(r for r in hiring.summaries(context(catalogs))['rows']
+                if r['profession'] == 'mining')['best_now'] is None
 
 
 def test_feeds_counts_top_three_quantities_train_now_and_unrelated():
