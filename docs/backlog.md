@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next: a profession for every empty slot (STORY-099). Regroomed 2026-10-17 (product owner): the web app is complete (STORY-081 to STORY-095, NiceGUI retired in STORY-087), and **beta testing is wrapped**: 31 complete scans and the character captures are the data we build on, with no further in-game test sessions before go-live. The work now is making the app as useful as possible on that data; the launch-day checklist and remaining in-game checks wait until after go-live (*Launch-day checklist* under Later). Team's job is set as *what should each character do next, and is it paying off?* (STORY-097, STORY-099; *Is it paying off?* under Later).
+Nothing in progress; the next story is the top of *Order* under Next. Regroomed 2026-10-17 (product owner): the web app is complete (STORY-081 to STORY-095, NiceGUI retired in STORY-087), and **beta testing is wrapped**: 31 complete scans and the character captures are the data we build on, with no further in-game test sessions before go-live. The work now is making the app as useful as possible on that data; the launch-day checklist and remaining in-game checks wait until after go-live (*Launch-day checklist* under Later). Team's job is set as *what should each character do next, and is it paying off?* (STORY-097, STORY-099; *Is it paying off?* under Later).
 
 **Scanning:** keep the usual routine (scan, `/reload`, import, then `/bscan clear` and `/reload`) whenever you happen to be at the auction house; nothing else is needed (STORY-026 dropped 2026-10-17).
 
