@@ -2402,6 +2402,7 @@ export interface operations {
                 q?: string;
                 sort?: string;
                 descending?: boolean;
+                window?: number;
             };
             header?: never;
             path?: never;

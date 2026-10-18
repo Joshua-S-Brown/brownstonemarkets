@@ -164,7 +164,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   STORY-093's Linen Cloth and Arille figures; comparisons at 1280/390 px are in ignored
   `work/story-093/`. No collection/import ran; unknown bank remains a lower bound.
 
-- **Market:** scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
+- **Market:** opens with For our levels; All in our chains remains one click away.
+  Card selection and catalog-band filtering follow [UI-09/11](requirements.md#interface).
+  Scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
   Item pages lead with a base-item decision summary, scoped holdings and own item farming evidence;
   Web record tabs and the evidence footer retain details. Three removal gaps lead,
@@ -268,7 +270,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,986 Python tests pass (one platform skip), plus 104 Vitest tests.
+Expected: 1,987 Python tests pass (one platform skip), plus 104 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

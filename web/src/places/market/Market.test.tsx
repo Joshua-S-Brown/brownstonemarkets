@@ -61,7 +61,10 @@ const card = (id: number, name: string, sparkline = [100, 90]) => ({
   outside_chains: id === 5,
   removed_units: null,
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  sessionStorage.clear();
+});
 it("keeps the signal evidence counts and unknown churn explanation", () => {
   expect(signalEvidence(signal)).toContain("2/3 comparable gaps");
   expect(
@@ -69,6 +72,7 @@ it("keeps the signal evidence counts and unknown churn explanation", () => {
   ).toContain("churn unknown");
 });
 it("renders head, three-plus-more cards, history threshold, separate collapsed identities and exact record links; delegates sorting and filters", async () => {
+  sessionStorage.setItem("brownstone-team-one", "40");
   const user = userEvent.setup(),
     open = vi.fn();
   const fetch = vi.fn(async (...args: [URL | string]) => {
@@ -124,6 +128,19 @@ it("renders head, three-plus-more cards, history threshold, separate collapsed i
     </QueryClientProvider>,
   );
   await screen.findByRole("heading", { name: "Cheaper than usual" });
+  expect(String(fetch.mock.calls[0]?.[0])).toContain("role=levels");
+  expect(String(fetch.mock.calls[0]?.[0])).toContain("window=40");
+  expect(screen.getByText(/next 40 points/)).toBeTruthy();
+  expect(screen.getAllByText("base").length).toBeGreaterThan(0);
+  expect(
+    screen
+      .getByRole("button", { name: "For our levels" })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
+  await user.click(screen.getByRole("button", { name: "All in our chains" }));
+  await waitFor(() =>
+    expect(String(fetch.mock.calls.at(-1)?.[0])).toContain("role=all"),
+  );
   expect(screen.getByText(/779 listed now of 2,290 items/)).toBeTruthy();
   expect(screen.getByText(/2,904 items · 2.5h old/)).toBeTruthy();
   expect(screen.getAllByText(/Listings are supply, not sales/)).toHaveLength(1);

@@ -159,7 +159,7 @@ def test_top_lists_roles_both_directions_limits_determinism_and_no_pooling(tmp_p
     for item_id in range(1, 15):
         for variant in ('suffix:-1', 'suffix:-2'):
             rows.append(result['rows'][0] | {'item_id': item_id, 'variant_id': variant, 'variant_state': 'variant',
-                        'listings': 10, 'crowding': 'contested',
+                        'listings': 10, 'units': 20, 'crowding': 'contested',
                         'overshoot': overshoot(50 if item_id % 2 else 200, [100] * 5, flood.settings({}))})
     catalog = {'items_by_id': dict.fromkeys(range(1, 14)),
                'recipes_by_id': {1: {'output_item_id': 1, 'inputs': [{'item_id': 2}]},
@@ -168,12 +168,23 @@ def test_top_lists_roles_both_directions_limits_determinism_and_no_pooling(tmp_p
     assert roles[1] == 'output' and roles[2] == 'material / output' and roles[3] == 'material'
     lists = flood.top_lists(result | {'rows': rows}, roles)
     assert len(lists['contested']) == len(lists['overshoots']) == 10
+    assert len({r['item_id'] for r in lists['overshoots']}) == 10
+    assert lists['rows'] == rows  # Exact identities and every price/count remain in data.
     assert {r['overshoot']['label'] for r in lists['overshoots']} == {'cheap', 'high'}
     assert all(r['item_id'] != 14 and r['listings'] == 10 for r in lists['contested'])
     reversed_lists = flood.top_lists(result | {'rows': list(reversed(rows))}, roles)
     assert all(lists[key] == reversed_lists[key] for key in ('contested', 'overshoots'))
     thin = [r | {'listings': 2, 'crowding': 'thin'} for r in rows]
     assert flood.top_lists(result | {'rows': thin}, roles)['overshoots'] == []
+    # Floors are per identity, inclusive, before selecting five; never sum sibling evidence.
+    examples = [rows[0] | {'listings': 4, 'units': 100}, rows[0] | {'listings': 20, 'units': 9},
+                rows[2] | {'listings': 5, 'units': 10,
+                            'overshoot': overshoot(50, [100] * 5, flood.settings({}))},
+                rows[2] | {'variant_id': 'larger', 'overshoot': overshoot(900, [100] * 5, flood.settings({}))}]
+    selected = flood.top_lists(result | {'rows': examples}, roles)
+    assert selected['rows'] == examples
+    assert selected['overshoots'] == [examples[3] | {'role': roles[2]}]
+    assert flood.top_lists(result | {'rows': examples[:3]}, roles)['overshoots'] == [examples[2] | {'role': roles[2]}]
 
 
 @pytest.mark.parametrize(('key', 'value'), [('flood_window_days', 0), ('flood_min_days', True),

@@ -34,18 +34,17 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 
 **Order** (regroomed 2026-10-17, product owner):
 1. STORY-062 sales speed and suggested stock levels (refine first)
-2. STORY-100 a Market front page worth reading
-3. STORY-006 replay (before launch)
-4. STORY-101 frozen beta test corpus
-5. STORY-102 beta prices as a launch-week reference
-6. STORY-011a survey third-party scan sources
-7. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+2. STORY-006 replay (before launch)
+3. STORY-101 frozen beta test corpus
+4. STORY-102 beta prices as a launch-week reference
+5. STORY-011a survey third-party scan sources
+6. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100 and SPIKE-009/009b.
 
 ### STORY-062 — Sales speed and suggested stock levels
 
@@ -59,22 +58,6 @@ Acceptance:
 - **Suggested target** beside Ledger's stock targets (STORY-061): removal rate × the days of cover the owner chooses (one setting), capped at a share of typical listed supply so we never plan to hold more than the market moves. Shown next to the manual target, never replacing it.
 - **Shown** on the Market explorer's item page (STORY-055) and beside held stock and targets in Ledger (STORY-061).
 - Feeds *Sales speed instead of a fixed cap* (Later) for Today, which stays a separate story.
-
-### STORY-100 — A Market front page worth reading
-
-Added 2026-10-17; merges *One card row per item* and *Market for our levels* from Later. On the copied beta scan `20261017T104157Z-ff991e`, *Dearer than usual* opens with Raw Winter Squid at +4,185.7% (9s against 21c typical, 4 listings) and spends two of three rows on it (*base* and *unresolved*); *Cheaper than usual* does the same with Bright Yellow Shirt. The grid's top rows are thin outliers at the team's levels nobody can use.
-
-As the owner, I want Market's front cards and default list to show items I can act on, so that the page tells me something in a glance.
-
-Acceptance:
-- **One row per item** on the front cards: the largest identity, labelled, as UI-09's movement does (decide this in UI-11 and check, per ADDON-08, whether identical base/unresolved rows are the same listings seen twice).
-- **Minimum evidence** for *Cheaper* and *Dearer*: a listings and units floor recorded in UI-11 (proposal: at least 5 listings and 10 units); items below it stay in the grid with their thin label.
-- **For our levels:** a default filter or ordering by the skill bands the team can reach (Team's window), with *All in our chains* one click away; never inferred from names.
-- **Unchanged:** prices, metrics, flood labels and calculations.
-- **Offline tests:** one row per item with identities kept separate in data; the floor excludes thin rows from cards only; the level filter uses catalog skill bands.
-- **Real data:** copied beta, report the three rows of each card before and after, and the default grid's count. Screenshots at 1280 and 390 px beside the prototype's Market view.
-- **Doc headroom (decided 2026-10-18, owner):** `requirements.md` and `design.md` are within 7 bytes of their ceilings (`DOC_SIZE_LIMITS` in `brownstone/gates.py`), and recent stories fit by compressing rules into shorthand (CRAFT-13 now reads "compare rank-one hire, no known recipes, per compatible profession including held"). Trim both to at least 3,000 bytes under their ceilings without raising or changing the ceilings: remove text that repeats another section (link to it instead), dated history and story narratives that belong in Git, and descriptions of code that `design.md` or the code already holds. Rewrite the most compressed rules (CRAFT-11, CRAFT-13 and similar) as plain sentences. Never change a rule's meaning, ID or heading (anchors are linked), and keep source-evidence links. Do the trim before the UI-11 edit. In the report, list each section trimmed with bytes saved and confirm no rule changed meaning; `brownstone gates` prints the bytes left.
-- Depends on nothing. Rules: UI-09, UI-11, ADDON-08, CRAFT-11, UI-18. Design: *Market explorer (STORY-055)*, *Flood signals (STORY-064/072)*, *Web app (UI-18)*.
 
 ### STORY-006 — Replay and rebuild local data
 

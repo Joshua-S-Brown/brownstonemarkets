@@ -19,6 +19,7 @@ def test_grouping_preserves_every_identity_price_units_history_and_base_parent()
     rows = [row(state='unresolved', price=700, units=7), row(price=90, units=20),
             row(state='variant', variant='suffix', price=800, units=3), row(2, state=None),
             row(3, state='unresolved', price=None)]
+    rows[0]['signal']['crowding'] = 'thin'
     saved = deepcopy(rows)
     groups = mp.grouped_rows(rows)
     assert len(groups) == 3
@@ -90,3 +91,43 @@ def test_removed_chain_item_absent_now_is_still_in_our_chains():
     card = mp.cards({'rows': [], 'chain_ids': [9], 'pulse': {'early': [signal]}})['early']['preview'][0]
     assert not card['outside_chains']
     assert card['price_copper'] is None
+
+
+def test_levels_use_catalog_bands_profession_ids_and_team_window_without_changing_grid_evidence():
+    from test_progression import evidence, progression_catalog
+
+    catalog = progression_catalog()
+    catalog['profession'] = 'tailoring'
+    recipes = list(catalog['recipes_by_id'].values())
+    recipes[0]['skillup_colors'] = [1, 20, 25, 40]
+    for recipe in recipes[1:]:
+        recipe['skillup_colors'] = [50, 60, 75, 100]
+    character = evidence(catalog)
+    character['recipes']['Arbitrary title']['known_recipes']['skill_id'] = 197
+    result = {'catalogs': [catalog], 'characters': {'owner': character}}
+    low = mp.level_items(result, 5)
+    high = mp.level_items(result, 50)
+    assert recipes[0]['output_item_id'] in low
+    assert recipes[1]['output_item_id'] not in low
+    assert recipes[1]['output_item_id'] in high
+    assert {i['item_id'] for i in recipes[0]['inputs']} <= low
+    page = {'rows': [row(i) for i in high], 'pulse': {}}
+    saved = deepcopy(page)
+    filtered = mp.project(page, role='levels', level_ids=low)
+    assert {r['item_id'] for r in filtered['rows']} == low
+    assert len(mp.project(page, role='all')['rows']) == len(high)
+    item = recipes[1]['output_item_id']
+    assert mp.project(page, role='levels', q=str(item), level_ids=low)['rows'][0]['item_id'] == item
+    assert page == saved
+    # Names do not map professions, and unknown ranks/bands never imply rank one.
+    surface = character['recipes']['Arbitrary title']['known_recipes']
+    surface['skill_id'] = 171
+    assert mp.level_items(result, 50) == set()
+    surface['skill_id'], surface['rank'] = 197, None
+    assert mp.level_items(result, 50) == set()
+    assert mp.level_items(result | {'characters': {}}, 50) == set()
+    surface['rank'] = 8
+    for recipe in recipes:
+        recipe['required_skill'] = None
+        recipe.pop('skillup_colors')
+    assert mp.level_items(result, 50) == set()

@@ -185,8 +185,13 @@ def top_lists(result, roles):
                        key=lambda r: (-r['listings'],
                                       -Fraction(r['churn']['changed'], r['churn']['pairs'] or 1), *tie(r)))
     # Thin identities' one-off quotes would crowd out real swings; their item pages still flag them.
-    overshoots = sorted((r for r in rows if r['overshoot']['label'] in ('cheap', 'high') and r['crowding'] != 'thin'),
+    overshoots = sorted((r for r in rows if r['overshoot']['label'] in ('cheap', 'high') and r['crowding'] != 'thin'
+                         and r['listings'] >= 5 and r['units'] >= 10),
                         key=lambda r: (-abs(Fraction(r['overshoot']['ratio']['numerator'],
                                                      r['overshoot']['ratio']['denominator']) - 1), *tie(r)))
+    largest: dict[int, dict] = {}
+    for row in overshoots:
+        largest.setdefault(row['item_id'], row)
+    overshoots = list(largest.values())
     return {**result, 'contested': contested[:10], 'overshoots': [r for label in ('cheap', 'high')
                                              for r in [r for r in overshoots if r['overshoot']['label'] == label][:5]]}

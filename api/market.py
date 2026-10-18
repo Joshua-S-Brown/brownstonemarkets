@@ -2,7 +2,7 @@
 import json
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 
 from brownstone import item_history, market_presentation
@@ -90,10 +90,12 @@ def item(item_id: int, source: str = '', variant: str = ''):
 
 
 @router.get('/market', response_model=Market)
-def market(source: str = '', role: str = 'all', q: str = '', sort: str = 'gap_percent', descending: bool = True):
+def market(source: str = '', role: str = 'levels', q: str = '', sort: str = 'gap_percent',
+           descending: bool = True, window: int = Query(25, ge=5, le=100)):
     chosen = context.resolve(source)
     result = context.explorer(chosen)
-    page = market_presentation.project(result['market'], role, q, sort, descending)
+    page = market_presentation.project(result['market'], role, q, sort, descending,
+                                       level_ids=market_presentation.level_items(result, window))
     return jsonable_encoder(page | {'evidence': context.evidence(chosen, result['snapshot'] or {})})
 
 

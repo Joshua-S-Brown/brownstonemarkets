@@ -1,5 +1,8 @@
 """Market presentation: exact identities, deterministic groups and UI-11 card order."""
 from .market_explorer import identity
+from .progression import _groups
+from .skillups import build_skillups
+from .today_characters import PROFESSION_SKILL_IDS
 
 SORT_FIELDS = {'name', 'price_copper', 'typical_copper', 'gap_percent', 'listings', 'units', 'signal'}
 
@@ -69,8 +72,36 @@ def cards(page):
     return result
 
 
-def project(page, role='all', q='', sort='gap_percent', descending=True):
-    return page | {'rows': grouped_rows(page['rows'], role, q, sort, descending), 'cards': cards(page),
+def project(page, role='all', q='', sort='gap_percent', descending=True, level_ids=frozenset()):
+    rows = page['rows']
+    if role == 'levels' and not q.strip():
+        rows = [r for r in rows if r['item_id'] in level_ids]
+    return page | {'rows': grouped_rows(rows, 'all' if role == 'levels' else role, q, sort, descending),
+                   'cards': cards(page),
                    'item_count': len({r['item_id'] for r in page['rows']}),
                    'identity_count': len(page['rows']),
                    'listed_chain_count': len({r['item_id'] for r in page['rows'] if r['roles']})}
+
+
+def level_items(result, window):
+    """Catalog skill-up bands overlapping a captured profession rank through Team's look-ahead."""
+    ranks: dict[int, set[int]] = {}
+    for state in result['characters'].values():
+        groups, _ = _groups([], state)
+        for group in groups.values():
+            if group['skill_id'] is not None and group['rank'] is not None:
+                ranks.setdefault(group['skill_id'], set()).add(group['rank'])
+    items = set()
+    for group in build_skillups(result['catalogs'], n=1)['groups']:
+        skill_id = PROFESSION_SKILL_IDS.get(group['catalog']['profession'])
+        for band in group['bands']:
+            if band['label'] == 'skill unknown':
+                continue
+            low, high = map(int, band['label'].split('–'))
+            if not any(rank <= high and rank + window >= low for rank in ranks.get(skill_id, ())):
+                continue
+            for row in band['recipes']:
+                if row['excluded'] or not (row['direct'] or row['raw']):
+                    continue
+                items.update([row['recipe']['output_item_id'], *row['direct'], *row['raw']])
+    return items

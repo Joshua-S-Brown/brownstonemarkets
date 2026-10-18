@@ -216,7 +216,9 @@ def test_market_grid_catalog_roles_prices_sparkline_and_lazy_item_reads(client, 
         raise AssertionError('Item-only history/holdings must not load on Market home')
     monkeypatch.setattr(ih, 'load_history', forbidden)
     monkeypatch.setattr(me, 'item_summary', forbidden)
-    page = browser.get('/api/market').json()
+    assert browser.get('/api/market').json()['rows'] == []  # No captured profession ranks.
+    assert browser.get('/api/market?window=4').status_code == 422
+    page = browser.get('/api/market?role=all').json()
     rows = {r['item_id']: r for r in page['rows']}
     assert rows[2589]['price_copper'] == 11
     assert rows[2589]['sparkline'] == [10, 11]
@@ -346,7 +348,7 @@ def test_market_pulse_matches_shared_lists_and_reads_batch_once(tmp_path, monkey
     source['flood_min_days'] = 1
     with duckdb.connect(str(source['data_dir'] / 'brownstone.duckdb')) as db:
         db.execute("UPDATE scan_metrics SET listings=10,min_buyout=6 WHERE scan_id='scan-5' AND item_id=2589")
-        db.execute("UPDATE scan_metrics SET listings=3,min_buyout=200 WHERE scan_id='scan-5' AND item_id=2996")
+        db.execute("UPDATE scan_metrics SET listings=5,units=10,min_buyout=200 WHERE scan_id='scan-5' AND item_id=2996")
         db.execute("UPDATE scan_listings SET time_left=4 WHERE scan_id='scan-4'")
     calls = []
     real = ih._metrics_by_scan
@@ -456,7 +458,7 @@ def test_search_role_uses_catalog_evidence_and_joins_disagreements():
 
 def test_market_api_server_sort_role_filter_and_card_contract(client):
     browser, _ = client
-    page = browser.get('/api/market').json()
+    page = browser.get('/api/market?role=all').json()
     assert page['item_count'] > page['listed_chain_count']
     assert page['identity_count'] >= page['item_count']
     assert all(len(card['preview']) <= 3 for card in page['cards'].values())

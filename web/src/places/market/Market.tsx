@@ -15,6 +15,7 @@ import { UtcTime } from "../../ui/UtcTime";
 import { Tip, Sparkline, ErrorState } from "../../ui/parts";
 import { DataGrid } from "../../ui/DataGrid";
 import { Evidence } from "../../ui/Evidence";
+import { readWindow } from "../team/state";
 import styles from "./market.module.css";
 export function signalEvidence(s: Signal) {
   return `${s.listings} listings · ${s.units} units · largest stack ${s.largest_stack_units}/${s.units} · lowest buyout changes ${s.churn.changed}/${s.churn.pairs} comparable gaps${s.churn.pairs ? "" : " (churn unknown)"} · ${s.overshoot.days} days, ${s.overshoot.scans} scans · ${s.overshoot.label}`;
@@ -125,7 +126,7 @@ function CardRow({ row: r }: { row: components["schemas"]["MarketCardRow"] }) {
           variant={identityVariant(r)}
         />
         <small>
-          <Identity state={r.variant_state} />
+          {r.variant_state === "base" ? "base" : <Identity state={r.variant_state} />}
           {r.outside_chains && " · Outside our chains"}
         </small>
         <small>
@@ -144,25 +145,27 @@ function CardRow({ row: r }: { row: components["schemas"]["MarketCardRow"] }) {
   );
 }
 export function Market({ source }: { source: string }) {
-  const [role, setRole] = useState("all"),
+  const [role, setRole] = useState("levels"),
     [q, setQ] = useState("");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "gap_percent", desc: true },
   ]);
   const [params] = useSearchParams();
   const sort = sorting[0];
+  const reach = readWindow(source);
   const path =
     "market?" +
     new URLSearchParams({
       role,
       q,
+      window: String(reach),
       sort: sort?.id || "gap_percent",
       descending: String(sort?.desc ?? true),
     });
   const query = useQuery<MarketData>({
     placeholderData: (previous, query) =>
       query?.queryKey[0] === source ? previous : undefined,
-    queryKey: [source, "market", role, q, sorting],
+    queryKey: [source, "market", role, q, sorting, reach],
     queryFn: ({ signal }) => get<MarketData>(path, source, signal),
   });
   if (query.error)
@@ -234,6 +237,7 @@ export function Market({ source }: { source: string }) {
         action={
           <div className={styles.tools}>
             {[
+              ["levels", "For our levels"],
               ["all", "All in our chains"],
               ["materials", "Materials"],
               ["crafts", "Crafts and intermediates"],
@@ -256,6 +260,12 @@ export function Market({ source }: { source: string }) {
           </div>
         }
       >
+        <p className={styles.muted}>
+          {role === "levels" && !q.trim()
+            ? `Catalog skill-up bands from our captured ranks through the next ${reach} points (Team’s window). Unknown ranks are excluded. `
+            : ""}
+          {data.rows.length.toLocaleString("en-US")} items shown.
+        </p>
         <DataGrid
           rows={data.rows}
           columns={columns}
@@ -276,8 +286,9 @@ export function Market({ source }: { source: string }) {
       <details className={styles.evidence}>
         <summary>Market evidence and scan movement</summary>
         <p>
-          Lowest buyout vs earlier daily median; thin items excluded from price
-          cards. Units are listed supply. Sellers unknown; no sales or demand
+          Lowest buyout vs earlier daily median; price cards require at least 5
+          listings and 10 units per identity, with one labelled identity per
+          item. Units are listed supply. Sellers unknown; no sales or demand
           forecast.
         </p>
         <Evidence

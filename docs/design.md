@@ -40,22 +40,7 @@ rows/wording; the web app owns display and per-tab state.
 Dependencies point inward: entry → views/api → brownstone; brownstone never imports display
 frameworks, views or api. Calculation modules take supplied data/clock and do not download.
 
-| Modules | Responsibility |
-| --- | --- |
-| config, markets | Typed Source, local overrides, MARKET_KEYS/derived ID/scope |
-| sources, normalization, pipeline | TSM download/validate/collect; shared addon preview/import |
-| scans, scan_details, variants | Lua parsing, validation, references, variant identity |
-| addon_records, character_snapshots, journal, sales, professions, characters | Non-scan lifecycle and scoped projections |
-| scan_inputs, drop_files, import_review | Drop inventory, review rows/status, per-file imports |
-| storage, metrics, item_names | Migrations, facts/reads, versioned metrics and labels |
-| analysis, scan_changes, removed_listings, flood_signals | Browse/CLI screening and scoped market comparisons |
-| crafting, action_board, skillups, recipe_graph | Catalog validation, routes/ranking, bands, team graph |
-| recipe_import, recipe_catalogs | Saved-page CLI generation; selection-based discovery/learning labels |
-| progression, hiring, session_options, farming | Reach costs, hire comparisons, This session composition |
-| today*, stock, watchlist | Funded plan/loading/evidence/settings, holdings/targets, retained hit engine |
-| freshness, money, navigation | Freshness, copper display, questions/experience order |
-| beta_report, beta_evidence, beta_markdown | Isolated evidence checks and private report |
-| cli, doc_sections, backlog_close | `python -m brownstone`: import, recipes, beta-report, rules, close-story |
+Module contracts follow below; the entry points and imports identify their owners.
 
 ### Web app (UI-18)
 
@@ -82,76 +67,42 @@ Supply chains: `supply_chain.py` projects cached Market routes; `api/chains.py` 
 
 ## Data contracts
 
-| Entity | Identity | Notes |
-| --- | --- | --- |
-| Market | `game_version, region, scope, realm, server_type, faction, environment` → derived `market_id` | One auction house. Crafting also needs the source's `rules_version` |
-| Source | `source_id` (+ `provider`, `source_url`) | One feed observing one market; a `[[sources]]` entry; names its data folders |
-| Collection | `snapshot_id` (UTC time + random suffix) | Bronze CSV + manifest with source and market identity; manifest records `analytical_snapshot_id` |
-| Analytical snapshot | source + upstream scan time + SHA-256 | Repeated identical content from the same source reuses the earlier ID |
-| Price observation | analytical snapshot + source + market identity + item ID + variant/resolution | Integer copper: `min_buyout, market_value, recent_value, historical_value` |
-| Item name lookup | `game_version, item_id` | `item_names`: label, `origin_rank` (observed 1, catalog 0), `observed_at`, evidence reference. Label policy is DATA-02; no market/source/rules identity is relaxed for prices or supply |
-| Addon scan | `source_id, scan_id` → `snapshot_id = <source_id>:<scan_id>` | `addon_scans`: status, `partial`, `priced`, times, counts, `nonexact_stacks`, client, house evidence, scan and file SHA-256. Its import manifest lists every scan with an outcome (`imported`, `duplicate`, `partial (not priced)`, `empty`) and counts `already_imported`, `remaining_unimported` (including unselected scans) and `other_house` (file scans from another auction house); `scan_id`, `updated_at` and `analytical_snapshot_id` name the newest complete scan, and status is `no_complete_scan` when there is none |
-| Listing | `source_id, scan_id, listing_index` + market identity | `scan_listings`: `item_id, item_name, quantity, buyout` (whole stack), `unit_buyout` (exact only), `unit_buyout_ceil`, `min_bid, bid, complete_info`, plus nullable ADDON-09 fields and ADDON-08 variant/resolution |
-| Scan metrics | version + source + full market + scan/snapshot + item/variant/state | `scan_metrics`: integer price/count facts and share/coverage numerators; rules in ADDON-10. `metric_key` is canonical JSON of every identity field, preserving nulls without hash/delimiter collisions; primary key enforces uniqueness |
-| Scan item reference | source + scan + item ID + full market identity | `scan_items`: first-pass observations, separate pass values and effective-field provenance; `effective_scan_items` resolves references under ADDON-09; `_items.parquet` in silver; legacy scans have no reference observations |
-| Catalog | `game_version, rules_version, catalog_version` | TOML generated from a selection file and one saved page (CRAFT-08). Header: `source_url`, `source_sha256`, `verified_at`, optional `page_coverage` (CRAFT-08). Items: role, Wowhead URL, optional unit `vendor_price_copper`, `vendor_quantity` (default 1), `vendor_bundle_price_copper` (exact unit × quantity) with `vendor_price_source_url`, `vendor_verified`, `availability`. Recipes: inputs, `output_quantity`, `required_skill` (absent when Wowhead's 9999 sentinel, CRAFT-08), optional `skillup_colors`, `learned_from`, `training_cost_copper` (CRAFT-08), Wowhead spell URL, `verification_url`, `evidence_sha256`, optional `output_quantity_verified`, `availability` |
-| Recipe selection | file name = catalog name | `config/recipe-selections/<catalog>.toml`: catalog header fields, finished `[[recipes]]` (with optional overrides), `[recipe_defaults]`, `[[items]]` vendor evidence and notes, including positive `vendor_quantity`; importer divides the page buy price exactly and retains the bundle price (CRAFT-08) |
-| Recipe source page | SHA-256 | `data/recipe-sources/wowhead/<game>/<profession>/<sha16>.html` + `.json` manifest: page URL, `saved_at`, `archived_at`, original file name |
+Market and source identities are defined in [DATA-03/08](requirements.md#data-integrity).
+Raw/archive and analytical snapshot contracts follow DATA-01/04; addon scan, listing,
+item-reference and metric fields follow [ADDON-08/09/10](requirements.md#addon-scans).
+Catalog and recipe-selection fields follow [CRAFT-08](requirements.md#crafting).
+`storage.py` owns table/view definitions; `config.py` owns Source. Item names join only
+on game version/item ID under DATA-02, never relaxing price or supply scope.
+Recipe source pages are archived by SHA-256 in
+`data/recipe-sources/wowhead/<game>/<profession>/<sha16>.html` with a JSON manifest
+(page URL, saved/archive times and original file name).
 
 ### Schema migrations
 
-`storage.SCHEMA_VERSION` and ordered `MIGRATIONS` are authoritative. `upgrade_database`
-backs up the starting file before pending idempotent steps; record each version after its
-steps complete. Newer schemas refuse. DuckDB column-add/update cannot reliably share one
-transaction, so interrupted upgrades must replay. Add numbered `_migrate_to_N`, register
-and bump version; do not edit frozen DDL. Nullable legacy fields preserve original evidence.
-
-| Version | Current schema contribution |
-| --- | --- |
-| 1 | Initial market snapshots |
-| 2 | Source/market identity split |
-| 3 | Addon scans and listings |
-| 4 | Explicit environment and legacy cutover adapter |
-| 5 | Version/item name lookup and named read views |
-| 6 | Variant identity, scan items, capture availability |
-| 7 | scan_metrics frozen DDL; derived initialization outside migrations |
-| 8 | Item-pass/effective-reference fields and view |
-| 9 | Nullable scan machine, no backfill |
-| 10 | Character snapshots/slots |
-| 11 | Raw character journal |
-
-Pipeline upgrades existing databases; explicit import creates one if needed.
-Preview never creates/migrates. `load_snapshot` refuses old schemas. Manifests remain raw:
-`markets.upgrade_legacy` adapts pre-split/environment fields on read, retaining explicit values.
-`completed_snapshots` filters source/all MARKET_KEYS and chooses observation time. Legacy
-environment uses migration 4's frozen 2026-11-04 00:00 UTC collection boundary (Forever before
-that boundary is beta; others live; missing listing times use parent scan, missing parent time live). IDs/hash/history never relabel on reimport.
-
-Named views preserve numeric/base fields, replacing labels only through DATA-02. Compare uses
-scan's loaded price/listing name first, lookup next, Item ID last. Lookup joins only game/item
-(one-to-one), never prices/supply. New imports update name candidates in their transaction;
-validated catalogs seed on upgrade/import (including duplicates)/app startup, without creating
-DB for catalogs alone. Bad catalogs warn/exclude; numeric depth/craft readers retain base tables.
+`storage.SCHEMA_VERSION`/`MIGRATIONS` own the numbered schema history (OPS-02).
+Add `_migrate_to_N`, register it and bump the version; never edit frozen DDL.
+Record versions after idempotent steps complete: DuckDB column-add/update cannot
+reliably share a transaction. Pipeline upgrades before writing; preview never migrates;
+`load_snapshot` refuses old schemas. `markets.upgrade_legacy` adapts raw manifests on read.
+Migration 4 freezes the 2026-11-04 00:00 UTC environment boundary: Forever before it is
+beta, others live; missing listing time uses the parent, missing parent time is live.
+Reimport never relabels IDs/hashes/history.
+Named views use DATA-02 labels; imports and validated catalog seeding update candidates
+transactionally (including duplicate imports and app startup), never creating a DB for
+catalogs alone. Bad catalogs warn/exclude; numeric depth/craft readers keep base tables.
 
 ### Format-4 item pass
 
-The addon appends the finished listing scan before starting its transient request queue. Only
-`item_pass` in that saved table changes afterward; queue/cursor/pending IDs never enter
-SavedVariables. Pass status `running` after an interrupted reload is valid evidence, not a
-resumption request. Capture bounds and lifecycle policy live in ADDON-09; exact saved fields and
-counter semantics live in `addon/README.md`.
-
-`scan_details.item_frame` retains first-pass observations. `pass_frame` validates metadata and
-separate pass rows; `reference_frame` joins within one scan, preserves both sets of values and
-records fields effectively filled by the pass. The pipeline checks all reference IDs against
-this scan's listings before writing. `_items.parquet` contains first-pass, pass and provenance
-columns. `effective_frame` is the in-memory equivalent of `effective_scan_items` (a test compares
-the two); a pass row repeating a first-pass value is rejected; Today reads
-that view with the unchanged source/full-market/scan/snapshot predicate. Other item-level/stack
-readers should use the same view. Format-4 availability adds `item_first_available`,
-`item_pass_added`, `item_effective_available` and pass counters; existing `item_available` remains
-first-pass availability. Formats 1–3 keep their previous availability shape and null provenance.
-Mixed 1/2/3/4 files share the same exact-byte archive and canonical scan-ID/hash deduplication.
+Lifecycle, fields and counters: [ADDON-09](requirements.md#addon-scans),
+[addon README](../addon/README.md). The saved scan precedes the transient queue;
+only its `item_pass` changes later. Queue state is never saved.
+`scan_details.item_frame`/`pass_frame` validate separate observations;
+`reference_frame` preserves both and effective-field provenance in `_items.parquet`.
+The pipeline checks reference IDs against the same scan's listings and rejects pass
+rows repeating first-pass values. `effective_frame` and `effective_scan_items` agree;
+Today and other item readers use the view with full source/market/scan/snapshot scope.
+Formats 1–3 retain their availability shape/null provenance; mixed formats share byte
+archives and canonical scan-ID/hash deduplication.
 
 ## Scan import preview
 
@@ -615,6 +566,8 @@ UI-09 defines the summary, tabs and removal disclosure; home alone renders marke
 UI-09 defines ordering, distinct-item limit and handling of missing evidence.
 `api.context.explorer` caches builds per source/database/config/hour. `market_page`, `grid_rows`,
 `item_chain` and `item_activity` project web contracts through `api/market.py`.
+`market_presentation.level_items` reuses progression rank evidence and catalog skill-up bands;
+UI-09 defines the default filter. UI-11 defines card selection before its five-row limit.
 Legacy `/` item URLs redirect to `/app/market`; the inspector retains UI-07 origins/back stack.
 
 The palette renders up to 50 identity hits; the grid searches every snapshot item by name/ID. IDs, incompatible catalog versions,
