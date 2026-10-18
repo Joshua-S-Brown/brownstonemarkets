@@ -33,7 +33,7 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-17, product owner):
-1. STORY-062 sales speed and suggested stock levels (refine first)
+1. STORY-062 sales speed and suggested stock levels
 2. STORY-101 frozen beta test corpus
 3. STORY-102 beta prices as a launch-week reference
 4. STORY-011a survey third-party scan sources
@@ -47,16 +47,23 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 
 ### STORY-062 — Sales speed and suggested stock levels
 
-Added 2026-10-13 (product owner: "turnover, how fast items sell in the market is really kind of the point… I don't know how else you determine how much stock or inventory you keep"). Brownstone only. Needs STORY-027 and enough consecutive scans: refine the minimum before handoff with the beta's 31 complete scans. Draft.
+Added 2026-10-13 (product owner: "turnover, how fast items sell in the market is really kind of the point… I don't know how else you determine how much stock or inventory you keep"). Refined 2026-10-18 on the copied beta (`forever-us-normal-alliance-addon`, 31 scans 2026-10-04 to 2026-10-16: 30 adjacent pairs, 22 within UI-10's 12 hours, 96.9 hours covered).
 
 As the owner, I want to see how fast each item moves on the auction house and a suggested stock level from it, so that targets come from evidence instead of guesses.
 
+Beta findings that shape the rules:
+- A per-pair median is zero for most items: of 2,189 base identities listed in at least five pairs, only 281 have a positive median, because slow movers clear in bursts. A time-weighted rate (units removed early ÷ hours covered) is positive for 1,960 of 2,125 identities with at least five pairs and 24 hours.
+- Removed early is a loose upper bound on busy commodities, because undercutters cancel and repost (UI-10 matches stack size and price): Linen Cloth shows about 3,795 units/day removed early against 7,053 listed. Units newly listed exceed units removed on every checked item (Linen Cloth 17,988/day), so a net figure is always 0 and gives no lower bound. Crafted gear looks plausible: Brown Linen Robe 6.6/day against 33 listed.
+
 Acceptance:
-- **Removal rate** per item from STORY-027: units removed per hour across consecutive scan pairs within the maximum gap, as a median with the number of scan pairs it rests on. Always *removed*, an upper bound on sales, never *sold*. Too few pairs says so instead of a number.
-- **Turnover:** listed units divided by the removal rate (how long today's supply would last), shown beside it.
-- **Suggested target** beside Ledger's stock targets (STORY-061): removal rate × the days of cover the owner chooses (one setting), capped at a share of typical listed supply so we never plan to hold more than the market moves. Shown next to the manual target, never replacing it.
-- **Shown** on the Market explorer's item page (STORY-055) and beside held stock and targets in Ledger (STORY-061).
-- Feeds *Sales speed instead of a fixed cap* (Later) for Today, which stays a separate story.
+- **Removal rate (UI-19, new rule):** per exact ADDON-08 identity, sum UI-10 *removed early* units over the qualifying pairs (≤12 h) whose earlier scan lies within `speed_window_days` of the newest eligible scan and in which the identity was listed in the earlier scan; divide by those pairs' summed hours. Show it per day, in integer units rounded down, with **N scan gaps, H hours** beside it. *Could have expired* and *time left unknown* are not counted. Fewer than `speed_min_pairs` pairs or `speed_min_hours` hours says **not enough scan gaps (N, H h)** instead of a number. Pairs where the identity was absent earlier are not zero-rate pairs. Always labelled **removed early (upper bound on sales; includes cancels and reposts)**, never *sold*.
+- **Turnover:** median listed units across those pairs' earlier scans ÷ daily rate, shown as **≈ D days of listed supply**; zero rate says **no early removals in N scan gaps**, never infinity or a number.
+- **Suggested target:** for base items in Ledger's targets view, `min(rate × speed_cover_days, speed_cap_percent% × median listed units)`, rounded down. Shown beside the manual target as *suggested*, never replacing or saving it. Not enough evidence leaves it blank with the reason.
+- **Settings:** `speed_window_days` (default 14), `speed_min_pairs` (5), `speed_min_hours` (24), `speed_cover_days` (3), `speed_cap_percent` (25), positive integers with shared config and source overrides like `flood_*`. Defaults are an owner decision recorded in UI-19.
+- **Shown:** Market item page Overview (UI-09) for every identity, and Ledger beside held stock and targets (Stock, UI-18). Computed lazily per item page; Ledger reads once for its targeted and held items. No Today, Board, ranking or version change; *Sales speed instead of a fixed cap* (Later) stays separate.
+- **Offline tests:** time weighting across unequal gaps; absent-earlier pairs excluded; skipped gaps (>12 h) and pairs outside the window excluded; expiry/unknown not counted; variants never pooled; thresholds inclusive; zero rate and too-few-pairs messages; cap and cover arithmetic in integer units; settings validation.
+- **Real data:** on the copied beta with defaults, report rate, evidence, turnover and suggested target for Linen Cloth, Bolt of Linen Cloth, Copper Bar, Brown Linen Robe and Linen Bag. Expected rates (±1 per day): 3,795 / 786 / 2,903 / 6 / 4 per day, each on 18–20 gaps and 80–91 hours. Screenshots at 1280 and 390 px beside the prototype's Market item and Ledger views.
+- Depends on STORY-027 (done) and STORY-061 (done). Rules: UI-10, UI-09, UI-11 (settings pattern), ADDON-08, Stock. Design: *Market explorer (STORY-055)*, *Stock contracts*, *Web app (UI-18)*.
 
 ### STORY-101 — Frozen beta test corpus
 
