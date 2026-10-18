@@ -1374,6 +1374,31 @@ export interface components {
              */
             view: "route" | "opportunities" | "level-up";
         };
+        /** PlannedMember */
+        PlannedMember: {
+            /** Faction */
+            faction: string;
+            /** Name */
+            name?: string | null;
+            /** Professions */
+            professions: components["schemas"]["PlannedProfession"][];
+            /** Role */
+            role: string;
+        };
+        /** PlannedProfession */
+        PlannedProfession: {
+            /** Profession */
+            profession: string;
+            /** Tiers */
+            tiers: components["schemas"]["PlannedTier"][];
+        };
+        /** PlannedTier */
+        PlannedTier: {
+            best: components["schemas"]["HireBest"] | null;
+            /** Cap */
+            cap: number;
+            estimate: components["schemas"]["Estimate"];
+        };
         /** Profession */
         Profession: {
             alternative: components["schemas"]["Recipe"] | null;
@@ -1778,6 +1803,8 @@ export interface components {
             no_catalog: string[];
             /** Notes */
             notes: string[];
+            /** Planned */
+            planned: components["schemas"]["PlannedMember"][];
             /** Roster */
             roster: components["schemas"]["Member"][];
         };

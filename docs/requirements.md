@@ -115,6 +115,13 @@ Observed listed supply only, never sales/demand/liquidity/realizable profit or c
 
 ### Team character cards
 
+- Team appends the file-ordered `[[planned]]` roster from optional personal `config/team.local.toml`:
+  optional name, required alliance/horde faction, free-text role and at most two `hiring.SKILL_IDS`
+  professions. Invalid entries identify entry/field (including duplicate name/faction). Show *planned,
+  not created*, professions and CRAFT-13 hire cost/best profit at 75/150; absent evidence is unknown.
+  A scoped capture with matching name/faction replaces a named entry; unnamed entries remain.
+  Plans never enter Today, Board, holdings or current-team hiring comparisons; file errors show on Team.
+
 - A card is **stale** when its latest readable bags snapshot is strictly older than **7 days**.
   Without readable bags, level/gold stay unknown, with no stale claim.
 - **Last seen** and its machine use the newest imported snapshot or journal observation for that

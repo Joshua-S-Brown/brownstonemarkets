@@ -4,8 +4,10 @@ import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { get } from "../../api/client";
 import { Evidence } from "../../ui/Evidence";
-import { ErrorState } from "../../ui/parts";
+import { ErrorState, Tip } from "../../ui/parts";
 import { readWindow, writeWindow } from "./state";
+import { Money } from "./Money";
+import { title } from "./Hiring";
 import { MemberCard } from "./Roster";
 import { Coverage } from "./Coverage";
 import { HiringTables } from "./HiringTables";
@@ -70,7 +72,7 @@ export function Team({ source }: { source: string }) {
                 </label>
               }
             >
-              {!data.roster.length && (
+              {!data.roster.length && !data.planned.length && (
                 <p>
                   No characters imported for this source. Use Data → Import.
                 </p>
@@ -78,6 +80,40 @@ export function Team({ source }: { source: string }) {
               <div className={styles.roster}>
                 {data.roster.map((m) => (
                   <MemberCard key={m.character.join("|")} member={m} />
+                ))}
+                {data.planned.map((m, i) => (
+                  <article className={styles.card} key={i}>
+                    <header>
+                      <div>
+                        <strong>{m.name ?? "Unnamed character"}</strong>
+                        <div className={styles.meta}>
+                          Planned, not created · {m.faction}
+                        </div>
+                      </div>
+                    </header>
+                    <p>{m.role}</p>
+                    {m.professions.map((p) => (
+                      <section key={p.profession}>
+                        <h3>{title(p.profession)}</h3>
+                        {p.tiers.map((t) => (
+                          <p key={t.cap}>
+                            Cost to {t.cap}:{" "}
+                            <Money copper={t.estimate.cost_copper ?? null} />
+                            {!t.estimate.complete && (
+                              <>
+                                {" "}
+                                <Tip text={t.estimate.reasons.join("; ")}>
+                                  Incomplete estimate
+                                </Tip>
+                              </>
+                            )}{" "}
+                            · best profit per craft:{" "}
+                            <Money copper={t.best?.profit_copper ?? null} />
+                          </p>
+                        ))}
+                      </section>
+                    ))}
+                  </article>
                 ))}
               </div>
             </Panel>

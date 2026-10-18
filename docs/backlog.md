@@ -33,21 +33,20 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-107 planned roster
-2. STORY-108 biggest lever across characters
-3. STORY-111 profession record
-4. STORY-112 level from what we hold, or farm it
-5. STORY-104 vendor value as a floor
-6. STORY-105 sell raw or craft?
-7. STORY-106 gold reserve and capital
-8. STORY-109 Route and Ledger tidy-up
-9. STORY-110 records polish
+1. STORY-108 biggest lever across characters
+2. STORY-111 profession record
+3. STORY-112 level from what we hold, or farm it
+4. STORY-104 vendor value as a floor
+5. STORY-105 sell raw or craft?
+6. STORY-106 gold reserve and capital
+7. STORY-109 Route and Ledger tidy-up
+8. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 107 and SPIKE-009/009b.
 
 ### STORY-104 — Vendor value as a floor
 
@@ -104,23 +103,6 @@ Acceptance:
 - **Capital:** Team shows gold, holdings value and their total, with what is not valued.
 - **Offline tests:** reserve below, equal to and above captured gold; the override; partial captures giving *at least*; unknown prices excluded and counted.
 - Depends on nothing. Rules: *Today (today_version 11)* funds, *Team character cards*, UI-15. Design: *Today contracts*, *Team contracts*, *Stock contracts*.
-
-### STORY-107 — Planned roster
-
-Added 2026-10-18 (grooming, product owner). On launch day Team is empty until characters are created and captured, but the roster is already planned (priest tailor-enchanter, then warrior smith, then hunter, druid and mage).
-
-As the owner, I want Team to show the characters I plan to create, with their professions and first goals, so that launch day starts from the plan rather than a blank page.
-
-Decisions:
-- Planned characters live in the untracked local config (character names are personal): order, optional name, faction, a free-text role and up to two professions by skill ID from the existing profession table. Validated on load with clear errors.
-- Team's roster lists them after captured characters as *planned, not created*, each profession with CRAFT-13's existing hire summary (cost to 75 and 150, best profit at each cap). A captured character with the same name and faction in the source's scope replaces its planned entry.
-- Planned characters never feed Today, the Board, holdings or hiring comparisons of the current team.
-
-Acceptance:
-- **Shown:** planned entries in order with professions and hire summaries; a matching capture replaces its entry.
-- **Separate:** Today and Board output are identical with and without planned characters.
-- **Offline tests:** validation errors, ordering, replacement on capture, unknown profession ID, plan independence.
-- Depends on nothing. Rules: CRAFT-13, CRAFT-11, *Team character cards*. Design: *Team contracts*.
 
 ### STORY-108 — Biggest lever across characters
 

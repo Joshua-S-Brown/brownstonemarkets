@@ -7,7 +7,16 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field
 
-from brownstone import character_snapshots, characters, hiring, recipe_catalogs, team_holdings, team_view, today_loading
+from brownstone import (
+    character_snapshots,
+    characters,
+    hiring,
+    recipe_catalogs,
+    team_holdings,
+    team_plan,
+    team_view,
+    today_loading,
+)
 from brownstone.crafting import basis_prices
 from brownstone.ledger_view import day_bounds
 from brownstone.today_settings import TodaySettings
@@ -140,8 +149,27 @@ class Comparison(BaseModel):
     professions: list[ComparisonProfession]
 
 
+class PlannedTier(BaseModel):
+    cap: int
+    estimate: Estimate
+    best: HireBest | None
+
+
+class PlannedProfession(BaseModel):
+    profession: str
+    tiers: list[PlannedTier]
+
+
+class PlannedMember(BaseModel):
+    name: str | None = None
+    faction: str
+    role: str
+    professions: list[PlannedProfession]
+
+
 class Team(BaseModel):
     roster: list[Member]
+    planned: list[PlannedMember]
     hires: list[HireRow]
     no_catalog: list[str]
     comparisons: list[Comparison]
@@ -211,7 +239,13 @@ def build(chosen, window, now):
         result = results.get(key, {'professions': []})
         roster.append(dict(character=key, card=card, progression=team_view.path_result(result),
                            **team_view.profession_suggestions(card, summaries['rows'])))
-    payload = dict(roster=roster, hires=summaries['rows'], no_catalog=summaries['no_catalog'],
+    try:
+        plan = team_plan.load(context.ROOT / 'config/team.local.toml')
+    except (OSError, ValueError) as error:
+        notes.append(f'Unable to read planned roster: {error}')
+        plan = []
+    planned = team_plan.roster(plan, cards, hire_context, summaries['rows'])
+    payload = dict(roster=roster, planned=planned, hires=summaries['rows'], no_catalog=summaries['no_catalog'],
                    comparisons=summaries['comparisons'], all_incomplete=team_view.all_incomplete(summaries['rows']),
                    notes=notes, labels=team_view.HONESTY, hiring_labels=team_view.HIRING_LABELS,
                    evidence=context.evidence(chosen, arguments['snapshot'] if arguments else manifest or {}))

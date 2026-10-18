@@ -130,6 +130,7 @@ function fixture(): TeamData {
       },
       progression: { professions: [group], best_step: group },
     })),
+    planned: [],
     hires: [row],
     no_catalog: ["fishing"],
     comparisons: [],
@@ -462,4 +463,52 @@ it("renders hire and holder table rows with complete/incomplete pills and reason
   await screen.findByRole("tooltip", { name: "training cost unknown" });
   expect(screen.getByText("Best per craft at 300")).toBeTruthy();
   expect(screen.getByText("Best per craft in reach")).toBeTruthy();
+});
+
+it("appends planned characters with roles, professions and cap summaries without opening a record", async () => {
+  const data = fixture();
+  data.planned = [
+    {
+      name: "Future",
+      faction: "alliance",
+      role: "priest",
+      professions: [
+        {
+          profession: "tailoring",
+          tiers: [
+            {
+              cap: 75,
+              estimate: { ...estimate, complete: true, cost_copper: 123 },
+              best: {
+                output_name: "Robe",
+                output_item_id: 1,
+                profit_copper: 456,
+              },
+            },
+            { cap: 150, estimate, best: null },
+          ],
+        },
+      ],
+    },
+    { faction: "alliance", role: "warrior", professions: [] },
+  ];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => data })),
+  );
+  wrap(<Team source="one" />);
+  await screen.findByText("Future");
+  const cards = screen.getAllByRole("article");
+  expect(cards).toHaveLength(4);
+  expect(cards[2].textContent).toContain("Future");
+  expect(cards[2].textContent).toContain("priest");
+  expect(cards[2].textContent).toContain("Tailoring");
+  expect(cards[2].textContent).toContain("Cost to 75: 1s 23c");
+  expect(cards[2].textContent).toContain("best profit per craft: 4s 56c");
+  expect(cards[2].textContent).toContain("Cost to 150: unknown");
+  expect(cards[2].textContent).toContain("best profit per craft: unknown");
+  expect(cards[3].textContent).toContain("Unnamed character");
+  expect(screen.getAllByText(/Planned, not created/)).toHaveLength(2);
+  await userEvent.click(screen.getByText("Future"));
+  expect(open).not.toHaveBeenCalled();
 });

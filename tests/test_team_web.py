@@ -10,7 +10,7 @@ from test_today_characters import CHARACTER
 
 import api
 from api import context, team
-from brownstone import character_snapshots, hiring, team_view, today_loading, today_session
+from brownstone import character_snapshots, hiring, team_plan, team_view, today_loading, today_session
 from brownstone.today_settings import TodaySettings
 
 
@@ -18,6 +18,8 @@ from brownstone.today_settings import TodaySettings
 def browser(tmp_path, monkeypatch):
     source, catalog, data = team_app(tmp_path, monkeypatch)
     monkeypatch.setattr(team, '_cache', {})
+    monkeypatch.setattr(context, 'ROOT', tmp_path)
+    (tmp_path / 'config').mkdir(exist_ok=True)
     server = FastAPI()
     api.install(server, tmp_path / 'dist', 'offline-token')
     with TestClient(server) as client:
@@ -407,3 +409,83 @@ def test_profession_suggestions_observed_slots_hire_order_gaps_and_no_profit(sta
     else:
         assert not result['suggestions']
         assert result['suggestion_note'] == ('professions unknown' if slots is None else '')
+
+
+@pytest.mark.parametrize('content,field', [
+    ('planned = 3', 'planned'), ('planned = [1]', 'entry 1'),
+    ('[[planned]]\nname = 2', 'name'),
+    ('[[planned]]\nfaction = "neutral"', 'faction'),
+    ('[[planned]]\nfaction = "alliance"', 'role'),
+    ('[[planned]]\nfaction = "alliance"\nrole = "priest"', 'professions'),
+    ('[[planned]]\nfaction = "alliance"\nrole = "priest"\nprofessions = [197,333,164]', 'at most two'),
+    ('[[planned]]\nfaction = "alliance"\nrole = "priest"\nprofessions = [999]', 'unknown skill ID'),
+    ('[[planned]]\nfaction = "alliance"\nrole = "priest"\nprofessions = [true]', 'unknown skill ID'),
+    (('[[planned]]\nname = "Maker"\nfaction = "alliance"\nrole = "priest"\nprofessions = []\n') * 2,
+     'duplicate name and faction'), ('[[planned', 'Expected'),
+])
+def test_planned_validation_shows_error_on_team(browser, content, field):
+    (context.ROOT / 'config/team.local.toml').write_text(content)
+    response = get(browser)
+    assert response.status_code == 200
+    result = response.json()
+    assert not result['planned']
+    assert any('Unable to read planned roster:' in note and field in note for note in result['notes'])
+    if field not in ('planned', 'Expected'):
+        assert any('entry' in note for note in result['notes'])
+
+
+def test_planned_order_capture_replacement_hire_reuse_and_independence(browser, monkeypatch):
+    from api import today
+
+    fixed = datetime.now(UTC)
+
+    class Clock:
+        @staticmethod
+        def now(tz):
+            return fixed
+
+    monkeypatch.setattr(team, 'datetime', Clock)
+    monkeypatch.setattr(today, 'datetime', Clock)
+    monkeypatch.setattr(context, 'datetime', Clock)
+    client, source, *_ = browser
+    baseline = get(browser).json()
+    assert baseline['planned'] == []
+    _, arguments = today_loading.load_today(source, [browser[2]], TodaySettings(), browser[3], fixed)
+    board = team_view.team_board([browser[2]], browser[3], arguments)[1]
+    headers = {'X-Brownstone-Token': 'offline-token'}
+    url = '/api/today/plan?source=' + source['source_id']
+    before = client.post(url, headers=headers, json={}).json()
+    entries = [
+        dict(name='Future', faction='alliance', role='priest', professions=[197, 333]),
+        dict(name=CHARACTER[0], faction=CHARACTER[2].lower(), role='captured', professions=[197]),
+        dict(faction='alliance', role='warrior', professions=[164]),
+        dict(name=CHARACTER[0], faction='horde', role='other faction', professions=[182]),
+    ]
+    path = context.ROOT / 'config/team.local.toml'
+    path.write_text('\n'.join('[[planned]]\n' + '\n'.join(
+        f'{key} = {value!r}' for key, value in entry.items()) for entry in entries))
+    assert team_plan.load(path) == entries
+    result = get(browser).json()
+    planned = result.pop('planned')
+    assert result == {key: value for key, value in baseline.items() if key != 'planned'}
+    assert [p['role'] for p in planned] == ['priest', 'warrior', 'other faction']
+    assert [p['profession'] for p in planned[0]['professions']] == ['tailoring', 'enchanting']
+    hire = get(browser, 'team/hire/tailoring').json()['tiers'][:2]
+    assert planned[0]['professions'][0]['tiers'] == [
+        {key: tier[key] for key in ('cap', 'estimate', 'best')} for tier in hire]
+    assert all(t['estimate']['cost_copper'] is None and t['best'] is None
+               for t in planned[1]['professions'][0]['tiers'])
+    assert team_view.team_board([browser[2]], browser[3], arguments)[1] == board
+    today._cache.clear()
+    assert client.post(url, headers=headers, json={}).json() == before
+    # Removing captures restores the named plan; unnamed plans remain in order.
+    monkeypatch.setattr('brownstone.professions.latest_data', lambda _: {})
+    team._cache.clear()
+    assert [p['role'] for p in get(browser).json()['planned']] == [e['role'] for e in entries]
+    # No scan keeps the plan readable, with unknown costs/profits even for catalog professions.
+    monkeypatch.setattr(context, 'resolve', lambda _: source | {'source_id': 'empty'})
+    team._cache.clear()
+    empty = get(browser).json()
+    assert not empty['roster']
+    assert all(t['estimate']['cost_copper'] is None and t['best'] is None
+               for p in empty['planned'] for profession in p['professions'] for t in profession['tiers'])

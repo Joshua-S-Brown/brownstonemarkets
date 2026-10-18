@@ -212,5 +212,10 @@ def detail(context, row):
             'needs_pattern': sum(not _trainer(r) and not _unknown_source(r) for r in recipes),
             'unknown_source': sum(_unknown_source(r) for r in recipes),
             'tiers': [{'cap': cap, **levels.get(cap, {'required_level': None}), 'tier_fees': TIER_FEES,
-                       'estimate': progression.estimate_cost([], {}, 1, 300, cap, context['prices'], row['walk']),
-                       'best': _best(context, name, cap), 'feeds': feeds(context, name, cap)} for cap in CAPS]}
+                       **tier(context, row, cap), 'feeds': feeds(context, name, cap)} for cap in CAPS]}
+
+
+def tier(context, row, cap):
+    """CRAFT-13 hire cost and best trainer craft at one cap; Team's planned roster reuses it."""
+    return {'estimate': progression.estimate_cost([], {}, 1, 300, cap, context['prices'], row['walk']),
+            'best': _best(context, row['profession'], cap)}

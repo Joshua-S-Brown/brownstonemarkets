@@ -149,6 +149,10 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   costs, estimate reasons and lazy feeds. Six beta cards lead with Blacksmithing (172c now,
   26,131c at 300); Basilly keeps her recipe action, Arille has no free slot.
   1280/390 px Team/Next comparisons and copied-data evidence: ignored `work/story-099/`.
+  Planned roster (STORY-107): optional `config/team.local.toml` appends *planned, not created*
+  cards with 75/150 hire tiers from `hiring.tier`; bad files show a Team note. Beta check with
+  priest 197+333 and warrior 164: Enchanting costs unknown (no rank-one skill-up evidence).
+  Evidence: ignored `work/story-107/`.
   Earlier Team/Ledger comparisons: ignored `work/story-091/`.
   No collection/import ran. Training, gathering income, demand and tier-fee limits remain labelled.
 

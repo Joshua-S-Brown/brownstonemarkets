@@ -491,6 +491,8 @@ and lists observed NPC IDs without any captured name. No storage migration, new 
 
 ## Team contracts
 
+`team_plan` validates the optional personal roster; `api/team` appends unreplaced plans with existing hiring walks/best-cap output, separately from captured evidence and current-team comparisons.
+
 Rules: [CRAFT-11/13](requirements.md#crafting), [Team character cards](requirements.md#team-character-cards).
 `api/team.py` uses load_today_characters/load_today with TodaySettings defaults. Full-key records
 open on Next, then professions/path/holdings/history/evidence; sessionStorage keeps the release-only
