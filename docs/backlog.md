@@ -33,29 +33,15 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-17, product owner):
-1. STORY-101 frozen beta test corpus
-2. STORY-102 beta prices as a launch-week reference
-3. STORY-011a survey third-party scan sources
-4. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+1. STORY-102 beta prices as a launch-week reference
+2. STORY-011a survey third-party scan sources
+3. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100 and SPIKE-009/009b.
-
-### STORY-101 — Frozen beta test corpus
-
-Added 2026-10-17. Beta testing is wrapped; its data is the only real data we have until live scans build up. Not a backup (STORY-016 stays deferred).
-
-As the owner, I want a frozen copy of the beta data and one command that re-checks its known numbers, so that changes made after the beta closes are still tested against real play.
-
-Acceptance:
-- **Corpus:** a dated copy of the current `data/` under ignored `work/`, with a manifest (file count, SHA-256 of every bronze file, scan count, character count, newest scan ID). Never in Git.
-- **One command** (`python -m brownstone beta-check <corpus>`, read-only) prints the headline numbers each place shows today: scans and newest scan, Market items and chain count, Today route steps and planned profit, Team characters, Ledger net and reconciled pairs, and compares them with an expected file saved beside the corpus. Differences are listed, not failed silently.
-- **Story reviews use it:** `docs/prompts/story-review.md` step 6 names it as the default real-data check once the beta is closed.
-- **Offline tests:** the command on a small synthetic corpus; a changed expected value is reported; the corpus is opened read-only.
-- Depends on nothing. Rules: DATA-01, OPS-01. Design: *Beta evidence report*, *Quality gates*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101 and SPIKE-009/009b.
 
 ### STORY-102 — Beta prices as a launch-week reference
 

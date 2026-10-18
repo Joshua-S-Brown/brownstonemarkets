@@ -293,7 +293,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,998 Python tests pass (one platform skip), plus 105 Vitest tests.
+Expected: 2,003 Python tests pass (one platform skip), plus 105 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in
@@ -313,6 +313,20 @@ On Today → This session, inspect each character's Farming summary and expand F
 for all rates, object IDs and excluded stretches. Inspect stale/unknown labels, holdings and source
 evidence; preview never writes. A browser check
 uses `brownstone_app.py --data-dir /path/to/copied-data --port 8081`.
+
+### Frozen beta corpus (STORY-101)
+
+Default real-data regression check (offline, current code/catalogs, temporary replay):
+
+```bash
+.venv/bin/python -m api.beta_check check work/beta-corpus/2026-10-18/
+```
+
+Exit 0 matches, 1 lists headline differences, 2 means invalid inputs/hash failure. Explain and review
+legitimate differences before `check <corpus-dir> --accept`, which replaces only expected.json.
+The ignored corpus was created with `python -m api.beta_check freeze work/beta-corpus/2026-10-18/`;
+freeze refuses existing destinations and reads the configured data directory without writing it.
+See [Beta corpus check](design.md#beta-corpus-check-story-101) for the replay/clock contract.
 
 ### After a play session
 

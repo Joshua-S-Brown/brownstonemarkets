@@ -522,6 +522,17 @@ without nested double count. Team caches per source/window until database/config
 hire detail loads on expansion. Empty characters allow hire comparison; absent scans explain.
 No price SQL/Today changes.
 
+## Beta corpus check (STORY-101)
+
+`python -m api.beta_check freeze work/beta-corpus/<name>/` freezes one configured addon's
+bronze and source-local JSON settings. source.json retains resolved configuration without machine
+paths; manifest.json records input hashes, counts and the newest eligible scan's reference time.
+One temporary `rebuild.rebuild` replay produces expected.json from uncached Market, Today, Team,
+Ledger (all days) and Linen Cloth removal-speed projections using current repo catalogs/code.
+`check <corpus-dir>` verifies hashes before replay and afterwards, prints expected/actual headlines,
+and exits 0 for matches, 1 for differences, 2 for invalid inputs. `--accept` replaces only expected.json
+after verification. No API caches or live-data writes; missing speed evidence stays null.
+
 ## Beta evidence report
 
 `cli.beta_report_main` selects one addon source → `beta_report.create_report`; its configured
