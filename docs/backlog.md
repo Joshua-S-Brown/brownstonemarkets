@@ -33,42 +33,21 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-17, product owner):
-1. STORY-097 character record: what next, and what's in the bags
-2. STORY-098 hiring and levelling evidence from our own captures
-3. STORY-099 a profession for every empty slot
-4. STORY-062 sales speed and suggested stock levels (refine first)
-5. STORY-100 a Market front page worth reading
-6. STORY-006 replay (before launch)
-7. STORY-101 frozen beta test corpus
-8. STORY-102 beta prices as a launch-week reference
-9. STORY-011a survey third-party scan sources
-10. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
+1. STORY-098 hiring and levelling evidence from our own captures
+2. STORY-099 a profession for every empty slot
+3. STORY-062 sales speed and suggested stock levels (refine first)
+4. STORY-100 a Market front page worth reading
+5. STORY-006 replay (before launch)
+6. STORY-101 frozen beta test corpus
+7. STORY-102 beta prices as a launch-week reference
+8. STORY-011a survey third-party scan sources
+9. STORY-028 sellers and supply chains (blocked: see *Seller capture* under Later)
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095 and SPIKE-009/009b.
-
-### STORY-097 — Character record: what next, and what's in the bags
-
-Added 2026-10-17 (grooming: Team's job is *what should each character do next, and is it paying off?*). Today the record lists facts and answers no question: on the beta, Arille's Professions tab shows bars and "44 points before this tier caps", Holdings is an unpriced list of 17 bag stacks with *Contents unknown* for the bank, and History is a skill chart.
-
-As the owner, I want a character's record to open on what that character should do next and what to do with what it holds, so that I can play it without cross-checking Today, Market and Ledger.
-
-Acceptance:
-- **Next tab, first and default:** (1) this character's steps in today's Route (UI-18 Today, same plan and numbering, links to the Route); (2) its best next skill step per profession from CRAFT-11 (recipe, skill needed, cost to reach, earns per craft, *pays back training in N crafts*), the same choice the roster card shows; (3) its last 7 UTC days from the gold ledger: came in, went out, net, and its top three categories (UI-15), with *unknown* where ledger evidence is missing.
-- **Holdings with values and actions:** each bags/bank stack shows units, unit value and total at the same cautious price Ledger's held stock uses (so the two never disagree), and one suggested action, in this order: *used in tonight's plan* (Route step), *mail to X for …* when another character's plan needs it, *sell* when listed above its vendor price, *vendor* when it has a vendor sell price and no listing, otherwise *keep* with no claim. Unpriced items say *no price* and are never valued at 0. Totals are labelled *at least* while the bank is uncaptured or partial. This replaces *Vendor the junk* under Later.
-- **Path tidy:** rows whose profit is unknown collapse behind *N more without a price*; CRAFT-11's incomplete reasons read as sentences (*Smelt Copper's skill-up colour is unknown*), not raw text; per-catalog unlisted counts move into the evidence footer.
-- **Unchanged:** calculations, `today_version`, CRAFT-11 ranking and storage. The record reuses Today's plan for the same source and settings rather than building a second one.
-- **Implementation notes:**
-  - *One plan, Today's:* Today's plan is built from the tab's sessionStorage state (`web/src/places/today/state.ts`: `readState`, `readWindow`, `todayKey`) by `POST /api/today/plan`, cached server-side in `api/today.py` (`cached_plan`, keyed by plan identity). The record must not build its own. Suggested shape: a `POST /api/team/character/next` that takes the same body as `/today/plan` plus the character key, calls `cached_plan` (a cache hit when Today is already open), and returns this character's `stops` (match `RouteStop.characters`) and the holdings actions. Use the same react-query key so an open Today page and the record share one fetch.
-  - *Holdings actions are calculation:* put them in a `brownstone/` function (inputs: the plan result, the character's holdings units from `team_holdings.holdings`, cautious prices from `basis_prices(observations, 'cautious')` as `stock.build_stock` does, and captured vendor sell prices), not in `api/` or `web/` (AGENTS.md). *Used in tonight's plan* and *mail to X* come from the plan's held-item use and its mail lines (`today_session.route_stops`), never from item names.
-  - *Last 7 days:* the gold ledger already has per-character, per-day, per-category totals (`api/ledger.py` `GoldTotal`, `ledger_view.day_bounds`); filter, don't recompute.
-  - *Where it shows:* `web/src/records/CharacterRecord.tsx` (tabs start at *Professions*; add *Next* first, keep the rest) and `web/src/places/team/Path.tsx` for the Path tidy. `api/team.py` `character` already returns holdings; extend its model rather than adding a second holdings read.
-- **Offline tests:** Next shows only this character's Route steps; holdings actions follow the stated order and never value a missing price; partial bank says *at least*; the record and Today agree on the same plan.
-- **Real data** (copied beta, scan `20261017T104157Z-ff991e`): Arille's Next lists Route steps 6, 7, 9 and 11 (buy 12 Copper Bar and 7 Light Leather, 3 Weak Flux, craft 3 Rough Grinding Stone and 3 Copper Dagger, post 3 Copper Dagger for 21s 69c profit); its Blacksmithing step is Cloudy Skyforged Chain at skill 50, 2s 17c to reach, 90s 50c per craft. Screenshots at 1280 and 390 px.
-- Depends on nothing. Rules: CRAFT-11, *Team character cards*, UI-15, UI-18, ADDON-11, MONEY-02. Design: *Team contracts*, *Today contracts*, *Gold ledger contracts*, *Web app (UI-18)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097 and SPIKE-009/009b.
 
 ### STORY-098 — Hiring and levelling evidence from our own captures
 
@@ -193,6 +172,8 @@ Acceptance:
 **One mailbox stop per holder** (found in the STORY-095 review, 2026-10-17): on the beta Route, Cicelyna and Baspion each get two mailbox stops, one for material mail and a later one for gold mail, and gold mail still reads *Cicelyna mails 8s 87c to Arille* rather than STORY-095's *Cicelyna: mail …*. Fold gold mail into the holder's material mailbox stop and share the wording.
 
 **Route and Ledger tidy-up** (groomed 2026-10-17; with *Biggest lever across characters* and *One mailbox stop per holder* above): the beta Route opens with five mailbox steps that each repeat *postage is unconfirmed*; show that note once. Ledger's gold reconciliation lists 61 pairs, nearly all 0c actual, 0c recorded, 0c unexplained; show pairs with an unexplained amount by default and the rest on demand. Also check why the beta Route plans *Craft 5 × Linen Bag · needs 45 · you're 32* for Basilly: whether earlier crafts in that step reach 45 or the plan schedules a recipe the character can't make yet.
+
+**Holdings as item rows** (found in the STORY-097 review, 2026-10-17): the character record's Holdings tab shows each stack as a run-on text line (*Shiny Red Apple · 16 units · 49c / unit · 7s 84c total · sell*), where the prototype's *Bags and bank* uses item rows with the count on the right. Lay stacks out as rows (item, units, unit value, total, action) so 17 stacks scan at 390 px.
 
 **Is it paying off?** (groomed 2026-10-17; the second half of Team's job): profit by activity (crafting, farming, vendoring, auction) per character, in total and per hour played, from the gold ledger (UI-15), item movements (UI-16), farming rates (UI-13) and journal session times. Shown in the character record and as a Team summary. Needs a rule for attributing a crafted sale's profit to the crafting activity and for what counts as time played.
 

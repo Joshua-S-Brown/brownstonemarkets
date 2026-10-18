@@ -140,6 +140,17 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   1280/390 px Team/Ledger comparisons with the prototype are in ignored `work/story-091/`.
   No collection/import ran. Training, gathering income, demand and tier-fee limits remain labelled.
 
+- **Character Next (STORY-097):** records open on the character's numbered Today Route stops,
+  CRAFT-11 profession choices and seven UTC days of ledger totals/top categories. Holdings show
+  Stock's cautious unit/total values and exact-identity Route/mail/sell/vendor/keep actions (vendor
+  when a listing is at or below the vendor price); missing prices remain unknown and incomplete
+  captures label totals at least. Gold is unknown only for a character the ledger never saw.
+  CRAFT-11 incomplete reasons are sentences (*Smelt Copper’s skill-up colour is unknown*); Path
+  collapses unpriced recipes and keeps catalog counts in the evidence footer.
+  Offline: `test_team_web.py`, CharacterRecord and Team Vitest. Copied beta scan
+  `20261017T104157Z-ff991e`: Arille Route 6/7/9/11; Cloudy Skyforged Chain at 50,
+  217c to reach, 9,050c per craft. Comparisons at 1280/390 px: ignored `work/story-097/`.
+
 - **Inspector records (STORY-093):** prototype-width item/character panels use three persistent facts,
   scrolling tabs, UTC times and evidence footers. Item Overview pairs stored prices/typical with supply
   bars, vendor/deposit/holdings facts and best-use/farming panels. Character records show profession
@@ -245,7 +256,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,963 Python tests pass (one platform skip), plus 103 Vitest tests.
+Expected: 1,966 Python tests pass (one platform skip), plus 104 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

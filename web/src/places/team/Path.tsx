@@ -148,11 +148,13 @@ export function Path({ groups, window }: { groups: Group[]; window: number }) {
             <>
               <h3>Reachable recipes</h3>
               <DataGrid
-                rows={g.recipes.filter(
-                  (r) =>
-                    r.recipe_id !== g.best?.recipe_id ||
-                    r.catalog_id !== g.best?.catalog_id,
-                )}
+                rows={g.recipes
+                  .filter((r) => r.profit_copper != null)
+                  .filter(
+                    (r) =>
+                      r.recipe_id !== g.best?.recipe_id ||
+                      r.catalog_id !== g.best?.catalog_id,
+                  )}
                 density="compact"
                 columns={[
                   {
@@ -188,12 +190,27 @@ export function Path({ groups, window }: { groups: Group[]; window: number }) {
                   },
                 ]}
               />
-              {g.recipes.map((r) => (
-                <RecipeDetails
-                  key={`${String(r.catalog_id)}|${String(r.recipe_id)}`}
-                  recipe={r}
-                />
-              ))}
+              {g.recipes
+                .filter((r) => r.profit_copper != null)
+                .map((r) => (
+                  <RecipeDetails
+                    key={`${String(r.catalog_id)}|${String(r.recipe_id)}`}
+                    recipe={r}
+                  />
+                ))}
+              {g.recipes.some((r) => r.profit_copper == null) && (
+                <details>
+                  <summary>
+                    {g.recipes.filter((r) => r.profit_copper == null).length}{" "}
+                    more without a price
+                  </summary>
+                  {g.recipes
+                    .filter((r) => r.profit_copper == null)
+                    .map((r, i) => (
+                      <RecipeDetails key={i} recipe={r} />
+                    ))}
+                </details>
+              )}
             </>
           ) : (
             <p>

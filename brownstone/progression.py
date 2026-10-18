@@ -36,14 +36,14 @@ def _step_options(entries, state, rank, prices, trained):
         label = recipe['name']
         crafts = expected_crafts(recipe, rank)
         if crafts is None:
-            reasons.append(f'{label}: missing colour')
+            reasons.append(f'{label}’s skill-up colour is unknown')
             continue
         if not crafts:
             continue
         key = (action_board.catalog_identity(catalog), recipe['recipe_id'])
         training = recipe.get('training_cost_copper') if trainer and key not in trained else 0
         if training is None:
-            reasons.append(f'{label}: training cost unknown')
+            reasons.append(f'{label}’s training cost is unknown')
             continue
         try:
             if "route_error" in catalog:
@@ -54,8 +54,8 @@ def _step_options(entries, state, rank, prices, trained):
             continue
         cost = result['craft_cost_copper']
         if cost is None:
-            missing = [r['item_id'] for r in result['choices'] if r['unit_cost_copper'] is None]
-            reasons.append(f'{label}: missing material price {missing}')
+            missing = [r['item_name'] for r in result['choices'] if r['unit_cost_copper'] is None]
+            reasons.append(f"{label} has no price for {' and '.join(missing)}")
             continue
         options.append({'rank': rank, 'catalog_id': key[0], 'recipe_id': key[1], 'recipe': label,
                         'expected_crafts': str(crafts), 'cost_copper': ceil(cost * crafts) + training,

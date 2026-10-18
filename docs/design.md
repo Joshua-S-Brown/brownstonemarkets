@@ -528,37 +528,36 @@ and lists observed NPC IDs without any captured name. No storage migration, new 
 
 ## Team contracts
 
-Rules: [CRAFT-11/13](requirements.md#crafting) and [Team character cards](requirements.md#team-character-cards).
-`api/team.py` reads load_today_characters/load_today with TodaySettings defaults.
-Roster cards open (name, realm, faction) inspector records; sessionStorage keeps the release-only
-window per tab/source. Records expose professions/path/holdings/history and evidence.
-Without scan, roster remains readable.
+Rules: [CRAFT-11/13](requirements.md#crafting), [Team character cards](requirements.md#team-character-cards).
+`api/team.py` uses load_today_characters/load_today with TodaySettings defaults. Full-key records
+open on Next, then professions/path/holdings/history/evidence; sessionStorage keeps the release-only
+window per tab/source. Next shares Today's query/state; `/team/character/next` uses `today.cached_plan`
+and filters stops without renumbering. One record holdings read loads held IDs via load_today,
+like Stock. `team_view.character_holdings` values/actions use cautious prices and exact-key Route stacks;
+`character_gold` filters cached Ledger day/category totals (unknown if unseen).
+Path collapses unpriced recipes; catalog counts sit in the evidence footer. Without scans, roster remains readable.
 
-`progression.team_board` builds team RecipeGraph/Board once, shared across character progression
-and `hiring.prepare(shared=...)`. build_progression returns profession rank/max/note/evidenced skill ID, recipes/best,
-unlisted counts/freshness; recipe rows retain Today status/learning/profit/reason/confidence and
-estimate complete/copper/reasons/per-point steps. Unknown stays unknown.
-`progression.choose_best` picks best and the other-band alternative (CRAFT-11) without reordering recipes;
-`session_options` retains that recipe identity while projecting its labelled estimate.
-Team's empty states use the group skill ID and `hiring.SKILL_IDS`; learning labels use
-`recipe_catalogs.learning_label`. Payback and hiring cost disclosures follow Team character-card rules;
-`team_view` owns payback, next-step/alternative/gathering and all-incomplete decisions;
-web money tables sort copper.
-Attribution uses Today's exact ID/rank matcher; planned_rank changes rank check only.
-evaluate_recipe supplies team-aware cautious material costs, including unranked intermediates;
-expected_crafts/estimate_cost use exact rational yellow expectations. One skillup_walk/window/cap
-and listing ladders are shared across targets, which stop at prefix. Single-craft confidence reuses
-Today quotes; no funding/reservation/sales credit or changed Board profit.
+`progression.team_board` builds RecipeGraph/Board once for progression and `hiring.prepare(shared=...)`.
+build_progression returns rank/max/note/skill ID, recipes/best, unlisted counts/freshness;
+rows retain Today status/learning/profit/reason/confidence and estimate complete/copper/reasons/steps.
+`choose_best` selects best/alternative without reordering; `session_options` retains that identity.
+Empty states use group skill ID and `hiring.SKILL_IDS`; learning uses `recipe_catalogs.learning_label`.
+`team_view` owns payback, next-step/alternative/gathering and all-incomplete decisions; web money sorts copper.
+Attribution uses Today's ID/rank matcher; planned_rank changes only the rank check.
+evaluate_recipe supplies team-aware cautious costs, including unranked intermediates;
+expected_crafts/estimate_cost use rational yellow expectations. One skillup_walk/window/cap and
+listing ladders serve all targets at their prefix. Confidence reuses Today quotes;
+no funding/reservation/sales credit or changed Board profit.
 
 Hiring prepare reuses scoped evidence/current board. summaries returns compatible professions,
-holders, rank-300 estimate/best/shared rank-one walk; no-catalog/two-primary comparisons separate.
-Synthetic hire evidence is unlearned trainer recipes. Own routes use trainer/current-team recipes;
-other-profession routes use current team. Summary cost eagerly resolves sort ties; lazy detail reuses
-prefixes/tier maker maps. feeds evaluates current eligible Board roots with existing cost walker;
-unknown/unsupported baseline never claims savings. Top consuming rows retain total savings and
-hire-made material, avoiding nested double count. Team caches one build per source/window until
-database/config/hour changes; hire detail loads on first expansion. Empty characters still allow
-hire comparison; absent scans explain. No new price SQL or Today state changes.
+holders, rank-300 estimate/best/shared rank-one walk; no-catalog/two-primary comparisons stay separate.
+Synthetic hires have unlearned trainer recipes. Own routes use trainer/current-team recipes;
+other-profession routes use current team. Summary cost resolves sort ties; lazy detail reuses
+prefixes/tier maker maps. feeds evaluates eligible Board roots with the cost walker;
+unknown/unsupported baselines claim no savings. Top consumers retain savings/hire-made material
+without nested double count. Team caches per source/window until database/config/hour changes;
+hire detail loads on expansion. Empty characters allow hire comparison; absent scans explain.
+No new price SQL or Today state changes.
 
 ## Beta evidence report
 

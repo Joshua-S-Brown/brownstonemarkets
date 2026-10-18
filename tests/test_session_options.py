@@ -80,7 +80,7 @@ def test_missing_prices_incomplete_reasons_never_free(monkeypatch, prices):
     for r in group['recipes']:
         assert r['profit_copper'] is None and r['board_reason'] == 'missing prices'
         assert r['estimate']['cost_copper'] is r['estimate']['cheap_cost_copper'] is None
-        assert 'missing material price' in r['estimate']['reasons'][0]
+        assert 'has no price for' in r['estimate']['reasons'][0]
 
 
 def test_cap_no_estimates_and_skill_without_recipe_list(monkeypatch):
@@ -101,7 +101,7 @@ def test_incomplete_colour_and_unvalued_reason(monkeypatch):
     result, _, _ = compose(monkeypatch, args)
     r = result['characters'][0]['professions'][0]['recipes'][0]
     assert r['estimate']['cost_copper'] is None
-    assert 'missing colour' in r['estimate']['reasons'][0]
+    assert 'skill-up colour is unknown' in r['estimate']['reasons'][0]
     assert r['estimate']['cheap_cost_copper'] is None
 
 

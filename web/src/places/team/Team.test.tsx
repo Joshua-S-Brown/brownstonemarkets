@@ -222,7 +222,35 @@ it("loads hire detail only on first opening and retains it when reopened", async
   ).toBeGreaterThan(0);
 });
 it("retains alternatives, learning columns, gathering IDs and empty catalog sentences", () => {
-  const view = wrap(<Path groups={[group]} window={25} />);
+  const view = wrap(
+    <Path
+      groups={[
+        {
+          ...group,
+          recipes: [
+            ...group.recipes,
+            {
+              ...recipe,
+              name: "Smelt Copper",
+              profit_copper: null,
+              estimate: {
+                ...estimate,
+                reasons: ["Rank 48: Smelt Copper’s skill-up colour is unknown"],
+              },
+            },
+          ],
+        },
+      ]}
+      window={25}
+    />,
+  );
+  const hidden = screen.getByText("1 more without a price").closest("details")!;
+  expect(hidden.open).toBe(false);
+  fireEvent.click(screen.getByText("1 more without a price"));
+  expect(hidden.open).toBe(true);
+  expect(
+    screen.getAllByText(/Smelt Copper’s skill-up colour is unknown/).length,
+  ).toBeGreaterThan(0);
   expect(screen.getByText("Or learn now")).toBeTruthy();
   expect(
     screen.getByText("reliable while you look for the pattern"),

@@ -5,12 +5,14 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from brownstone import character_snapshots, characters, hiring, recipe_catalogs, team_holdings, team_view, today_loading
+from brownstone.crafting import basis_prices
+from brownstone.ledger_view import day_bounds
 from brownstone.today_settings import TodaySettings
 
-from . import context
+from . import context, ledger, today
 from .models import Evidence
 
 router = APIRouter()
@@ -149,11 +151,29 @@ class Team(BaseModel):
 class Holdings(BaseModel):
     items: list[dict[str, Any]]
     captures: list[dict[str, Any]]
+    value_copper: int = 0
+    at_least: bool = True
+    unpriced: int = 0
 
 
 class CharacterRecord(Member):
     holdings: Holdings
     evidence: dict[str, Any]
+
+
+class NextRequest(today.PlanRequest):
+    character: tuple[str, str, str]
+    window: int = Field(25, ge=5, le=100)
+
+
+class CharacterStop(today.RouteStop):
+    number: int
+
+
+class CharacterNext(BaseModel):
+    stops: list[CharacterStop]
+    holdings: Holdings
+    gold: dict[str, Any]
 
 
 class HireDetail(Facts):
@@ -249,7 +269,12 @@ def character(name: str, realm: str, faction: str, source: str = '', window: int
                             snapshot_ids=sorted({r['snapshot_id'] for r, _ in state['observations']
                                                  if r.get('snapshot_id')}),
                             skills_status=member['card']['skills_status'], **dict(entry['payload']['evidence']))
-            entry['records'][key] = member | dict(holdings=dict(items=items, captures=captures), evidence=evidence)
+            _, arguments = today_loading.load_today(chosen, [], TodaySettings(), {}, entry['now'],
+                                                     item_ids={u['item_id'] for u in items})
+            arguments = arguments or {}
+            _, prices = basis_prices(arguments.get('observations', {}), 'cautious')
+            held = team_view.character_holdings(items, captures, {}, [], prices, arguments.get('vendor_prices', {}))
+            entry['records'][key] = member | dict(holdings=held, evidence=evidence)
         return jsonable_encoder(entry['records'][key])
 
 
@@ -264,3 +289,25 @@ def hire(profession: str, source: str = ''):
         if profession not in entry['details']:
             entry['details'][profession] = hiring.detail(entry['hiring'], row)
         return jsonable_encoder(entry['details'][profession])
+
+
+@router.post('/team/character/next', response_model=CharacterNext)
+def character_next(body: NextRequest, source: str = ''):
+    chosen = context.resolve(source)
+    record = character(*body.character, source=source, window=body.window)
+    try:
+        payload = today.plan(body, source)
+    except HTTPException as error:
+        if error.status_code != 409:
+            raise
+        payload = dict(plan={}, stops=[])
+    held = record['holdings']
+    prices = {r['item_id']: r['unit_copper'] for r in held['items'] if r['variant_state'] == 'base'}
+    vendors = {r['item_id']: r['vendor_copper'] for r in held['items'] if r['variant_state'] == 'base'}
+    held = team_view.character_holdings(held['items'], held['captures'], payload['plan'], payload['stops'],
+                                        prices, vendors)
+    with ledger._lock:
+        gold = team_view.character_gold(ledger.cached(chosen).get('gold'), body.character,
+                                        day_bounds('7', datetime.now(UTC)))
+    return jsonable_encoder(dict(stops=[stop | {'number': number} for number, stop in enumerate(payload['stops'], 1)
+                                        if list(body.character) in stop['characters']], holdings=held, gold=gold))

@@ -55,9 +55,9 @@ def test_trainer_only_pattern_count_training_once_and_cumulative_walk():
     assert [t['required_level'] for t in result['tiers']] == [None, 10, 20, 35]
 
 
-@pytest.mark.parametrize('failure,reason', [('training', 'training cost unknown'),
-                                          ('material', 'missing material price'), ('zero', 'missing material price'),
-                                          ('colour', 'missing colour'), ('gap', 'no qualifying')])
+@pytest.mark.parametrize('failure,reason', [('training', 'training cost is unknown'),
+                                          ('material', 'has no price for'), ('zero', 'has no price for'),
+                                          ('colour', 'skill-up colour is unknown'), ('gap', 'no qualifying')])
 def test_incomplete_never_free(failure, reason):
     catalogs = fixture()
     recipe = catalogs[0]['recipes_by_id'][10]

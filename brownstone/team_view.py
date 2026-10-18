@@ -1,4 +1,6 @@
 """Pure Team projections shared by the web adapters and the native migration view."""
+from datetime import UTC, datetime
+
 from . import hiring, progression, recipe_catalogs
 from .today_characters import available_characters
 
@@ -75,3 +77,63 @@ def path_result(result):
                                'alternative_kind': alternative_kind(group.get('alternative')),
                                'gathering': gathering(group), 'next_step': next_step(group)['kind']})
     return result | {'professions': groups, 'best_step': roster_step(groups)}
+
+
+def character_holdings(items, captures, plan, stops, prices, vendor_prices):
+    """Value exact held identities like Stock and suggest only evidenced Route uses."""
+    rows = []
+    for item in items:
+        base = item['variant_state'] == 'base'
+        price = prices.get(item['item_id']) if base else None
+        vendor = vendor_prices.get(item['item_id']) if base else None
+        own, mail = None, None
+        for number, stop in enumerate(stops, 1):
+            for line in stop['lines']:
+                evidence = line['evidence']
+                if any(_same_stack(a, item) for a in evidence.get('held_outputs', [])):
+                    own = f'used in tonight’s plan (Route step {number})'
+                if evidence.get('stage') == 'mail' and _same_stack(evidence, item):
+                    mail = f"mail to {evidence['to']} for " + ' and '.join(p['name'] for p in evidence['purposes'])
+                    mail += f' (Route step {number})'
+            for craft in plan.get('craft', []):
+                if not any(line['evidence'].get('recipe_id') == craft['recipe_id'] and
+                           line['evidence'].get('catalog_id') == craft['catalog_id'] for line in stop['lines']):
+                    continue
+                if any(_same_stack(a, item) and a.get('to') in (None, item['character'])
+                       for a in craft.get('held_allocations', [])):
+                    own = f'used in tonight’s plan (Route step {number})'
+        action = own or mail if base else None
+        if not action:
+            # A listing at or below the vendor price earns less than vendoring it.
+            action = 'sell' if price is not None and vendor is not None and price > vendor else (
+                'vendor' if vendor else 'keep')
+        rows.append(item | dict(vendor_copper=vendor, unit_copper=price,
+                                value_copper=price * item['units'] if price is not None else None,
+                                action=action))
+    return dict(items=rows, captures=captures, value_copper=sum(r['value_copper'] or 0 for r in rows),
+                at_least=not captures or any(c['unknown'] or c['partial'] for c in captures),
+                unpriced=sum(r['unit_copper'] is None for r in rows))
+
+
+def _same_stack(unit, item):
+    """Exact ADDON-08 identity in the same owner's bags or bank; item ID alone never matches."""
+    return (unit.get('key') is not None and tuple(unit['key']) == tuple(item['key']) and
+            all(unit.get(field) == item[field] for field in ('character', 'realm', 'faction', 'kind')))
+
+
+def character_gold(data, character, bounds):
+    """Filter the ledger's existing UTC day/category totals; a character the ledger never saw stays unknown."""
+    seen = [r for r in (data or {}).get('totals', []) if tuple(r['character']) == character]
+    if not seen:
+        return dict(in_copper=None, out_copper=None, net_copper=None, categories=[])
+    rows = [r for r in seen
+            if bounds[0] <= int(datetime.fromisoformat(r['day']).replace(tzinfo=UTC).timestamp()) < bounds[1]]
+    categories = {}
+    for row in rows:
+        target = categories.setdefault(row['category'], dict(category=row['category'], in_copper=0, out_copper=0))
+        for key in ('in_copper', 'out_copper'):
+            target[key] += row[key]
+    incoming, outgoing = (sum(r[k] for r in rows) for k in ('in_copper', 'out_copper'))
+    return dict(in_copper=incoming, out_copper=outgoing, net_copper=incoming - outgoing,
+                categories=sorted(categories.values(), key=lambda r: (-(r['in_copper'] + r['out_copper']),
+                                                                      r['category']))[:3])

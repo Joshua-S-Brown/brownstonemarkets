@@ -5,6 +5,8 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { Inspector } from "../app/Inspector";
 import { useInspector } from "../app/InspectorContext";
+import * as Dialog from "@radix-ui/react-dialog";
+import { todayKey } from "../places/today/state";
 import { CharacterRecord } from "./CharacterRecord";
 import type { RecordData } from "../places/team/types";
 vi.mock("./CharacterHistory", () => ({
@@ -46,6 +48,7 @@ function data(realm = "First"): RecordData {
       history: [],
     },
     progression: {
+      unlisted: { fixture: 7 },
       professions: [
         {
           profession: "Tailoring",
@@ -81,6 +84,9 @@ function data(realm = "First"): RecordData {
       ],
     },
     holdings: {
+      value_copper: 0,
+      at_least: true,
+      unpriced: 1,
       captures: [
         { kind: "bank", unknown: true, age_hours: null, partial: false },
         { kind: "bags", unknown: false, age_hours: 2, partial: true },
@@ -124,15 +130,14 @@ function Links() {
     </>
   );
 }
-function wrap(child: React.ReactNode) {
+function wrap(
+  child: React.ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/app/team?source=source"]}>
-        {child}
+        <Dialog.Root>{child}</Dialog.Root>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -145,7 +150,16 @@ it("requests distinct full identities, keeps characters out of URLs, and support
       calls.push(url);
       return {
         ok: true,
-        json: async () => data(url.searchParams.get("realm")!),
+        json: async () =>
+          url.pathname === "/api/today/plan"
+            ? { state: {}, stops: [] }
+            : url.pathname.endsWith("/next")
+              ? {
+                  stops: [],
+                  holdings: data().holdings,
+                  gold: { categories: [] },
+                }
+              : data(url.searchParams.get("realm")!),
       };
     }),
   );
@@ -161,15 +175,35 @@ it("requests distinct full identities, keeps characters out of URLs, and support
   await userEvent.click(screen.getByText("Close ✕"));
   await userEvent.click(screen.getByText("Second"));
   await screen.findByRole("heading", { name: "Maker" });
-  expect(calls[1].searchParams.get("realm")).toBe("Second");
-  expect(calls[1].searchParams.get("name")).toBe("Maker");
-  expect(calls[1].searchParams.get("faction")).toBe("Alliance");
+  expect(
+    calls
+      .filter((c) => c.pathname === "/api/team/character")[1]
+      .searchParams.get("realm"),
+  ).toBe("Second");
+  expect(
+    calls
+      .filter((c) => c.pathname === "/api/team/character")[1]
+      .searchParams.get("name"),
+  ).toBe("Maker");
+  expect(
+    calls
+      .filter((c) => c.pathname === "/api/team/character")[1]
+      .searchParams.get("faction"),
+  ).toBe("Alliance");
   expect(screen.getByText("?source=source")).toBeTruthy();
 });
 it("renders unknown values, recipe provenance, partial captures, exact variants and history", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({ ok: true, json: async () => data() })),
+    vi.fn(async (url: URL) => ({
+      ok: true,
+      json: async () =>
+        url.pathname === "/api/today/plan"
+          ? { state: {}, stops: [] }
+          : url.pathname.endsWith("/next")
+            ? { stops: [], holdings: data().holdings, gold: { categories: [] } }
+            : data(),
+    })),
   );
   wrap(
     <CharacterRecord
@@ -185,6 +219,7 @@ it("renders unknown values, recipe provenance, partial captures, exact variants 
   expect(facts.textContent).toContain(
     "GoldunknownProfessions1Known recipesat least 3",
   );
+  await userEvent.click(screen.getByRole("tab", { name: "Professions" }));
   await userEvent.hover(
     screen.getByRole("button", { name: "Recipe evidence" }),
   );
@@ -194,6 +229,10 @@ it("renders unknown values, recipe provenance, partial captures, exact variants 
   );
   await userEvent.click(screen.getByRole("tab", { name: "Path" }));
   const path = screen.getByRole("tabpanel");
+  expect(within(path).queryByText("Unlisted")).toBeNull();
+  expect(
+    within(screen.getByRole("contentinfo")).getByText("Unlisted"),
+  ).toBeTruthy();
   expect(
     within(path).getByRole("columnheader", { name: "Skill" }).closest("tr")
       ?.children,
@@ -225,4 +264,73 @@ it("renders unknown values, recipe provenance, partial captures, exact variants 
   fireEvent.click(screen.getByRole("tab", { name: "History" }));
   await screen.findByText("No readable level or rank history yet.");
   expect(screen.getByText("bags-1")).toBeTruthy();
+});
+
+it("opens Next with the shared Today query, original Route numbers and per-profession best", async () => {
+  const record = data();
+  const g = record.progression.professions[0];
+  g.best = {
+    ...g.recipes[0],
+    training_cost_copper: 100,
+    payback: { status: "crafts", crafts: 3 },
+  };
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(todayKey("source"), {
+    state: { context: "shared", choices: [], refill: false },
+    stops: [],
+  });
+  const fetcher = vi.fn(async (url: URL) => ({
+    ok: true,
+    json: async () =>
+      url.pathname.endsWith("/next")
+        ? {
+            holdings: record.holdings,
+            stops: [
+              {
+                number: 6,
+                place: "auction house",
+                lines: [{ index: 4, text: "Buy 12 Copper Bar", evidence: {} }],
+              },
+            ],
+            gold: {
+              in_copper: 100,
+              out_copper: 30,
+              net_copper: 70,
+              categories: [],
+            },
+          }
+        : record,
+  }));
+  vi.stubGlobal("fetch", fetcher);
+  wrap(
+    <CharacterRecord
+      source="source"
+      character={["Maker", "First", "Alliance"]}
+    />,
+    client,
+  );
+  expect(
+    await screen.findByRole("link", { name: "Route step 6" }),
+  ).toHaveProperty(
+    "href",
+    expect.stringContaining("/today?source=source&view=route"),
+  );
+  expect(
+    screen.getByRole("tab", { name: "Next" }).getAttribute("aria-selected"),
+  ).toBe("true");
+  expect(screen.getByText("Buy 12 Copper Bar")).toBeTruthy();
+  expect(screen.getByText("needs skill 2 · trainer")).toBeTruthy();
+  expect(screen.getByText("pays back training in 3 crafts")).toBeTruthy();
+  expect(screen.getByText(/Came in/).textContent).toContain("Net: 70c");
+  expect(
+    fetcher.mock.calls.every(([url]) => url.pathname !== "/api/today/plan"),
+  ).toBe(true);
+  const next = fetcher.mock.calls.find(([url]) =>
+    url.pathname.endsWith("/next"),
+  );
+  expect(next).toBeTruthy();
+  await userEvent.click(screen.getByRole("tab", { name: "Holdings" }));
+  expect(screen.getByText(/no price/).textContent).toContain("keep");
 });

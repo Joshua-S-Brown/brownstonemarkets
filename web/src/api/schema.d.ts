@@ -356,6 +356,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/team/character/next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Character Next */
+        post: operations["character_next_api_team_character_next_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/team/hire/{profession}": {
         parameters: {
             query?: never;
@@ -537,6 +554,16 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** CharacterNext */
+        CharacterNext: {
+            /** Gold */
+            gold: {
+                [key: string]: unknown;
+            };
+            holdings: components["schemas"]["Holdings"];
+            /** Stops */
+            stops: components["schemas"]["CharacterStop"][];
+        };
         /** CharacterRecord */
         CharacterRecord: {
             card: components["schemas"]["Card"];
@@ -567,6 +594,25 @@ export interface components {
             craft_status: string;
             /** Training Cost Copper */
             training_cost_copper: number | null;
+        };
+        /** CharacterStop */
+        CharacterStop: {
+            /** Character */
+            character: string;
+            /** Characters */
+            characters: [
+                string,
+                string,
+                string
+            ][];
+            /** Lines */
+            lines: components["schemas"]["RouteLine"][];
+            /** Number */
+            number: number;
+            /** Place */
+            place: string;
+            /** Stage */
+            stage: string;
         };
         /** Comparison */
         Comparison: {
@@ -820,6 +866,11 @@ export interface components {
         };
         /** Holdings */
         Holdings: {
+            /**
+             * At Least
+             * @default true
+             */
+            at_least: boolean;
             /** Captures */
             captures: {
                 [key: string]: unknown;
@@ -828,6 +879,16 @@ export interface components {
             items: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Unpriced
+             * @default 0
+             */
+            unpriced: number;
+            /**
+             * Value Copper
+             * @default 0
+             */
+            value_copper: number;
         };
         /** Import */
         Import: {
@@ -1160,6 +1221,30 @@ export interface components {
             utc: string;
         } & {
             [key: string]: unknown;
+        };
+        /** NextRequest */
+        NextRequest: {
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** State */
+            state?: {
+                [key: string]: unknown;
+            };
+            /**
+             * View
+             * @default route
+             * @enum {string}
+             */
+            view: "route" | "opportunities" | "level-up";
+            /**
+             * Window
+             * @default 25
+             */
+            window: number;
         };
         /** Node */
         Node: {
@@ -2449,6 +2534,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CharacterRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    character_next_api_team_character_next_post: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NextRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CharacterNext"];
                 };
             };
             /** @description Validation Error */

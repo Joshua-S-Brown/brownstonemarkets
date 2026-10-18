@@ -10,7 +10,7 @@ from test_today_characters import CHARACTER
 
 import api
 from api import context, team
-from brownstone import hiring, team_view, today_loading, today_session
+from brownstone import character_snapshots, hiring, team_view, today_loading, today_session
 from brownstone.today_settings import TodaySettings
 
 
@@ -19,7 +19,7 @@ def browser(tmp_path, monkeypatch):
     source, catalog, data = team_app(tmp_path, monkeypatch)
     monkeypatch.setattr(team, '_cache', {})
     server = FastAPI()
-    api.install(server, tmp_path / 'dist')
+    api.install(server, tmp_path / 'dist', 'offline-token')
     with TestClient(server) as client:
         yield client, source, catalog, data
 
@@ -168,6 +168,14 @@ def test_no_scan_roster_empty_team_and_read_failure(browser, monkeypatch):
     result = get(browser).json()
     assert len(result['roster']) == 2
     assert not result['hires'] and 'No snapshot' in result['notes'][0]
+    monkeypatch.setattr('api.ledger.cached', lambda _: dict(gold=dict(totals=[dict(
+        character=CHARACTER, day=datetime.now(UTC).date().isoformat(), category='other',
+        in_copper=120, out_copper=20)])))
+    next_record = browser[0].post('/api/team/character/next', params={'source': 'empty'},
+                                  headers={'X-Brownstone-Token': 'offline-token'},
+                                  json=dict(character=CHARACTER))
+    assert next_record.status_code == 200, next_record.text
+    assert next_record.json()['stops'] == [] and next_record.json()['gold']['net_copper'] == 100
     monkeypatch.setattr('brownstone.professions.latest_data', lambda _: {})
     team._cache.clear()
     assert not get(browser).json()['roster']
@@ -267,3 +275,104 @@ def test_roster_best_action_uses_profit_completeness_cost_and_preserves_steps():
     assert team_view.roster_step([]) is None
     assert team_view.roster_step(groups[:1])["profession"] == "unknown"
     assert team_view.roster_step([dict(profession="Mining", best=None)])["profession"] == "Mining"
+
+
+def test_character_holdings_action_order_exact_identity_and_cautious_values():
+    from brownstone.crafting import basis_prices
+
+    key = dict(character='Maker', realm='Realm', faction='Alliance')
+    items = [dict(key=(i, None, 'base'), item_id=i, variant_state='base', kind='bags', units=2, **key)
+             for i in range(1, 8)]
+    items.append(items[0] | dict(variant_state='variant', key=(1, 'v1', 'variant')))
+    allocation = items[0] | dict(to='Maker')
+    craft = dict(recipe_id=10, catalog_id='catalog', held_allocations=[allocation], held_outputs=[])
+    mail = dict(stage='mail', to='Other', purposes=[dict(name='Robe')], **items[0])
+    stops = [dict(lines=[dict(evidence=mail), dict(evidence=mail | dict(item_id=2, key=(2, None, 'base')))]),
+             dict(lines=[dict(evidence=dict(stage='craft', recipe_id=10, catalog_id='catalog'))])]
+    _, prices = basis_prices({i: dict(min_buyout=100, market_value=70) for i in (1, 2, 3, 6)} |
+                             {7: dict(min_buyout=0, market_value=0)}, 'cautious')
+    captures = [dict(kind='bags', unknown=False, partial=False), dict(kind='bank', unknown=True, partial=False)]
+    result = team_view.character_holdings(items, captures, dict(craft=[craft]), stops, prices,
+                                          {i: 50 for i in (1, 2, 3, 4)} | {6: 100})
+    assert [r['action'] for r in result['items']] == [
+        'used in tonight’s plan (Route step 2)', 'mail to Other for Robe (Route step 1)',
+        'sell', 'vendor', 'keep', 'vendor', 'keep', 'keep']
+    assert result['items'][0]['unit_copper'] == 70 and result['items'][0]['value_copper'] == 140
+    assert all(r['unit_copper'] is None and r['value_copper'] is None for r in result['items'] if
+               r['item_id'] in (4, 5, 7) or r['variant_state'] != 'base')
+    assert result['value_copper'] == 560 and result['unpriced'] == 4 and result['at_least']
+    captures[1].update(unknown=False, partial=True)
+    assert team_view.character_holdings([], captures, {}, [], {}, {})['at_least']
+    posted = dict(characters=[tuple(key.values())], lines=[dict(evidence=dict(held_outputs=[items[0]]))])
+    output = team_view.character_holdings([items[0]], captures, {}, [posted], {}, {})
+    assert output['items'][0]['action'] == 'used in tonight’s plan (Route step 1)'
+    craft['held_allocations'][0]['to'] = None
+    unknown_maker = team_view.character_holdings([items[0]], captures, dict(craft=[craft]), stops, {}, {})
+    assert unknown_maker['items'][0]['action'] == 'used in tonight’s plan (Route step 2)'
+    captures[1]['partial'] = False
+    assert not team_view.character_holdings([], captures, {}, [], {}, {})['at_least']
+    # Another realm, location or variant of the same item ID never acquires a Route action.
+    for changed in (dict(realm='Elsewhere'), dict(kind='bank'), dict(key=(1, 'v1', 'variant'))):
+        row = team_view.character_holdings([items[0] | changed], captures, dict(craft=[craft]), stops, {}, {})
+        assert row['items'][0]['action'] == 'keep'
+
+
+def test_character_seven_utc_days_filter_existing_totals_and_unknown():
+    from brownstone.ledger_view import day_bounds
+
+    now = datetime(2026, 10, 17, 23, 59, tzinfo=UTC)
+    rows = [dict(character=CHARACTER, day='2026-10-11', category=str(i), in_copper=i, out_copper=1)
+            for i in range(5)]
+    rows += [rows[0] | dict(day='2026-10-10', in_copper=1000),
+             rows[0] | dict(day='2026-10-18', in_copper=2000),
+             rows[0] | dict(character=('Other', *CHARACTER[1:]), in_copper=3000)]
+    result = team_view.character_gold(dict(totals=rows), CHARACTER, day_bounds('7', now))
+    assert (result['in_copper'], result['out_copper'], result['net_copper']) == (10, 5, 5)
+    assert [r['category'] for r in result['categories']] == ['4', '3', '2']
+    quiet = team_view.character_gold(dict(totals=rows[5:6]), CHARACTER, day_bounds('7', now))
+    assert (quiet['in_copper'], quiet['net_copper'], quiet['categories']) == (0, 0, [])
+    for evidence in (None, {}, dict(totals=rows[-1:])):
+        assert team_view.character_gold(evidence, CHARACTER, day_bounds('7', now)) == dict(
+            in_copper=None, out_copper=None, net_copper=None, categories=[])
+
+
+def test_character_next_reuses_today_plan_numbering_settings_and_holdings_read(browser, monkeypatch):
+    from api import today
+
+    calls, reads = [], []
+    build, latest = today.build, character_snapshots.latest_data
+
+    def counted(*args):
+        calls.append(1)
+        return build(*args)
+
+    def read(*args):
+        reads.append(1)
+        return latest(*args)
+
+    monkeypatch.setattr(today, '_cache', {})
+    monkeypatch.setattr(today, 'build', counted)
+    monkeypatch.setattr(character_snapshots, 'latest_data', read)
+    client, source, *_ = browser
+    params, headers = {'source': source['source_id']}, {'X-Brownstone-Token': 'offline-token'}
+    payload = client.post('/api/today/plan', params=params, headers=headers, json={'state': {}}).json()
+    get(browser, 'team/character', name=CHARACTER[0], realm=CHARACTER[1], faction=CHARACTER[2])
+    get(browser, 'ledger')  # Prime the independent Ledger cache before counting record reads.
+    before = len(reads)
+    response = client.post('/api/team/character/next', params=params, headers=headers,
+                           json=dict(character=CHARACTER, state=payload['state']))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result['stops'] == [s | {'number': i} for i, s in enumerate(payload['stops'], 1)
+                               if list(CHARACTER) in s['characters']]
+    assert result['stops'] and len(calls) == 1 and len(reads) == before
+    assert result['gold']['net_copper'] is None
+    assert result['holdings']['at_least']
+    # Changed choices use the same Today state rather than a second default plan.
+    state = payload['state'] | dict(choices=[], refill=False)
+    response = client.post('/api/team/character/next', params=params, headers=headers,
+                           json=dict(character=CHARACTER, state=state)).json()
+    changed = client.post('/api/today/plan', params=params, headers=headers, json=dict(state=state)).json()
+    assert response['stops'] == [s | {'number': i} for i, s in enumerate(changed['stops'], 1)
+                                 if list(CHARACTER) in s['characters']]
+    assert len(calls) == 2

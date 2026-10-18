@@ -104,14 +104,14 @@ def test_orange_and_yellow_copper_steps():
 
 
 @pytest.mark.parametrize('change,reason', [({'skillup_colors': [1, 2, 8, 10]}, 'no qualifying'),
-                                         ({'skillup_colors': None}, 'missing colour'),
-                                         ({'training_cost_copper': None}, 'training cost unknown')])
+                                         ({'skillup_colors': None}, 'skill-up colour is unknown'),
+                                         ({'training_cost_copper': None}, 'training cost is unknown')])
 def test_gap_colours_training_incomplete(change, reason):
     c = progression_catalog()
     r = c['recipes_by_id'][30]
     r.update(change)
     data = evidence(c)
-    if reason == 'training cost unknown':
+    if reason == 'training cost is unknown':
         data['recipes']['Arbitrary title']['known_recipes']['rows'][0]['learned'] = False
     result = estimate_cost([(c, r)], data, 8, 75, 10, {1: 10})
     assert not result['complete'] and result['cost_copper'] is None
@@ -138,7 +138,7 @@ def test_trainer_once_and_new_trainer_at_required_rank():
 def test_missing_material_never_free(prices):
     c = progression_catalog()
     result = estimate_cost([(c, c['recipes_by_id'][30])], evidence(c), 8, 75, 9, prices)
-    assert result['cost_copper'] is None and 'missing material price [1]' in result['reasons'][0]
+    assert result['cost_copper'] is None and result['reasons'] == ['Rank 8: Fixture craft has no price for Fixture 1']
 
 
 def test_intermediate_without_board_profit_still_costs_cheapest_route():
