@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 
-from brownstone import item_history, market_presentation
+from brownstone import item_history, market_presentation, sales_speed
 from brownstone import market_explorer as me
 
 from . import context
@@ -70,7 +70,13 @@ def item(item_id: int, source: str = '', variant: str = ''):
         summary = summary | {'held': None, 'at_least': False}
         summary = summary | {k: {'recipe': None, 'reason': 'Separate identity; base-item routes excluded'}
                              for k in ('made_from', 'used_in')}
-    return Item(role=summary['role'], deposit_copper=summary['deposit_copper'], item_id=item_id,
+    state, variant_id = (selected if selected is not None else
+                         (observed.get('variant_state'), observed.get('variant_id')) if observed else ('base', None))
+    try:
+        speed = sales_speed.select(sales_speed.load(chosen, [item_id]), item_id, variant_id, state, chosen)
+    except Exception:  # Like floods, a removal-speed read failure keeps the rest of the item page.
+        speed = None
+    return Item(speed=speed, role=summary['role'], deposit_copper=summary['deposit_copper'], item_id=item_id,
                 name=observed.get('item_name') or page['name'], quality=quality(observed),
                 price_copper=observed.get('min_buyout'),
                 typical_copper=signal.get('overshoot', {}).get('typical_copper'),

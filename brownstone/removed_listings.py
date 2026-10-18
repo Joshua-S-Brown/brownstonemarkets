@@ -64,7 +64,7 @@ def _known_names(db, config, item_ids):
 
 def _empty_item(item_id, variant_id, state):
     return {'item_id': item_id, 'variant_id': variant_id, 'variant_state': state,
-            'item_name': None, 'evidence': [],
+            'item_name': None, 'evidence': [], 'earlier_listings': 0, 'earlier_units': 0,
             **{category: {'listings': 0, 'units': 0} for category in CATEGORIES},
             'without_buyout': {'earlier': 0, 'later': 0}}
 
@@ -98,6 +98,9 @@ def _compare(db, config, pair, item_ids=None) -> dict:
     for side, item_id, variant, state, quantity, buyout, bucket, name, count in _counts(db, config, pair, item_ids):
         identity = (item_id, variant, state)
         item = items.setdefault(identity, _empty_item(*identity))
+        if side == 'earlier':
+            item['earlier_listings'] += count
+            item['earlier_units'] += quantity * count
         if name:
             item['item_name'] = min(name, item['item_name'] or name)
         if buyout is None or buyout <= 0:

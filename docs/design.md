@@ -200,6 +200,16 @@ pairs. UI-11 and Today share `qualifying_pairs`; `recent_comparisons` reads the 
 read-only connection only when the item history record opens. Shared theme
 cards/badges and expansions show evidence and keep identities separate, including noncatalog items.
 
+### Removal speed (STORY-062)
+
+Rules live in `requirements.md` → UI-19. `sales_speed.read` reuses UI-10's adjacent pairs and
+matching/classification, retaining earlier listed units (including no-buyout listings) for each identity.
+`summarize` uses exact fractions for rate, median, turnover and target arithmetic until display.
+Item Overview reads lazily for its item ID (base when the item is not listed now); Stock loads all held/target
+IDs once per cached generation. Both use `select`, where base falls back to legacy only without a modern
+identity; a failed read returns no speed and keeps the rest of the page.
+The shared web `RemovalSpeed` renders the typed API contract; it calculates no estimates.
+
 ### Flood signals (STORY-064/072)
 
 Rules and config defaults live in `requirements.md` → UI-11. `flood_signals.signals` reads

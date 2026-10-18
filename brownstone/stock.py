@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
-from . import character_snapshots
+from . import character_snapshots, sales_speed
 from .action_board import compatible_catalogs
 from .crafting import basis_prices
 from .freshness import assess
@@ -137,7 +137,15 @@ def load_stock(config, catalogs, now: datetime):
     ids.update(e.item_id for e in entries)
     _, arguments = load_today(config, catalogs, TodaySettings(), {}, now, item_ids=ids,
                               holdings_data=holdings(data, now))
-    return build_stock(data, entries, arguments, config, catalogs, now)
+    result = build_stock(data, entries, arguments, config, catalogs, now)
+    try:
+        speeds = sales_speed.load(config, sorted(ids))
+    except Exception:  # A removal-speed read failure shows as unavailable and keeps Stock.
+        speeds = None
+    for row in result['rows']:
+        item_id, variant_id, state = row['key']
+        row['speed'] = None if speeds is None else sales_speed.select(speeds, item_id, variant_id, state, config)
+    return result
 
 
 def filter_rows(result, query='', chains_only=False):

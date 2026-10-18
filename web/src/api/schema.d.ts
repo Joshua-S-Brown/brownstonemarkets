@@ -934,6 +934,7 @@ export interface components {
             quality: number | null;
             /** Role */
             role: string | null;
+            speed?: components["schemas"]["Speed"] | null;
             /** Typical Copper */
             typical_copper: number | null;
             /** Units */
@@ -1636,6 +1637,29 @@ export interface components {
             /** Waiting Error */
             waiting_error?: string | null;
         };
+        /** Speed */
+        Speed: {
+            /** Daily Units */
+            daily_units: number | null;
+            /** Days Supply */
+            days_supply: number | null;
+            /** Hours */
+            hours: number;
+            /** Label */
+            label: string;
+            /** Median Units */
+            median_units: number | null;
+            /** Pairs */
+            pairs: number;
+            /** Reason */
+            reason: string;
+            /** Settings */
+            settings: {
+                [key: string]: number;
+            };
+            /** Suggested Units */
+            suggested_units: number | null;
+        };
         /** Stock */
         Stock: {
             /** Buy Cost Copper */
@@ -1703,6 +1727,7 @@ export interface components {
             purchased_units?: number | null;
             /** Short */
             short?: number | null;
+            speed?: components["schemas"]["Speed"] | null;
             /** Target Units */
             target_units: number | null;
             /** Unlisted Units */

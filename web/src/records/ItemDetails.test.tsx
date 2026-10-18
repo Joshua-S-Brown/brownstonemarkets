@@ -1,3 +1,4 @@
+import { RemovalSpeed } from "../ui/RemovalSpeed";
 import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -178,6 +179,24 @@ function stubRecord(held: number | null) {
                   wowhead_url: "https://www.wowhead.com/forever/item=1",
                 }
               : {
+                  speed: {
+                    label:
+                      "removed early (upper bound on sales; includes cancels and reposts)",
+                    pairs: 3,
+                    hours: 4,
+                    daily_units: null,
+                    median_units: 1,
+                    days_supply: null,
+                    suggested_units: null,
+                    reason: "not enough scan gaps (3, 4.0 h)",
+                    settings: {
+                      speed_window_days: 14,
+                      speed_min_pairs: 5,
+                      speed_min_hours: 24,
+                      speed_cover_days: 3,
+                      speed_cap_percent: 25,
+                    },
+                  },
                   role: "Craft",
                   deposit_copper: 100,
                   item_id: 1,
@@ -229,6 +248,10 @@ it("opens Overview, exposes all record tabs and footer, reads selected identity 
   expect(
     (await screen.findAllByText(/not gathered yet/)).length,
   ).toBeGreaterThan(0);
+  expect(screen.getByText("not enough scan gaps (3, 4.0 h)")).toBeTruthy();
+  expect(
+    screen.getByText(/upper bound on sales; includes cancels and reposts/),
+  ).toBeTruthy();
   const facts = screen.getByLabelText("Item facts");
   expect(facts.textContent).toContain(
     "Lowest9s 99cTypical—Listings · units1 · 3",
@@ -252,4 +275,41 @@ it("lists each base-item holder beside team holdings, but not on a variant", asy
   expect(
     await screen.findByText(/36 units · Basilly 22, Keenagen bank 14/),
   ).toBeTruthy();
+});
+
+it("shows zero removal evidence without numeric turnover and leaves insufficient suggestions blank", () => {
+  const evidence = {
+    label: "removed early (upper bound on sales; includes cancels and reposts)",
+    pairs: 5,
+    hours: 24,
+    daily_units: 0,
+    median_units: 10,
+    days_supply: null,
+    suggested_units: 0,
+    reason: "no early removals in 5 scan gaps",
+    settings: {
+      speed_window_days: 14,
+      speed_min_pairs: 5,
+      speed_min_hours: 24,
+      speed_cover_days: 3,
+      speed_cap_percent: 25,
+    },
+  };
+  const rendered = render(<RemovalSpeed speed={evidence} suggested />);
+  expect(screen.getByText("no early removals in 5 scan gaps")).toBeTruthy();
+  expect(screen.queryByText(/days of listed supply/)).toBeNull();
+  expect(screen.getByText("Suggested: 0 units")).toBeTruthy();
+  rendered.rerender(
+    <RemovalSpeed
+      speed={{
+        ...evidence,
+        daily_units: null,
+        suggested_units: null,
+        reason: "not enough scan gaps (4, 24.0 h)",
+      }}
+      suggested
+    />,
+  );
+  expect(screen.getByText("Suggested: — units")).toBeTruthy();
+  expect(screen.getByText("not enough scan gaps (4, 24.0 h)")).toBeTruthy();
 });

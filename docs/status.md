@@ -181,6 +181,12 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   the remainder expand, skipped gaps are counted; market-wide lists stay on home (STORY-078, UI-09).
   UI-11 typical prices use equal-weight UTC daily medians, with days/scans evidence and
   `flood_min_days` history validation (STORY-072; rules in requirements → UI-11).
+- **Removal speed (STORY-062):** Market item Overview and Ledger Restock show UI-19's
+  time-weighted early-removal upper bound, scan gaps/hours, listed-supply turnover and evidence
+  thresholds. Ledger adds display-only base-item suggestions beside manual targets. Rules/defaults
+  live in requirements → UI-19; offline checks in `test_sales_speed.py` and web record/Ledger tests.
+  Copied beta: 3,795/786/2,903/6/4 daily units for Linen Cloth/Bolt/Copper Bar/Brown Linen Robe/Linen Bag;
+  18–20 gaps, 80.3–90.8 hours. Screenshots at 1280/390 px: ignored `work/story-062/comparisons.html`.
 - **Stock:** Ledger's Restock retains readable bags/bank captures, exact variants, cautious
   listed values and whole-stack estimates. Target drafts save atomically through `/api/ledger/targets`;
   damaged files remain unchanged with a 422 explanation. Today is unaffected. Copied beta: 10 capture
@@ -244,7 +250,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   are measured (requirements → Product direction). Today models deposits under requirements → Today (v11): Sell and Queue show
   refundable posting gold and expiry loss at the saved 2/8/24-hour duration, including held outputs;
   deposits do not reserve funds or reduce ranked profit. Neutral/missing evidence stays unknown.
-  Postage in plans and sale speed remain backlog work.
+  Postage in plans remains backlog work; removal speed follows UI-19.
   A gold-only mail recorded the previous draft's items and no gold, so the ledger (STORY-034) uses money
   changes. Each profession window event saves the full recipe list: 25 MB of the 29.6 MB 2026-10-15 file.
 - Today fixes aggregate routes before whole-stack sizing; surplus uncredited/unshared, greedy plan
@@ -287,7 +293,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 1,990 Python tests pass (one platform skip), plus 104 Vitest tests.
+Expected: 1,998 Python tests pass (one platform skip), plus 105 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

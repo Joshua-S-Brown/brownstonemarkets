@@ -24,6 +24,19 @@ FLOOD_DEFAULTS = {
 }
 
 
+SPEED_DEFAULTS = {
+    'speed_window_days': 14, 'speed_min_pairs': 5, 'speed_min_hours': 24,
+    'speed_cover_days': 3, 'speed_cap_percent': 25,
+}
+
+
+def _validate_speed(source):
+    for key, default in SPEED_DEFAULTS.items():
+        value = source.setdefault(key, default)
+        if type(value) is not int or value <= 0:
+            raise ValueError(f'{key} must be a positive integer')
+
+
 def _validate_flood(source):
     if 'flood_min_scans' in source:
         raise ValueError('flood_min_scans is replaced by flood_min_days; remove the old setting')
@@ -70,6 +83,11 @@ class Source(TypedDict):
     flood_min_days: int
     flood_cheap_percent: int
     flood_high_percent: int
+    speed_window_days: int
+    speed_min_pairs: int
+    speed_min_hours: int
+    speed_cover_days: int
+    speed_cap_percent: int
     label: NotRequired[str]
     rules_version: NotRequired[str]  # Required for crafting; matches a catalog's rules_version.
     allow_missing_updated_at: NotRequired[bool]
@@ -108,6 +126,7 @@ def build_source(shared: dict, entry: dict) -> Source:
     source["market_id"] = markets.market_id(source)
     _validate_feed(source)
     _validate_flood(source)
+    _validate_speed(source)
     idle = source.setdefault('farming_idle_minutes', 10)
     if type(idle) is not int or idle <= 0:
         raise ValueError('farming_idle_minutes must be a positive integer')

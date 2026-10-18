@@ -45,6 +45,8 @@ def test_cached_search_chains_targets_capture_states_and_evidence(browser, monke
     data = get(browser).json()["stock"]
     assert data["rows"][0]["short"] == 9 and data["rows"][0]["at_most"]
     assert data["names"]["2589"] == "Linen Cloth"
+    assert data["rows"][0]["speed"]["suggested_units"] is None
+    assert data["rows"][0]["speed"]["reason"] == 'not enough scan gaps (0, 0.0 h)'
     assert any(c["character"] == "Cara" and c["unknown"] for c in data["captures"])
     assert any(c["excluded"] for c in data["captures"]) and any(c["empty"] for c in data["captures"])
     assert data["evidence"]["freshness"]["stale"]

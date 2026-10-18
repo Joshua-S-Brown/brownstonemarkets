@@ -1,3 +1,4 @@
+import { RemovalSpeed } from "../../ui/RemovalSpeed";
 import { Panel } from "../../ui/Panel";
 import { Tile } from "../../ui/Tile";
 import kit from "../../ui/components.module.css";
@@ -473,7 +474,7 @@ export function Ledger({ source }: { source: string }) {
                       header: (
                         {
                           held: "Held",
-                          target_units: "Target",
+                          target_units: "Target · suggested / removal rate",
                           short: "Short",
                           buy_units: "Buy now",
                           wait_units: "Wait",
@@ -490,6 +491,12 @@ export function Ledger({ source }: { source: string }) {
                             ? "at most "
                             : ""}
                           {r[k as "held"] ?? "—"}
+                          {k === "target_units" && (
+                            <RemovalSpeed
+                              speed={r.speed}
+                              suggested={r.variant_state === "base"}
+                            />
+                          )}
                         </>
                       ),
                     })),

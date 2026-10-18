@@ -1378,3 +1378,12 @@ button.chip:hover {
   color: var(--muted);
   margin-top: 6px;
 }
+
+.removalSpeed {
+  white-space: normal;
+  min-width: 14rem;
+}
+
+td .removalSpeed {
+  width: 16rem;
+}

@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, StrictInt
 from brownstone import ledger_view, recipe_catalogs, stock
 
 from . import context
+from .models import Speed
 
 router = APIRouter()
 _lock = threading.Lock()
@@ -149,6 +150,7 @@ class Items(BaseModel):
 
 
 class StockRow(BaseModel):
+    speed: Speed | None = None
     item_id: int
     name: str
     variant_id: str | None

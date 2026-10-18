@@ -1,5 +1,6 @@
 """Offline stock evidence, integer units/prices and Save-only targets."""
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 from test_character_snapshots import snapshot as raw_snapshot
@@ -53,6 +54,9 @@ def test_two_characters_locations_unknown_unreadable_missing_stale_and_scope(tmp
     assert not stock.load_stock(config | {'source_id': 'another'}, [], NOW)['rows']
     assert not stock.load_stock(config | {'faction': 'horde'}, [], NOW)['rows']
     assert not stock.load_stock(config | {'market_id': 'another-house'}, [], NOW)['rows']
+    assert result['rows'][0]['speed']['reason'] == 'not enough scan gaps (0, 0.0 h)'
+    with patch.object(stock.sales_speed, 'load', side_effect=OSError('locked')):
+        assert stock.load_stock(config, [], NOW)['rows'][0]['speed'] is None
     arguments = {'snapshot': result['snapshot'], 'observations': {2589: {'min_buyout': 0, 'market_value': 0}}}
     missing = stock.build_stock({}, [stock.Entry(2589, 10)], arguments, config, [], NOW)
     assert missing['rows'][0]['unit_copper'] is None

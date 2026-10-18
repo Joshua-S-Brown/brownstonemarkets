@@ -18,6 +18,13 @@ flood_min_days = 3
 flood_cheap_percent = 60
 flood_high_percent = 150
 
+# UI-19 Removal speed; shared settings, overridable per source.
+speed_window_days = 14
+speed_min_pairs = 5
+speed_min_hours = 24
+speed_cover_days = 3
+speed_cap_percent = 25
+
 # Each [[sources]] entry is one feed (source_id, provider, and a URL or scan file) observing one market.
 # The market is the auction house: game_version + region + scope + realm/server_type + faction + environment.
 # market_id is derived from those fields, so several sources can observe the same market.

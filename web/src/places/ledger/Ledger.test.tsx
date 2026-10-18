@@ -90,6 +90,24 @@ const payload = {
         name: "Linen Cloth",
         variant_id: null,
         variant_state: "base",
+        speed: {
+          label:
+            "removed early (upper bound on sales; includes cancels and reposts)",
+          pairs: 20,
+          hours: 90.8,
+          daily_units: 3795,
+          median_units: 7053,
+          days_supply: 1.86,
+          suggested_units: 1763,
+          reason: "",
+          settings: {
+            speed_window_days: 14,
+            speed_min_pairs: 5,
+            speed_min_hours: 24,
+            speed_cover_days: 3,
+            speed_cap_percent: 25,
+          },
+        },
         held: 11,
         target_units: 20,
         short: 9,
@@ -197,6 +215,11 @@ it("persists days per source, sends shared filters and loads category provenance
     variant: '["base",null]',
   });
   expect(screen.getByText("at most 9")).toBeTruthy();
+  expect(screen.getByText("Suggested: 1,763 units")).toBeTruthy();
+  expect(
+    screen.getByText(/3,795 units\/day · 20 scan gaps, 90.8 hours/),
+  ).toBeTruthy();
+  expect(screen.getByText("≈ 1.9 days of listed supply")).toBeTruthy();
   expect(screen.getByText(/unreadable capture/)).toBeTruthy();
 });
 it("targets use fresh drafts, validation, Remove and Save only; success invalidates Ledger", async () => {

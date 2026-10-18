@@ -46,7 +46,20 @@ class BestUse(BaseModel):
     reason: str
 
 
+class Speed(BaseModel):
+    label: str
+    pairs: int
+    hours: float
+    daily_units: int | None
+    median_units: float | None
+    days_supply: float | None
+    suggested_units: int | None
+    reason: str
+    settings: dict[str, int]
+
+
 class Item(BaseModel):
+    speed: Speed | None = None
     role: str | None
     deposit_copper: int | None
     item_id: int

@@ -215,6 +215,8 @@ def test_market_grid_catalog_roles_prices_sparkline_and_lazy_item_reads(client, 
     def forbidden(*args):
         raise AssertionError('Item-only history/holdings must not load on Market home')
     monkeypatch.setattr(ih, 'load_history', forbidden)
+    from brownstone import sales_speed
+    monkeypatch.setattr(sales_speed, 'load', forbidden)
     monkeypatch.setattr(me, 'item_summary', forbidden)
     assert browser.get('/api/market').json()['rows'] == []  # No captured profession ranks.
     assert browser.get('/api/market?window=4').status_code == 422
@@ -332,6 +334,10 @@ def test_activity_sales_holdings_failures_and_farming_preserve_other_evidence(cl
     monkeypatch.setattr(me, 'item_floods', broken)
     item = browser.get('/api/items/2589').json()
     assert item['price_copper'] == 11 and 'busy fixture' in item['details']['floods_error']
+    assert item['speed']['pairs'] == 1 and item['speed']['daily_units'] is None
+    from brownstone import sales_speed
+    monkeypatch.setattr(sales_speed, 'load', broken)
+    assert browser.get('/api/items/2589').json()['speed'] is None
     assert 'busy fixture' in browser.get('/api/items/2589/activity').json()['sales_error']
     monkeypatch.setattr(me, 'item_removals', broken)
     h = browser.get('/api/items/2589/history').json()

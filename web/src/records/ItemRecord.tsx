@@ -1,3 +1,4 @@
+import { RemovalSpeed } from "../ui/RemovalSpeed";
 import record from "./records.module.css";
 import { Tile } from "../ui/Tile";
 import { Panel } from "../ui/Panel";
@@ -159,6 +160,9 @@ export function ItemRecord({
                   .join(", ")}`}
             </dd>
           </dl>
+          <Panel title="Removal rate">
+            <RemovalSpeed speed={item.speed} />
+          </Panel>
           <Panel title="Best use">
             {(["used_in", "made_from"] as const).map((key) => (
               <section key={key}>
