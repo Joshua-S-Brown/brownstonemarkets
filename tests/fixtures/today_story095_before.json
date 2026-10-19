@@ -155,7 +155,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 14
+      "today_version": 15
     },
     {
       "recipe_id": 30,
@@ -313,7 +313,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 14
+      "today_version": 15
     }
   ],
   "buy": [
@@ -334,7 +334,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 14
+      "today_version": 15
     }
   ],
   "sell": [
@@ -378,7 +378,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 14
+      "today_version": 15
     },
     {
       "output_item_id": 4,
@@ -421,7 +421,7 @@
       "market_id": "classic-us-mankrik-alliance",
       "snapshot_id": "fixture",
       "scan_id": "scan",
-      "today_version": 14
+      "today_version": 15
     }
   ],
   "below_vendor": [],
@@ -480,7 +480,7 @@
   },
   "listing_evidence_available": true,
   "minimum_gain_copper": 1,
-  "today_version": 14,
+  "today_version": 15,
   "shopping_total_copper": 20,
   "dropped_choices": [],
   "refill": true,

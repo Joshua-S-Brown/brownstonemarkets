@@ -209,7 +209,7 @@ def test_held_outputs_separate_value_without_profit_credit():
 def test_no_holdings_exact_plan_and_version():
     baseline = plan()
     assert plan(holdings_data=({}, {}, [], [])) == baseline
-    assert baseline['today_version'] == TODAY_VERSION == 14
+    assert baseline['today_version'] == TODAY_VERSION == 15
 
 
 def test_holdings_context_resets_choices_without_clock_age():

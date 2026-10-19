@@ -416,6 +416,8 @@ Rules: `requirements.md` → Today. Framework-free calculations.
   uses `today_rows.warning_text` and on-demand evidence.
   `craft_details(row)` projects held/purchased materials and the batch's retained `reserved_steps`
   (or scales original steps when holdings are absent). Sell retains owners and separate held value.
+  Board accepts scoped scan `vendor_prices`; Sell retains `vendor_sell_copper`/`vendor_instead`
+  when positive, and Queue carries the vendor action through prose, stops and totals (Today v15).
   After held-output allocation, `deposits.auction_deposit` adds Sell's nullable `deposit_copper` and
   `post_duration_hours` (Today v11), taking stack size from `stack_sizes` so unlisted outputs still get one. Queue post lines retain these fields; its nullable
   `deposits_to_post_copper` sums the complete post list. Rules remain in requirements → Today.

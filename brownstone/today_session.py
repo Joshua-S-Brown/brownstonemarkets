@@ -35,9 +35,10 @@ def stable_queue(queue):
 def queue_total(queue):
     profit = queue["expected_profit_copper"]
     deposits = queue.get("deposits_to_post_copper")
+    basis = 'planned sale' if any(r.get('vendor_instead') for r in queue['lines']) else 'undercut'
     return (f"Gold needed: {format_money(queue['gold_needed_copper'])} · "
             f"Deposits to post: {format_money(deposits) if deposits is not None else 'unknown'} · "
-            f"Expected profit at undercut: {format_money(profit) if profit is not None else 'unavailable'}")
+            f"Expected profit at {basis}: {format_money(profit) if profit is not None else 'unavailable'}")
 
 
 def queue_line(line):
@@ -67,6 +68,12 @@ def queue_line_text(line):
                 f"{line['batch_size']} crafts" + held_note(line))
     price = format_money(line["unit_copper"]) if line["unit_copper"] is not None else "unavailable"
     profit = format_money(line["profit_copper"]) if line["profit_copper"] is not None else "unavailable"
+    if line.get('vendor_instead'):
+        held = line.get('held_outputs', [])
+        owners = ', '.join(f"{u['character']} ({u['kind']}): {u['units']}" for u in held)
+        return (f"Sell: {name} · vendor it instead · {price} each · {line['quantity']} crafted"
+                + (f" + {sum(u['units'] for u in held)} held ({owners})" if held else '')
+                + f" · profit {profit} · deposits excluded: refunded on an auction sale")
     deposit = deposit_text(line)
     held = line.get('held_outputs', [])
     if held:
@@ -107,7 +114,8 @@ def headline_profit(row, sell):
     post = sell['undercut_batch_profit_copper']
     profit = row['batch_profit_copper'] if post is None else post
     return {'headline_profit_copper': profit, 'headline_per_craft_copper': profit // row['batch_size'],
-            'profit_basis': ' at cautious sale price' if post is None else ''}
+            'profit_basis': ' at vendor value' if sell.get('vendor_instead') else (
+                ' at cautious sale price' if post is None else '')}
 
 
 def gold_mail_lines(result, character_data, funds):
@@ -249,7 +257,7 @@ def route_place(line, crafts, character_data, post=None):
               'gold unknown': 'mailbox', 'auction house': 'auction house', 'vendor': 'vendor',
               'post': f"auction house · {line.get('post_duration_hours', 24)}h posts"}
     if stage != 'craft':
-        return character, places[stage]
+        return character, 'vendor' if line.get('vendor_instead') else places[stage]
     profession = line.get('profession') or 'profession unknown'
     identities = route_identities(line, crafts, character_data, post)
     state = character_data.get(identities[0]) if len(identities) == 1 else None

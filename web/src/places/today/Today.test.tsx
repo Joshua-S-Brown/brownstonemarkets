@@ -559,3 +559,45 @@ it.each([
     ).toBeTruthy();
   },
 );
+
+it("shows vendor fallback and vendor value only for priced opportunities", async () => {
+  data.plan.craft[0] = { ...craft, vendor_profit_copper: -30 };
+  data.plan.sell[0].vendor_instead = true;
+  data.plan.unplanned = [
+    {
+      catalog_id: "other",
+      recipe_id: 31,
+      output_item_id: 4,
+      output_name: "Boots",
+      profession: "tailoring",
+      tonight_reason: "not selected tonight",
+      profit_copper: 50,
+    },
+  ];
+  data.stops[0].place = "vendor";
+  data.stops[0].lines[0] = {
+    index: 0,
+    text: "Sell: Robe · vendor it instead · 1s 90c each",
+    evidence: {
+      stage: "post",
+      name: "Robe",
+      quantity: 2,
+      unit_copper: 190,
+      profit_copper: 350,
+      vendor_instead: true,
+    },
+    display: { item_id: 3 },
+    warnings: "",
+  };
+  mount();
+  expect(await screen.findByText(/Vendor it instead 2/)).toBeTruthy();
+  expect(screen.queryByText("Post")).toBeNull();
+  expect(
+    screen.getByText("Deposits excluded: refunded on an auction sale"),
+  ).toBeTruthy();
+  expect(screen.getAllByText(/Vendor value/)).toHaveLength(1);
+  expect(
+    screen.getByRole("button", { name: "Boots" }),
+  ).toBeTruthy();
+  expect(screen.getByText("At planned auction or vendor value")).toBeTruthy();
+});

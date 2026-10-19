@@ -19,6 +19,7 @@ export type Unplanned = {
   required_skill?: number | null;
   tonight_reason: string;
   profit_copper: number | null;
+  vendor_profit_copper?: number;
 };
 function History({ source, item }: { source: string; item: number }) {
   const query = useQuery({
@@ -114,6 +115,11 @@ export function Opportunities({
             <span className={styles.big}>
               <Money copper={row.headline_per_craft_copper} />
             </span>
+            {row.vendor_profit_copper != null && (
+              <span>
+                Vendor value <Money copper={row.vendor_profit_copper} /> / craft
+              </span>
+            )}
             <div className={styles.why}>
               Planned · {row.batch_size} crafts ·{" "}
               <PlanText
@@ -137,6 +143,11 @@ export function Opportunities({
           <span className={styles.big}>
             <Money copper={row.profit_copper} />
           </span>
+          {row.vendor_profit_copper != null && (
+            <span>
+              Vendor value <Money copper={row.vendor_profit_copper} /> / craft
+            </span>
+          )}
           <div className={styles.why}>
             {reasonText(row)} · per craft at cautious sale price
             <History source={source} item={row.output_item_id} />

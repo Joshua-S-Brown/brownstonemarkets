@@ -16,7 +16,8 @@ def compatible(catalog: dict, market: dict) -> bool:
 
 
 def rank_recipes(catalog, observations, market, snapshot, *, now, sort_by="profit",
-                 basis="cautious", max_age_hours=24, auction_cut=0.05, recipe_graph=None, sell_price_caps=None):
+                 basis="cautious", max_age_hours=24, auction_cut=0.05, recipe_graph=None, sell_price_caps=None,
+                 vendor_prices=None):
     """Rank finished outputs; missing evidence sorts last, stale never signals action.
 
     Observations map item ID to unit copper {"min_buyout", "market_value"} from one scoped
@@ -55,6 +56,9 @@ def rank_recipes(catalog, observations, market, snapshot, *, now, sort_by="profi
                          "profit_by_basis": dict.fromkeys(PRICE_BASES)})
             continue
         result = results[basis]
+        vendor = (vendor_prices or {}).get(output['item_id'])
+        if vendor is not None and vendor > 0 and result['craft_cost_copper'] is not None:
+            result['vendor_profit_copper'] = vendor * recipe['output_quantity'] - result['craft_cost_copper']
         result["profit_by_basis"] = {name: r["profit_copper"] for name, r in results.items()}
         result["action"] = ("missing prices" if not result["valid"] else
                             "stale data" if freshness["stale"] else
@@ -88,7 +92,7 @@ def catalog_for_row(catalogs: list[dict], row: dict) -> dict:
 
 def rank_catalogs(catalogs, observations, market, snapshot, *, now, sort_by="profit",
                   basis="cautious", max_age_hours=24, auction_cut=0.05, team_makeable=None, recipe_graph=None,
-                  sell_price_caps=None):
+                  sell_price_caps=None, vendor_prices=None):
     """One board with qualified rows; without team evidence retain exact catalog-local routes."""
     selected = compatible_catalogs(catalogs, market)
     if not selected:
@@ -101,7 +105,7 @@ def rank_catalogs(catalogs, observations, market, snapshot, *, now, sort_by="pro
     for catalog in selected:
         board = rank_recipes(catalog, observations, market, snapshot, now=now, sort_by=sort_by,
                              basis=basis, max_age_hours=max_age_hours, auction_cut=auction_cut, recipe_graph=graph,
-                             sell_price_caps=sell_price_caps)
+                             sell_price_caps=sell_price_caps, vendor_prices=vendor_prices)
         rows.extend({**row, "catalog_id": catalog_identity(catalog), "profession": catalog["profession"]}
                     for row in board["rows"])
     result = _ranked_board(rows, board["freshness"], basis, sort_by)

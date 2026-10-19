@@ -28,7 +28,7 @@ def test_session_every_character_next_steps_bands_costs_and_rank(browser, tmp_pa
         assert 'insufficient listings' in estimate['reasons'][0]
     craft_stops = [s for s in result['stops'] if s['stage'] == 'craft']
     assert all('rank unknown' not in s['place'] for s in craft_stops)
-    assert result['plan']['today_version'] == 14
+    assert result['plan']['today_version'] == 15
 
 
 @pytest.mark.parametrize('named', [False, True])

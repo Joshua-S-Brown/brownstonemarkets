@@ -305,7 +305,7 @@ def test_today_loads_sales_once_and_build_is_pure(tmp_path, monkeypatch):
     _, args = load_today(config, [], TodaySettings(), {}, NOW, flood=True)
     assert args['sales_data'] is evidence and reader.call_count == 1
     monkeypatch.setattr(sales, 'load', Mock(side_effect=AssertionError('calculations must not load')))
-    assert build_today(**args)['today_version'] == 14
+    assert build_today(**args)['today_version'] == 15
 
 
 def test_team_rate_combines_units_and_net_before_rounding():

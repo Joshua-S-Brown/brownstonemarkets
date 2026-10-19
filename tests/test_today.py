@@ -356,7 +356,7 @@ def test_craft_details_reserved_costs_reconcile_across_crafts_and_vendor(monkeyp
     for buy in result['buy']:
         assert totals[(buy['item_id'], buy['method'])] == {field: buy[field] for field in totals[(1, 'buy')]}
     assert [craft_details(r)['materials'][0]['cost_copper'] for r in result['craft']] == [30, 80]
-    assert result['today_version'] == 14
+    assert result['today_version'] == 15
 
 
 def chain_catalog():
@@ -679,3 +679,47 @@ def test_unlisted_output_takes_stack_size_from_scan_references():
     assert sell['deposit_copper'] == max(100, 40 * units * 24 // 40)
     assert sell['deposit_copper'] == auction_deposit(40, units, 20, 24, MARKET['faction'])
     assert result['queue']['deposits_to_post_copper'] == sell['deposit_copper']
+
+
+@pytest.mark.parametrize('stack,lowest', [(20, 201), (1, 299)])
+@pytest.mark.parametrize('vendor,fallback', [(189, False), (190, True), (191, True),
+                                             (None, False), (0, False), (-1, False)])
+def test_vendor_floor_after_cut_and_board_value(stack, lowest, vendor, fallback):
+    from test_today_holdings import evidence
+
+    from brownstone.today_session import headline_profit, queue_line_text, queue_total, route_stops
+    from views.today_rows import sell_row
+
+    c = catalog()
+    c['recipes_by_id'][30]['output_quantity'] = 2
+    settings = TodaySettings(10000, 1, 'fixed', max_crafts=2)
+    args = dict(catalogs=[c], vendor_prices={3: vendor}, stack_sizes={3: stack},
+                holdings_data=evidence((3, 3, 'Maker', 'bags')),
+                metrics={3: dict(min_buyout=lowest, max_stack_size=stack, listings=3,
+                                 units=10, largest_stack_units=2)})
+    result = plan(settings, **args)
+    craft, sell = result['craft'][0], result['sell'][0]
+    queue = result['queue']
+    line = queue['lines'][-1]
+    assert sell['undercut_copper'] == (None if fallback else 200)
+    assert sell.get('vendor_instead', False) is fallback
+    proceeds = vendor if fallback else 190
+    assert sell['undercut_batch_profit_copper'] == proceeds * 4 - craft['batch_cost_copper']
+    assert sell['held_value_copper'] == proceeds * 3
+    assert queue['expected_profit_copper'] == sell['undercut_batch_profit_copper']
+    assert queue['deposits_to_post_copper'] == (0 if fallback else sell['deposit_copper'])
+    assert ('vendor it instead' in queue_line_text(line)) is fallback
+    assert ('vendor it instead' in sell_row(sell)['Action']) is fallback
+    assert ('at vendor value' in headline_profit(craft, sell)['profit_basis']) is fallback
+    if fallback:
+        assert line['unit_copper'] == vendor
+        assert 'Expected profit at planned sale:' in queue_total(queue)
+        assert route_stops(queue, result['craft'], {})[-1]['place'] == 'vendor'
+        assert 'deposits excluded: refunded on an auction sale' in queue_line_text(line)
+    # The unplanned Board row uses the per-execution cost; planned rows use their actual batch cost.
+    board = plan(settings, **args, choices=[], refill=False)['unplanned'][0]
+    if vendor is not None and vendor > 0:
+        assert board['vendor_profit_copper'] == vendor * 2 - board['craft_cost_copper']
+        assert craft['vendor_profit_copper'] == (vendor * 4 - craft['batch_cost_copper']) // 2
+    else:
+        assert 'vendor_profit_copper' not in board and 'vendor_profit_copper' not in craft

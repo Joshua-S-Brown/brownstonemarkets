@@ -85,6 +85,8 @@ def sell_row(row):
             "Listings": row["listings"], "Units": row["units"], "Largest stack units": row["largest_stack_units"],
             "Undercut unit (g)": row["undercut_copper"], "Price step": row.get("price_step", "1c"),
             "Vendor ceiling": vendor_cap_label(row),
+            "Action": (f"vendor it instead · {format_money(row['vendor_sell_copper'])} each · "
+                       "deposits excluded: refunded on an auction sale" if row.get('vendor_instead') else 'post'),
             "Profit at undercut for batch (g)": row["undercut_batch_profit_copper"],
             "Deposit_copper": row.get("deposit_copper"), "Deposit": sell_deposit(row),
             "Your sales": sales_text(row.get("your_sales")), "Thin": row["thin"], "Warnings": warning_fields(row),

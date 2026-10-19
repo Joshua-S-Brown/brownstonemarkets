@@ -16,6 +16,7 @@ export type Craft = Choice & {
   headline_per_craft_copper: number;
   profit_basis: string;
   warnings_text?: string;
+  vendor_profit_copper?: number;
   confidence: string;
   confidence_reasons: string[];
   feasible_size: number;

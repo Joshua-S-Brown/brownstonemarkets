@@ -33,37 +33,16 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-104 vendor value as a floor
-2. STORY-105 sell raw or craft?
-3. STORY-106 gold reserve and capital
-4. STORY-109 Route and Ledger tidy-up
-5. STORY-110 records polish
+1. STORY-105 sell raw or craft?
+2. STORY-106 gold reserve and capital
+3. STORY-109 Route and Ledger tidy-up
+4. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 107, 108, 111, 112 and SPIKE-009/009b.
-
-### STORY-104 — Vendor value as a floor
-
-Moved from *App conveniences* on 2026-10-18 (grooming). Levelling crafts flood fast at launch, and an undercut can end up paying less than a vendor.
-
-As a gold maker, I want every sell suggestion to beat what a vendor pays, so that I never post an item for less than vendoring it.
-
-Decisions (from the code, 2026-10-18):
-- **Vendor value** is the newest scan's `vendor_sell_copper` (`effective_scan_items`, already loaded as Today's `vendor_prices`). Missing or nonpositive means no floor, never 0.
-- **Today Sell** (`today._sell`): today it caps posts at the vendor *buy* price (`vendor_price_cap_copper`) but ignores what a vendor pays. When the undercut's net after the cut (`_net`) is at or below the vendor value, the row says *vendor it instead · X each* and its profit uses the vendor value. Deposits stay as they are (refunded on a sale, so excluded from the comparison) and the row says so.
-- **Holdings action** (`team_view`, the `action = 'sell' …` line): compare the net after the cut, not the gross listing, with the vendor value.
-- **Board and Opportunities:** beside auction profit, show *vendor value* = vendor value × output quantity − batch cost for outputs with a vendor value.
-- Bump `today_version` if the Today section requires it for changed Sell output.
-
-Acceptance:
-- **Floor:** no Sell row or holdings action suggests a post whose net after the cut is at or below the vendor value; those say *vendor it instead*.
-- **Shown:** Board and Opportunities rows show vendor value beside auction profit where it exists; missing vendor prices show nothing, never 0.
-- **Offline tests:** net-after-cut equal to, just above and below the vendor value; unstackable whole-silver steps; missing vendor price; holdings action; Board vendor value.
-- **Real data** (copy of `data/`): report how many beta Sell rows and holdings actions change, with two examples.
-- Depends on nothing. Rules: CRAFT-04, CRAFT-05, MONEY-01, MONEY-02, *Today (today_version 11)*, *Team character cards*. Design: *Today contracts*, *Team contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 107, 108, 111, 112 and SPIKE-009/009b.
 
 ### STORY-105 — Sell raw or craft?
 

@@ -50,7 +50,7 @@ def test_split_purchases_reconcile_buy_details_queue_removals_and_display():
                  ('buy', 6, 6, 105, 25, 2), ('vendor', 4, 4, 100, 25, 0)]
     assert (craft['batch_size'], craft['batch_cost_copper'], craft['batch_profit_copper']) == (5, 255, 695)
     assert craft['limiting_factor'] == 'per-item cap'
-    assert p['today_version'] == TODAY_VERSION == 14
+    assert p['today_version'] == TODAY_VERSION == 15
     assert gold_cost(craft['purchases']) == p['shopping_total_copper'] == 255
     assert sum(r['cost_copper'] for r in craft_details(craft)['materials']) == 255
     uses = purchase_uses(p['craft'])

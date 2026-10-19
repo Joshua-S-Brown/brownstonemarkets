@@ -302,7 +302,7 @@ def test_character_holdings_action_order_exact_identity_and_cautious_values():
                                           {i: 50 for i in (1, 2, 3, 4)} | {6: 100})
     assert [r['action'] for r in result['items']] == [
         'used in tonight’s plan (Route step 2)', 'mail to Other for Robe (Route step 1)',
-        'sell', 'vendor', 'keep', 'vendor', 'keep', 'keep']
+        'sell', 'vendor', 'keep', 'vendor it instead', 'keep', 'keep']
     assert result['items'][0]['unit_copper'] == 70 and result['items'][0]['value_copper'] == 140
     assert all(r['unit_copper'] is None and r['value_copper'] is None for r in result['items'] if
                r['item_id'] in (4, 5, 7) or r['variant_state'] != 'base')
@@ -584,3 +584,16 @@ def test_profession_record_without_snapshot_keeps_compatible_catalogs(browser, m
     team._cache.clear()
     character = get(browser, 'team/character', name=CHARACTER[0], realm=CHARACTER[1], faction=CHARACTER[2]).json()
     assert character['catalog_professions'] == {'197': 'tailoring'}
+
+
+@pytest.mark.parametrize('price,vendor,cut,action', [
+    (200, 189, .05, 'sell'), (200, 190, .05, 'vendor it instead'),
+    (200, 191, .05, 'vendor it instead'), (200, 170, .15, 'vendor it instead'),
+    (200, None, .05, 'keep'), (200, 0, .05, 'keep'), (200, -1, .05, 'keep'),
+])
+def test_holdings_vendor_floor_uses_net_after_market_cut(price, vendor, cut, action):
+    item = dict(item_id=1, variant_state='base', units=2)
+    row = team_view.character_holdings([item], [], {}, [], {1: price}, {1: vendor}, cut)['items'][0]
+    assert row['action'] == action
+    assert row['value_copper'] == 400
+    assert row['vendor_copper'] == (vendor if vendor and vendor > 0 else None)

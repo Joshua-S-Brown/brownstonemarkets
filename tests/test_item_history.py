@@ -134,7 +134,7 @@ def test_read_only_wrappers_empty_tsm_and_unchanged_item_today_outputs(tmp_path)
     assert before == after and page == me.item_page(after, 2996)
     _, args_after = load_today(config, [catalog], TodaySettings(), {}, NOW)
     assert build_today(**args_after) == today
-    assert TODAY_VERSION == 14
+    assert TODAY_VERSION == 15
     with duckdb.connect(str(database), read_only=True) as db:
         assert 'TSM' in ih.history(db, config | {'provider': 'tsm'}, 2996)['note']
         assert 'No eligible' in ih.history(db, config | {'source_id': 'other'}, 2996)['note']

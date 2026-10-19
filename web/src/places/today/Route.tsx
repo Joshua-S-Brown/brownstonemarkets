@@ -12,6 +12,7 @@ import styles from "../../ui/components.module.css";
 type Line = Plan["stops"][number]["lines"][number];
 type QueueLine = {
   stage?: string;
+  vendor_instead?: boolean;
   name?: string;
   units?: number;
   quantity?: number;
@@ -59,7 +60,13 @@ function LineMoney({ row }: { row: QueueLine }) {
         <Money copper={row.unit_copper ?? null} /> / unit ·{" "}
         <Money copper={row.profit_copper ?? null} /> profit
         <br />
-        Deposit <Money copper={row.deposit_copper ?? null} /> · back on sale
+        {row.vendor_instead ? (
+          <span>Deposits excluded: refunded on an auction sale</span>
+        ) : (
+          <>
+            Deposit <Money copper={row.deposit_copper ?? null} /> · back on sale
+          </>
+        )}
       </>
     );
   return null;
@@ -80,8 +87,9 @@ function RouteLine({
     typeof display.skillup_band === "string" ? display.skillup_band : "";
   const actionNote =
     typeof display.action_note === "string" ? display.action_note : "";
-  const verb =
-    row.stage === "craft"
+  const verb = row.vendor_instead
+    ? "Vendor it instead"
+    : row.stage === "craft"
       ? "Craft"
       : row.stage === "post"
         ? "Post"

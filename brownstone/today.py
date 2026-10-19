@@ -19,7 +19,7 @@ from .today_confidence import confidence, purchase_confidence, route_notes
 from .today_settings import TodaySettings
 from .today_warnings import PRICE_NOTE, base_signals, price_caps, warning_fields
 
-TODAY_VERSION = 14
+TODAY_VERSION = 15
 ROW_LIMIT = 10
 
 
@@ -183,7 +183,8 @@ def _held_batch(purchases, steps):
     return {"gold_cost_copper": today_holdings.gold_cost(purchases), "reserved_steps": steps}
 
 
-def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut, projection, makers, signals):
+def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, auction_cut, projection, makers,
+                signals, vendor_prices=None):
     selected = compatible_catalogs(catalogs, market)
     if not selected:
         return [], Counter(), [], []
@@ -191,7 +192,7 @@ def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, au
     caps = price_caps(signals)
     board = rank_catalogs(selected, observations, market, snapshot, now=now,
                           max_age_hours=max_age_hours, auction_cut=auction_cut, recipe_graph=graph,
-                          sell_price_caps=caps)
+                          sell_price_caps=caps, vendor_prices=vendor_prices)
     filtered, hidden = filter_candidates(board["rows"], projection)
     prices, sales = basis_prices(observations, "cautious")
     rows = []
@@ -414,7 +415,7 @@ def undercut_price(lowest, max_stack_size):
     return lowest - 1
 
 
-def _sell(row, metrics, auction_cut):
+def _sell(row, metrics, auction_cut, vendor_prices=None):
     metric = (metrics or {}).get(row["output_item_id"], {})
     lowest = metric.get("min_buyout")
     undercut = undercut_price(lowest, metric.get("max_stack_size"))
@@ -425,8 +426,14 @@ def _sell(row, metrics, auction_cut):
     if post_cap is not None and undercut is not None:
         step = SILVER if metric.get('max_stack_size') == 1 else 1
         undercut = min(undercut, post_cap) // step * step or None
+    vendor = (vendor_prices or {}).get(row['output_item_id'])
+    vendor = vendor if vendor is not None and vendor > 0 else None
+    vendor_instead = vendor is not None and undercut is not None and _net(undercut, 1, auction_cut) <= vendor
     profit = (_net(undercut, row["output_quantity"], auction_cut) * row["batch_size"] - row["batch_cost_copper"]
               if undercut else None)
+    if vendor_instead:
+        profit = vendor * row['output_quantity'] * row['batch_size'] - row['batch_cost_copper']
+        undercut = None
     thin = (metric["listings"] < 3 or metric["largest_stack_units"] * 2 >= metric["units"]) if metric else None
     return {"output_item_id": row["output_item_id"], "output_name": row["output_name"],
             "catalog_id": row["catalog_id"], "recipe_id": row["recipe_id"], "batch_size": row["batch_size"],
@@ -434,6 +441,7 @@ def _sell(row, metrics, auction_cut):
             "largest_stack_units": metric.get("largest_stack_units"), "thin": thin,
             "undercut_copper": undercut, "undercut_batch_profit_copper": profit,
             **({"vendor_price_cap_copper": vendor_cap, "vendor_capped": vendor_capped} if vendor_cap else {}),
+            **({'vendor_sell_copper': vendor, 'vendor_instead': vendor_instead} if vendor else {}),
             "price_step": "whole silver" if metric.get("max_stack_size") == 1 else "1c",
             **warning_fields(row), "price_note": PRICE_NOTE if cap is not None else None}
 
@@ -475,8 +483,10 @@ def _held_evidence(crafts, sells, holdings, units, captures, max_age_hours, auct
             row.pop('holding_consumers', None)
         for row, sell in zip(crafts, sells, strict=True):
             sell.update(held_outputs=row['held_outputs'],
-                        held_value_copper=_net(sell['undercut_copper'], sum(u['units'] for u in row['held_outputs']),
-                                              auction_cut) if sell['undercut_copper'] else None)
+                        held_value_copper=(sell['vendor_sell_copper'] * sum(u['units'] for u in row['held_outputs'])
+                                           if sell.get('vendor_instead') else _net(sell['undercut_copper'],
+                                              sum(u['units'] for u in row['held_outputs']),
+                                              auction_cut) if sell['undercut_copper'] else None))
             sell['confidence_reasons'] = row['confidence_reasons']
 
 
@@ -507,7 +517,7 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
     makers = team_makeable(compatible_catalogs(catalogs, market), character_data or {})
     candidates, hidden, warnings, board = _candidates(catalogs, observations, market, snapshot, now,
                                               max_age_hours, auction_cut, projection, makers,
-                                              base_signals(flood_evidence))
+                                              base_signals(flood_evidence), vendor_prices)
     holdings, captures, units = today_holdings.scoped(holdings_data, projection["character"])
     dropped, limits = [], {}
     if choices is None:
@@ -520,7 +530,12 @@ def build_today(catalogs, observations, market, snapshot, settings: TodaySetting
                                catalogs, choices, refill)
     _public_materials(crafts, holdings)
     shopping = _shopping(crafts, metrics)
-    sells = [_sell(row, metrics, auction_cut) for row in crafts]
+    for row in crafts:
+        vendor = (vendor_prices or {}).get(row['output_item_id'])
+        if vendor is not None and vendor > 0:
+            row['vendor_profit_copper'] = (vendor * row['output_quantity'] * row['batch_size']
+                                           - row['batch_cost_copper']) // row['batch_size']
+    sells = [_sell(row, metrics, auction_cut, vendor_prices) for row in crafts]
     for row, sell in zip(crafts, sells, strict=True):
         sell['your_sales'] = sales.combined(sales_data, row['output_item_id'], projection['character'])
         sell['max_expiries'] = market.get('max_expiries', 3)
@@ -644,10 +659,13 @@ def session_queue(crafts, shopping, sells):
                       **({"held_outputs": sell["held_outputs"], "held_value_copper": sell["held_value_copper"]}
                          if "held_outputs" in sell else {}),
                       "deposit_copper": sell["deposit_copper"], "post_duration_hours": sell["post_duration_hours"],
-                      "unit_copper": sell["undercut_copper"], "profit_copper": sell["undercut_batch_profit_copper"],
+                      "unit_copper": (sell.get('vendor_sell_copper') if sell.get('vendor_instead')
+                                      else sell['undercut_copper']),
+                      **({'vendor_instead': True} if sell.get('vendor_instead') else {}),
+                      "profit_copper": sell["undercut_batch_profit_copper"],
                       **_confidence_fields(row), **warning_fields(sell)})
     profits = [s["undercut_batch_profit_copper"] for s in sells]
-    deposits = [s["deposit_copper"] for s in sells]
+    deposits = [s["deposit_copper"] for s in sells if not s.get("vendor_instead")]
     return {"mail_note": "Mail between characters is not charged; postage is unconfirmed on Forever.",
             "deposits_to_post_copper": sum(deposits) if all(d is not None for d in deposits) else None,
             "lines": lines, "gold_needed_copper": sum(p["cost_copper"] for p in shopping),

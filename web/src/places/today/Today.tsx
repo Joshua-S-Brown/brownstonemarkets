@@ -160,7 +160,11 @@ export function Today({
         <Tile
           label="Planned profit"
           value={<Money copper={queue.expected_profit_copper} />}
-          caption="At planned undercut · listings, not sales"
+          caption={
+            data.plan.sell.some((r) => r.vendor_instead)
+              ? "At planned auction or vendor value"
+              : "At planned undercut · listings, not sales"
+          }
         />
       </div>
       {data.plan.freshness.stale && (

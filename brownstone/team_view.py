@@ -2,6 +2,7 @@
 from datetime import UTC, datetime
 
 from . import action_board, hiring, progression, recipe_catalogs, skillups, today_characters
+from .today import _net
 from .today_characters import available_characters
 
 BOARD_KEYS = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut')
@@ -143,13 +144,14 @@ def profession_record(catalogs, data, board, profession):
                                coverage=skillups.coverage_line(c)) for c in catalogs])
 
 
-def character_holdings(items, captures, plan, stops, prices, vendor_prices):
+def character_holdings(items, captures, plan, stops, prices, vendor_prices, auction_cut=.05):
     """Value exact held identities like Stock and suggest only evidenced Route uses."""
     rows = []
     for item in items:
         base = item['variant_state'] == 'base'
         price = prices.get(item['item_id']) if base else None
         vendor = vendor_prices.get(item['item_id']) if base else None
+        vendor = vendor if vendor is not None and vendor > 0 else None
         own, mail = None, None
         for number, stop in enumerate(stops, 1):
             for line in stop['lines']:
@@ -168,9 +170,8 @@ def character_holdings(items, captures, plan, stops, prices, vendor_prices):
                     own = f'used in tonight’s plan (Route step {number})'
         action = own or mail if base else None
         if not action:
-            # A listing at or below the vendor price earns less than vendoring it.
-            action = 'sell' if price is not None and vendor is not None and price > vendor else (
-                'vendor' if vendor else 'keep')
+            action = 'sell' if price is not None and vendor is not None and _net(price, 1, auction_cut) > vendor else (
+                ('vendor it instead' if price is not None else 'vendor') if vendor else 'keep')
         rows.append(item | dict(vendor_copper=vendor, unit_copper=price,
                                 value_copper=price * item['units'] if price is not None else None,
                                 action=action))

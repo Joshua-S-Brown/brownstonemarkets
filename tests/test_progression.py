@@ -346,7 +346,7 @@ def test_today_plan_identical_to_before_story070():
     current = plan()
     current.pop('unplanned')  # STORY-088 adds display evidence, not a planning change.
     assert json.loads(json.dumps(current, default=str)) == before
-    assert TODAY_VERSION == before['today_version'] == 14
+    assert TODAY_VERSION == before['today_version'] == 15
 
 
 @pytest.mark.parametrize('held,expected', [(0, 60), (3, 30), (6, 0)])
