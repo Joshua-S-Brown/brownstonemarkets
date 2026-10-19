@@ -75,7 +75,7 @@ export function ItemRecord({
           {variant && (
             <>
               {" "}
-              · <Identity state={JSON.parse(variant)[0]} />
+              · <Identity state={JSON.parse(variant)[0]} several />
             </>
           )}
         </p>

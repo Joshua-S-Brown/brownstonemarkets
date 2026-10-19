@@ -260,6 +260,8 @@ it("renders unknown values, recipe provenance, partial captures, exact variants 
   fireEvent.click(screen.getByRole("tab", { name: "Holdings" }));
   expect(screen.getByText("Contents unknown")).toBeTruthy();
   expect(screen.getByText(/at least 2 units/)).toBeTruthy();
+  // A lone identity carries no label.
+  expect(screen.getByRole("listitem").textContent).not.toContain("variant");
   const item = screen.getByRole("button", { name: "Monkey robe" });
   const capture = screen.getByText("Capture evidence");
   expect(
@@ -277,9 +279,48 @@ it("renders unknown values, recipe provenance, partial captures, exact variants 
   expect(screen.getByText("bags-1")).toBeTruthy();
 });
 
+it("labels a holding only beside another identity, not another stack of the same one", async () => {
+  const record = data();
+  record.holdings.items.push({ ...record.holdings.items[0]!, kind: "bank" });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: URL) => ({
+      ok: true,
+      json: async () =>
+        url.pathname === "/api/today/plan"
+          ? { state: {}, stops: [] }
+          : url.pathname.endsWith("/next")
+            ? { stops: [], holdings: record.holdings, gold: { categories: [] } }
+            : record,
+    })),
+  );
+  wrap(
+    <CharacterRecord
+      source="source"
+      character={["Maker", "First", "Alliance"]}
+    />,
+  );
+  await screen.findByRole("heading", { name: "Maker" });
+  await userEvent.click(screen.getByRole("tab", { name: "Holdings" }));
+  const stacks = screen.getAllByRole("listitem");
+  expect(stacks).toHaveLength(2);
+  stacks.forEach((row) => expect(row.textContent).not.toContain("variant"));
+});
+
 it("opens Next with the shared Today query, original Route numbers and per-profession best", async () => {
   const record = data();
   record.free_slots = 1;
+  record.holdings.items.push({
+    item_id: 10,
+    name: "Monkey robe",
+    variant_state: "base",
+    variant_id: null,
+    units: 3,
+    unit_copper: 5,
+    value_copper: 15,
+    action: "sell",
+    kind: "bags",
+  });
   record.suggestion_note = "";
   record.suggestions = ["blacksmithing", "leatherworking", "engineering"].map(
     (profession, i) => ({
@@ -397,7 +438,15 @@ it("opens Next with the shared Today query, original Route numbers and per-profe
   );
   expect(next).toBeTruthy();
   await userEvent.click(screen.getByRole("tab", { name: "Holdings" }));
-  expect(screen.getByText(/no price/).textContent).toContain("keep");
+  const stacks = within(
+    screen.getByRole("list", { name: "bags stacks" }),
+  ).getAllByRole("listitem");
+  expect(
+    stacks.map((row) => [...row.children].map((cell) => cell.textContent)),
+  ).toEqual([
+    ["Monkey robe variant", "at least 2 units", "no price", "—", "keep"],
+    ["Monkey robe ", "at least 3 units", "5c / unit", "15c total", "sell"],
+  ]);
 });
 
 it("opens exact-skill profession headings, follows materials to items and goes Back across all three records", async () => {

@@ -165,7 +165,14 @@ export function Palette({ source }: { source: string }) {
                                   >
                                     {hit.name}
                                   </span>{" "}
-                                  <Identity state={hit.variant_state} />
+                                  <Identity
+                                    state={hit.variant_state}
+                                    several={
+                                      hits.filter(
+                                        (h) => h.item_id === hit.item_id,
+                                      ).length > 1
+                                    }
+                                  />
                                 </span>
                                 <small>
                                   {hit.role ? `${hit.role} · ` : ""}

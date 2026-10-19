@@ -471,7 +471,13 @@ export function Ledger({ source }: { source: string }) {
                               r.variant_id,
                             ])}
                           />
-                          <Identity state={r.variant_state} />
+                          <Identity
+                            state={r.variant_state}
+                            several={
+                              stock.rows.filter((s) => s.item_id === r.item_id)
+                                .length > 1
+                            }
+                          />
                         </>
                       ),
                     },

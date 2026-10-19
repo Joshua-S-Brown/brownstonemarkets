@@ -17,7 +17,7 @@ import {
 } from "recharts";
 import type { ColumnDef } from "@tanstack/react-table";
 import { get } from "../api/client";
-import type { History, Ladder } from "../api/market";
+import type { History, Ladder, Removal } from "../api/market";
 import { DataGrid } from "../ui/DataGrid";
 import { Money, moneyText } from "../ui/Money";
 import { ErrorState } from "../ui/parts";
@@ -326,9 +326,28 @@ export function ItemCharts({
   );
 }
 
+const kinds = ["early", "expiry"] as const;
+type Kind = (typeof kinds)[number];
 export function RemovalHistory({ h }: { h: History }) {
   const pairs = h.removals?.pairs?.filter((p) => !p.skipped) ?? [];
-  const [all, setAll] = useState(false);
+  const totals = new Map<string, Pick<Removal, "variant_state" | Kind>>();
+  pairs.forEach((p) =>
+    p.items.forEach((r) => {
+      const key = JSON.stringify([r.variant_state, r.variant_id]);
+      const t = totals.get(key) ?? {
+        variant_state: r.variant_state,
+        early: { listings: 0, units: 0 },
+        expiry: { listings: 0, units: 0 },
+      };
+      kinds.forEach((k) => {
+        t[k] = {
+          listings: t[k].listings + r[k].listings,
+          units: t[k].units + r[k].units,
+        };
+      });
+      totals.set(key, t);
+    }),
+  );
   return (
     <section>
       <h2>Removed between scans</h2>
@@ -336,20 +355,33 @@ export function RemovalHistory({ h }: { h: History }) {
       {h.removals_error && <p role="alert">{h.removals_error}</p>}
       <p>{h.removals?.note}</p>
       <p>
+        {pairs.length} comparable gaps ·{" "}
         {(h.removals?.pairs?.length ?? 0) - pairs.length} skipped gaps (over 12
         hours)
       </p>
-      {(all ? pairs : pairs.slice(0, 3)).map((p, i) => (
-        <section key={i}>
-          <h3>
+      {[...totals.values()].map((t, i) => (
+        <p key={i}>
+          <Identity state={t.variant_state} several={totals.size > 1} /> Removed
+          early: {t.early.listings.toLocaleString("en-US")} listings ·{" "}
+          {t.early.units.toLocaleString("en-US")} units · Could have expired:{" "}
+          {t.expiry.listings.toLocaleString("en-US")} listings ·{" "}
+          {t.expiry.units.toLocaleString("en-US")} units
+        </p>
+      ))}
+      {pairs.map((p, i) => (
+        <details key={i}>
+          <summary>
             <UtcTime value={p.earlier.finished_at} /> →{" "}
-            <UtcTime value={p.later.finished_at} />
-          </h3>
-          <p>Gap {(p.gap / 3600).toFixed(2)} hours</p>
+            <UtcTime value={p.later.finished_at} /> · gap{" "}
+            {(p.gap / 3600).toFixed(2)} hours
+          </summary>
           {p.items.map((r, j) => (
             <section key={j}>
               <p>
-                <Identity state={r.variant_state} />
+                <Identity
+                  state={r.variant_state}
+                  several={p.items.length > 1}
+                />
               </p>
               {(["early", "expiry", "unknown"] as const).map((k, i) => (
                 <p key={k}>
@@ -373,13 +405,8 @@ export function RemovalHistory({ h }: { h: History }) {
               </details>
             </section>
           ))}
-        </section>
+        </details>
       ))}
-      {pairs.length > 3 && (
-        <button onClick={() => setAll(!all)}>
-          {all ? "Show three gaps" : "Show all scan gaps"}
-        </button>
-      )}
     </section>
   );
 }

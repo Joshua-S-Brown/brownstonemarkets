@@ -139,13 +139,24 @@ it("gives local read-error guidance and one-scan/empty guidance", async () => {
     expect.stringContaining("Use Data"),
   );
 });
-it("shows three qualifying removal gaps, skipped count, and expands the rest", async () => {
+it("summarises removals per identity over comparable gaps, with each gap on demand", async () => {
+  const counts = (early: number, expiry: number) => ({
+    early: { listings: early, units: early * 2 },
+    expiry: { listings: expiry, units: expiry * 2 },
+    unknown: { listings: 0, units: 0 },
+    without_buyout: { earlier: 0, later: 0 },
+    evidence: [],
+  });
+  const identity = { item_id: 1, item_name: "Robe", variant_id: null };
   const pair = {
     skipped: false,
     earlier: { finished_at: "2026-10-15T00:00:00Z" },
     later: { finished_at: "2026-10-15T01:00:00Z" },
     gap: 3600,
-    items: [],
+    items: [
+      { ...identity, variant_state: "base", ...counts(1, 2) },
+      { ...identity, variant_state: "variant", ...counts(300, 0) },
+    ],
   };
   host(
     <RemovalHistory
@@ -153,17 +164,27 @@ it("shows three qualifying removal gaps, skipped count, and expands the rest", a
         ...h,
         removals: {
           note: "",
-          pairs: [pair, { ...pair, skipped: true }, pair, pair, pair, pair],
+          pairs: [pair, { ...pair, skipped: true }, pair, pair],
         },
       }}
     />,
   );
-  expect(screen.getByText("1 skipped gaps (over 12 hours)")).toBeTruthy();
-  expect(screen.getAllByText("Gap 1.00 hours")).toHaveLength(3);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Show all scan gaps" }),
-  );
-  expect(screen.getAllByText("Gap 1.00 hours")).toHaveLength(5);
+  expect(
+    screen.getByText("3 comparable gaps · 1 skipped gaps (over 12 hours)"),
+  ).toBeTruthy();
+  const totals = screen.getAllByText(/Removed early: .* Could have expired/);
+  expect(totals.map((p) => p.textContent!.trim())).toEqual([
+    "Removed early: 3 listings · 6 units · Could have expired: 6 listings · 12 units",
+    "variant Removed early: 900 listings · 1,800 units · Could have expired: 0 listings · 0 units",
+  ]);
+  const gaps = screen.getAllByText(/gap 1.00 hours/);
+  expect(gaps).toHaveLength(3);
+  expect(gaps[0]!.closest("details")!.hasAttribute("open")).toBe(false);
+  await userEvent.click(gaps[0]!);
+  expect(gaps[0]!.closest("details")!.hasAttribute("open")).toBe(true);
+  expect(
+    screen.getAllByText("Removed early: 300 listings · 600 units"),
+  ).toHaveLength(3);
 });
 
 it("renders distinct chart series, labelled axes, UTC ticks and a dashed typical reference", async () => {

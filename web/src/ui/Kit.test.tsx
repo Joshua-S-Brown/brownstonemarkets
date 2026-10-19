@@ -114,23 +114,28 @@ it("SignalPill has stable distinct labels and style hooks", () => {
     expect(screen.getByText(label).dataset.signal).toBe(label),
   );
 });
-it("Identity hides base, keeps variant/unresolved separate and explains isolation", async () => {
+it("Identity hides base and lone identities, names variant/unidentified link plainly and explains isolation", async () => {
   render(
     <>
-      <Identity state="base" />
-      <Identity state="variant" />
-      <Identity state="unresolved" />
-      <Identity state={null} />
+      <Identity state="base" several />
+      <Identity state="variant" several />
+      <Identity state="unresolved" several />
+      <Identity state={null} several />
+      <Identity state="variant" several={false} />
     </>,
   );
   expect(screen.queryByText("base")).toBeNull();
+  expect(screen.queryByText("unresolved")).toBeNull();
+  expect(screen.getAllByText("variant")).toHaveLength(1);
   expect(screen.getByText("legacy")).toBeTruthy();
   await userEvent.hover(screen.getByRole("button", { name: "variant" }));
   expect((await screen.findByRole("tooltip")).textContent).toContain(
     "separate listings and prices",
   );
   await userEvent.unhover(screen.getByRole("button", { name: "variant" }));
-  await userEvent.hover(screen.getByRole("button", { name: "unresolved" }));
+  await userEvent.hover(
+    screen.getByRole("button", { name: "unidentified link" }),
+  );
   await waitFor(() =>
     expect(screen.getByRole("tooltip").textContent).toContain(
       "never enter base-item crafting",

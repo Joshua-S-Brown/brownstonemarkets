@@ -114,6 +114,14 @@ it("groups matching items and characters, hides empty groups and keeps variant k
           variant_state: "variant",
           variant_id: key,
         },
+        {
+          kind: "item",
+          name: "Barbaric Linen Vest",
+          item_id: 2578,
+          quality: 2,
+          role: "Craft",
+          variant_state: "base",
+        },
       ],
     }),
   );
@@ -135,7 +143,7 @@ it("groups matching items and characters, hides empty groups and keeps variant k
   expect(document.body.textContent).not.toContain(key);
   expect(screen.getByTitle(key).textContent).toContain("variant");
 });
-it("shows only the ID for an item outside the catalogs, with its identity beside the name", async () => {
+it("shows only the ID for an item outside the catalogs, with no label for its only identity", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({
@@ -161,5 +169,5 @@ it("shows only the ID for an item outside the catalogs, with its identity beside
   await userEvent.type(screen.getByRole("combobox"), "hearth");
   const name = await screen.findByText("Hearthstone");
   expect(screen.getByText("6948").textContent).toBe("6948");
-  expect(name.parentElement!.textContent).toContain("unresolved");
+  expect(name.parentElement!.textContent).toBe("Hearthstone ");
 });

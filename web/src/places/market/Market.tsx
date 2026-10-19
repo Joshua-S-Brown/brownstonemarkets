@@ -53,17 +53,21 @@ const columns: ColumnDef<Row>[] = [
   {
     accessorKey: "name",
     header: "Item",
-    cell: ({ row: { original: r } }) => (
+    cell: ({ row }) => (
       <>
         <ItemLink
-          id={r.item_id}
-          name={r.name}
-          quality={r.quality}
+          id={row.original.item_id}
+          name={row.original.name}
+          quality={row.original.quality}
           badge
-          variant={identityVariant(r)}
+          variant={identityVariant(row.original)}
         />
         <small>
-          {r.item_id} <Identity state={r.variant_state} />
+          {row.original.item_id}{" "}
+          <Identity
+            state={row.original.variant_state}
+            several={row.depth > 0 || row.subRows.length > 0}
+          />
         </small>
       </>
     ),
@@ -126,11 +130,7 @@ function CardRow({ row: r }: { row: components["schemas"]["MarketCardRow"] }) {
           variant={identityVariant(r)}
         />
         <small>
-          {r.variant_state === "base" ? (
-            "base"
-          ) : (
-            <Identity state={r.variant_state} />
-          )}
+          <Identity state={r.variant_state} several />
           {r.outside_chains && " · Outside our chains"}
         </small>
         <small>

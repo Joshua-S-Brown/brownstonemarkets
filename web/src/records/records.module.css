@@ -139,3 +139,29 @@
 .uses p {
   margin: 4px 0;
 }
+
+/* The inspector is narrow at every width: the item takes its own line, values align below. */
+.stacks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+}
+.stacks li {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.stacks li:first-child {
+  border-top: 0;
+}
+.stacks li > span:first-child {
+  grid-column: 1 / -1;
+}
+.stacks li > span:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}

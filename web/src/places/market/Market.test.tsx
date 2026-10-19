@@ -131,7 +131,7 @@ it("renders head, three-plus-more cards, history threshold, separate collapsed i
   expect(String(fetch.mock.calls[0]?.[0])).toContain("role=levels");
   expect(String(fetch.mock.calls[0]?.[0])).toContain("window=40");
   expect(screen.getByText(/next 40 points/)).toBeTruthy();
-  expect(screen.getAllByText("base").length).toBeGreaterThan(0);
+  expect(screen.queryByText("base")).toBeNull();
   expect(
     screen
       .getByRole("button", { name: "For our levels" })
@@ -170,10 +170,13 @@ it("renders head, three-plus-more cards, history threshold, separate collapsed i
     within(body).getAllByRole("row")[0]!.getAttribute("data-selected"),
   ).toBe("true");
   await user.click(
-    screen.getByRole("button", { name: "+1 variants/unresolved" }),
+    screen.getByRole("button", { name: "+1 separately priced" }),
   );
   expect(within(body).getAllByRole("row")).toHaveLength(3);
   expect(within(body).getAllByRole("row")[1]!.textContent).toContain("7");
+  expect(within(body).getAllByRole("row")[1]!.textContent).toContain(
+    "unidentified link",
+  );
   await user.click(
     within(body).getByRole("button", { name: "Material unresolved" }),
   );

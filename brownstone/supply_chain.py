@@ -106,7 +106,7 @@ def build_graph(explorer, catalog, root, buy, forced):
     nodes: dict[int, dict] = {}
     edges: dict[tuple[int, int], dict] = {}
 
-    def visit(item_id, units, column, trail, root_node=False, chosen=True):
+    def visit(item_id, units, trail, root_node=False, chosen=True):
         cost, method, _ = unit_route(catalog, buy, item_id, trail, forced) if not root_node else (None, 'craft', {})
         rid = root['recipe_id'] if root_node else catalog['recipe_for_output'].get(item_id)
         recipe = catalog['recipes_by_id'][rid] if rid is not None else None
@@ -115,7 +115,6 @@ def build_graph(explorer, catalog, root, buy, forced):
         current = nodes[item_id]
         # Unchosen branches are drawn as evidence only; their quantities are never needed.
         current['units'] += units if chosen else 0
-        current['column'] = max(current['column'], column)
         if recipe is None:
             return
         if rid in trail:
@@ -129,10 +128,28 @@ def build_graph(explorer, catalog, root, buy, forced):
             previous = edges.get((item_id, child), {}).get('chosen', False)
             edges[item_id, child] = {'parent': item_id, 'child': child, 'quantity': quantity,
                                      'chosen': active or previous}
-            visit(child, units * quantity // recipe['output_quantity'], column + 1, (*trail, rid), chosen=active)
+            visit(child, units * quantity // recipe['output_quantity'], (*trail, rid), chosen=active)
 
-    visit(root['output_item_id'], root['output_quantity'], 0, (), True)
+    visit(root['output_item_id'], root['output_quantity'], (), True)
+    place_columns(nodes, edges.values(), root['output_item_id'])
     return list(nodes.values()), list(edges.values())
+
+
+def place_columns(nodes, edges, root_id):
+    """Chosen nodes sit one column past their deepest chosen parent; unchosen-only nodes follow any parent."""
+    parents: dict[int, list[dict]] = {}
+    for edge in edges:
+        parents.setdefault(edge['child'], []).append(edge)
+    placed = {root_id: 0}
+
+    def column(item_id):
+        if item_id not in placed:
+            links = parents[item_id]
+            placed[item_id] = 1 + max(column(e['parent']) for e in [e for e in links if e['chosen']] or links)
+        return placed[item_id]
+
+    for item_id, current in nodes.items():
+        current['column'] = column(item_id)
 
 
 def node(explorer, catalog, item_id, recipe, method, cost, buy, trail, forced, root_node):

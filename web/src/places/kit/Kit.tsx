@@ -63,7 +63,7 @@ export function Kit() {
         · No profession captured
         <p>
           <ItemLink id={2589} name="Linen Cloth" quality={1} badge />{" "}
-          <Identity state="base" />
+          <Identity state="base" several />
         </p>
         <p>
           <ItemLink
@@ -73,10 +73,11 @@ export function Kit() {
             quality={2}
             badge
           />{" "}
-          <Identity state="variant" />
+          <Identity state="variant" several />
         </p>
         <p>
-          <Identity state="unresolved" /> <Identity state={null} />
+          <Identity state="unresolved" several />{" "}
+          <Identity state={null} several />
         </p>
         <UtcTime value="2026-10-16T11:37:27Z" />
       </Panel>

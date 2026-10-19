@@ -45,7 +45,7 @@ function Value({ name, value }: { name: string; value: unknown }) {
   )
     return <CharacterName character={value as [string, string, string]} />;
   if (name === "variant_state" && typeof value === "string")
-    return <Identity state={value} />;
+    return <Identity state={value} several />;
   if (
     typeof value === "number" &&
     ["at", "from", "to", "captured_at", "newest_sale", "posted_at"].includes(

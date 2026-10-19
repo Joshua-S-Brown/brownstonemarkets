@@ -146,7 +146,7 @@ export function DataGrid<T>({
                         onClick={r.getToggleExpandedHandler()}
                       >
                         {r.getIsExpanded() ? "−" : "+"}
-                        {r.subRows.length} variants/unresolved
+                        {r.subRows.length} separately priced
                       </button>
                     )}
                   </td>

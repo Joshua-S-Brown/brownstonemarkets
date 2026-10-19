@@ -33,28 +33,12 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 111, 112 and SPIKE-009/009b.
-
-### STORY-110 — Records polish
-
-Merges *Holdings as item rows*, *Chosen-route column placement*, *Plain identity labels* and *Shorter removal history* from Later (2026-10-18 grooming).
-
-As a gold maker, I want records that scan at a glance on the Mac and phone, so that I spend less time reading them.
-
-Acceptance:
-- **Holdings as rows:** the character record's *Bags and bank* lays each stack out as a row (item, units, unit value, total, action), readable at 390 px.
-- **Chosen route first:** Supply chains places columns from the chosen path first, then unchosen-only nodes, so no chosen edge crosses an empty column.
-- **Plain identity labels:** *base* and *unresolved* read as *variant* or *unidentified link* only where an item has more than one identity; identities stay separate (ADDON-08).
-- **Shorter removal history:** the item page summarises removed-early and could-have-expired totals over comparable gaps, with each gap on demand.
-- **Offline tests:** Vitest for each; layout ordering for chosen and unchosen paths; identity labels with one and several identities.
-- Compare 1280 and 390 px screenshots with the prototype (UI-18).
-- Depends on nothing. Rules: UI-18, ADDON-08, UI-10, UI-16. Design: *Web app (UI-18)*, *Team recipe graph (STORY-015b)*, *Removed listings (STORY-027)*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112 and SPIKE-009/009b.
 
 ## Later
 

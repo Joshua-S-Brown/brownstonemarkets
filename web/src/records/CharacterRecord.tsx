@@ -384,44 +384,67 @@ export function CharacterRecord({
                     : "Captured items"
                 }
               >
-                {holdings.items
-                  .filter((item) => item.kind === kind)
-                  .map((item, i) => (
-                    <p key={i}>
-                      <ItemLink
-                        id={Number(item.item_id)}
-                        name={String(item.name)}
-                        variant={JSON.stringify([
-                          item.variant_state,
-                          item.variant_id,
-                        ])}
-                      />{" "}
-                      · {atLeast ? "at least " : ""}
-                      {String(item.units)} {item.units === 1 ? "unit" : "units"}{" "}
-                      ·{" "}
-                      {item.unit_copper == null ? (
-                        "no price"
-                      ) : (
-                        <>
-                          <Money copper={Number(item.unit_copper)} /> / unit ·{" "}
-                          <Money copper={Number(item.value_copper)} /> total
-                        </>
-                      )}{" "}
-                      · {String(item.action ?? "keep")}
-                      {item.variant_state !== "base" && (
-                        <>
-                          ·{" "}
+                <ul className={record.stacks} aria-label={`${kind} stacks`}>
+                  {holdings.items
+                    .filter((item) => item.kind === kind)
+                    .map((item, i) => (
+                      <li key={i}>
+                        <span>
+                          <ItemLink
+                            id={Number(item.item_id)}
+                            name={String(item.name)}
+                            variant={JSON.stringify([
+                              item.variant_state,
+                              item.variant_id,
+                            ])}
+                          />{" "}
                           <Identity
                             state={
                               item.variant_state == null
                                 ? null
                                 : String(item.variant_state)
                             }
+                            several={
+                              new Set(
+                                holdings.items
+                                  .filter(
+                                    (other) => other.item_id === item.item_id,
+                                  )
+                                  .map((other) =>
+                                    JSON.stringify([
+                                      other.variant_state,
+                                      other.variant_id,
+                                    ]),
+                                  ),
+                              ).size > 1
+                            }
                           />
-                        </>
-                      )}
-                    </p>
-                  ))}
+                        </span>
+                        <span>
+                          {atLeast ? "at least " : ""}
+                          {String(item.units)}{" "}
+                          {item.units === 1 ? "unit" : "units"}
+                        </span>
+                        {item.unit_copper == null ? (
+                          <span>no price</span>
+                        ) : (
+                          <span>
+                            <Money copper={Number(item.unit_copper)} /> / unit
+                          </span>
+                        )}
+                        <span>
+                          {item.unit_copper == null ? (
+                            "—"
+                          ) : (
+                            <>
+                              <Money copper={Number(item.value_copper)} /> total
+                            </>
+                          )}
+                        </span>
+                        <span>{String(item.action ?? "keep")}</span>
+                      </li>
+                    ))}
+                </ul>
                 {!holdings.items.some((item) => item.kind === kind) && (
                   <p>{atLeast ? "Contents unknown" : "No items captured"}</p>
                 )}

@@ -219,6 +219,13 @@ def test_unchosen_branches_keep_dashed_evidence_without_changing_costs(chain):
     assert 2589 not in {leaf['item_id'] for leaf in forced['leaves']}
     units = {n['item_id']: n['units'] for n in forced['nodes']}
     assert units[2996] and not units[2589]
+    # Unchosen-only nodes sit past their parent; a chosen node keeps its chosen column.
+    assert {n['item_id']: n['column'] for n in forced['nodes']}[2589] == 2
+    c, _ = supply_chain.select(chain, 'tailoring', 2393)
+    c['recipes_by_id'][2393]['inputs'].append({'item_id': 2589, 'quantity': 1})
+    direct = supply_chain.route(chain, 'tailoring', 2393, forced={2996: 'buy'})
+    assert {n['item_id']: n['column'] for n in direct['nodes']}[2589] == 1
+    assert {n['item_id']: n['column'] for n in supply_chain.route(chain, 'tailoring', 2393)['nodes']}[2589] == 2
     assert normal['nodes'][0]['output']
     assert normal['nodes'][0]['sale_price_copper'] == normal['waterfall'][0]['amount_copper']
 

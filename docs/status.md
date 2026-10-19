@@ -27,7 +27,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   and always uses its cheapest routes. Route, Per craft and Batch use shared panels: two columns
   from 1100 px, stacked below. Content-sized cards retain maker/status/held evidence; curved
   quantity edges distinguish chosen paths from unchosen branches, whose cards read *Not on the
-  chosen route* with no toggle or units. Chips and wide graphs scroll
+  chosen route* with no toggle or units. Columns follow the chosen path first, then unchosen-only nodes (STORY-110). Chips and wide graphs scroll
   horizontally. The labelled waterfall keeps quantities, costs, missing-price stops and losses
   in its rows. Offline verification: `test_supply_chain.py`, `test_chains_api.py`, Chains Vitest.
   Copied beta scan `20261017T104157Z-ff991e`: Copper Dagger opens at 601c/824c cost/profit;
@@ -184,8 +184,8 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 - **Inspector records (STORY-093):** prototype-width item/character panels use three persistent facts,
   scrolling tabs, UTC times and evidence footers. Item Overview pairs stored prices/typical with supply
   bars, vendor/deposit/holdings facts and best-use/farming panels. Character records show profession
-  bars, projected known-recipe totals, four-column reachable recipes, location-first holdings and
-  distinct history series with All readings. Offline: ItemDetails/ItemCharts/CharacterRecord Vitest,
+  bars, projected known-recipe totals, four-column reachable recipes, location-first holdings (one row per
+  stack: item, units, unit value, total, action) and distinct history series with All readings. Offline: ItemDetails/ItemCharts/CharacterRecord Vitest,
   character projection and web API tests. Copied Forever beta `20261017T104157Z-ff991e` matches
   STORY-093's Linen Cloth and Arille figures; comparisons at 1280/390 px are in ignored
   `work/story-093/`. No collection/import ran; unknown bank remains a lower bound.
@@ -195,10 +195,12 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   Scoped name/ID search, separate variants, catalog chains/bands/team eligibility,
   movement, consecutive-scan removals and flood signals (UI-02/06/09/10/11).
   Item pages lead with a base-item decision summary, scoped holdings and own item farming evidence;
-  Web record tabs and the evidence footer retain details. Three removal gaps lead,
-  the remainder expand, skipped gaps are counted; market-wide lists stay on home (STORY-078, UI-09).
+  Web record tabs and the evidence footer retain details. Removals summarise early/could-have-expired
+  totals per identity over comparable gaps, each gap opens on demand, skipped gaps are counted; market-wide lists stay on home (STORY-078, UI-09).
   UI-11 typical prices use equal-weight UTC daily medians, with days/scans evidence and
   `flood_min_days` history validation (STORY-072; rules in requirements → UI-11).
+  Identity pills read *variant*/*unidentified link* only beside another identity of the same item;
+  cards, item headers and evidence always label a non-base identity, base never (STORY-110).
 - **Removal speed (STORY-062):** Market item Overview and Ledger Restock show UI-19's
   time-weighted early-removal upper bound, scan gaps/hours, listed-supply turnover and evidence
   thresholds. Ledger adds display-only base-item suggestions beside manual targets. Rules/defaults
@@ -311,7 +313,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 2,063 Python tests pass (one platform skip), plus 109 Vitest tests.
+Expected: 2,063 Python tests pass (one platform skip), plus 112 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in
