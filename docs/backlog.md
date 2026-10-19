@@ -139,14 +139,33 @@ Moved from *Your own character's data* (*Profession page*) on 2026-10-18 (groomi
 
 As a gold maker, I want to open one profession and see every recipe with each character's status, so that I can plan who learns what without opening every character.
 
-Decisions:
-- A profession record in the inspector, following UI-18's record pattern, opened from profession names on Team and in character records.
-- Rows: every compatible catalog recipe by skill band; each scoped character's CRAFT-11 status (Known, Train now, not yet, needs pattern, unknown); how it's learned (CRAFT-08 labels); newest Board profit per craft or its reason; materials as item links.
+Decisions (from the code, 2026-10-18):
+- **Key:** the catalog `profession` slug (`tailoring`), one record per slug, every compatible catalog for it (`action_board.compatible_catalogs`). Display only: reuse what exists, add no estimate, no reach walk and no change to Board, Team or Today output.
+- **Projection** (`brownstone/team_view.py`, beside `path_result`): `profession_record(catalogs, data, board, profession)`.
+  - **Holders:** scoped characters whose profession has the profession's skill ID (`hiring.SKILL_IDS`). The skill ID comes from the card or progression group, never the title. Each carries rank and maximum. One with the skill but no recipe list is a holder whose recipes are all unknown, with CRAFT-11's *open the profession window* note.
+  - **Rows:** every catalog recipe, grouped by the band of its required skill (`skillups.band_label(required_skill // 25 * 25)`; *skill unknown* when absent). Each row appears once, carrying its CRAFT-10 range text from `skillups.recipe_placement`.
+  - **Per holder:** `today_characters.recipe_status` gives the status (*Known*, *Train now* with training cost, *Not yet*, *Unknown*) and keeps its reason, e.g. *needs pattern or other source* or *recipe not listed*. Characters without the profession get no column.
+  - **Learning:** `recipe_catalogs.learning_label`.
+  - **Profit:** the newest Board row on the full `(catalog_id, recipe_id)`: `profit_copper` or its `action` reason. A recipe with no row is an *intermediate: not ranked by the Action Board*. With no snapshot, every row says so, and profit is null, never 0.
+  - **Materials:** catalog `inputs` with quantity and item name from `items_by_id`.
+- **API:** `GET /team/profession/{profession}` in `api/team.py` reads the same cache entry the way `/team/hire/{profession}` does: `current(chosen) or cached(chosen, 25)`, memoised per entry. Keep the parsed catalogs in the entry so the record works without a snapshot. 404 for a slug with no compatible catalog. Pydantic model; regenerate `schema.d.ts`.
+- **Web:** `web/src/records/ProfessionRecord.tsx`, lazy like `CharacterRecord`.
+  - `RecordRef` gains `{ profession: string }`. Like characters, it's held in inspector state, not the URL, and the back stack works across all three record kinds.
+  - Header facts: holders with rank/max and recipe count. The working list is grouped by band, with materials as `ItemLink`s and money via `Money`. The evidence footer holds catalog IDs and versions, the coverage line (`skillups.coverage_line`), scan ID and freshness.
+  - Opened from Team's *Profession coverage* and hiring table names (already slugs) and from character-record profession headings. Character-record headings link only when the group's skill ID maps to a slug with a catalog; otherwise they stay plain text.
+- **Docs:** UI-18 *Inspector* says item, character or profession links. Add `profession` to `web/src/records` in design *Web app (UI-18)*. Add the contract to *Team contracts* in one or two lines.
 
 Acceptance:
 - **Shown** as above, with unknowns explained and no names used for matching.
-- **Offline tests:** status per character, unknown recipe lists, bands, profit reasons, links; Vitest for the record.
-- Compare 1280 and 390 px screenshots with the prototype's record views (UI-18).
+- **Offline tests** (extend `tests/test_team_web.py` and `CharacterRecord.test.tsx`/`Team.test.tsx` before adding files):
+  - One holder per status: Known, Train now with cost, Not yet for rank, Not yet for needs pattern, Unknown for not listed.
+  - A holder with the skill but no recipe list.
+  - A same-titled profession with a different skill ID that is not a holder.
+  - Bands, including *skill unknown*.
+  - Board profit, intermediate reason, and no snapshot giving null profit with a reason.
+  - 404 for an unknown slug.
+  - Vitest: opening from Team and from a character heading, Back to the character, and a material link opening the item record.
+- **Real data** (Forever beta source, read-only): open Blacksmithing and Tailoring and report the holders, recipe count per profession (catalogs hold 430 and 412) and status counts per holder, with two example rows each. Screenshots at 1280 and 390 px beside the prototype's character record view (UI-18; the prototype has no profession record, so match its header/tabs/footer pattern).
 - Depends on nothing. Rules: CRAFT-08, CRAFT-10, CRAFT-11, UI-18. Design: *Team contracts*, *Skill-up map contracts*, *Web app (UI-18)*.
 
 ### STORY-112 — Level from what we hold, or farm it
