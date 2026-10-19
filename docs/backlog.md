@@ -44,18 +44,31 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 
 ### STORY-109 — Route and Ledger tidy-up
 
-Merges *One mailbox stop per holder* and *Route and Ledger tidy-up* from Later (2026-10-18 grooming).
+Merges *One mailbox stop per holder* and *Route and Ledger tidy-up* from Later (2026-10-18 grooming). Refined 2026-10-19 with beta evidence.
 
 As a gold maker, I want a Route without repeated stops and notes and a Ledger that leads with what needs attention, so that I can follow them quickly at the mailbox.
 
+Findings (beta corpus `work/beta-corpus/2026-10-18/`, replayed by `work/story-109/baseline.py`):
+- The Route has 13 stops, five of them mailbox stops. Baspion (stops 1 and 5) and Cicelyna (stops 2 and 4) each get two, because `today_session.queue_with_gold` inserts every gold mail line after *all* material take/mail lines and `route_stops` only groups consecutive lines.
+- `Route.tsx` shows `queue.mail_note` under every mailbox stop.
+- **Linen Bag:** the plan is correct. Basilly's capture (recipe list 2026-10-15 10:25 UTC, skills two minutes later at Tailoring 32) has recipe 3755 `learned: true`, `craftable: true`, `relativeDifficulty: 1` (yellow), and they crafted one in game on 2026-10-09 (catalog note). Only the band is wrong: `views/today_rows.recipe_band` uses the catalog's Wowhead `skillup_colors` [45, 45, 47, 65] and says *needs 45 · you're 32*. Across the team's 15 learned catalog recipes with both values, 13 match the game's colour; the other is Arille's Copper Chain Belt (rank 31, catalog orange 35, game orange).
+- The Ledger's gold reconciliation lists every pair; all 79 beta pairs reconcile (0 unknown).
+
+Decisions:
+- **One mailbox stop per holder:** in `queue_with_gold`, place each donor's gold mail line straight after that donor's last material `mail` line; a donor with no material mail keeps today's position (after all take/mail, before purchases). *Gold unknown* lines are unchanged. `route_stops` stays consecutive grouping. Gold mail text becomes STORY-095's form, *Cicelyna: mail 8s 87c to Arille* (`queue_line_text`), in Route, Queue and copy text. Plan, funds, reservations and amounts are unchanged; no `today_version` bump. Check how ticks are keyed: if by line index, the new order is deterministic, so only ticks saved before the change can shift, and the existing plan-reset behaviour covers it (say which in the report).
+- **Postage note once:** show `queue.mail_note` once on the Route, on the first mailbox stop only; copy text already has it once.
+- **Skill band from the game:** when the character's captured recipe row has `info.relativeDifficulty` (0 orange, 1 yellow, 2 green, 3 grey) and `learned: true`, the band's colour comes from it: *yellow at rank 32 (from the game)*, followed by the catalog thresholds as now. Where the catalog would say *not yet* but the game says learned, add *catalog says needs 45*. Without the captured value, keep today's catalog band. One shared helper serves Route (`views/today_web.route_lines`) and Level up (`views/today_rows`). Don't change catalog values (no source evidence for Forever's thresholds), eligibility or ranking.
+- **Ledger:** gold reconciliation shows pairs whose unexplained amount is nonzero or unknown by default; the reconciled rest are behind *Show N reconciled pairs* (`web/src/places/ledger/Ledger.tsx` around *Gold reconciliation*, `GoldPairs` in `Tables.tsx`). With none needing attention, say *All N pairs reconcile*. API and `ledger_version` unchanged; filtering is display-only in the web page.
+- **Rules to record:** *Gold mail* bullet in *Today (today_version 15)*: the new wording and placement, one note per Route; the skill-band source as a short addition to UI-12 (it says catalog skill-up bands today); the Ledger default in UI-15 item 10. requirements.md has about 236 bytes left under its size limit: tighten wording in the bullets you touch to stay under it.
+
 Acceptance:
-- **One mailbox stop per holder:** gold mail joins the holder's material mailbox stop and uses STORY-095's *Cicelyna: mail …* wording.
-- **Postage note once:** *postage is unconfirmed* appears once per Route, not on every mailbox step.
-- **Ledger:** gold reconciliation shows pairs with an unexplained amount by default; the rest are on demand with their count.
-- **Linen Bag check:** explain why the beta Route plans *Craft 5 × Linen Bag · needs 45 · you're 32* for Basilly, and fix the plan if it schedules a recipe the character can't make yet.
-- **Offline tests:** stop merging with material and gold mail, gold-only and material-only holders, the single note, the default filter and its count, and the skill check.
-- **Real data** (copy of `data/`): beta Route stop count before and after; Ledger pairs shown by default.
-- Depends on nothing. Rules: UI-12, UI-15, *Today (today_version 11)*. Design: *This session (STORY-063)*, *Gold ledger contracts*.
+- **One mailbox stop per holder:** a holder with material and gold mail has one mailbox stop, using *Name: mail X to Y*.
+- **Postage note once** per Route.
+- **Skill band:** a learned recipe with a captured difficulty shows the game's colour and never *needs X* below the catalog threshold; without one, the catalog band is unchanged.
+- **Ledger:** pairs needing attention show by default; the rest on demand with their count.
+- **Offline tests:** material plus gold mail from one holder, gold-only and material-only holders, a gold-unknown line; the single note; the band with and without captured difficulty, including the catalog-disagrees case; the Ledger default filter and its count, with and without pairs needing attention. Extend the existing `today_session`, Route/Today Vitest and Ledger tests before adding new ones.
+- **Real data** (beta corpus via `work/story-109/baseline.py`, or a copy of `data/`): Route goes from 13 stops to **11** (mailbox stops 5 → 3: Baspion, Cicelyna, Keenagen); planned profit stays 3,851c; Basilly's Linen Bag step reads *yellow at rank 32 (from the game)* with *catalog says needs 45*; the Ledger shows *All 79 pairs reconcile* with none listed by default. Accept the beta-check change of `today.route_steps` 13 → 11 after explaining it. Screenshots of Route and Ledger at 1280 and 390 px beside the prototype.
+- Depends on nothing. Rules: *Today (today_version 15)* (Gold mail, Held materials), UI-12, UI-15. Design: *This session (STORY-063)*, *Gold ledger contracts*, *Today contracts*.
 
 ### STORY-110 — Records polish
 
