@@ -141,17 +141,19 @@ As a gold maker levelling a profession, I want the cost to reach a skill to use 
 Decisions (from the code, 2026-10-18):
 - **Today:** `progression.skillup_walk` picks the cheapest usable craft per point with `evaluate_recipe` on unit prices, so every unit is charged at the cheapest listing (80 Linen Cloth costs 80 × the lowest price).
 - **Holdings first:** the walk spends the team's captured bags and bank (exact ADDON-08 identity; base only) before buying, deducting units as each point consumes them. Held units cost no cash. The crafter's own stock is used first, then other characters' stock, labelled *mail from X*; postage stays uncharged, as in Today. Each estimate reports the held units used and their value at the auction price after the cut, labelled *worth*, never as cost.
+- **Choice follows cash (decided 2026-10-19, product owner):** at each point the walk picks the usable craft with the lowest *cash* cost after the units still held are applied, so holdings can change which recipe is suggested, not only its price. Ties keep the existing order (`recipe_id`, `catalog_id`). Holdings consumed by an earlier point are gone for later points.
 - **Then buy along the listings:** what is still needed is priced along the listing ladder for the whole quantity (`today.Ladder`), not as quantity × the cheapest. Running out of listings makes the estimate incomplete, with the reason.
 - **Or farm it:** for each material still bought, show the best UI-13 rate for that item among the team's characters: *or farm ≈ H h at <spot> (Basilly's own rate)*, hours rounded up to a tenth. Not counted in gold. No rate means nothing is shown.
 - **Where:** CRAFT-11 reach estimates on Team, the character record's *Next skill steps* and Today's Level up. CRAFT-13 hires have no holdings and stay unchanged. Partial or stale captures make the held amount **at least** and say so.
-- Bump `today_version` if the Today section requires it.
+- Bump `today_version` (now 14 in `today.py`; the requirements heading still reads 11) if the Today section requires it.
 
 Acceptance:
 - **Holdings first:** reach costs drop by the cash value of held units consumed, each estimate shows what it uses from whom, and nothing held is counted twice across points or characters.
+- **Choice follows cash:** a test where a held material makes a pricier-at-auction recipe the cheapest in cash, so the walk picks it; once the stack runs out, later points go back to the auction-cheapest recipe.
 - **Listings walked:** remaining quantities are priced along the ladder; a shortfall is incomplete, never priced at the last listing.
 - **Farm option:** shown only where a measured rate exists, labelled as the owner's own past sessions, not a promise.
 - **Offline tests:** holdings covering all, part and none of a walk; own versus another character's stock; variant identities never pooling with the base; ladder depth and shortfall; yellow fractional crafts; farm hours; hires unchanged.
-- **Real data** (copy of `data/`): one beta character's Tailoring reach cost to the end of its window before and after, with the held units used.
+- **Real data** (copy of `data/`): one beta character's Tailoring reach cost to the end of its window before and after, with the held units used and any points whose suggested recipe changed.
 - Depends on nothing. Rules: CRAFT-11, CRAFT-13, UI-12, UI-13, ADDON-08, *Today (today_version 11)*. Design: *Team contracts*, *This session (STORY-063)*, *Farming (STORY-065, STORY-074, STORY-075, STORY-077)*, *Stock contracts*.
 
 ## Later
