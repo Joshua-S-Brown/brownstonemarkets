@@ -33,32 +33,14 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-106 gold reserve and capital
-2. STORY-109 Route and Ledger tidy-up
-3. STORY-110 records polish
+1. STORY-109 Route and Ledger tidy-up
+2. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 107, 108, 111, 112 and SPIKE-009/009b.
-
-### STORY-106 — Gold reserve and capital
-
-Moved from *Ledger analytics* (*Capital view*) on 2026-10-18 (grooming). At launch gold is the bottleneck, and training and the mount must not be spent on crafts.
-
-As a gold maker, I want to keep a reserve out of Today's budget and see what the company is worth, so that plans never spend money I've set aside.
-
-Decisions:
-- **Reserve:** Today settings gain `reserve_copper` (per-source file, `today_settings.py`, default 0). `today_funds.resolve_funds` plans with the captured total minus the reserve, floored at 0, labelled *captured X − reserve Y*. The entered-amount override is unchanged and ignores the reserve.
-- **Capital** on Team: captured gold per character plus bags and bank at value (`team_view` holdings `value_copper`), as **at least** where captures are partial or prices unknown. Active auctions (`journal.active_auction_rows` has counts only) and mailboxes are listed as *not valued*, with their counts.
-- Bump `today_version` if the Today section requires it.
-
-Acceptance:
-- **Reserve:** Today never plans more than captured gold minus the reserve; a reserve above captured gold plans with 0 and says so.
-- **Capital:** Team shows gold, holdings value and their total, with what is not valued.
-- **Offline tests:** reserve below, equal to and above captured gold; the override; partial captures giving *at least*; unknown prices excluded and counted.
-- Depends on nothing. Rules: *Today (today_version 11)* funds, *Team character cards*, UI-15. Design: *Today contracts*, *Team contracts*, *Stock contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 111, 112 and SPIKE-009/009b.
 
 ### STORY-109 — Route and Ledger tidy-up
 

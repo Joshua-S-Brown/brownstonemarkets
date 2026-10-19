@@ -173,9 +173,10 @@ def test_settings_saved_cancelled_invalid_and_failed_write_keep_saved_plan(brows
     before = path.read_bytes()
     assert client.post('/api/today/settings', json={'settings': {'max_crafts': 0}}, headers=TOKEN).status_code == 400
     assert before == path.read_bytes()
-    saved = data['settings'] | {'post_duration_hours': 8}
+    saved = data['settings'] | {'post_duration_hours': 8, 'reserve_text': '10s'}
     assert client.post('/api/today/settings', json={'settings': saved}, headers=TOKEN).status_code == 200
     assert load_settings(path).post_duration_hours == 8
+    assert load_settings(path).reserve_copper == 1000
     data['state']['ticks'] = {'0': True}
     updated = request(browser, data['state']).json()
     assert updated['reset_note'] == today_session.PLAN_RESET and updated['state']['ticks'] == {}
@@ -212,13 +213,13 @@ def test_held_material_output_unknown_bank_and_unreadable_holdings(browser, monk
     monkeypatch.setattr('brownstone.professions.latest_data',
                         lambda config: {('Arille', 'realm', 'alliance'): state(learned=True)})
     held = evidence((1, 2, 'Basilly', 'bags'), (3, 2, 'Basilly', 'bags'), age=30, unknown_bank=True)
-    monkeypatch.setattr(today_loading, '_load_holdings', lambda *a: (held, None))
+    monkeypatch.setattr(today_loading, 'load_holdings', lambda *a: (held, None))
     data = request(browser).json()
     assert any('bank not captured' in note for note in data['notes'])
     assert 'Basilly: mail 2' in data['copy_text'] and 'post 5 crafted + 2 held' in data['copy_text']
     assert all(r['method'] != 'held' for r in data['plan']['buy'])
     assert 'held count from a stale capture' in data['copy_text']
-    monkeypatch.setattr(today_loading, '_load_holdings', lambda *a: (None, 'Unable to read held items: bad capture'))
+    monkeypatch.setattr(today_loading, 'load_holdings', lambda *a: (None, 'Unable to read held items: bad capture'))
     monkeypatch.setattr(today, '_cache', {})
     assert request(browser).json()['plan']['holdings_warning'].startswith('Unable to read held items')
 

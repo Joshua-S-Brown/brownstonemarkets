@@ -1076,3 +1076,15 @@ button.chip:hover {
     margin-inline: -16px;
   }
 }
+
+.today-settings label {
+  display: block;
+  margin-block: 14px;
+}
+.today-settings input:not([type="checkbox"]),
+.today-settings select {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+}

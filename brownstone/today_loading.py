@@ -28,7 +28,7 @@ def load_today(config, catalogs, settings, character_data, now: datetime, *,
         flood_evidence = flood_signals.signals(db, config, _signal_ids(ids, character_data), now) if flood else None
     holdings_warning = None
     if holdings_data is None and holdings:
-        holdings_data, holdings_warning = _load_holdings(config, now)
+        holdings_data, holdings_warning = load_holdings(config, now)
     settings = resolve_funds(settings, character_data, now, config["max_age_hours"]).settings
     arguments = dict(catalogs=catalogs, observations=observations, market=config,
                      snapshot={**manifest, "snapshot_id": sid}, settings=settings, now=now,
@@ -39,7 +39,7 @@ def load_today(config, catalogs, settings, character_data, now: datetime, *,
     return manifest, arguments
 
 
-def _load_holdings(config, now):
+def load_holdings(config, now):
     """Unreadable captures degrade to planning without holdings, explained, like character evidence."""
     try:
         return team_holdings.holdings(character_snapshots.latest_data(config), now), None

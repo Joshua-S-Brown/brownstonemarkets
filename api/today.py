@@ -181,7 +181,7 @@ def settings(request: SettingsRequest, source: str = ''):
     chosen = context.resolve(source)
     try:
         values = dict(request.settings)
-        for key in ('gold', 'minimum'):
+        for key in ('gold', 'minimum', 'reserve'):
             if key + '_text' in values:
                 values[key + '_copper'] = parse_money(values.pop(key + '_text'))
         saved = today_settings.TodaySettings(**values)

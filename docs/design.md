@@ -389,7 +389,7 @@ Rules: `requirements.md` → Today. Framework-free calculations.
   and stack references (stack sizes for every referenced item, listed or not). Missing listing support is `None`, distinct from an eligible scan's `{}`. No seller
   strings enter this path; reads keep source, every MARKET_KEYS field, scan/snapshot and variant state.
 - **Settings.** `TodaySettings` holds validated integer settings, the nullable character
-  `(name, realm, faction)`, `gold_override`, `include_unknown` and `post_duration_hours` (older files load with defaults).
+  `(name, realm, faction)`, `gold_override`, `reserve_copper`, `include_unknown` and `post_duration_hours` (older files load with defaults).
   `today_settings` persists one atomic JSON file per source. `today_funds.resolve_funds` turns the
   scoped projection into effective settings plus summary and notes, without persisting the balance.
 - **Eligibility.** `today_characters.project_recipes` matches catalog recipe IDs against the
@@ -496,6 +496,11 @@ and lists observed NPC IDs without any captured name. No storage migration, new 
 
 ## Team contracts
 
+`api/team.build` reads `team_holdings.holdings` once and `load_today` once for all held item IDs,
+reusing that holdings data for progression. `team_view.capital` calls `character_holdings` per roster
+character without `uses`, sums `today_funds.recorded_balances` and values, and attaches scoped
+`journal.active_auction_rows` counts (unreadable: all unknown, with a note). Capital never uses the lazy character record path.
+
 `team_plan` validates the optional personal roster; `api/team` appends unreplaced plans with existing hiring walks/best-cap output, separately from captured evidence and current-team comparisons.
 
 Rules: [CRAFT-11/13](requirements.md#crafting), [Team character cards](requirements.md#team-character-cards).
@@ -595,7 +600,7 @@ count and carry depth. Skill bands combine direct and raw memberships without mu
 `item_page` returns all observed variant identities separately, vendor references, catalog-qualified
 made-from/used-in rows and team statuses. Catalog-only items remain reachable with unknown market prices.
 `item_summary` lazily composes one `item_floods` read (also reused by the Market tab),
-`today_loading._load_holdings` and cached explorer character/price evidence. `base_signal` selects
+`today_loading.load_holdings` and cached explorer character/price evidence. `base_signal` selects
 only an unambiguous base/legacy price/signal/metric row; Stock's exact base holdings exclude variants.
 `item_farming` values complete histories before filtering item rows and containing spots, preserving
 UI-13 denominators and ordering. `farming_spot` projects item-record names/positions;

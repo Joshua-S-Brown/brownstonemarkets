@@ -52,6 +52,38 @@ export function Team({ source }: { source: string }) {
             </p>
           ))}
           <div className={styles.panels}>
+            <Panel title="Capital">
+              <p>
+                Gold: <Money copper={data.capital.gold_copper} /> · Holdings:{" "}
+                <Money copper={data.capital.holdings_copper} /> · Total:{" "}
+                {data.capital.at_least && "at least "}
+                <Money copper={data.capital.total_copper} />
+              </p>
+              {data.capital.missing_gold > 0 && (
+                <p>
+                  {data.capital.missing_gold} characters without captured gold
+                </p>
+              )}
+              {data.capital.unpriced > 0 && (
+                <p>{data.capital.unpriced} stacks without a price</p>
+              )}
+              {data.capital.holdings_incomplete && (
+                <p>Holdings captures are unknown or partial.</p>
+              )}
+              <p>Mailboxes: not captured</p>
+              <details>
+                <summary>Capital by character · Auctions not valued</summary>
+                {data.capital.characters.map((c) => (
+                  <p key={c.character.join("|")}>
+                    {c.character[0]} · Gold: <Money copper={c.gold_copper} /> ·
+                    Holdings: <Money copper={c.holdings_copper} /> · Total:{" "}
+                    {c.at_least && "at least "}
+                    <Money copper={c.total_copper} /> · Auctions:{" "}
+                    {c.auctions ?? "unknown"} · not valued
+                  </p>
+                ))}
+              </details>
+            </Panel>
             <Panel
               title="Roster"
               action={

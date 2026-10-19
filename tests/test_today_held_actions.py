@@ -106,7 +106,7 @@ def test_copy_route_and_display_suffix_match(browser, monkeypatch):
     from test_today_characters import state
     monkeypatch.setattr('brownstone.professions.latest_data',
                         lambda config: {('Maker', 'realm', 'alliance'): state(learned=True)})
-    monkeypatch.setattr('brownstone.today_loading._load_holdings',
+    monkeypatch.setattr('brownstone.today_loading.load_holdings',
                         lambda *a: (evidence((1, 2, 'Other', 'bags')), None))
     payload = request(browser).json()
     for stop in payload['stops']:

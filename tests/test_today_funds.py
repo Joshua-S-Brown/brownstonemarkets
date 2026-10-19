@@ -118,3 +118,27 @@ def test_shared_loader_matches_plan_with_same_funds(tmp_path, monkeypatch):
     expected = build_today(**(arguments | {'settings': replace(settings, gold_copper=255)}))
     assert result == expected and result['today_version'] == 15
     assert result['shopping_total_copper'] <= 255
+
+
+@pytest.mark.parametrize('character', [CHARACTER, None])
+@pytest.mark.parametrize('reserve_delta', [-100, 0, 100])
+def test_reserve_captured_funds_minimum_and_override(character, reserve_delta, tmp_path):
+    data = funds_data() | {('Other', 'Beta', 'Alliance'): {'bags': {
+        'gold_copper': 100, 'captured_at': int(TIME.timestamp())}}}
+    total = 255 if character else 355
+    reserve = total + reserve_delta
+    saved = TodaySettings(gold_copper=999, reserve_copper=reserve, character=character,
+                          minimum_copper=0, percent_basis_points=1000)
+    funds = resolve_funds(saved, data, TIME, 24)
+    assert funds.settings.gold_copper == max(0, total - reserve)
+    assert funds.settings.minimum_gain == (max(0, total - reserve) + 9) // 10
+    assert ('captured 2s 55c − reserve' if character else 'captured 3s 55c − reserve') in funds.origin
+    assert ('nothing to spend' in funds.origin) == (reserve >= total)
+    override = replace(saved, gold_override=True)
+    assert resolve_funds(override, data, TIME, 24).settings == override
+    path = tmp_path / 'settings.json'
+    save_settings(path, saved)
+    assert load_settings(path) == saved
+    for value in (-1, True, 1.5):
+        with pytest.raises(ValueError, match='nonnegative integers'):
+            replace(saved, reserve_copper=value)

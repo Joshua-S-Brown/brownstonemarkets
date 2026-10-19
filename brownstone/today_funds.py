@@ -55,13 +55,19 @@ def resolve_funds(settings: TodaySettings, data: dict, now: datetime, max_age_ho
         return TodayFunds(settings, "entered amount", (f"No captured gold for {who}; using the entered amount.",))
     total = sum(bags["gold_copper"] for _, bags in captures)
     labels = tuple(_capture_label(c, bags, now, max_age_hours) for c, bags in captures)
-    effective = replace(settings, gold_copper=total)
+    effective = replace(settings, gold_copper=max(0, total - settings.reserve_copper))
+    reserve = ""
+    if settings.reserve_copper:
+        reserve = f"; captured {format_money(total)} − reserve {format_money(settings.reserve_copper)}"
+        if effective.gold_copper == 0:
+            reserve += "; reserve is more than captured gold; nothing to spend"
     if selected is not None:
-        return TodayFunds(effective, labels[0])
+        return TodayFunds(effective, labels[0] + reserve)
     notes = labels
     if missing:
         notes += (f"No captured gold for {', '.join(missing)}; excluded from the recorded total.",)
-    return TodayFunds(effective, f"across {len(captures)} characters; gold must be mailed to the crafter", notes)
+    return TodayFunds(effective, f"across {len(captures)} characters; gold must be mailed to the crafter{reserve}",
+                      notes)
 
 
 def recorded_balances(data):

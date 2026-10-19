@@ -487,6 +487,46 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** Capital */
+        Capital: {
+            /** At Least */
+            at_least: boolean;
+            /** Characters */
+            characters: components["schemas"]["CapitalCharacter"][];
+            /** Gold Copper */
+            gold_copper: number;
+            /** Holdings Copper */
+            holdings_copper: number;
+            /** Holdings Incomplete */
+            holdings_incomplete: boolean;
+            /** Missing Gold */
+            missing_gold: number;
+            /** Total Copper */
+            total_copper: number;
+            /** Unpriced */
+            unpriced: number;
+        };
+        /** CapitalCharacter */
+        CapitalCharacter: {
+            /** At Least */
+            at_least: boolean;
+            /** Auctions */
+            auctions: number | null;
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Gold Copper */
+            gold_copper: number | null;
+            /** Holdings Copper */
+            holdings_copper: number;
+            /** Total Copper */
+            total_copper: number;
+            /** Unpriced */
+            unpriced: number;
+        };
         /** Capture */
         Capture: {
             /** Age Hours */
@@ -1943,6 +1983,7 @@ export interface components {
         Team: {
             /** All Incomplete */
             all_incomplete: boolean;
+            capital: components["schemas"]["Capital"];
             /** Comparisons */
             comparisons: components["schemas"]["Comparison"][];
             evidence: components["schemas"]["Evidence"];

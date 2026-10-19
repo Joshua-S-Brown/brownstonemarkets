@@ -16,6 +16,12 @@ import { Settings } from "./Settings";
 import { readWindow } from "../team/state";
 import styles from "../../ui/components.module.css";
 const views = ["route", "opportunities", "level-up"];
+// Source and owner, plus the whole reserve clause when one is set.
+function fundsCaption(label: string) {
+  const reserve = label.indexOf("; captured ");
+  return label.split(";")[0] + (reserve < 0 ? "" : label.slice(reserve));
+}
+
 export function Today({
   source,
   waiting,
@@ -130,7 +136,7 @@ export function Today({
               </small>
             </>
           }
-          caption={data.funds_label.split(";")[0]}
+          caption={fundsCaption(data.funds_label)}
           progress={
             data.funds_copper > 0
               ? queue.gold_needed_copper / data.funds_copper

@@ -16,7 +16,7 @@ from .skillups import build_skillups
 from .storage import scope_predicate
 from .today import _net, undercut_price
 from .today_characters import project_recipes, recipe_status, team_makeable
-from .today_loading import _load_holdings, load_today, load_today_characters
+from .today_loading import load_holdings, load_today, load_today_characters
 from .today_settings import TodaySettings
 
 
@@ -24,7 +24,7 @@ def load_explorer(config, catalogs, now: datetime) -> dict:
     selected = compatible_catalogs(catalogs, config)
     characters, warning = load_today_characters(config)
     manifest, arguments = load_today(config, selected, TodaySettings(), characters, now)
-    holdings, holdings_warning = _load_holdings(config, now)
+    holdings, holdings_warning = load_holdings(config, now)
     result = {'holdings': holdings or ({}, {}, [], []), 'holdings_warning': holdings_warning, 'config': config,
               'catalogs': selected,
               'incompatible': [c for c in catalogs if c not in selected], 'warning': warning, 'snapshot': None,
@@ -224,7 +224,7 @@ def item_summary(config, result, page, now):
     signal = base_signal(floods['rows'], page['item_id'])
     observed = base_signal(page['observed'], page['item_id'])
     metrics = base_signal(page['metrics'], page['item_id']) or {}
-    held, warning = _load_holdings(config, now)
+    held, warning = load_holdings(config, now)
     totals, _, captures, units = held or ({}, {}, [], [])
     try:
         own_sales, sales_error = sales.load(config), None

@@ -39,9 +39,14 @@ function SettingsForm({
   close: () => void;
 }) {
   const [draft, setDraft] = useState<
-    Plan["settings"] & { gold_text: string; minimum_text: string }
+    Plan["settings"] & {
+      gold_text: string;
+      reserve_text: string;
+      minimum_text: string;
+    }
   >({
     ...data.settings,
+    reserve_text: moneyText(Number(data.settings.reserve_copper ?? 0)),
     gold_text: moneyText(Number(data.settings.gold_copper)),
     minimum_text: moneyText(Number(data.settings.minimum_copper)),
   });
@@ -55,6 +60,7 @@ function SettingsForm({
   });
   return (
     <form
+      className={styles["today-settings"]}
       onSubmit={(e) => {
         e.preventDefault();
         mutation.mutate();
@@ -85,18 +91,35 @@ function SettingsForm({
           ))}
         </select>
       </label>
-      {["gold_override", "include_unknown"].map((k) => (
-        <label key={k}>
-          <input
-            type="checkbox"
-            checked={Boolean(draft[k])}
-            onChange={(e) => setDraft({ ...draft, [k]: e.target.checked })}
-          />
-          {k === "gold_override"
-            ? "Enter an amount instead"
-            : "Include unknown recipes"}
-        </label>
-      ))}
+      <label>
+        <input
+          type="checkbox"
+          checked={Boolean(draft.gold_override)}
+          onChange={(e) =>
+            setDraft({ ...draft, gold_override: e.target.checked })
+          }
+        />
+        Enter an amount instead
+      </label>
+      <label>
+        Gold reserve{" "}
+        {Boolean(draft.gold_override) && "· not used with an entered amount"}
+        <input
+          required
+          value={draft.reserve_text}
+          onChange={(e) => setDraft({ ...draft, reserve_text: e.target.value })}
+        />
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={Boolean(draft.include_unknown)}
+          onChange={(e) =>
+            setDraft({ ...draft, include_unknown: e.target.checked })
+          }
+        />
+        Include unknown recipes
+      </label>
       <label>
         Minimum mode{" "}
         <select

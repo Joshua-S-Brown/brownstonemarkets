@@ -5,6 +5,7 @@ from . import action_board, hiring, progression, recipe_catalogs, skillups, toda
 from .money import format_money
 from .today import _net
 from .today_characters import available_characters
+from .today_funds import recorded_balances
 
 BOARD_KEYS = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut')
 HONESTY = ('Cost to reach is an estimate, with no credit for selling results. Current-scan profit, not a forecast; '
@@ -214,3 +215,30 @@ def character_gold(data, character, bounds):
     return dict(in_copper=incoming, out_copper=outgoing, net_copper=incoming - outgoing,
                 categories=sorted(categories.values(), key=lambda r: (-(r['in_copper'] + r['out_copper']),
                                                                       r['category']))[:3])
+
+
+def capital(data, holdings_data, prices, vendor_prices, auctions, auction_cut):
+    """Company value from scoped captured gold and cautious base-stack holdings."""
+    _, _, captures, units = holdings_data
+    balances = recorded_balances(data)
+    incomplete = False
+    auction_counts = {(r['Character'], r['Realm'], r['Faction']): r['Auctions'] for r in auctions}
+    rows = []
+    for key in sorted(data):
+        items = [u | {'variant_state': u['key'][2]} for u in units
+                 if (u['character'], u['realm'], u['faction']) == key]
+        held = character_holdings(items, [c for c in captures
+                                  if (c['character'], c['realm'], c['faction']) == key],
+                                  {}, [], prices, vendor_prices, auction_cut)
+        incomplete |= held['at_least']
+        gold = balances.get(key)
+        rows.append(dict(character=key, gold_copper=gold, holdings_copper=held['value_copper'],
+                         total_copper=(gold or 0) + held['value_copper'], unpriced=held['unpriced'],
+                         at_least=gold is None or held['at_least'] or bool(held['unpriced']),
+                         auctions=auction_counts.get(key)))
+    gold = sum(balances.values())
+    value = sum(r['holdings_copper'] for r in rows)
+    return dict(gold_copper=gold, holdings_copper=value, total_copper=gold + value,
+                at_least=any(r['at_least'] for r in rows), holdings_incomplete=incomplete,
+                missing_gold=len(data) - len(balances),
+                unpriced=sum(r['unpriced'] for r in rows), characters=rows)

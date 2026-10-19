@@ -66,7 +66,8 @@ function fixture(): Plan {
     evidence: {},
     copy_text: "Craft 2 Robe\nGold needed: 1s",
     funds_copper: 5000,
-    funds_label: "Our team",
+    funds_label:
+      "Our team · across 2 characters; gold must be mailed to the crafter; captured 24s 8c − reserve 30s; reserve is more than captured gold; nothing to spend",
     settings: {
       gold_copper: 10000,
       minimum_copper: 1000,
@@ -151,6 +152,14 @@ it("Route defaults, ticks survive refresh per source, copy matches Queue and URL
     expect(requests.some((r) => r.body.view === "level-up")).toBe(true),
   );
   expect(screen.queryByLabelText("Biggest lever")).toBeNull();
+  expect(
+    screen.getByText(
+      "Our team · across 2 characters; captured 24s 8c − reserve 30s; reserve is more than captured gold; nothing to spend",
+      {
+        selector: "div",
+      },
+    ),
+  ).toBeTruthy();
   expect(requests[0].body.view).toBe("route");
   expect(screen.getByText("2 scans waiting")).toBeTruthy();
   await user.click(screen.getByRole("checkbox", { name: "Craft 2 Robe" }));
@@ -292,6 +301,13 @@ it("settings are Save-only, Cancel discards draft and Save sends explicit money 
     (screen.getByLabelText("Entered gold") as HTMLInputElement).value,
   ).toBe("1g");
   expect(screen.queryByLabelText("Percentage of gold available")).toBeNull();
+  await user.clear(screen.getByLabelText(/Gold reserve/));
+  await user.type(screen.getByLabelText(/Gold reserve/), "10s");
+  await user.click(screen.getByLabelText("Enter an amount instead"));
+  expect(
+    (screen.getByLabelText(/Gold reserve/) as HTMLInputElement).value,
+  ).toBe("10s");
+  expect(screen.getByText(/not used with an entered amount/)).toBeDefined();
   await user.selectOptions(screen.getByLabelText("Minimum mode"), "scaled");
   await user.clear(screen.getByLabelText("Percentage of gold available"));
   await user.type(screen.getByLabelText("Percentage of gold available"), "2.5");
@@ -303,6 +319,7 @@ it("settings are Save-only, Cancel discards draft and Save sends explicit money 
   expect(saved.body.settings).toMatchObject({
     gold_text: "1g",
     minimum_text: "10s",
+    reserve_text: "10s",
     percent_basis_points: 250,
   });
   expect(saved.headers).toMatchObject({ "X-Brownstone-Token": "test-token" });
@@ -596,8 +613,6 @@ it("shows vendor fallback and vendor value only for priced opportunities", async
     screen.getByText("Deposits excluded: refunded on an auction sale"),
   ).toBeTruthy();
   expect(screen.getAllByText(/Vendor value/)).toHaveLength(1);
-  expect(
-    screen.getByRole("button", { name: "Boots" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Boots" })).toBeTruthy();
   expect(screen.getByText("At planned auction or vendor value")).toBeTruthy();
 });

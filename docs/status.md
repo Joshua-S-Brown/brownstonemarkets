@@ -90,6 +90,7 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   the rail, status chip or `?sheet=data`. All legacy places redirect with source; Stock
   redirects to Ledger, Data to Today with the sheet. `brownstone_app.py` serves FastAPI/uvicorn with a pywebview window; `launch_app.py` reuses or restarts it through authenticated endpoints.
   `Open Brownstone App.command` / `.cmd` uses authenticated reuse/restart, native window or browser fallback.
+- **Reserve and capital (STORY-106):** Today settings save a per-source gold reserve subtracted from captured funds (floored at 0; the entered amount ignores it). Team opens with Capital: recorded gold, cautious holdings and an *at least* total with counts of missing gold and unpriced stacks; auctions and mailboxes are not valued. Rules: Today funds, Team character cards. Copied beta: at least 12,504c; a 10s reserve plans with 1,408c for 2,558c profit.
 - **Material uses (STORY-105):** Item → Made from and used in leads with per-unit sell/vendor/craft comparisons (UI-09); Team Holdings names the best eligible craft when it beats selling and vendoring. Intermediates are valued at their own sale, labelled; unknown prices retain reasons; Today is unchanged.
 - **Today:** funded whole-listing plan, choices/refill, shopping, sell/whole-silver undercuts,
   queue, confidence, character eligibility and captured funds; today_version 15.
@@ -309,7 +310,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 2,055 Python tests pass (one platform skip), plus 109 Vitest tests.
+Expected: 2,063 Python tests pass (one platform skip), plus 109 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

@@ -401,7 +401,7 @@ def test_summary_best_use_vendor_prices_and_holdings_keep_exact_base(client, mon
     variant.update(variant_id='suffix', variant_state='variant', min_buyout=99999)
     r['items'].append(variant)
     captures = [{'unknown': True, 'partial': True}]
-    monkeypatch.setattr(me, '_load_holdings', lambda *a: (({(2589, None, 'base'): 7,
+    monkeypatch.setattr(me, 'load_holdings', lambda *a: (({(2589, None, 'base'): 7,
         (2589, 'suffix', 'variant'): 99}, {}, captures, []), None))
     item = browser.get('/api/items/2589').json()
     assert item['price_copper'] == 11 and item['held'] == 7 and item['at_least']

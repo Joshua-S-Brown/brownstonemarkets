@@ -602,3 +602,70 @@ def test_holdings_vendor_floor_uses_net_after_market_cut(price, vendor, cut, act
     assert row['action'] == action
     assert row['value_copper'] == 400
     assert row['vendor_copper'] == (vendor if vendor and vendor > 0 else None)
+
+
+def test_capital_shared_read_values_exclusions_auctions_and_missing_gold(browser, monkeypatch):
+    from brownstone import journal, team_holdings
+
+    data = browser[3]
+    other = next(k for k in data if k != CHARACTER)
+    data[other]['bags'].pop('gold_copper')
+    own = dict(character=CHARACTER[0], realm=CHARACTER[1], faction=CHARACTER[2], kind='bags')
+    units = [dict(key=(i, variant, state), item_id=i, units=2, **own)
+             for i, variant, state in [(1, None, 'base'), (999, None, 'base'), (1, 'v', 'variant')]]
+    captures = [dict(unknown=False, partial=True, age_hours=0, **own)]
+    calls = []
+    load = today_loading.load_today
+
+    def loading(*args, **kwargs):
+        calls.append(kwargs)
+        return load(*args, **kwargs)
+
+    monkeypatch.setattr(team_holdings, 'holdings', lambda *args: ({}, {}, captures, units))
+    monkeypatch.setattr(today_loading, 'load_today', loading)
+    monkeypatch.setattr(journal, 'active_auction_rows', lambda chosen: [
+        dict(Character=CHARACTER[0], Realm=CHARACTER[1], Faction=CHARACTER[2], Auctions=6),
+        dict(Character=other[0], Realm='wrong realm', Faction=other[2], Auctions=99)])
+    result = get(browser).json()['capital']
+    assert result['gold_copper'] == 255 and result['holdings_copper'] == 20
+    assert result['total_copper'] == 275 and result['at_least']
+    assert result['missing_gold'] == 1 and result['unpriced'] == 2
+    assert [r['auctions'] for r in result['characters']] == [6, None]
+    assert result['characters'][1]['gold_copper'] is None
+    assert len(calls) == 1 and calls[0]['item_ids'] == {1, 999}
+    assert calls[0]['holdings_data'][3] == units
+    assert get(browser).json()['capital'] == result and len(calls) == 1
+    data[other]['bags']['gold_copper'] = 10
+    captures[0]['partial'] = False
+    captures.append(dict(character=other[0], realm=other[1], faction=other[2],
+                         unknown=False, partial=False, age_hours=0))
+    team._cache.clear()
+    complete = get(browser).json()['capital']
+    assert complete['at_least'] and not complete['holdings_incomplete'] and complete['unpriced'] == 2
+    units[:] = units[:1]
+    team._cache.clear()
+    assert not get(browser).json()['capital']['at_least']
+    captures[0]['unknown'] = True
+    team._cache.clear()
+    assert get(browser).json()['capital']['at_least']
+    monkeypatch.setattr(journal, 'active_auction_rows', lambda chosen: 1 / 0)
+    team._cache.clear()
+    failed = get(browser).json()
+    assert [r['auctions'] for r in failed['capital']['characters']] == [None, None]
+    assert any('Unable to read active auctions' in n for n in failed['notes'])
+
+
+def test_capital_source_and_full_market_scope(tmp_path, monkeypatch):
+    from test_characters import fixture
+
+    from brownstone.config import MARKET_KEYS
+
+    source = fixture(tmp_path)
+    monkeypatch.setattr(context, 'ROOT', tmp_path)
+    (tmp_path / 'config').mkdir(exist_ok=True)
+    entry = team.build(source, 25, datetime.now(UTC))['payload']['capital']
+    assert entry['gold_copper'] == 24690 and len(entry['characters']) == 2
+    for key in ('source_id', *MARKET_KEYS):
+        scoped = team.build(source | {key: 'other-scope'}, 25, datetime.now(UTC))['payload']['capital']
+        assert scoped['gold_copper'] == scoped['holdings_copper'] == scoped['total_copper'] == 0
+        assert scoped['characters'] == []

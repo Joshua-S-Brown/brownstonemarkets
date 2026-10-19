@@ -98,6 +98,26 @@ const detail = {
 };
 function fixture(): TeamData {
   return {
+    capital: {
+      gold_copper: 255,
+      holdings_copper: 20,
+      total_copper: 275,
+      at_least: true,
+      holdings_incomplete: true,
+      missing_gold: 1,
+      unpriced: 2,
+      characters: [
+        {
+          character: ["Basilly", "Beta", "Alliance"],
+          gold_copper: null,
+          holdings_copper: 20,
+          total_copper: 20,
+          at_least: true,
+          unpriced: 2,
+          auctions: null,
+        },
+      ],
+    },
     roster: [1, 2].map((i) => ({
       free_slots: null,
       suggestions: [],
@@ -185,6 +205,14 @@ it("keeps windows per tab/source, commits only on release, and opens exact same-
   await screen.findAllByRole("button", { name: "Maker" });
   expect(requests.filter((r) => r.pathname === "/api/team")).toHaveLength(1);
   expect(requests.some((r) => r.pathname.includes("/hire/"))).toBe(false);
+  expect(screen.getByText("Capital")).toBeTruthy();
+  expect(screen.getByText("1 characters without captured gold")).toBeTruthy();
+  expect(screen.getByText("2 stacks without a price")).toBeTruthy();
+  expect(screen.getByText("Mailboxes: not captured")).toBeTruthy();
+  await userEvent.click(
+    screen.getByText("Capital by character · Auctions not valued"),
+  );
+  expect(screen.getByText(/Auctions: unknown · not valued/)).toBeTruthy();
   fireEvent.change(screen.getByRole("slider"), { target: { value: "30" } });
   expect(requests.filter((r) => r.pathname === "/api/team")).toHaveLength(1);
   fireEvent.pointerUp(screen.getByRole("slider"));

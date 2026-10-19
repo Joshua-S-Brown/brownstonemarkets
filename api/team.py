@@ -12,6 +12,7 @@ from brownstone import (
     character_snapshots,
     characters,
     hiring,
+    journal,
     market_explorer,
     recipe_catalogs,
     team_holdings,
@@ -176,7 +177,29 @@ class PlannedMember(BaseModel):
     professions: list[PlannedProfession]
 
 
+class CapitalCharacter(BaseModel):
+    character: tuple[str, str, str]
+    gold_copper: int | None
+    holdings_copper: int
+    total_copper: int
+    at_least: bool
+    unpriced: int
+    auctions: int | None
+
+
+class Capital(BaseModel):
+    gold_copper: int
+    holdings_copper: int
+    total_copper: int
+    at_least: bool
+    holdings_incomplete: bool
+    missing_gold: int
+    unpriced: int
+    characters: list[CapitalCharacter]
+
+
 class Team(BaseModel):
+    capital: Capital
     roster: list[Member]
     planned: list[PlannedMember]
     hires: list[HireRow]
@@ -271,14 +294,29 @@ class HireDetail(Facts):
     tiers: list[dict[str, Any]]
 
 
+def _auctions(chosen):
+    """Auction counts are display-only; an unreadable journal leaves every count unknown."""
+    try:
+        return journal.active_auction_rows(chosen), None
+    except Exception as error:
+        return [], f'Unable to read active auctions: {error}. Auction counts are unknown.'
+
+
 def build(chosen, window, now):
     data, warning = today_loading.load_today_characters(chosen)
     catalogs, errors = recipe_catalogs.parse_catalogs(recipe_catalogs.find_catalogs(context.ROOT / 'config'))
     cards = characters.build_characters(chosen, data=data, now=now)
-    manifest, arguments = today_loading.load_today(chosen, catalogs, TodaySettings(), data, now, holdings=True)
+    held, holdings_warning = today_loading.load_holdings(chosen, now)
+    held = held or ({}, {}, [], [])
+    manifest, arguments = today_loading.load_today(chosen, catalogs, TodaySettings(), data, now,
+        item_ids={u['item_id'] for u in held[3]}, holdings_data=held)
+    _, prices = basis_prices((arguments or {}).get('observations', {}), 'cautious')
+    auctions, auctions_warning = _auctions(chosen)
+    capital = team_view.capital(data, held, prices, (arguments or {}).get('vendor_prices', {}),
+                               auctions, chosen['auction_cut'])
     shared = team_view.team_board(catalogs, data, arguments)
     results = team_view.team_results(catalogs, data, arguments, window, shared)
-    notes = errors + [w for w in (warning, (arguments or {}).get('holdings_warning')) if w]
+    notes = errors + [w for w in (warning, holdings_warning, auctions_warning) if w]
     hire_context, summaries = None, {'rows': [], 'no_catalog': [], 'comparisons': []}
     if arguments is not None:
         try:
@@ -301,7 +339,8 @@ def build(chosen, window, now):
         notes.append(f'Unable to read planned roster: {error}')
         plan = []
     planned = team_plan.roster(plan, cards, hire_context, summaries['rows'])
-    payload = dict(roster=roster, planned=planned, hires=summaries['rows'], no_catalog=summaries['no_catalog'],
+    payload = dict(capital=capital, roster=roster, planned=planned, hires=summaries['rows'],
+                   no_catalog=summaries['no_catalog'],
                    comparisons=summaries['comparisons'], all_incomplete=team_view.all_incomplete(summaries['rows']),
                    notes=notes, labels=team_view.HONESTY, hiring_labels=team_view.HIRING_LABELS,
                    evidence=context.evidence(chosen, arguments['snapshot'] if arguments else manifest or {}))
