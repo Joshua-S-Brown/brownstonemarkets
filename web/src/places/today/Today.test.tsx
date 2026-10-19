@@ -112,7 +112,11 @@ beforeEach(() => {
             state: body.state?.context ? body.state : data.state,
             session:
               body.view === "level-up"
-                ? { characters: [], tier_explanation: "Captured tiers" }
+                ? data.session || {
+                    characters: [],
+                    lever: null,
+                    tier_explanation: "Captured tiers",
+                  }
                 : null,
           };
       return { ok: true, json: async () => result };
@@ -143,6 +147,10 @@ it("Route defaults, ticks survive refresh per source, copy matches Queue and URL
   const user = userEvent.setup();
   mount();
   await screen.findByText("Craft 2 Robe");
+  await waitFor(() =>
+    expect(requests.some((r) => r.body.view === "level-up")).toBe(true),
+  );
+  expect(screen.queryByLabelText("Biggest lever")).toBeNull();
   expect(requests[0].body.view).toBe("route");
   expect(screen.getByText("2 scans waiting")).toBeTruthy();
   await user.click(screen.getByRole("checkbox", { name: "Craft 2 Robe" }));
@@ -167,7 +175,33 @@ it("Route defaults, ticks survive refresh per source, copy matches Queue and URL
 it("Opportunities retain ranking, money, reasons and Hide Low leaves Route complete", async () => {
   const user = userEvent.setup();
   data.plan.freshness.stale = true;
+  data.session = {
+    lever: {
+      character: ["Second", "Beta", "Alliance"],
+      profession: "Tailoring",
+      reach: 55,
+      cost_copper: 100,
+      profit_copper: 200,
+      text: "Best next skill step",
+    },
+    characters: [
+      {
+        character: ["First", "Beta", "Alliance"],
+        options_text: ["Level Cooking · unlocks Food"],
+        next_steps: [{ kind: "level_profession" }],
+      },
+      {
+        character: ["Second", "Beta", "Alliance"],
+        options_text: ["Level Tailoring · unlocks Robe"],
+        next_steps: [{ kind: "level_profession" }],
+      },
+    ],
+  };
   mount("opportunities");
+  const lever = await screen.findByLabelText("Biggest lever");
+  expect(lever.textContent).toContain("Second");
+  expect(lever.textContent).toContain("Best next skill step");
+  expect(lever.textContent).not.toContain("First");
   await screen.findByRole("button", { name: "Robe" });
   expect(screen.getByRole("button", { name: "Low" })).toBeTruthy();
   expect(
@@ -397,6 +431,14 @@ it("Route renders while the lever request is unresolved; then Biggest lever scro
     json: async () => ({
       ...data,
       session: {
+        lever: {
+          character: ["Arille", "Beta", "Alliance"],
+          profession: "Blacksmithing",
+          reach: 50,
+          cost_copper: 405,
+          profit_copper: 9250,
+          text: "Best skill step 31 → 50",
+        },
         characters: [
           {
             character: ["Arille", "Beta", "Alliance"],
@@ -423,6 +465,12 @@ it("Route renders while the lever request is unresolved; then Biggest lever scro
   });
   expect((await screen.findByLabelText("Biggest lever")).textContent).toContain(
     "31 → 50",
+  );
+  expect(screen.getByLabelText("Biggest lever").textContent).toContain(
+    "Arille",
+  );
+  expect(screen.getByLabelText("Biggest lever").textContent).toContain(
+    "Best skill step",
   );
   expect(screen.getByText("Craft 2 Robe")).toBeTruthy();
   await userEvent.click(screen.getByRole("button", { name: "Open Level up" }));

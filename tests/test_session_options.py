@@ -11,6 +11,7 @@ from test_today_characters import CHARACTER
 from brownstone.session_options import base_signal, build_options, milestones, next_steps, next_tier, profession_order
 from brownstone.today import build_today
 from brownstone.today_settings import TodaySettings
+from views.today_rows import session_display
 
 
 def arguments(**changes):
@@ -102,6 +103,8 @@ def test_incomplete_colour_and_unvalued_reason(monkeypatch):
     r = result['characters'][0]['professions'][0]['recipes'][0]
     assert r['estimate']['cost_copper'] is None
     assert 'skill-up colour is unknown' in r['estimate']['reasons'][0]
+    assert result['characters'][0]['professions'][0]['best'] is not None
+    assert session_display(result, args)['lever'] is None
     assert r['estimate']['cheap_cost_copper'] is None
 
 

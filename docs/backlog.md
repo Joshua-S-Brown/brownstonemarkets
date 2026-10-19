@@ -33,20 +33,19 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-108 biggest lever across characters
-2. STORY-111 profession record
-3. STORY-112 level from what we hold, or farm it
-4. STORY-104 vendor value as a floor
-5. STORY-105 sell raw or craft?
-6. STORY-106 gold reserve and capital
-7. STORY-109 Route and Ledger tidy-up
-8. STORY-110 records polish
+1. STORY-111 profession record
+2. STORY-112 level from what we hold, or farm it
+3. STORY-104 vendor value as a floor
+4. STORY-105 sell raw or craft?
+5. STORY-106 gold reserve and capital
+6. STORY-109 Route and Ledger tidy-up
+7. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 107 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 107, 108 and SPIKE-009/009b.
 
 ### STORY-104 — Vendor value as a floor
 
@@ -103,21 +102,6 @@ Acceptance:
 - **Capital:** Team shows gold, holdings value and their total, with what is not valued.
 - **Offline tests:** reserve below, equal to and above captured gold; the override; partial captures giving *at least*; unknown prices excluded and counted.
 - Depends on nothing. Rules: *Today (today_version 11)* funds, *Team character cards*, UI-15. Design: *Today contracts*, *Team contracts*, *Stock contracts*.
-
-### STORY-108 — Biggest lever across characters
-
-Moved from Later on 2026-10-18 (found in the STORY-088 review). Today's lever card takes the first character whose Level up options include a *Level …* step, read from the option text. With several characters that is not the team's best.
-
-As a gold maker, I want the lever card to show the team's best next skill step, so that the biggest unlock is chosen by value, not character order.
-
-Decisions:
-- UI-12 returns a structured best next step per character (character, profession, reach cost or unknown, unlocked profit per craft) and ranks it: complete estimates first, then highest unlocked profit per craft, then lowest cost, then character name.
-- The web (`web/src/places/today/Today.tsx`, the `today-lever` query) reads that field and parses no text.
-
-Acceptance:
-- **Ranked:** with several levelling steps the card shows the highest-ranked one, labelled with its character.
-- **Offline tests:** ranking order and ties, incomplete costs, no levelling step, and a Vitest proving the card reads the structured field.
-- Depends on nothing. Rules: UI-12, CRAFT-11. Design: *This session (STORY-063)*, *Today contracts*.
 
 ### STORY-109 — Route and Ledger tidy-up
 

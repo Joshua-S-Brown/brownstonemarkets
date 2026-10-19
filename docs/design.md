@@ -459,6 +459,9 @@ are untouched.
 `web/src/places/today/` loads **Level up** on selection. `api/today.py` reuses the loaded Today
 arguments and reserved plan, composing `build_options` once. `views/today_rows.session_display`
 adds shared option prose, catalog skill-up bands and farming labels without new price reads.
+Its nullable `lever` selects existing `level_profession` steps by descending `profit_copper`,
+then ascending `cost_copper`, full character key and profession; it carries `character`,
+`profession`, `reach`, `cost_copper`, `profit_copper` and existing step `text` (STORY-108).
 
 ### Farming (STORY-065, STORY-074, STORY-075, STORY-077)
 

@@ -45,21 +45,16 @@ export function reasonText(row: Unplanned) {
   return row.tonight_reason;
 }
 export function bestLever(session: Plan["session"]) {
-  const characters = (session?.characters || []) as {
-    character: [string, string, string];
-    options_text: string[];
-    next_steps?: { kind: string }[];
-  }[];
-  for (const c of characters) {
-    const index =
-      c.next_steps?.findIndex((s) => s.kind === "level_profession") ??
-      c.options_text.findIndex(
-        (s) => s.startsWith("Level ") && s.includes("unlocks"),
-      );
-    if (index >= 0)
-      return { character: c.character, text: c.options_text[index] };
-  }
-  return null;
+  return (
+    (session?.lever as {
+      character: [string, string, string];
+      profession: string;
+      reach: number;
+      cost_copper: number;
+      profit_copper: number;
+      text: string;
+    } | null) ?? null
+  );
 }
 export function Opportunities({
   data,

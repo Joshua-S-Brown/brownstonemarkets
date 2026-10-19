@@ -398,6 +398,7 @@ def session_profit_basis(character):
 def session_display(options, arguments):
     """Readable session projection retaining all evidence; no extra loads or estimates."""
     characters = []
+    levers = []
     for character in options['characters']:
         groups = []
         for group in character['professions']:
@@ -413,7 +414,15 @@ def session_display(options, arguments):
         characters.append(character | {'professions': groups, 'farming': farming | {'spots': spots},
                                        'options_text': [step_text(step, character, options['window'])
                                                         for step in character['next_steps']]})
-    return options | {'characters': characters}
+        for step, text in zip(character['next_steps'], characters[-1]['options_text'], strict=True):
+            if step['kind'] == 'level_profession':
+                recipe = step['recipe']
+                levers.append({'character': character['character'], 'profession': step['group']['profession'],
+                               'reach': recipe['required_skill'], 'cost_copper': recipe['estimate']['cost_copper'],
+                               'profit_copper': recipe['profit_copper'], 'text': text})
+    lever = min(levers, key=lambda row: (-row['profit_copper'], row['cost_copper'],
+                                        row['character'], row['profession']), default=None)
+    return options | {'characters': characters, 'lever': lever}
 
 
 def recipe_band(row, rank, catalogs):

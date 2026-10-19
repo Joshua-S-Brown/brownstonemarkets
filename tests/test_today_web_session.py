@@ -141,3 +141,45 @@ def test_refill_rows_choices_no_silent_resize_and_full_shopping():
     result,_,_=today_session.session_plan(args,changed | {'refill':False})
     assert len(result['craft'])==10
     assert sum(r['cost_copper'] for r in result['buy'])==result['shopping_total_copper']
+
+
+def test_session_lever_ranks_profit_cost_full_character_key_and_profession(monkeypatch):
+    from test_session_options import arguments, compose
+
+    from brownstone.session_options import next_steps
+
+    args = arguments()
+    options, _, _ = compose(monkeypatch, args)
+    template = options['characters'][0]
+    candidates = [
+        (('Zed', 'Beta', 'Alliance'), 'Tailoring', 101, 100),
+        (('Zed', 'Beta', 'Alliance'), 'Tailoring', 100, 1),
+        (('Able', 'Alpha', 'Alliance'), 'Alchemy', 100, 10),
+        (('Able', 'Alpha', 'Alliance'), 'Tailoring', 100, 10),
+        (('Able', 'Alpha', 'Horde'), 'Alchemy', 100, 10),
+        (('Able', 'Beta', 'Alliance'), 'Alchemy', 100, 10),
+        (('Zed', 'Alpha', 'Alliance'), 'Alchemy', 100, 10),
+    ]
+    characters = []
+    for key, profession, profit, cost in reversed(candidates):
+        character = deepcopy(template)
+        group = character['professions'][0]
+        group['profession'] = profession
+        group['best'].update(profit_copper=profit)
+        group['best']['estimate'].update(cost_copper=cost)
+        character.update(character=key, crafts=[])
+        character['next_steps'] = next_steps(character)
+        characters.append(character)
+    options = options | {'characters': characters}
+    original = deepcopy(options)
+    for key, profession, profit, cost in candidates:
+        display = today_rows.session_display(options, args)
+        lever = display['lever']
+        assert lever == dict(character=key, profession=profession,
+                            reach=characters[-1]['professions'][0]['best']['required_skill'],
+                            cost_copper=cost, profit_copper=profit,
+                            text=display['characters'][-1]['options_text'][0])
+        assert options == original
+        characters.pop()
+        original = deepcopy(options)
+    assert today_rows.session_display(options, args)['lever'] is None
