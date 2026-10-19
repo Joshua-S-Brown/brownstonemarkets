@@ -127,3 +127,15 @@
     min-height: 44px;
   }
 }
+
+.uses {
+  table-layout: fixed;
+}
+.uses tbody td,
+.uses th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.uses p {
+  margin: 4px 0;
+}

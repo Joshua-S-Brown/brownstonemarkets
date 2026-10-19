@@ -95,6 +95,9 @@ export type Recipe = {
   vendor_price_cap_copper: number | null;
 };
 export type Chain = {
+  best_uses: (Omit<components["schemas"]["MaterialUse"], "characters"> & {
+    characters: Recipe["characters"];
+  })[];
   in_chain: boolean;
   demand: { professions: string[]; bands: string[] }[];
   made_from: Recipe[];

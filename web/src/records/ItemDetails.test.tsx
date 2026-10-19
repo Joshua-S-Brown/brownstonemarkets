@@ -53,6 +53,42 @@ it("renders linked routes, quantities, unknown intermediate profit and team elig
       ok: true,
       json: async () => ({
         in_chain: true,
+        best_uses: [
+          {
+            action: "sell",
+            value_copper: 9,
+            reason: "",
+            characters: [],
+            over_selling_copper: 0,
+          },
+          {
+            action: "vendor",
+            value_copper: 5,
+            reason: "",
+            characters: [],
+            over_selling_copper: -4,
+          },
+          {
+            action: "craft into Bolt",
+            value_copper: 12,
+            reason: "",
+            intermediate: true,
+            eligibility: "nobody on the team knows it",
+            characters: [],
+          },
+          {
+            action: "craft into Shirt",
+            value_copper: null,
+            reason: "Missing output sale price",
+            characters: [
+              {
+                character: ["Maker", "Realm", "Alliance"],
+                craft_status: "Train now",
+                character_reason: "",
+              },
+            ],
+          },
+        ],
         made_from: [recipe],
         used_in: [
           {
@@ -71,6 +107,20 @@ it("renders linked routes, quantities, unknown intermediate profit and team elig
   await screen.findAllByText("Intermediate: no Action Board profit row", {
     exact: false,
   });
+  expect(
+    screen.getByRole("heading", { name: "Best use of one unit" }),
+  ).toBeTruthy();
+  expect(screen.getByText("craft into Bolt")).toBeTruthy();
+  expect(
+    screen.getByText("intermediate: valued at its own sale, not a Board row"),
+  ).toBeTruthy();
+  expect(screen.getByText("12c")).toBeTruthy();
+  expect(screen.getByText("nobody on the team knows it")).toBeTruthy();
+  expect(screen.getByText("Train now", { exact: false })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Maker" })).toBeTruthy();
+  expect(screen.getByText("9c")).toBeTruthy();
+  expect(screen.getByText("5c")).toBeTruthy();
+  expect(screen.getByText(/Listings are not sales/)).toBeTruthy();
   expect(screen.getAllByText("Linen")).toHaveLength(2);
   expect(screen.getByText("2 units per craft")).toBeTruthy();
   expect(screen.getAllByText("Team: Unknown")).toHaveLength(3);

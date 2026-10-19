@@ -33,35 +33,15 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-105 sell raw or craft?
-2. STORY-106 gold reserve and capital
-3. STORY-109 Route and Ledger tidy-up
-4. STORY-110 records polish
+1. STORY-106 gold reserve and capital
+2. STORY-109 Route and Ledger tidy-up
+3. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 107, 108, 111, 112 and SPIKE-009/009b.
-
-### STORY-105 — Sell raw or craft?
-
-Moved from *App conveniences* (*Best use of a material*) on 2026-10-18 (grooming). The most common launch-week decision is whether to sell gathered cloth, ore or herbs or craft them on.
-
-As a gold maker, I want each material compared across selling, vendoring and every craft it feeds, per unit, so that I know its best use at current prices.
-
-Decisions:
-- **Per unit of the material:** auction net = `today.undercut_price` on the newest lowest, after the cut; vendor value as in STORY-104; for each compatible catalog recipe using it with a Board row, **craft value** = (the Board's cautious net sale per craft − the Board's cost of the other inputs per craft) ÷ this material's quantity per craft (`crafting.evaluate_recipe`, the same costing as the Board, never a second path). Integer copper, rounded down.
-- **Who can craft it:** CRAFT-11 Known/Train now per scoped character; recipes no one can make stay listed and labelled *nobody on the team knows it*.
-- Any missing price makes that option unknown with its reason, never 0. Rank known values highest first.
-- **Where:** the item record's *Made from and used in* tab leads with *Best use of one unit*; the character record's Holdings action names the best known option (*craft into Bolt of Linen Cloth · +4c a unit over selling*). Today's plan is unchanged.
-
-Acceptance:
-- **Compared:** selling, vendoring and each craft per unit, with who can make it, for any item with a consuming recipe.
-- **Honest:** unknowns say why; listings are not sales; values come from the newest scan.
-- **Offline tests:** craft value with one and several other inputs, an intermediate route, missing prices on each side, quantity above 1, eligibility labels, and Today unchanged.
-- **Real data** (copy of `data/`): Linen Cloth (2589) per-unit sell, vendor and Bolt of Linen Cloth values on the beta.
-- Depends on STORY-104. Rules: CRAFT-03, CRAFT-04, CRAFT-05, CRAFT-11, UI-09, ADDON-08. Design: *Crafting calculation*, *Market explorer (STORY-055)*, *Team contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 107, 108, 111, 112 and SPIKE-009/009b.
 
 ### STORY-106 — Gold reserve and capital
 

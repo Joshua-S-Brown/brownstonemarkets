@@ -591,6 +591,7 @@ connections are read-only. It adds no price SQL or pricing policy. Finished-outp
 come from Board rows; intermediates use `crafting.evaluate_recipe` for routes and `material_plan`'s
 expanded quantities, retaining no Board profit. Routed nested choices multiply by the recorded craft
 count and carry depth. Skill bands combine direct and raw memberships without multiplying quantities.
+`material_uses` projects UI-09 per-unit comparisons from each used-in row’s `evaluate_recipe` choices (Board row, or `intermediate_value` flagged `intermediate`) and newest base metrics; `item_chain` and Team Holdings share it.
 `item_page` returns all observed variant identities separately, vendor references, catalog-qualified
 made-from/used-in rows and team statuses. Catalog-only items remain reachable with unknown market prices.
 `item_summary` lazily composes one `item_floods` read (also reused by the Market tab),

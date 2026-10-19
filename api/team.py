@@ -12,6 +12,7 @@ from brownstone import (
     character_snapshots,
     characters,
     hiring,
+    market_explorer,
     recipe_catalogs,
     team_holdings,
     team_plan,
@@ -369,8 +370,10 @@ def character(name: str, realm: str, faction: str, source: str = '', window: int
                                                      item_ids={u['item_id'] for u in items})
             arguments = arguments or {}
             _, prices = basis_prices(arguments.get('observations', {}), 'cautious')
+            uses = {i: market_explorer.material_uses(context.explorer(chosen), i)
+                    for i in {u['item_id'] for u in items if u['variant_state'] == 'base'}}
             held = team_view.character_holdings(items, captures, {}, [], prices, arguments.get('vendor_prices', {}),
-                                                 chosen['auction_cut'])
+                                                 chosen['auction_cut'], uses=uses)
             entry['records'][key] = member | dict(holdings=held, evidence=evidence,
                 catalog_professions={hiring.SKILL_IDS[c['profession']]: c['profession'] for c in entry['catalogs']
                                      if c['profession'] in hiring.SKILL_IDS})
@@ -417,8 +420,10 @@ def character_next(body: NextRequest, source: str = ''):
     held = record['holdings']
     prices = {r['item_id']: r['unit_copper'] for r in held['items'] if r['variant_state'] == 'base'}
     vendors = {r['item_id']: r['vendor_copper'] for r in held['items'] if r['variant_state'] == 'base'}
+    uses = {r['item_id']: market_explorer.material_uses(context.explorer(chosen), r['item_id'])
+            for r in held['items'] if r['variant_state'] == 'base'}
     held = team_view.character_holdings(held['items'], held['captures'], payload['plan'], payload['stops'],
-                                        prices, vendors, chosen['auction_cut'])
+                                        prices, vendors, chosen['auction_cut'], uses=uses)
     with ledger._lock:
         gold = team_view.character_gold(ledger.cached(chosen).get('gold'), body.character,
                                         day_bounds('7', datetime.now(UTC)))

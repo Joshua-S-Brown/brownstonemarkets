@@ -315,6 +315,11 @@ def test_character_holdings_action_order_exact_identity_and_cautious_values():
     craft['held_allocations'][0]['to'] = None
     unknown_maker = team_view.character_holdings([items[0]], captures, dict(craft=[craft]), stops, {}, {})
     assert unknown_maker['items'][0]['action'] == 'used in tonight’s plan (Route step 2)'
+    best = dict(action='craft into Belt', eligible=True, value_copper=90, over_selling_copper=20)
+    planned = team_view.character_holdings(items[:2], captures, dict(craft=[craft]), stops, {}, {},
+                                           uses={1: [best], 2: [best]})
+    assert [r['action'] for r in planned['items']] == [
+        'used in tonight’s plan (Route step 2)', 'mail to Other for Robe (Route step 1)']
     captures[1]['partial'] = False
     assert not team_view.character_holdings([], captures, {}, [], {}, {})['at_least']
     # Another realm, location or variant of the same item ID never acquires a Route action.

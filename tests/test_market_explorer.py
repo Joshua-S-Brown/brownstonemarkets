@@ -54,6 +54,7 @@ def test_search_chains_quantities_prices_and_unknown_team(tmp_path):
     assert not unknown['in_chain'] and not unknown['made_from']
     assert unknown['observed'][0]['min_buyout'] is None
     assert me.item_page(result, 123456)['observed'] == []
+    assert next(o for o in me.material_uses(result, 2589) if o['action'] == 'sell')['value_copper'] == 9
     assert not result['freshness']['stale']
     assert me.load_explorer(config, [catalog], NOW + timedelta(days=2))['freshness']['stale']
 
@@ -154,3 +155,95 @@ def test_captured_quality_uses_exact_identity_and_scope(tmp_path):
     with duckdb.connect(str(config['data_dir'] / 'brownstone.duckdb'), read_only=True) as db:
         assert me.captured_qualities(db, config | {'source_id': 'other'}, result['snapshot']['snapshot_id']) == {}
         assert me.captured_qualities(db, config | {'environment': 'other'}, result['snapshot']['snapshot_id']) == {}
+
+
+@pytest.mark.parametrize('others,missing,expected,reason', [
+    ([(2, 3)], None, 77, ''),
+    ([(2, 3), (3, 2)], None, 74, ''),
+    ([(2, 3)], 1, 77, ''),  # The held material itself needs no purchase quote.
+    ([(2, 3)], 2, None, 'Missing input prices: Copper Bar'),
+    ([(2, 3)], 4, None, 'Missing output sale price'),
+])
+def test_material_per_unit_board_costs_missing_sides_and_today_unchanged(others, missing, expected, reason):
+    from test_action_board import observed
+    from test_recipe_graph import MARKET, NOW, SNAPSHOT, TAILOR, character, make_catalog
+
+    from brownstone import team_view
+    from brownstone.today import build_today
+    from brownstone.today_settings import TodaySettings
+
+    catalog = make_catalog('tailor', 'tailoring', 30, 4, [(1, 2), *others])
+    catalog['recipes_by_id'][30]['output_quantity'] = 2
+    prices = {1: 11, 2: 12, 3: 3, 4: 100}
+    prices.pop(missing, None)
+    args = dict(observations=observed(prices), market=MARKET, snapshot=SNAPSHOT,
+                now=NOW, max_age_hours=24, auction_cut=.05)
+    characters = {TAILOR: character(catalog)}
+    plan_args = args | dict(catalogs=[catalog], settings=TodaySettings(), character_data=characters)
+    before = build_today(**plan_args)
+    result = dict(config=MARKET | {'auction_cut': .05}, catalogs=[catalog],
+                  recipes=me.recipe_rows([catalog], args, characters), vendors={1: 5}, items=[],
+                  metrics=[dict(item_id=1, variant_state='base', variant_id=None,
+                                min_buyout=prices.get(1), max_stack_size=20)], demand=[])
+    options = me.material_uses(result, 1)
+    craft = next(o for o in options if o['action'].startswith('craft'))
+    assert craft['value_copper'] == expected and craft['reason'] == reason
+    assert craft['quantity'] == 2 and craft['characters'][0]['craft_status'] == 'Known'
+    assert craft['eligible'] and not craft['eligibility']
+    assert [o['value_copper'] for o in options] == sorted(
+        [o['value_copper'] for o in options], key=lambda c: (c is None, -(c or 0)))
+    sell = next(o for o in options if o['action'] == 'sell')
+    assert sell['value_copper'] == (None if missing == 1 else 9)
+    assert bool(sell['reason']) == (missing == 1)
+    assert next(o for o in options if o['action'] == 'vendor')['value_copper'] == 5
+    item = dict(item_id=1, variant_state='base', units=3)
+    # Without a known craft, selling vs vendoring stays STORY-104's cautious-price choice.
+    held = team_view.character_holdings([item], [], {}, [], {1: 11}, {1: 5}, uses={1: options})
+    assert held['items'][0]['action'] == (
+        'craft into Belt' + (f' · +{expected - 9}c a unit over selling' if missing != 1 else '')
+        if expected is not None else 'sell')
+    vendor_best = [dict(action='vendor', eligible=True, value_copper=50, over_selling_copper=41), *options]
+    held = team_view.character_holdings([item], [], {}, [], {}, {1: 5}, uses={1: vendor_best})
+    assert held['items'][0]['action'] == 'vendor'
+    variant = item | dict(variant_state='variant')
+    held = team_view.character_holdings([variant], [], {}, [], {}, {}, uses={1: options})
+    assert held['items'][0]['action'] == 'keep'
+    assert build_today(**plan_args) == before
+
+
+@pytest.mark.parametrize('learned,rank,status,eligible', [
+    (True, 8, 'Known', True), (False, 8, 'Train now', True), (False, 0, 'Not yet', False),
+    (None, 8, 'Unknown', False),
+])
+def test_material_uses_intermediate_route_and_team_eligibility(learned, rank, status, eligible):
+    from test_action_board import observed
+    from test_recipe_graph import MARKET, NOW, SNAPSHOT, TAILOR, character, make_catalog
+
+    from brownstone import team_view
+
+    catalog = make_catalog('tailor', 'tailoring', 30, 4, [(1, 2), (2, 3)])
+    catalog['items_by_id'][3] = dict(item_id=3, name='Buckle', role='material')
+    catalog['recipes_by_id'][20] = dict(recipe_id=20, output_item_id=2, output_quantity=1,
+                                      profession='tailoring', inputs=[dict(item_id=3, quantity=2)])
+    catalog['recipe_for_output'][2] = 20
+    catalog['items_by_id'][2]['role'] = 'intermediate'
+    args = dict(observations=observed({1: 11, 2: 100, 3: 3, 4: 100}), market=MARKET, snapshot=SNAPSHOT,
+                now=NOW, max_age_hours=24, auction_cut=.05)
+    data = {TAILOR: character(catalog, learned=learned, rank=rank)}
+    result = dict(config=MARKET | {'auction_cut': .05}, catalogs=[catalog],
+                  recipes=me.recipe_rows([catalog], args, data), vendors={1: 0}, items=[], metrics=[], demand=[])
+    options = me.material_uses(result, 1)
+    craft = next(o for o in options if o['action'].startswith('craft'))
+    assert craft['value_copper'] == 38  # (95 - (3 * (2 * 3))) // 2, same routed choices as Board.
+    assert craft['characters'][0]['craft_status'] == status and craft['eligible'] is eligible
+    assert craft['eligibility'] == ('' if eligible else 'nobody on the team knows it')
+    vendor = next(o for o in options if o['action'] == 'vendor')
+    assert vendor['value_copper'] is None and 'vendor sell price' in vendor['reason']
+    item = dict(item_id=1, variant_state='base', units=2)
+    assert team_view.character_holdings([item], [], {}, [], {}, {}, uses={1: options})['items'][0]['action'] == (
+        'craft into Belt' if eligible else 'keep')
+    # No Board row: the intermediate's own cautious sale, 95 net, over 2 Buckles per craft.
+    intermediate = next(o for o in me.material_uses(result, 3) if o['action'].startswith('craft'))
+    assert intermediate['value_copper'] == 47 and intermediate['intermediate'] and not intermediate['reason']
+    assert not craft['intermediate']
+    assert me.material_uses(result, 999) == []

@@ -263,6 +263,9 @@ def test_history_ladder_picker_gaps_no_buyout_errors_and_chain_routes(client, mo
     bolt = browser.get('/api/items/2996/chain').json()
     assert bolt['made_from'][0]['profit_copper'] is None
     assert 'Intermediate' in bolt['made_from'][0]['reason']
+    assert bolt['best_uses'][0]['action'] == 'craft into White Linen Shirt'
+    assert bolt['best_uses'][0]['value_copper'] == 1865
+    assert bolt['best_uses'][0]['eligibility'] == 'nobody on the team knows it'
     assert bolt['used_in'][0]['quantity'] == 1 and bolt['demand']
     assert bolt['used_in'][0]['characters'][0]['craft_status'] == 'Unknown'
     assert not browser.get('/api/items/99999/chain').json()['in_chain']

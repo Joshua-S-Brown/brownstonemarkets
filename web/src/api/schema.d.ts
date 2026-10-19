@@ -556,6 +556,8 @@ export interface components {
         };
         /** Chain */
         Chain: {
+            /** Best Uses */
+            best_uses: components["schemas"]["MaterialUse"][];
             /** Demand */
             demand: {
                 [key: string]: unknown;
@@ -1229,6 +1231,48 @@ export interface components {
              * @default []
              */
             variants: components["schemas"]["MarketRow"][];
+        };
+        /** MaterialUse */
+        MaterialUse: {
+            /** Action */
+            action: string;
+            /** Catalog Id */
+            catalog_id?: string | null;
+            /** Characters */
+            characters: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Eligibility
+             * @default
+             */
+            eligibility: string;
+            /** Eligible */
+            eligible: boolean;
+            /**
+             * Intermediate
+             * @default false
+             */
+            intermediate: boolean;
+            /** Item Id */
+            item_id?: number | null;
+            /** Over Selling Copper */
+            over_selling_copper: number | null;
+            /** Quantity */
+            quantity?: number | null;
+            /** Reason */
+            reason: string;
+            /** Recipe Id */
+            recipe_id?: number | null;
+            /** Value Copper */
+            value_copper: number | null;
+            /**
+             * Vendor Capped
+             * @default false
+             */
+            vendor_capped: boolean;
+            /** Vendor Price Cap Copper */
+            vendor_price_cap_copper?: number | null;
         };
         /** Member */
         Member: {

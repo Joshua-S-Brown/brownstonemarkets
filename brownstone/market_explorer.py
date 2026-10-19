@@ -14,6 +14,7 @@ from .recipe_import import GAME_PATHS
 from .session_options import base_signal
 from .skillups import build_skillups
 from .storage import scope_predicate
+from .today import _net, undercut_price
 from .today_characters import project_recipes, recipe_status, team_makeable
 from .today_loading import _load_holdings, load_today, load_today_characters
 from .today_settings import TodaySettings
@@ -81,13 +82,13 @@ def recipe_rows(catalogs, arguments, characters) -> list[dict]:
             try:
                 routed = route_catalog(catalog, recipe["recipe_id"], buy, graph)
             except ValueError as error:
-                rows.append({"catalog": catalog, "recipe": recipe,
+                rows.append({"catalog": catalog, "recipe": recipe, "board_row": key in ranked,
                              "value": {"profit_copper": None, "action": "unsupported recipe: " + str(error)},
                              "status": projection["statuses"].get(key, {}), "characters": statuses, "materials": []})
                 continue
             if valued is None:
                 valued = intermediate_value(routed, recipe, buy, sell, arguments['auction_cut'])
-            rows.append({'catalog': routed, 'recipe': recipe, 'value': valued,
+            rows.append({'catalog': routed, 'recipe': recipe, 'value': valued, 'board_row': key in ranked,
                          'status': projection['statuses'].get(key, {}), 'characters': statuses,
                          'materials': routed_materials(routed, valued, buy, sell)})
     return sorted(rows, key=lambda r: (r['value']['profit_copper'] is None,
@@ -323,8 +324,47 @@ def chain_recipe(row, item_id):
 
 def item_chain(result, item_id):
     page = item_page(result, item_id)
-    return {'in_chain': page['in_chain'], 'demand': page['demand'],
+    return {'in_chain': page['in_chain'], 'demand': page['demand'], 'best_uses': material_uses(result, item_id),
             **{key: [chain_recipe(r, item_id) for r in page[key]] for key in ('made_from', 'used_in')}}
+
+
+def material_uses(result, item_id):
+    """Per-unit opportunity values from the newest scoped scan and existing Board choices."""
+    page = item_page(result, item_id)
+    if not page['used_in']:
+        return []
+    metric = base_signal(page['metrics'], item_id) or {}
+    post = undercut_price(metric.get('min_buyout'), metric.get('max_stack_size'))
+    auction = _net(post, 1, result['config']['auction_cut']) if post is not None else None
+    vendor = page['vendor_sell']
+    vendor = vendor if vendor is not None and vendor > 0 else None
+    options = [dict(action='sell', value_copper=auction, reason='' if auction is not None else
+                    'No positive undercut quote in the newest scan', characters=[], eligible=True),
+               dict(action='vendor', value_copper=vendor, reason='' if vendor is not None else
+                    'No positive vendor sell price in the newest scan', characters=[], eligible=True)]
+    for row in page['used_in']:
+        recipe, value = row['recipe'], row['value']
+        other = [c for c in value.get('choices', []) if c['item_id'] != item_id]
+        missing = [c['item_name'] for c in other if c['total_cost_copper'] is None]
+        # Intermediates have no Board row; their own cautious sale, costed by the same evaluate_recipe, values them.
+        reason = (value['action'] if not value.get('choices') else
+                  'Missing output sale price' if value.get('net_revenue_copper') is None else
+                  'Missing input prices: ' + ', '.join(missing) if missing else '')
+        quantity = sum(i['quantity'] for i in recipe['inputs'] if i['item_id'] == item_id)
+        copper = None if reason else (value['net_revenue_copper'] -
+                                      sum(c['total_cost_copper'] for c in other)) // quantity
+        makers = [c for c in row['characters'] if c['craft_status'] in ('Known', 'Train now')]
+        options.append(dict(action='craft into ' + row['catalog']['items_by_id'][recipe['output_item_id']]['name'],
+                            value_copper=copper, reason=reason, characters=row['characters'], eligible=bool(makers),
+                            eligibility='' if makers else 'nobody on the team knows it',
+                            catalog_id=catalog_identity(row['catalog']), recipe_id=recipe['recipe_id'],
+                            item_id=recipe['output_item_id'], quantity=quantity, intermediate=not row['board_row'],
+                            vendor_capped=value.get('vendor_capped', False),
+                            vendor_price_cap_copper=value.get('vendor_price_cap_copper')))
+    for option in options:
+        option['over_selling_copper'] = (option['value_copper'] - auction
+                                        if option['value_copper'] is not None and auction is not None else None)
+    return sorted(options, key=lambda o: (o['value_copper'] is None, -(o['value_copper'] or 0)))
 
 
 def item_activity(config, result, item_id, now):

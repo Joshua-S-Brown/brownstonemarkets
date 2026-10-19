@@ -2,6 +2,7 @@
 from datetime import UTC, datetime
 
 from . import action_board, hiring, progression, recipe_catalogs, skillups, today_characters
+from .money import format_money
 from .today import _net
 from .today_characters import available_characters
 
@@ -144,7 +145,7 @@ def profession_record(catalogs, data, board, profession):
                                coverage=skillups.coverage_line(c)) for c in catalogs])
 
 
-def character_holdings(items, captures, plan, stops, prices, vendor_prices, auction_cut=.05):
+def character_holdings(items, captures, plan, stops, prices, vendor_prices, auction_cut=.05, uses=None):
     """Value exact held identities like Stock and suggest only evidenced Route uses."""
     rows = []
     for item in items:
@@ -168,7 +169,8 @@ def character_holdings(items, captures, plan, stops, prices, vendor_prices, auct
                 if any(_same_stack(a, item) and a.get('to') in (None, item['character'])
                        for a in craft.get('held_allocations', [])):
                     own = f'used in tonight’s plan (Route step {number})'
-        action = own or mail if base else None
+        # Tonight's Route use or mail outranks a best-use suggestion.
+        action = own or mail or _best_use((uses or {}).get(item['item_id'], [])) if base else None
         if not action:
             action = 'sell' if price is not None and vendor is not None and _net(price, 1, auction_cut) > vendor else (
                 ('vendor it instead' if price is not None else 'vendor') if vendor else 'keep')
@@ -178,6 +180,16 @@ def character_holdings(items, captures, plan, stops, prices, vendor_prices, auct
     return dict(items=rows, captures=captures, value_copper=sum(r['value_copper'] or 0 for r in rows),
                 at_least=not captures or any(c['unknown'] or c['partial'] for c in captures),
                 unpriced=sum(r['unit_copper'] is None for r in rows))
+
+
+def _best_use(options):
+    """UI-09's best known per-unit option when it is a team-makeable craft; selling or vendoring keeps STORY-104."""
+    best = next((o for o in options if o['eligible'] and o['value_copper'] is not None), None)
+    if best is None or best['action'] in ('sell', 'vendor'):
+        return None
+    delta = best['over_selling_copper']
+    gain = f' · +{format_money(delta)} a unit over selling' if delta is not None and delta > 0 else ''
+    return best['action'] + gain
 
 
 def _same_stack(unit, item):

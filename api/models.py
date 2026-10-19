@@ -166,7 +166,25 @@ class Ladder(BaseModel):
     zoom_copper: int | None
 
 
+class MaterialUse(BaseModel):
+    action: str
+    value_copper: int | None
+    reason: str
+    characters: list[dict[str, Any]]
+    eligible: bool
+    eligibility: str = ""
+    over_selling_copper: int | None
+    catalog_id: str | None = None
+    recipe_id: int | None = None
+    item_id: int | None = None
+    quantity: int | None = None
+    intermediate: bool = False
+    vendor_capped: bool = False
+    vendor_price_cap_copper: int | None = None
+
+
 class Chain(BaseModel):
+    best_uses: list[MaterialUse]
     in_chain: bool
     demand: list[dict[str, Any]]
     made_from: list[dict[str, Any]]

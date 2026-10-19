@@ -1,3 +1,4 @@
+import styles from "./records.module.css";
 import { Panel } from "../ui/Panel";
 import { CharacterWords } from "../ui/CharacterWords";
 import { UtcTime } from "../ui/UtcTime";
@@ -126,6 +127,68 @@ export function ItemChain({ source, id }: { source: string; id: number }) {
     <>
       {!c.in_chain && (
         <p>This item is in no compatible catalog. Price evidence only.</p>
+      )}
+      {!!c.best_uses?.length && (
+        <section>
+          <h2>Best use of one unit</h2>
+          <p>
+            Newest scan estimates after the auction cut. Listings are not sales;
+            speed and demand unknown.
+          </p>
+          <table className={styles.uses}>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Per unit</th>
+                <th>Who can craft</th>
+              </tr>
+            </thead>
+            <tbody>
+              {c.best_uses.map((o, i) => (
+                <tr key={i}>
+                  <td>
+                    {o.action}
+                    {o.reason && <p>{o.reason}</p>}
+                    {o.intermediate && (
+                      <p>
+                        intermediate: valued at its own sale, not a Board row
+                      </p>
+                    )}
+                    {o.vendor_capped && (
+                      <p>
+                        capped at vendor price{" "}
+                        <Money copper={o.vendor_price_cap_copper ?? null} />
+                      </p>
+                    )}
+                  </td>
+                  <td>
+                    <Money copper={o.value_copper} />
+                    {o.over_selling_copper != null &&
+                      o.over_selling_copper > 0 && (
+                        <p>
+                          +<Money copper={o.over_selling_copper} /> a unit over
+                          selling
+                        </p>
+                      )}
+                  </td>
+                  <td>
+                    {o.eligibility}
+                    {o.characters
+                      .filter((c) =>
+                        ["Known", "Train now"].includes(c.craft_status),
+                      )
+                      .map((c, j) => (
+                        <p key={j}>
+                          <CharacterName character={c.character} />:{" "}
+                          {c.craft_status}
+                        </p>
+                      ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
       {(["made_from", "used_in"] as const).map((key) => (
         <section key={key}>
