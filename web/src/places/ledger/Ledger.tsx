@@ -195,7 +195,10 @@ export function Ledger({ source }: { source: string }) {
   const data = query.data,
     gold = data?.gold,
     items = data?.items,
-    stock = data?.stock;
+    stock = data?.stock,
+    pairs = gold?.reconciliation ?? [],
+    attention = pairs.filter((r) => r.unexplained_copper !== 0),
+    reconciled = pairs.filter((r) => r.unexplained_copper === 0);
   return (
     <>
       <PageHead
@@ -302,7 +305,17 @@ export function Ledger({ source }: { source: string }) {
                 <Totals source={source} kind="gold" rows={gold.totals} />
               </details>
               <h3>Gold reconciliation</h3>
-              <GoldPairs rows={gold.reconciliation} />
+              {attention.length > 0 || pairs.length === 0 ? (
+                <GoldPairs rows={attention} />
+              ) : (
+                <p>All {pairs.length} pairs reconcile</p>
+              )}
+              {reconciled.length > 0 && (
+                <details>
+                  <summary>Show {reconciled.length} reconciled pairs</summary>
+                  <GoldPairs rows={reconciled} />
+                </details>
+              )}
               <details>
                 <summary>Gold evidence</summary>
                 <Evidence data={gold.evidence} />

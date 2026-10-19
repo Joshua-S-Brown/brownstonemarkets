@@ -190,9 +190,10 @@ export function Route({
                 : stop.character}
               <span> · {stop.place}</span>
             </div>
-            {stop.place === "mailbox" && (
-              <small>{data.plan.queue.mail_note}</small>
-            )}
+            {stop.place === "mailbox" &&
+              i === data.stops.findIndex((s) => s.place === "mailbox") && (
+                <small>{data.plan.queue.mail_note}</small>
+              )}
             <div className={styles.steps}>
               {stop.lines.map((line) => (
                 <RouteLine

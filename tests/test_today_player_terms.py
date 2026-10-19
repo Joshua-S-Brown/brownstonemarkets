@@ -31,7 +31,7 @@ def test_gold_transfers_order_unknowns_and_scope():
     from test_today import NOW
 
     from brownstone.today_funds import resolve_funds
-    from brownstone.today_session import gold_mail_lines, queue_line, queue_with_gold
+    from brownstone.today_session import gold_mail_lines, queue_line, queue_state, queue_with_gold, route_stops
     from brownstone.today_settings import TodaySettings
 
     result = plan()
@@ -43,18 +43,27 @@ def test_gold_transfers_order_unknowns_and_scope():
     funds = resolve_funds(TodaySettings(), data, NOW, 24)
     lines = gold_mail_lines(result, data, funds)
     assert [(r['character'], r['copper']) for r in lines] == [('Able', 100), ('Basilly', cost - 101)]
-    assert queue_line(lines[0]) == 'Able mails 1s to Arille'
+    assert queue_line(lines[0]) == 'Able: mail 1s to Arille'
     original = json.dumps(result, sort_keys=True, default=str)
     queue = queue_with_gold(result, data, funds)
     assert queue['lines'][:2] == lines
     assert queue['lines'][2]['stage'] == 'auction house'
     assert json.dumps(result, sort_keys=True, default=str) == original
-    result['queue']['lines'].insert(0, {'stage': 'take'})
-    result['queue']['lines'].insert(1, {'stage': 'mail'})
-    assert queue_with_gold(result, data, funds)['lines'][2:4] == lines
+    materials = [dict(stage='take', character='Able', name='Cloth', units=1, kind='bank'),
+                 dict(stage='mail', character='Able', name='Cloth', units=1, to='Arille'),
+                 dict(stage='mail', character='Material only', name='Thread', units=1, to='Arille')]
+    result['queue']['lines'][:0] = materials
+    merged = queue_with_gold(result, data, funds)
+    assert merged['lines'][:5] == [*materials[:2], lines[0], materials[2], lines[1]]
+    stops = route_stops(merged, result['craft'], data)
+    assert [(s['character'], len(s['lines'])) for s in stops if s['place'] == 'mailbox'] == [
+        ('Able', 2), ('Material only', 1), ('Basilly', 1)]
+    previous = queue_state(queue, {}) | {'ticks': {'0': True}}
+    assert queue_state(merged, previous)['ticks'] == {}
     data[('Arille', 'Beta', 'Alliance')]['bags'].pop('captured_at')
     unknown = gold_mail_lines(result, data, funds)
     assert len(unknown) == 1
+    assert queue_with_gold(result, data, funds)['lines'][3] == unknown[0]
     assert queue_line(unknown[0]) == "Arille's gold isn't captured; Arille needs 1s 30c for purchases"
     assert gold_mail_lines(result, data, replace(funds, origin='entered amount')) == []
     single = replace(funds, settings=replace(funds.settings, character=('Arille', 'Beta', 'Alliance')))

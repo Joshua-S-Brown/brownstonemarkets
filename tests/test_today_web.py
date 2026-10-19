@@ -263,6 +263,27 @@ def test_bands_unknown_rank_and_catalog_evidence():
         assert today_rows.recipe_band(row, rank, [c]).startswith(color)
     assert 'rank unknown' in today_rows.recipe_band(row, None, [c])
     assert today_rows.band_colour(20, [1, 1, 1, 40]) == 'no reliable skill-ups'
+    from test_today_characters import CHARACTER, state
+
+    evidence = state(learned=True, rank=0)
+    captured = evidence['recipes']['Arbitrary title']['known_recipes']['rows'][0]
+    for difficulty, color in enumerate(('orange', 'yellow', 'green', 'grey')):
+        captured['info'] = {'relativeDifficulty': difficulty}
+        band = today_rows.recipe_band(row, 0, [c], evidence)
+        assert band.startswith(f'{color} at rank 0 (from the game) · catalog says needs 1')
+        assert "you're" not in band and 'orange 1, yellow 20, green 30, grey 40' in band
+    assert today_rows.recipe_band(row, None, [c], evidence) == (
+        'grey (from the game) · orange 1, yellow 20, green 30, grey 40')
+    captured['learned'] = False
+    assert today_rows.recipe_band(row, 0, [c], evidence).startswith("needs 1 · you're 0")
+    captured['learned'] = True
+    captured['info'] = {}
+    assert today_rows.recipe_band(row, 20, [c], evidence).startswith('yellow at rank 20 · orange')
+    captured['info'] = {'relativeDifficulty': 1}
+    stops = [dict(characters=[CHARACTER], lines=[dict(evidence=row | {'stage': 'craft'})])]
+    from views.today_web import route_lines
+    route_lines(stops, {'catalogs': [c], 'character_data': {CHARACTER: evidence}}, {}, [])
+    assert stops[0]['lines'][0]['display']['skillup_band'].startswith('yellow at rank 0 (from the game)')
 
 
 def test_failed_signal_read_is_explicit_and_character_failure_keeps_plan(browser, monkeypatch):

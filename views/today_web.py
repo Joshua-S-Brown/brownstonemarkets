@@ -17,7 +17,7 @@ def route_lines(stops, arguments, qualities, crafts):
                 key = tuple(stop['characters'][0]) if len(stop['characters']) == 1 else None
                 state = arguments.get('character_data', {}).get(key)
                 rank = recipe_rank(state, row['recipe_id']) if state else None
-                band = today_rows.recipe_band(row, rank, arguments['catalogs'])
+                band = today_rows.recipe_band(row, rank, arguments['catalogs'], state)
             if row['stage'] == 'post':
                 item = next(posts)['output_item_id']
             line['display'] = dict(action_note=held_note(row), item_id=item, quality=base_quality(qualities, item),

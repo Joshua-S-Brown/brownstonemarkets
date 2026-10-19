@@ -139,9 +139,10 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   crafts/refill, including crafts excluded earlier in the session. Settings save through the token boundary to the existing source file.
   Native Today URLs and Team return links redirect to the web page; the old Today renderer is retired.
   Offline coverage moved to `test_today_web*.py`, `test_today_session_words.py` and Today Vitest tests.
-  On copied beta data, scan `20261016T113727Z-eb77d0`: 13 Queue lines match NiceGUI verbatim,
-  including quantities, gold mail, deposits and copy text. Shopping 1,825c, deposits 411c,
-  expected profit 2,583c, captured team funds 1,939c. All five characters' This session options match.
+  Copied Forever beta `20261017T104157Z-ff991e`: 20 actions, 11 stops (three mailbox),
+  profit 3,851c; Linen Bag is yellow at rank 32 from the game, with the catalog disagreement retained.
+  Route and Ledger follow [STORY-109’s rules](requirements.md#today-today_version-15);
+  1280/390 px prototype comparisons are in ignored `work/story-109/comparison.html`.
 - **Team (STORY-091):** `/app/team?source=` shows avatar cards with rank/tier bars and one best
   action, other steps/reasons in Tips and records, a profession coverage matrix and hiring/holder
   tables with estimate pills. The release-only look-ahead sits in the roster header and persists

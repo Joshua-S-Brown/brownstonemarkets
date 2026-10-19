@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { reasonText } from "./Opportunities";
 import { InspectorContext } from "../../app/InspectorContext";
 import { Today } from "./Today";
+import { Route } from "./Route";
 import { OurMove } from "./OurMove";
 import { type Plan, keepLocal, todayKey, readState, writeState } from "./state";
 const craft = {
@@ -615,4 +616,36 @@ it("shows vendor fallback and vendor value only for priced opportunities", async
   expect(screen.getAllByText(/Vendor value/)).toHaveLength(1);
   expect(screen.getByRole("button", { name: "Boots" })).toBeTruthy();
   expect(screen.getByText("At planned auction or vendor value")).toBeTruthy();
+});
+
+it("shows postage only at the first mailbox stop", async () => {
+  const stop = data.stops[0];
+  data.stops.push(
+    ...["Able", "Basilly"].map((name, i) => ({
+      ...stop,
+      character: name,
+      characters: [],
+      place: "mailbox",
+      lines: [
+        {
+          index: i + 1,
+          text: `${name}: mail 1s to Arille`,
+          evidence: { stage: "gold mail" },
+          warnings: "",
+        },
+      ],
+    })),
+  );
+  render(
+    <MemoryRouter>
+      <InspectorContext.Provider value={inspect}>
+        <Route data={data} tick={vi.fn()} />
+      </InspectorContext.Provider>
+    </MemoryRouter>,
+  );
+  await screen.findByRole("checkbox", { name: "Able: mail 1s to Arille" });
+  expect(screen.getAllByText("Postage is unconfirmed.")).toHaveLength(1);
+  expect(
+    screen.getByRole("checkbox", { name: "Basilly: mail 1s to Arille" }),
+  ).toBeTruthy();
 });

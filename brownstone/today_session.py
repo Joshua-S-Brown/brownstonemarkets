@@ -52,7 +52,7 @@ def queue_line(line):
 def queue_line_text(line):
     stage, name = line["stage"], line["name"]
     if stage == 'gold mail':
-        return f"{line['character']} mails {format_money(line['copper'])} to {name}"
+        return f"{line['character']}: mail {format_money(line['copper'])} to {name}"
     if stage == 'gold unknown':
         return f"{name}'s gold isn't captured; {name} needs {format_money(line['copper'])} for purchases"
     if stage in ("auction house", "vendor"):
@@ -148,11 +148,18 @@ def gold_mail_lines(result, character_data, funds):
 
 
 def queue_with_gold(result, character_data, funds):
-    """Presentation-only Queue with gold after all held-item transfers and before purchases."""
+    """Presentation-only Queue with gold beside each donor’s last material mail."""
     queue = result['queue']
     lines = queue['lines']
     index = next((i for i, line in enumerate(lines) if line['stage'] not in ('take', 'mail')), len(lines))
-    queue = queue | {'lines': deepcopy(lines[:index] + gold_mail_lines(result, character_data, funds) + lines[index:])}
+    transfers = gold_mail_lines(result, character_data, funds)
+    ordered = list(lines[:index])
+    for transfer in transfers:
+        position = next((i + 1 for i in range(len(ordered) - 1, -1, -1)
+                         if ordered[i]['stage'] in ('mail', 'gold mail') and
+                         ordered[i].get('character') == transfer.get('character')), len(ordered))
+        ordered.insert(position if transfer['stage'] == 'gold mail' else len(ordered), transfer)
+    queue = queue | {'lines': deepcopy(ordered + lines[index:])}
     if not any(line.get('purposes') for line in queue['lines']):
         return queue
     steps = {}

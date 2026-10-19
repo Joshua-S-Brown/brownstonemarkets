@@ -96,6 +96,16 @@ def recipe_rank(state: dict, recipe_id: int) -> int | None:
     return _rank(state, record) if record else None
 
 
+def recipe_colour(state: dict, recipe_id: int) -> str | None:
+    """Game skill-up colour of a learned captured recipe (relativeDifficulty 0-3), else None."""
+    row = _match(state, recipe_id)[1]
+    info = row.get("info")
+    difficulty = info.get("relativeDifficulty") if isinstance(info, dict) else None
+    if row.get("learned") is not True or type(difficulty) is not int or not 0 <= difficulty <= 3:
+        return None
+    return ("orange", "yellow", "green", "grey")[difficulty]
+
+
 def recipe_status(recipe: dict, state: dict, *, planned_rank: int | None = None) -> dict:
     """Resolve exact-ID status; planned_rank changes only the rank check for progression steps."""
     record, row = _match(state, recipe["recipe_id"])

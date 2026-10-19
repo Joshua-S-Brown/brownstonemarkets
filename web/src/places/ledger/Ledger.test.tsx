@@ -333,3 +333,37 @@ it("names the two largest categories per side and says None without any", () => 
   expect(leadingCategories([], "out_copper")).toBe("None");
   expect(leadingCategories(undefined, "in_copper")).toBe("None");
 });
+
+it("leads with nonzero and unknown reconciliation, with counted reconciled pairs on demand", async () => {
+  const rows = [0, 12, null].map((unexplained_copper, i) => ({
+    character: [`Pair${i}`, "Realm", "Alliance"],
+    from_utc: "2026-10-15T10:00:00Z",
+    to_utc: "2026-10-16T10:00:00Z",
+    actual_copper: 12,
+    recorded_copper: 0,
+    unexplained_copper,
+    reason: "",
+  }));
+  const original = payload.gold.reconciliation;
+  Object.assign(payload.gold, { reconciliation: rows });
+  try {
+    mount();
+    await screen.findByText("Pair1");
+    expect(screen.getByText("Pair2")).toBeTruthy();
+    expect(screen.queryByText("All 3 pairs reconcile")).toBeNull();
+    const summary = screen.getByText("Show 1 reconciled pairs");
+    expect(summary.closest("details")?.open).toBe(false);
+    await userEvent.click(summary);
+    expect(summary.closest("details")?.open).toBe(true);
+    expect(screen.getByText("Pair0")).toBeTruthy();
+    cleanup();
+    Object.assign(payload.gold, { reconciliation: [rows[0]] });
+    mount();
+    await screen.findByText("All 1 pairs reconcile");
+    expect(
+      screen.getByText("Show 1 reconciled pairs").closest("details")?.open,
+    ).toBe(false);
+  } finally {
+    payload.gold.reconciliation = original;
+  }
+});

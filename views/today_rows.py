@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from brownstone.money import format_money
 from brownstone.tier_levels import fallback_label
+from brownstone.today_characters import recipe_colour
 from brownstone.today_session import PLAN_RESET as PLAN_RESET
 from brownstone.today_session import headline_profit
 from brownstone.today_warnings import warning_fields
@@ -404,7 +405,8 @@ def session_display(options, arguments):
     for character in options['characters']:
         groups = []
         for group in character['professions']:
-            recipes = [r | {'skillup_band': recipe_band(r, group['rank'], arguments['catalogs']),
+            recipes = [r | {'skillup_band': recipe_band(r, group['rank'], arguments['catalogs'],
+                                arguments.get('character_data', {}).get(tuple(character['character']))),
                             'estimate': r['estimate'] | {'material_notes': reach_notes(r['estimate'])}}
                        for r in group['recipes']]
             groups.append(group | {'recipes': recipes,
@@ -433,18 +435,23 @@ def session_display(options, arguments):
     return options | {'characters': characters, 'lever': lever}
 
 
-def recipe_band(row, rank, catalogs):
+def recipe_band(row, rank, catalogs, character_state=None):
     recipe = next((c['recipes_by_id'].get(row['recipe_id']) for c in catalogs
                    if c['catalog_id'] == row['catalog_id']), None)
+    game_color = recipe_colour(character_state, row['recipe_id']) if character_state else None
+    game = game_color and f"{game_color}{'' if rank is None else f' at rank {rank}'} (from the game)"
     colors = recipe.get('skillup_colors') if recipe else None
     if not colors:
-        return 'skill-up range unknown: catalog has no colour bands'
-    if rank is None:
-        return 'skill-up colour unknown: character rank unknown'
+        return (f'{game} · ' if game else '') + 'skill-up range unknown: catalog has no colour bands'
     orange, yellow, green, grey = colors
+    thresholds = f'orange {orange}, yellow {yellow}, green {green}, grey {grey}'
+    if rank is None:
+        return f'{game} · {thresholds}' if game else 'skill-up colour unknown: character rank unknown'
     color = band_colour(rank, colors)
     label = f"needs {orange} · you're {rank}" if color == 'not yet' else f'{color} at rank {rank}'
-    return f'{label} · orange {orange}, yellow {yellow}, green {green}, grey {grey}'
+    if game:
+        label = game + (f' · catalog says needs {orange}' if color == 'not yet' else '')
+    return f'{label} · {thresholds}'
 
 
 def band_colour(rank, colors):
