@@ -390,6 +390,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/team/profession/{profession}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profession */
+        get: operations["profession_api_team_profession__profession__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/today/plan": {
         parameters: {
             query?: never;
@@ -567,6 +584,13 @@ export interface components {
         /** CharacterRecord */
         CharacterRecord: {
             card: components["schemas"]["Card"];
+            /**
+             * Catalog Professions
+             * @default {}
+             */
+            catalog_professions: {
+                [key: string]: string;
+            };
             /** Character */
             character: [
                 string,
@@ -1424,6 +1448,89 @@ export interface components {
             recipes: components["schemas"]["Recipe"][];
         } & {
             [key: string]: unknown;
+        };
+        /** ProfessionCatalog */
+        ProfessionCatalog: {
+            /** Catalog Id */
+            catalog_id: string;
+            /** Catalog Version */
+            catalog_version: string;
+            /** Coverage */
+            coverage: string;
+        };
+        /** ProfessionHolder */
+        ProfessionHolder: {
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Known Count */
+            known_count: number | null;
+            /** Max Rank */
+            max_rank: number | null;
+            /** Note */
+            note: string;
+            /** Rank */
+            rank: number | null;
+        };
+        /** ProfessionMaterial */
+        ProfessionMaterial: {
+            /** Item Id */
+            item_id: number;
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number;
+        };
+        /** ProfessionRecipe */
+        ProfessionRecipe: {
+            /** Band */
+            band: string;
+            /** Board Reason */
+            board_reason: string;
+            /** Catalog Id */
+            catalog_id: string;
+            /** Learn From */
+            learn_from: string;
+            /** Materials */
+            materials: components["schemas"]["ProfessionMaterial"][];
+            /** Name */
+            name: string;
+            /** Output Item Id */
+            output_item_id: number;
+            /** Profit Copper */
+            profit_copper: number | null;
+            /** Range Text */
+            range_text: string;
+            /** Recipe Id */
+            recipe_id: number;
+            /** Required Skill */
+            required_skill: number | null;
+            /** Statuses */
+            statuses: components["schemas"]["ProfessionStatus"][];
+        };
+        /** ProfessionRecord */
+        ProfessionRecord: {
+            /** Catalogs */
+            catalogs: components["schemas"]["ProfessionCatalog"][];
+            evidence: components["schemas"]["Evidence"];
+            /** Holders */
+            holders: components["schemas"]["ProfessionHolder"][];
+            /** Profession */
+            profession: string;
+            /** Rows */
+            rows: components["schemas"]["ProfessionRecipe"][];
+        };
+        /** ProfessionStatus */
+        ProfessionStatus: {
+            /** Character Reason */
+            character_reason: string;
+            /** Craft Status */
+            craft_status: string;
+            /** Training Cost Copper */
+            training_cost_copper: number | null;
         };
         /** Progression */
         Progression: {
@@ -2668,6 +2775,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HireDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    profession_api_team_profession__profession__get: {
+        parameters: {
+            query?: {
+                source?: string;
+            };
+            header?: never;
+            path: {
+                profession: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionRecord"];
                 };
             };
             /** @description Validation Error */

@@ -33,19 +33,18 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-111 profession record
-2. STORY-112 level from what we hold, or farm it
-3. STORY-104 vendor value as a floor
-4. STORY-105 sell raw or craft?
-5. STORY-106 gold reserve and capital
-6. STORY-109 Route and Ledger tidy-up
-7. STORY-110 records polish
+1. STORY-112 level from what we hold, or farm it
+2. STORY-104 vendor value as a floor
+3. STORY-105 sell raw or craft?
+4. STORY-106 gold reserve and capital
+5. STORY-109 Route and Ledger tidy-up
+6. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 107, 108 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 107, 108, 111 and SPIKE-009/009b.
 
 ### STORY-104 — Vendor value as a floor
 
@@ -132,41 +131,6 @@ Acceptance:
 - **Offline tests:** Vitest for each; layout ordering for chosen and unchosen paths; identity labels with one and several identities.
 - Compare 1280 and 390 px screenshots with the prototype (UI-18).
 - Depends on nothing. Rules: UI-18, ADDON-08, UI-10, UI-16. Design: *Web app (UI-18)*, *Team recipe graph (STORY-015b)*, *Removed listings (STORY-027)*.
-
-### STORY-111 — Profession record
-
-Moved from *Your own character's data* (*Profession page*) on 2026-10-18 (grooming).
-
-As a gold maker, I want to open one profession and see every recipe with each character's status, so that I can plan who learns what without opening every character.
-
-Decisions (from the code, 2026-10-18):
-- **Key:** the catalog `profession` slug (`tailoring`), one record per slug, every compatible catalog for it (`action_board.compatible_catalogs`). Display only: reuse what exists, add no estimate, no reach walk and no change to Board, Team or Today output.
-- **Projection** (`brownstone/team_view.py`, beside `path_result`): `profession_record(catalogs, data, board, profession)`.
-  - **Holders:** scoped characters whose profession has the profession's skill ID (`hiring.SKILL_IDS`). The skill ID comes from the card or progression group, never the title. Each carries rank and maximum. One with the skill but no recipe list is a holder whose recipes are all unknown, with CRAFT-11's *open the profession window* note.
-  - **Rows:** every catalog recipe, grouped by the band of its required skill (`skillups.band_label(required_skill // 25 * 25)`; *skill unknown* when absent). Each row appears once, carrying its CRAFT-10 range text from `skillups.recipe_placement`.
-  - **Per holder:** `today_characters.recipe_status` gives the status (*Known*, *Train now* with training cost, *Not yet*, *Unknown*) and keeps its reason, e.g. *needs pattern or other source* or *recipe not listed*. Characters without the profession get no column.
-  - **Learning:** `recipe_catalogs.learning_label`.
-  - **Profit:** the newest Board row on the full `(catalog_id, recipe_id)`: `profit_copper` or its `action` reason. A recipe with no row is an *intermediate: not ranked by the Action Board*. With no snapshot, every row says so, and profit is null, never 0.
-  - **Materials:** catalog `inputs` with quantity and item name from `items_by_id`.
-- **API:** `GET /team/profession/{profession}` in `api/team.py` reads the same cache entry the way `/team/hire/{profession}` does: `current(chosen) or cached(chosen, 25)`, memoised per entry. Keep the parsed catalogs in the entry so the record works without a snapshot. 404 for a slug with no compatible catalog. Pydantic model; regenerate `schema.d.ts`.
-- **Web:** `web/src/records/ProfessionRecord.tsx`, lazy like `CharacterRecord`.
-  - `RecordRef` gains `{ profession: string }`. Like characters, it's held in inspector state, not the URL, and the back stack works across all three record kinds.
-  - Header facts: holders with rank/max and recipe count. The working list is grouped by band, with materials as `ItemLink`s and money via `Money`. The evidence footer holds catalog IDs and versions, the coverage line (`skillups.coverage_line`), scan ID and freshness.
-  - Opened from Team's *Profession coverage* and hiring table names (already slugs) and from character-record profession headings. Character-record headings link only when the group's skill ID maps to a slug with a catalog; otherwise they stay plain text.
-- **Docs:** UI-18 *Inspector* says item, character or profession links. Add `profession` to `web/src/records` in design *Web app (UI-18)*. Add the contract to *Team contracts* in one or two lines.
-
-Acceptance:
-- **Shown** as above, with unknowns explained and no names used for matching.
-- **Offline tests** (extend `tests/test_team_web.py` and `CharacterRecord.test.tsx`/`Team.test.tsx` before adding files):
-  - One holder per status: Known, Train now with cost, Not yet for rank, Not yet for needs pattern, Unknown for not listed.
-  - A holder with the skill but no recipe list.
-  - A same-titled profession with a different skill ID that is not a holder.
-  - Bands, including *skill unknown*.
-  - Board profit, intermediate reason, and no snapshot giving null profit with a reason.
-  - 404 for an unknown slug.
-  - Vitest: opening from Team and from a character heading, Back to the character, and a material link opening the item record.
-- **Real data** (Forever beta source, read-only): open Blacksmithing and Tailoring and report the holders, recipe count per profession (catalogs hold 430 and 412) and status counts per holder, with two example rows each. Screenshots at 1280 and 390 px beside the prototype's character record view (UI-18; the prototype has no profession record, so match its header/tabs/footer pattern).
-- Depends on nothing. Rules: CRAFT-08, CRAFT-10, CRAFT-11, UI-18. Design: *Team contracts*, *Skill-up map contracts*, *Web app (UI-18)*.
 
 ### STORY-112 — Level from what we hold, or farm it
 

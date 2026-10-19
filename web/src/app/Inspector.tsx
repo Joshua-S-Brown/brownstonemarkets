@@ -2,16 +2,17 @@ import styles from "../theme/app.module.css";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
-import {
-  InspectorContext,
-  type CharacterKey,
-  type RecordRef,
-} from "./InspectorContext";
+import { InspectorContext, type RecordRef } from "./InspectorContext";
 import { Origin } from "./Origin";
 import { ItemRecord } from "../records/ItemRecord";
 const CharacterRecord = lazy(() =>
   import("../records/CharacterRecord").then((m) => ({
     default: m.CharacterRecord,
+  })),
+);
+const ProfessionRecord = lazy(() =>
+  import("../records/ProfessionRecord").then((m) => ({
+    default: m.ProfessionRecord,
   })),
 );
 export function Inspector({
@@ -23,10 +24,10 @@ export function Inspector({
 }) {
   const [params, setParams] = useSearchParams();
   const [stack, setStack] = useState<RecordRef[]>([]);
-  const [character, setCharacter] = useState<CharacterKey | null>(null);
+  const [local, setLocal] = useState<RecordRef | null>(null);
   const id = Number(params.get("inspect"));
-  const current: RecordRef | null = character
-    ? { character }
+  const current: RecordRef | null = local
+    ? local
     : Number.isSafeInteger(id) && id > 0
       ? {
           item: id,
@@ -34,7 +35,7 @@ export function Inspector({
         }
       : null;
   function show(record: RecordRef | null) {
-    setCharacter(record && "character" in record ? record.character : null);
+    setLocal(record && !("item" in record) ? record : null);
     const next = new URLSearchParams(params);
     if (record && "item" in record) next.set("inspect", String(record.item));
     else next.delete("inspect");
@@ -87,12 +88,20 @@ export function Inspector({
                   source={source}
                 />
               ) : (
-                <Suspense fallback={<p role="status">Loading character…</p>}>
-                  <CharacterRecord
-                    key={source + current.character.join("|")}
-                    source={source}
-                    character={current.character}
-                  />
+                <Suspense fallback={<p role="status">Loading record…</p>}>
+                  {"profession" in current ? (
+                    <ProfessionRecord
+                      key={source + current.profession}
+                      source={source}
+                      profession={current.profession}
+                    />
+                  ) : (
+                    <CharacterRecord
+                      key={source + current.character.join("|")}
+                      source={source}
+                      character={current.character}
+                    />
+                  )}
                 </Suspense>
               ))}
           </Dialog.Content>

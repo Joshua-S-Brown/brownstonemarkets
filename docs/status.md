@@ -138,6 +138,9 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   per tab/source; caveats live in the evidence footer. CharacterName links open full-key records.
   `team_view` owns shared shaping; `/api/team` caches one board per source/window until database,
   configuration or hour changes. Hire tier details load on demand. Holdings retain exact variants.
+  Profession records (STORY-111) open from coverage, hiring and exact-skill character headings;
+  a compact band-grouped table keeps one row per catalog recipe with a column per holder; range, materials and reasons expand. Catalog/scan evidence stays, including without a scan.
+  Offline: `test_team_web.py`, Team/CharacterRecord Vitest; beta comparisons: `work/story-111/`.
   Rules: [CRAFT-11/13](requirements.md#crafting), [Team character cards](requirements.md#team-character-cards).
   Offline: Team/CharacterRecord Vitest, `test_team_web.py`, progression/hiring/session-options suites.
   Copied beta `20261017T104157Z-ff991e`, window 25: eight characters, two recipe actions and six take-up actions;

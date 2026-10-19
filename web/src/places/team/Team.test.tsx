@@ -512,3 +512,26 @@ it("appends planned characters with roles, professions and cap summaries without
   await userEvent.click(screen.getByText("Future"));
   expect(open).not.toHaveBeenCalled();
 });
+
+it("opens profession records from coverage and both hiring tables", async () => {
+  const data = fixture();
+  data.comparisons = [
+    {
+      character: ["Maker", "Realm 1", "Alliance"],
+      professions: [{ profession: "tailoring", best: null }],
+    },
+  ];
+  wrap(
+    <>
+      <Coverage data={data} />
+      <HiringTables data={data} source="one" window={25} />
+    </>,
+  );
+  const links = screen.getAllByRole("button", { name: "Tailoring" });
+  expect(links).toHaveLength(3);
+  for (const link of links) await userEvent.click(link);
+  expect(open.mock.calls.map((c) => c[0])).toEqual(
+    Array(3).fill({ profession: "tailoring" }),
+  );
+  expect(requests).toHaveLength(0);
+});

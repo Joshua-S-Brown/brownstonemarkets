@@ -1,3 +1,4 @@
+import { useInspector } from "../../app/InspectorContext";
 import { PlanText } from "../today/PlanText";
 import { Evidence } from "../../ui/Evidence";
 import { Money } from "./Money";
@@ -91,13 +92,35 @@ function RecipeDetails({ recipe: r }: { recipe: Recipe }) {
     </details>
   );
 }
-export function Path({ groups, window }: { groups: Group[]; window: number }) {
+export function Path({
+  groups,
+  window,
+  catalogProfessions = {},
+}: {
+  groups: Group[];
+  window: number;
+  catalogProfessions?: Record<string, string>;
+}) {
+  const inspect = useInspector();
   return (
     <>
       {groups.map((g) => (
         <section key={g.profession}>
           <h2>
-            {g.profession} · {g.rank ?? "unknown"} / {g.max_rank ?? "unknown"}
+            {catalogProfessions[Number(g.skill_id)] ? (
+              <button
+                onClick={() =>
+                  inspect({
+                    profession: catalogProfessions[Number(g.skill_id)],
+                  })
+                }
+              >
+                {g.profession}
+              </button>
+            ) : (
+              g.profession
+            )}{" "}
+            · {g.rank ?? "unknown"} / {g.max_rank ?? "unknown"}
           </h2>
           {g.best && (
             <section className={record.best}>

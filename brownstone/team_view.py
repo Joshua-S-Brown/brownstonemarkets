@@ -1,7 +1,7 @@
 """Pure Team projections shared by the web adapters and the native migration view."""
 from datetime import UTC, datetime
 
-from . import hiring, progression, recipe_catalogs
+from . import action_board, hiring, progression, recipe_catalogs, skillups, today_characters
 from .today_characters import available_characters
 
 BOARD_KEYS = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut')
@@ -93,6 +93,49 @@ def path_result(result):
                                'alternative_kind': alternative_kind(group.get('alternative')),
                                'gathering': gathering(group), 'next_step': next_step(group)['kind']})
     return result | {'professions': groups, 'best_step': roster_step(groups)}
+
+
+def profession_record(catalogs, data, board, profession):
+    """Every catalog recipe and exact-skill holder, without new estimates or reach walks."""
+    catalogs = [c for c in catalogs if c['profession'] == profession]
+    skill_id, holders = hiring.SKILL_IDS.get(profession), []
+    for character in sorted(data) if skill_id is not None else []:
+        groups, _ = progression._groups([], data[character])
+        group = next((g for g in groups.values() if g['skill_id'] == skill_id), None)
+        if group is None:
+            continue
+        listed = any(today_characters._skill_id(r['known_recipes']) == group['skill_id']
+                     for r in data[character]['recipes'].values())
+        holders.append(dict(character=character, rank=group['rank'], max_rank=group['max_rank'],
+                            known_count=0 if listed else None,
+                            note='' if listed else 'Recipes unknown; open the profession window.'))
+    ranked = {(r['catalog_id'], r['recipe_id']): r for r in board['rows']} if board else {}
+    rows = []
+    for catalog in catalogs:
+        for recipe in catalog['recipes_by_id'].values():
+            required = recipe.get('required_skill')
+            statuses = [today_characters.recipe_status(recipe, data[h['character']]) if not h['note'] else
+                        dict(craft_status='Unknown', character_reason='recipe not listed', training_cost_copper=None)
+                        for h in holders]
+            row = ranked.get((action_board.catalog_identity(catalog), recipe['recipe_id']), {})
+            rows.append(dict(catalog_id=action_board.catalog_identity(catalog), recipe_id=recipe['recipe_id'],
+                             name=recipe['name'], output_item_id=recipe['output_item_id'], required_skill=required,
+                             band=skillups.band_label(required // 25 * 25) if required is not None else 'skill unknown',
+                             range_text=skillups.recipe_placement(recipe)[1],
+                             learn_from=recipe_catalogs.learning_label(recipe), statuses=statuses,
+                             profit_copper=row.get('profit_copper'),
+                             board_reason=row.get('action', 'intermediate: not ranked by the Action Board') if board
+                             else 'No snapshot for this source and market.',
+                             materials=[i | {'name': catalog['items_by_id'][i['item_id']]['name']}
+                                        for i in recipe['inputs']]))
+    for index, holder in enumerate(holders):
+        if holder['known_count'] is not None:
+            holder['known_count'] = sum(r['statuses'][index]['craft_status'] == 'Known' for r in rows)
+    return dict(profession=profession, holders=holders,
+                rows=sorted(rows, key=lambda r: (r['required_skill'] is None, r['required_skill'] or 0,
+                                                r['name'], r['catalog_id'], r['recipe_id'])),
+                catalogs=[dict(catalog_id=action_board.catalog_identity(c), catalog_version=c['catalog_version'],
+                               coverage=skillups.coverage_line(c)) for c in catalogs])
 
 
 def character_holdings(items, captures, plan, stops, prices, vendor_prices):

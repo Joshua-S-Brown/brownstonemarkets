@@ -1,3 +1,4 @@
+import { useInspector } from "../../app/InspectorContext";
 import { CharacterName } from "../../ui/CharacterName";
 import { Panel } from "../../ui/Panel";
 import { Pill, Tip } from "../../ui/parts";
@@ -34,6 +35,7 @@ export function HiringTables({
   source: string;
   window: number;
 }) {
+  const inspect = useInspector();
   return (
     <>
       <Panel
@@ -55,7 +57,12 @@ export function HiringTables({
               {data.hires.map((r) => (
                 <tr key={r.profession}>
                   <td>
-                    <Hire row={r} source={source} />
+                    <button
+                      onClick={() => inspect({ profession: r.profession })}
+                    >
+                      {title(r.profession)}
+                    </button>
+                    <Hire row={r} source={source} label="Tier estimates" />
                   </td>
                   <td>
                     <Money copper={r.estimate.cost_copper ?? null} />
@@ -100,7 +107,13 @@ export function HiringTables({
               {data.comparisons.flatMap((c) =>
                 c.professions.map((p) => (
                   <tr key={c.character.join("|") + p.profession}>
-                    <th>{title(p.profession)}</th>
+                    <th>
+                      <button
+                        onClick={() => inspect({ profession: p.profession })}
+                      >
+                        {title(p.profession)}
+                      </button>
+                    </th>
                     <td>
                       <Money copper={p.best?.profit_copper ?? null} />
                     </td>

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useInspector } from "../../app/InspectorContext";
 import { moneyText } from "../../ui/Money";
 import { CharacterName } from "../../ui/CharacterName";
@@ -18,16 +19,18 @@ export function SkillBar({
   name,
   rank,
   maximum,
+  label,
 }: {
   name: string;
   rank: number | null;
   maximum: number | null;
+  label?: ReactNode;
 }) {
   const fraction = skillFraction(rank, maximum);
   return (
     <div className={styles.skill}>
       <div>
-        {name}
+        {label ?? name}
         <span>
           {rank ?? "unknown"} / {maximum ?? "unknown"}
         </span>

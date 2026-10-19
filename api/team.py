@@ -8,6 +8,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field
 
 from brownstone import (
+    action_board,
     character_snapshots,
     characters,
     hiring,
@@ -189,8 +190,55 @@ class Holdings(BaseModel):
 
 
 class CharacterRecord(Member):
+    catalog_professions: dict[int, str] = {}
     holdings: Holdings
     evidence: dict[str, Any]
+
+
+class ProfessionHolder(Holder):
+    known_count: int | None
+    note: str
+
+
+class ProfessionStatus(BaseModel):
+    craft_status: str
+    character_reason: str
+    training_cost_copper: int | None
+
+
+class ProfessionMaterial(BaseModel):
+    item_id: int
+    quantity: int
+    name: str
+
+
+class ProfessionRecipe(BaseModel):
+    catalog_id: str
+    recipe_id: int
+    name: str
+    output_item_id: int
+    required_skill: int | None
+    band: str
+    range_text: str
+    learn_from: str
+    statuses: list[ProfessionStatus]
+    profit_copper: int | None
+    board_reason: str
+    materials: list[ProfessionMaterial]
+
+
+class ProfessionCatalog(BaseModel):
+    catalog_id: str
+    catalog_version: str
+    coverage: str
+
+
+class ProfessionRecord(BaseModel):
+    profession: str
+    holders: list[ProfessionHolder]
+    rows: list[ProfessionRecipe]
+    catalogs: list[ProfessionCatalog]
+    evidence: Evidence
 
 
 class NextRequest(today.PlanRequest):
@@ -249,7 +297,9 @@ def build(chosen, window, now):
                    comparisons=summaries['comparisons'], all_incomplete=team_view.all_incomplete(summaries['rows']),
                    notes=notes, labels=team_view.HONESTY, hiring_labels=team_view.HIRING_LABELS,
                    evidence=context.evidence(chosen, arguments['snapshot'] if arguments else manifest or {}))
-    return dict(payload=payload, hiring=hire_context, details={}, records={}, data=data, now=now)
+    return dict(payload=payload, hiring=hire_context, details={}, records={}, data=data, now=now,
+                catalogs=action_board.compatible_catalogs(catalogs, chosen),
+                board=shared[1] if shared else hire_context['board'] if hire_context else None, professions={})
 
 
 def current(chosen):
@@ -313,8 +363,24 @@ def character(name: str, realm: str, faction: str, source: str = '', window: int
             arguments = arguments or {}
             _, prices = basis_prices(arguments.get('observations', {}), 'cautious')
             held = team_view.character_holdings(items, captures, {}, [], prices, arguments.get('vendor_prices', {}))
-            entry['records'][key] = member | dict(holdings=held, evidence=evidence)
+            entry['records'][key] = member | dict(holdings=held, evidence=evidence,
+                catalog_professions={hiring.SKILL_IDS[c['profession']]: c['profession'] for c in entry['catalogs']
+                                     if c['profession'] in hiring.SKILL_IDS})
         return jsonable_encoder(entry['records'][key])
+
+
+@router.get('/team/profession/{profession}', response_model=ProfessionRecord)
+def profession(profession: str, source: str = ''):
+    chosen = context.resolve(source)
+    with _lock:
+        entry = current(chosen) or cached(chosen, 25)
+        if not any(c['profession'] == profession for c in entry['catalogs']):
+            raise HTTPException(404, 'Profession unavailable for this market.')
+        if profession not in entry['professions']:
+            entry['professions'][profession] = team_view.profession_record(
+                entry['catalogs'], entry['data'], entry['board'], profession) | {
+                    'evidence': entry['payload']['evidence']}
+        return jsonable_encoder(entry['professions'][profession])
 
 
 @router.get('/team/hire/{profession}', response_model=HireDetail)

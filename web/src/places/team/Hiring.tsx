@@ -78,7 +78,15 @@ export function HireDetail({ data }: { data: HireDetailData }) {
     </>
   );
 }
-export function Hire({ row, source }: { row: HireRow; source: string }) {
+export function Hire({
+  row,
+  source,
+  label,
+}: {
+  row: HireRow;
+  source: string;
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const query = useQuery({
     queryKey: [source, "team-hire", row.profession],
@@ -93,7 +101,7 @@ export function Hire({ row, source }: { row: HireRow; source: string }) {
   });
   return (
     <details onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary>{title(row.profession)}</summary>
+      <summary>{label ?? title(row.profession)}</summary>
       {open &&
         (query.error ? (
           <ErrorState

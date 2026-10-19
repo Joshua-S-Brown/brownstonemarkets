@@ -1,3 +1,4 @@
+import { useInspector } from "../../app/InspectorContext";
 import { CharacterName } from "../../ui/CharacterName";
 import { Panel } from "../../ui/Panel";
 import { Pill, Tip } from "../../ui/parts";
@@ -27,6 +28,7 @@ export function coverageRows(data: TeamData) {
   ];
 }
 export function Coverage({ data }: { data: TeamData }) {
+  const inspect = useInspector();
   return (
     <Panel title="Profession coverage">
       <div className={styles.scroll}>
@@ -51,7 +53,11 @@ export function Coverage({ data }: { data: TeamData }) {
                       {title(r.profession)}
                     </Tip>
                   ) : (
-                    title(r.profession)
+                    <button
+                      onClick={() => inspect({ profession: r.profession })}
+                    >
+                      {title(r.profession)}
+                    </button>
                   )}
                 </th>
                 {data.roster.map((c) => {

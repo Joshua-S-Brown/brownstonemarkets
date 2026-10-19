@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  within,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -18,6 +24,7 @@ afterEach(() => {
 });
 function data(realm = "First"): RecordData {
   return {
+    catalog_professions: {},
     free_slots: null,
     suggestions: [],
     suggestion_note: "professions unknown",
@@ -388,4 +395,153 @@ it("opens Next with the shared Today query, original Route numbers and per-profe
   expect(next).toBeTruthy();
   await userEvent.click(screen.getByRole("tab", { name: "Holdings" }));
   expect(screen.getByText(/no price/).textContent).toContain("keep");
+});
+
+it("opens exact-skill profession headings, follows materials to items and goes Back across all three records", async () => {
+  const character = data();
+  character.catalog_professions = { "197": "tailoring" };
+  character.progression.professions[0].skill_id = 197;
+  character.card.professions[0].skill_id = 197;
+  character.card.professions.push({
+    ...character.card.professions[0],
+    skill_id: 999,
+  });
+  const calls: URL[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: URL) => {
+      calls.push(url);
+      if (url.pathname === "/api/items/2589")
+        return new Promise<never>(() => {});
+      return {
+        ok: true,
+        json: async () =>
+          url.pathname === "/api/team/profession/tailoring"
+            ? {
+                profession: "tailoring",
+                holders: [
+                  {
+                    character: character.character,
+                    rank: 32,
+                    max_rank: 75,
+                    known_count: 1,
+                    note: "",
+                  },
+                ],
+                rows: [
+                  {
+                    catalog_id: "forever-tailoring",
+                    recipe_id: 1,
+                    name: "Linen shirt",
+                    output_item_id: 2,
+                    required_skill: 1,
+                    band: "1–24",
+                    range_text: "skill-up range unknown",
+                    learn_from: "trainer",
+                    profit_copper: null,
+                    board_reason: "No snapshot for this source and market.",
+                    materials: [
+                      { item_id: 2589, quantity: 2, name: "Linen Cloth" },
+                    ],
+                    statuses: [
+                      {
+                        craft_status: "Train now",
+                        character_reason: "",
+                        training_cost_copper: 100,
+                      },
+                    ],
+                  },
+                  {
+                    catalog_id: "forever-tailoring",
+                    recipe_id: 3,
+                    name: "Linen belt",
+                    output_item_id: 4,
+                    required_skill: 1,
+                    band: "1–24",
+                    range_text: "",
+                    learn_from: "trainer",
+                    profit_copper: 47,
+                    board_reason: "stale data",
+                    materials: [],
+                    statuses: [
+                      {
+                        craft_status: "Known",
+                        character_reason: "",
+                        training_cost_copper: null,
+                      },
+                    ],
+                  },
+                ],
+                catalogs: [
+                  {
+                    catalog_id: "forever-tailoring",
+                    catalog_version: "1",
+                    coverage: "coverage unknown; regenerate the catalog",
+                  },
+                ],
+                evidence: {
+                  source_id: "source",
+                  market_id: "market",
+                  scan_id: null,
+                  freshness: null,
+                },
+              }
+            : url.pathname === "/api/today/plan"
+              ? { state: {}, stops: [] }
+              : url.pathname.endsWith("/next")
+                ? {
+                    stops: [],
+                    holdings: character.holdings,
+                    gold: { categories: [] },
+                  }
+                : character,
+      };
+    }),
+  );
+  wrap(
+    <Inspector source="source">
+      <Links />
+    </Inspector>,
+  );
+  await userEvent.click(screen.getByText("First"));
+  await screen.findByRole("heading", { name: "Maker" });
+  await userEvent.click(screen.getByRole("button", { name: "Tailoring" }));
+  await screen.findByRole("heading", { name: "Tailoring" });
+  expect(screen.getByText(/32\/75 · 1 known catalog recipes/)).toBeTruthy();
+  expect(screen.getByText(/No snapshot/)).toBeTruthy();
+  expect(screen.getByText(/· stale data/)).toBeTruthy();
+  expect(screen.getByText(/training/).textContent).toContain("1s");
+  const recipes = screen.getByRole("table", { name: "Tailoring recipes" });
+  expect(within(recipes).getAllByRole("columnheader")).toHaveLength(5); // 4 columns + 1 band.
+  expect(
+    within(recipes).getByRole("columnheader", { name: "Maker" }),
+  ).toBeTruthy();
+  expect(within(recipes).getAllByRole("row")).toHaveLength(4);
+  expect(screen.getByText("?source=source")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Linen Cloth" })).toBeNull();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Linen shirt details" }),
+  );
+  expect(screen.getByText(/learned from trainer/)).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "Linen Cloth" }));
+  await waitFor(() =>
+    expect(calls.some((u) => u.pathname === "/api/items/2589")).toBe(true),
+  );
+  expect(await screen.findByText("Loading saved item…")).toBeTruthy();
+  expect(screen.getByText("?source=source&inspect=2589")).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "← Back" }));
+  await screen.findByRole("heading", { name: "Tailoring" });
+  await userEvent.click(screen.getByRole("button", { name: "← Back" }));
+  await screen.findByRole("heading", { name: "Maker" });
+  await userEvent.click(screen.getByRole("tab", { name: "Path" }));
+  expect(screen.getByRole("button", { name: "Tailoring" })).toBeTruthy();
+  await userEvent.click(screen.getByRole("tab", { name: "Professions" }));
+  expect(screen.getAllByRole("button", { name: "Tailoring" })).toHaveLength(1);
+  await userEvent.click(screen.getByRole("button", { name: "Tailoring" }));
+  await screen.findByRole("heading", { name: "Tailoring" });
+  expect(
+    calls
+      .filter((u) => u.pathname.includes("/profession/"))
+      .every((u) => u.searchParams.get("source") === "source"),
+  ).toBe(true);
 });

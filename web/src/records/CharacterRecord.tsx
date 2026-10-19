@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
 import { get, post } from "../api/client";
+import { useInspector } from "../app/InspectorContext";
 import type { CharacterKey } from "../app/InspectorContext";
 import { Evidence } from "../ui/Evidence";
 import { Money } from "../places/team/Money";
@@ -41,6 +42,7 @@ export function CharacterRecord({
   source: string;
   character: CharacterKey;
 }) {
+  const inspect = useInspector();
   const [tab, setTab] = useState("Next");
   const window = readWindow(source);
   const query = useQuery({
@@ -176,12 +178,25 @@ export function CharacterRecord({
           {next.data && !next.data.stops.length && (
             <p>No steps for this character in tonight’s Route.</p>
           )}
-          {data.progression.professions.length > 0 && (
-            <h2>Next skill steps</h2>
-          )}
+          {data.progression.professions.length > 0 && <h2>Next skill steps</h2>}
           {data.progression.professions.map((g) => (
             <section key={g.profession}>
-              <h3>{g.profession}</h3>
+              <h3>
+                {data.catalog_professions?.[Number(g.skill_id)] ? (
+                  <button
+                    onClick={() =>
+                      inspect({
+                        profession:
+                          data.catalog_professions[Number(g.skill_id)],
+                      })
+                    }
+                  >
+                    {g.profession}
+                  </button>
+                ) : (
+                  g.profession
+                )}
+              </h3>
               {g.best ? (
                 <>
                   <ItemLink id={g.best.output_item_id} name={g.best.name} />
@@ -302,7 +317,25 @@ export function CharacterRecord({
           {!c.professions.length && <p>No profession reported yet.</p>}
           {c.professions.map((p) => (
             <section key={p.name} className={record.profession}>
-              <SkillBar name={p.name} rank={p.rank} maximum={p.max_rank} />
+              <SkillBar
+                name={p.name}
+                rank={p.rank}
+                maximum={p.max_rank}
+                label={
+                  data.catalog_professions?.[Number(p.skill_id)] ? (
+                    <button
+                      onClick={() =>
+                        inspect({
+                          profession:
+                            data.catalog_professions[Number(p.skill_id)],
+                        })
+                      }
+                    >
+                      {p.name}
+                    </button>
+                  ) : undefined
+                }
+              />
               {p.at_cap && <Pill tone="warn">at cap: train the next tier</Pill>}
               <p>
                 {p.rank != null && p.max_rank != null
@@ -319,7 +352,11 @@ export function CharacterRecord({
           ))}
         </Tabs.Content>
         <Tabs.Content value="Path">
-          <Path groups={data.progression.professions} window={window} />
+          <Path
+            groups={data.progression.professions}
+            window={window}
+            catalogProfessions={data.catalog_professions}
+          />
         </Tabs.Content>
         <Tabs.Content value="Holdings">
           <h2>Bags and bank</h2>

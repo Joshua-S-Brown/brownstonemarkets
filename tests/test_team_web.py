@@ -489,3 +489,97 @@ def test_planned_order_capture_replacement_hire_reuse_and_independence(browser, 
     assert not empty['roster']
     assert all(t['estimate']['cost_copper'] is None and t['best'] is None
                for p in empty['planned'] for profession in p['professions'] for t in profession['tiers'])
+
+
+def test_profession_record_statuses_bands_materials_and_cache(browser, monkeypatch):
+    from test_progression import evidence
+
+    catalog, data = browser[2:]
+    recipe = catalog['recipes_by_id'][31]
+    recipe.update(required_skill=25, training_cost_copper=123)
+    catalog['recipes_by_id'][32].pop('required_skill')
+    catalog['recipes_by_id'][33]['learned_from'] = [2]
+    data.clear()
+    for name, rank, learned, listed in [('Known', 50, True, True), ('Train', 50, False, True),
+                                       ('Low', 1, False, True), ('Unlisted', 50, False, False)]:
+        state = evidence(catalog, rank=rank)
+        state.update(history=[], observations=[({'captured_at': 100}, 'machine')])
+        surface = state['recipes']['Arbitrary title']['known_recipes']
+        surface['rows'] = [{'recipe_id': rid, 'learned': learned} for rid in catalog['recipes_by_id']
+                           if listed or rid != 31]
+        data[(name, 'Beta', 'Alliance')] = state
+    missing = deepcopy(data[('Train', 'Beta', 'Alliance')])
+    missing['recipes'] = {}
+    missing['bags'] = {'captured_at': 100, 'skills': {'modern': {'rows': [
+        dict(name='Tailoring', skill_id=197, rank=50, max_rank=75)]}}}
+    data[('No list', 'Beta', 'Alliance')] = missing
+    wrong = deepcopy(missing)
+    wrong['bags']['skills']['modern']['rows'][0]['skill_id'] = 999
+    data[('Wrong skill', 'Beta', 'Alliance')] = wrong
+    calls = []
+    original = team_view.profession_record
+
+    def project(*args):
+        calls.append(1)
+        return original(*args)
+
+    monkeypatch.setattr(team_view, 'profession_record', project)
+    result = get(browser, 'team/profession/tailoring')
+    assert result.status_code == 200, result.text
+    record = result.json()
+    assert get(browser, 'team/profession/tailoring').json() == record and calls == [1]
+    assert get(browser, 'team/profession/unknown').status_code == 404
+    assert len(record['holders']) == 5
+    assert {h['character'][0]: (h['rank'], h['max_rank']) for h in record['holders']}['No list'] == (50, 75)
+    assert 'open the profession window' in next(h['note'] for h in record['holders'] if h['character'][0] == 'No list')
+    rows = {r['recipe_id']: r for r in record['rows']}
+    assert len(rows) == len(catalog['recipes_by_id'])
+    assert rows[31]['band'] == '25–49' and rows[32]['band'] == 'skill unknown'
+    assert rows[32]['range_text'] == 'skill unknown'
+    statuses = {h['character'][0]: s for h, s in zip(record['holders'], rows[31]['statuses'], strict=True)}
+    assert statuses['Known']['craft_status'] == 'Known'
+    assert statuses['Train'] == dict(craft_status='Train now', character_reason='', training_cost_copper=123)
+    assert statuses['Low']['character_reason'] == 'rank below required skill'
+    assert statuses['Unlisted']['character_reason'] == 'recipe not listed'
+    assert statuses['No list']['craft_status'] == 'Unknown'
+    assert all(r['statuses'][2]['craft_status'] == 'Unknown' for r in record['rows'])  # No list, alphabetic holders.
+    train = next(i for i, h in enumerate(record['holders']) if h['character'][0] == 'Train')
+    assert rows[33]['statuses'][train]['character_reason'] == 'needs pattern or other source'
+    assert rows[33]['learn_from'] == 'drop'
+    entry = next(iter(team._cache.values()))[1]
+    expected = next(r for r in entry['board']['rows'] if r['recipe_id'] == 31)
+    assert rows[31]['profit_copper'] == expected['profit_copper']
+    assert rows[31]['materials'] == [i | {'name': catalog['items_by_id'][i['item_id']]['name']}
+                                      for i in recipe['inputs']]
+    assert record['evidence']['source_id'] == browser[1]['source_id']
+    # Catalog-qualified profits never spill into another catalog with the same recipe ID.
+    other = deepcopy(catalog) | {'catalog_id': 'other'}
+    projected = original([catalog, other], data, {'rows': [expected]}, 'tailoring')
+    intermediate = next(r for r in projected['rows'] if r['catalog_id'] == 'other' and r['recipe_id'] == 31)
+    assert intermediate['profit_copper'] is None
+    assert intermediate['board_reason'] == 'intermediate: not ranked by the Action Board'
+    unmapped = deepcopy(wrong)
+    unmapped['bags']['skills']['modern']['rows'][0]['skill_id'] = None
+    # An unmapped slug never matches skill-unknown groups (None == None is not exact-skill evidence).
+    assert not original([catalog | {'profession': 'unmapped'}], {('X', 'Beta', 'Alliance'): unmapped},
+                        None, 'unmapped')['holders']
+    get(browser, window=30)
+    get(browser, 'team/profession/tailoring')
+    assert calls == [1]  # Reuses the current entry across windows.
+
+
+def test_profession_record_without_snapshot_keeps_compatible_catalogs(browser, monkeypatch):
+    original = today_loading.load_today
+    monkeypatch.setattr(today_loading, 'load_today', lambda *args, **kwargs: (None, None))
+    result = get(browser, 'team/profession/tailoring')
+    assert result.status_code == 200, result.text
+    record = result.json()
+    assert len(record['rows']) == len(browser[2]['recipes_by_id'])
+    assert record['catalogs'][0]['catalog_id'] == browser[2]['catalog_id']
+    assert all(r['profit_copper'] is None and 'No snapshot' in r['board_reason'] for r in record['rows'])
+    assert record['evidence']['scan_id'] is None
+    assert get(browser, 'team/profession/blacksmithing').status_code == 404
+    monkeypatch.setattr(today_loading, 'load_today', original)
+    team._cache.clear()
+    character = get(browser, 'team/character', name=CHARACTER[0], realm=CHARACTER[1], faction=CHARACTER[2]).json()
+    assert character['catalog_professions'] == {'197': 'tailoring'}
