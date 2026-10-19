@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from brownstone import (
     action_board,
@@ -21,6 +21,7 @@ from brownstone import (
 from brownstone.crafting import basis_prices
 from brownstone.ledger_view import day_bounds
 from brownstone.today_settings import TodaySettings
+from views.today_rows import reach_notes
 
 from . import context, ledger, today
 from .models import Evidence
@@ -39,6 +40,12 @@ class Estimate(Facts):
     cost_copper: int | None = None
     reasons: list[str] = []
     steps: list[dict[str, Any]] = []
+    material_notes: list[str] = Field(default_factory=list, exclude_if=lambda notes: not notes)
+
+    @model_validator(mode='before')
+    @classmethod
+    def label_materials(cls, value):
+        return value | {'material_notes': reach_notes(value)} if isinstance(value, dict) else value
 
 
 class Payback(BaseModel):
@@ -267,16 +274,16 @@ def build(chosen, window, now):
     data, warning = today_loading.load_today_characters(chosen)
     catalogs, errors = recipe_catalogs.parse_catalogs(recipe_catalogs.find_catalogs(context.ROOT / 'config'))
     cards = characters.build_characters(chosen, data=data, now=now)
-    manifest, arguments = today_loading.load_today(chosen, catalogs, TodaySettings(), data, now)
+    manifest, arguments = today_loading.load_today(chosen, catalogs, TodaySettings(), data, now, holdings=True)
     shared = team_view.team_board(catalogs, data, arguments)
     results = team_view.team_results(catalogs, data, arguments, window, shared)
-    notes = errors + ([warning] if warning else [])
+    notes = errors + [w for w in (warning, (arguments or {}).get('holdings_warning')) if w]
     hire_context, summaries = None, {'rows': [], 'no_catalog': [], 'comparisons': []}
     if arguments is not None:
         try:
             hire_context = hiring.prepare(catalogs=catalogs, character_data=data, shared=shared,
                                           **{k: arguments[k] for k in team_view.BOARD_KEYS})
-            summaries = hiring.summaries(hire_context, window=window)
+            summaries = hiring.summaries(hire_context, window=window, results=results)
         except ValueError as error:
             notes.append(f'Unable to compare new hires: {error}')
     else:

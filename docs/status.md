@@ -5,6 +5,12 @@ contracts in [design](design.md); history and dated beta reports live in Git.
 
 ## Implemented
 
+- **Reach from holdings (STORY-112):** Team, character Next skill steps and Today Level up choose
+  the cheapest cash craft per point after captured team stock, then walk auction listings. Shared
+  prefixes retain owners, mail, separate held worth and measured farm alternatives; short supply is
+  incomplete. Partial/stale captures say at least. Synthetic hires retain their original costs.
+  Rules: CRAFT-11; contracts: Team contracts. Offline: progression/session/hiring and web tests.
+
 - **Replay (STORY-006):** `python -m brownstone rebuild --output work/rebuilt-data` replays
   all configured sources' bronze manifests (including disabled sources) into fresh silver and
   DuckDB, using recorded collection times, market identities, hashes and addon selections.
@@ -300,7 +306,7 @@ it stops at the first failure and prints
 tests, coverage, time and the bytes left under the document size guards. Opt-in pre-commit hook (ruff and
 mypy only): `git config core.hooksPath tools/git-hooks`.
 
-Expected: 2,006 Python tests pass (one platform skip), plus 105 Vitest tests.
+Expected: 2,027 Python tests pass (one platform skip), plus 108 Vitest tests.
 Tests are offline; coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows
 from requirements.lock.txt; PowerShell harness skips explicitly when unavailable on macOS.
 Windows uses `.venv\Scripts\python.exe`. App/launcher/CLI retirement checks live in

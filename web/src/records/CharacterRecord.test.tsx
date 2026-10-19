@@ -82,6 +82,7 @@ function data(realm = "First"): RecordData {
               learn_from: "trainer",
               profit_copper: 40,
               estimate: {
+                material_notes: ["Held 3 Linen Cloth from Maker’s bags · worth 30c if sold"],
                 complete: true,
                 cost_copper: 20,
                 reasons: [],
@@ -296,6 +297,7 @@ it("opens Next with the shared Today query, original Route numbers and per-profe
               profit_copper: i === 1 ? -80 : 172,
             },
       estimate: {
+        material_notes: [],
         complete: false,
         cost_copper: null,
         reasons: ["unknown starter"],
@@ -384,6 +386,7 @@ it("opens Next with the shared Today query, original Route numbers and per-profe
   ).toBe(false);
 
   expect(screen.getByText("needs skill 2 · trainer")).toBeTruthy();
+  expect(screen.getByText(/Held 3 Linen Cloth/, { selector: "p" })).toBeTruthy();
   expect(screen.getByText("pays back training in 3 crafts")).toBeTruthy();
   expect(screen.getByText(/Came in/).textContent).toContain("Net: 70c");
   expect(

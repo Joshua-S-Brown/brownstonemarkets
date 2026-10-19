@@ -33,18 +33,17 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-18, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading):
-1. STORY-112 level from what we hold, or farm it
-2. STORY-104 vendor value as a floor
-3. STORY-105 sell raw or craft?
-4. STORY-106 gold reserve and capital
-5. STORY-109 Route and Ledger tidy-up
-6. STORY-110 records polish
+1. STORY-104 vendor value as a floor
+2. STORY-105 sell raw or craft?
+3. STORY-106 gold reserve and capital
+4. STORY-109 Route and Ledger tidy-up
+5. STORY-110 records polish
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Pending an in-game beta check:** none. STORY-027's time-left bounds were accepted on 2026-10-16; STORY-044, 071 and 077 were confirmed on 2026-10-15; STORY-031, 032, 033 and 040 on 2026-10-13 (`status.md`).
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 107, 108, 111 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 107, 108, 111, 112 and SPIKE-009/009b.
 
 ### STORY-104 — Vendor value as a floor
 
@@ -132,35 +131,18 @@ Acceptance:
 - Compare 1280 and 390 px screenshots with the prototype (UI-18).
 - Depends on nothing. Rules: UI-18, ADDON-08, UI-10, UI-16. Design: *Web app (UI-18)*, *Team recipe graph (STORY-015b)*, *Removed listings (STORY-027)*.
 
-### STORY-112 — Level from what we hold, or farm it
-
-Moved from *Today, later versions* (*Reach cost from holdings*) on 2026-10-18 (grooming, product owner). After launch the owner levels professions from gathered materials rather than buying, so a reach cost that prices everything at auction overstates what levelling will cost.
-
-As a gold maker levelling a profession, I want the cost to reach a skill to use what the team already holds, then show what's left to buy and how long it would take to farm, so that I know whether to gather, buy or wait.
-
-Decisions (from the code, 2026-10-18):
-- **Today:** `progression.skillup_walk` picks the cheapest usable craft per point with `evaluate_recipe` on unit prices, so every unit is charged at the cheapest listing (80 Linen Cloth costs 80 × the lowest price).
-- **Holdings first:** the walk spends the team's captured bags and bank (exact ADDON-08 identity; base only) before buying, deducting units as each point consumes them. Held units cost no cash. The crafter's own stock is used first, then other characters' stock, labelled *mail from X*; postage stays uncharged, as in Today. Each estimate reports the held units used and their value at the auction price after the cut, labelled *worth*, never as cost.
-- **Choice follows cash (decided 2026-10-19, product owner):** at each point the walk picks the usable craft with the lowest *cash* cost after the units still held are applied, so holdings can change which recipe is suggested, not only its price. Ties keep the existing order (`recipe_id`, `catalog_id`). Holdings consumed by an earlier point are gone for later points.
-- **Then buy along the listings:** what is still needed is priced along the listing ladder for the whole quantity (`today.Ladder`), not as quantity × the cheapest. Running out of listings makes the estimate incomplete, with the reason.
-- **Or farm it:** for each material still bought, show the best UI-13 rate for that item among the team's characters: *or farm ≈ H h at <spot> (Basilly's own rate)*, hours rounded up to a tenth. Not counted in gold. No rate means nothing is shown.
-- **Where:** CRAFT-11 reach estimates on Team, the character record's *Next skill steps* and Today's Level up. CRAFT-13 hires have no holdings and stay unchanged. Partial or stale captures make the held amount **at least** and say so.
-- Bump `today_version` (now 14 in `today.py`; the requirements heading still reads 11) if the Today section requires it.
-
-Acceptance:
-- **Holdings first:** reach costs drop by the cash value of held units consumed, each estimate shows what it uses from whom, and nothing held is counted twice across points or characters.
-- **Choice follows cash:** a test where a held material makes a pricier-at-auction recipe the cheapest in cash, so the walk picks it; once the stack runs out, later points go back to the auction-cheapest recipe.
-- **Listings walked:** remaining quantities are priced along the ladder; a shortfall is incomplete, never priced at the last listing.
-- **Farm option:** shown only where a measured rate exists, labelled as the owner's own past sessions, not a promise.
-- **Offline tests:** holdings covering all, part and none of a walk; own versus another character's stock; variant identities never pooling with the base; ladder depth and shortfall; yellow fractional crafts; farm hours; hires unchanged.
-- **Real data** (copy of `data/`): one beta character's Tailoring reach cost to the end of its window before and after, with the held units used and any points whose suggested recipe changed.
-- Depends on nothing. Rules: CRAFT-11, CRAFT-13, UI-12, UI-13, ADDON-08, *Today (today_version 11)*. Design: *Team contracts*, *This session (STORY-063)*, *Farming (STORY-065, STORY-074, STORY-075, STORY-077)*, *Stock contracts*.
-
 ## Later
 
 **Captured colours: remaining gaps** (found in the STORY-098 review, 2026-10-18; revisit with live captures after go-live): the copied beta has only 26 learned recipes, so captures fill two colour gaps (Smelt Copper, Copper Rod) and no hire or window-25 path becomes complete; starter, training and price evidence still block costs. Four learned recipes contradict their Wowhead colours and await owner review (`python -m brownstone skillups --source forever-us-normal-alliance-addon`). The catalog's `required_skill` 25 for Smelt Copper also looks wrong for Forever (learned and orange at rank 3). `--write` updates only existing picks; a derived intermediate with no pick of its own is listed, not written (adding a pick would make it a selected recipe), so capturing intermediates' colours needs a decision.
 
+**Holdings can raise a reach cost** (found in the STORY-112 review, 2026-10-19; needs a product decision): the per-point cash-greedy walk (CRAFT-11 *Reach from holdings*) does not guarantee the cheapest window. On the copied beta, Basilly's Tailoring 32→57 costs 1,559c with holdings and 1,514c without: both still buy the same whole 81-unit Linen listing (1,215c), and holdings steer early points to recipes that add 50c training. Options: compare the walk with and without holdings and show the cheaper, or look ahead before spending held stock. The Team, character and Today pages all show the greedy figure today.
+
 **Is it paying off?** (groomed 2026-10-17; the second half of Team's job): profit by activity (crafting, farming, vendoring, auction) per character, in total and per hour played, from the gold ledger (UI-15), item movements (UI-16), farming rates (UI-13) and journal session times. Shown in the character record and as a Team summary. Needs a rule for attributing a crafted sale's profit to the crafting activity and for what counts as time played.
+
+**Farming routes with a node addon** (idea from the product owner, 2026-10-19; not scheduled, after go-live): when STORY-112 says *or farm ≈ H h*, help pick where and how. A node addon such as Gatherer shows ore and herb nodes on the map and minimap; our farming capture (UI-13, STORY-074/075) already records what each loot window gave, when, and a map-percent position cell. Together they could rank spots and routes by measured value per hour, e.g. *Copper Ore: 3 cells in Elwynn, about N nodes per hour on your own runs*, and show how a route's real yield compares with its node count.
+- **First, check:** whether Gatherer (or an alternative) loads on Forever, and whether its SavedVariables hold node positions we can read as data. Gatherer comes from the Auctioneer authors, so treat it like Auctioneer: ideas only, no code, until its licence is checked (AGENTS.md).
+- **Our side stays read-only:** the app reads both files; it draws nothing in game. Map or minimap display stays with the node addon, since BrownstoneScan only reads (SPIKE-008).
+- **Honest limits:** rates are the owner's own past runs, not a promise; launch respawn competition differs from beta; cells are coarse (`farming_cell_percent`), so *route* means an ordered set of cells, not a path. Needs enough gathering stretches per spot after launch.
 
 **Lots and cost basis** (deferred from STORY-034 on 2026-10-15): which purchase each sold or crafted unit came from, for realised profit. Needs STORY-034b's item movements and a rule for held stock of unknown cost.
 

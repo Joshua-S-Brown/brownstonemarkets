@@ -19,7 +19,7 @@ def arguments(**changes):
     return dict(catalogs=[c], observations={i: {'min_buyout': 200} for i in c['items_by_id']} |
                 {1: {'min_buyout': 10}}, market=MARKET, snapshot=SNAPSHOT, now=NOW,
                 settings=TodaySettings(10000, 1, 'fixed'), max_age_hours=24, auction_cut=.05,
-                listings=None, metrics=None, character_data={CHARACTER: evidence(c)}) | changes
+                listings={1: [(1, 10, 10)] * 1000}, metrics=None, character_data={CHARACTER: evidence(c)}) | changes
 
 
 def signal(item_id, *, variant_state='base', variant_id=None, label='cheap'):
@@ -41,7 +41,9 @@ def compose(monkeypatch, args, rows=None):
 
 
 def test_team_status_order_plan_invariance_and_single_union_read(monkeypatch):
-    args = arguments()
+    from test_today_holdings import evidence as stock_evidence
+
+    args = arguments(holdings_data=stock_evidence((1, 3, 'Basilly', 'bags')))
     unknown = ('Zed', 'Beta', 'Alliance')
     capable = ('Able', 'Beta', 'Alliance')
     args['character_data'].update({unknown: {'recipes': {}, 'seen': {}, 'bags': {}}, capable: evidence()})
@@ -55,6 +57,14 @@ def test_team_status_order_plan_invariance_and_single_union_read(monkeypatch):
         assert c['crafts'][0]['signal']['crowding'] == 'contested'
         assert c['crafts'][0]['purchases'][0]['signal']['overshoot']['label'] == 'cheap'
     assert set(read.call_args.args[2]) == {1, 2, 3, 131, 133}
+    estimates = [c['professions'][0]['best']['estimate'] for c in result['characters'][:2]]
+    assert sum(h['units'] for e in estimates for h in e['held']) == 3
+    shown = session_display(result, args)['characters'][0]['professions'][0]['best']['estimate']
+    assert any('mail from Basilly' in note for note in shown['material_notes'])
+    from brownstone import team_view
+    team = team_view.team_results(args['catalogs'], args['character_data'], args, 25)
+    assert [team[c['character']]['professions'][0]['best']['estimate']['cost_copper']
+            for c in result['characters'][:2]] == [e['cost_copper'] for e in estimates]
 
 
 def test_cheapest_route_quantities_training_and_cheap_share(monkeypatch):
@@ -152,14 +162,15 @@ def test_yellow_rounding_and_nested_material_route(monkeypatch):
     recipe = next(r for r in result['characters'][0]['professions'][0]['recipes'] if r['recipe_id'] == 31)
     from fractions import Fraction
     from math import ceil
-    assert recipe['estimate']['cheap_cost_copper'] == sum(ceil(20 * Fraction(40, 60 - rank))
-                                                        for rank in range(21, 33))
+    assert recipe['estimate']['cheap_cost_copper'] == 10 * ceil(
+        sum(2 * Fraction(40, 60 - rank) for rank in range(21, 33)))
     # Cheapest route buys a cheap intermediate rather than assigning its raw inputs as purchases.
     args = arguments()
     args['catalogs'][0]['items_by_id'][131]['role'] = 'intermediate'
     args['catalogs'][0]['recipes_by_id'][30]['inputs'] = [{'item_id': 131, 'quantity': 2}]
     args['catalogs'][0]['recipes_by_id'][31]['inputs'] = [{'item_id': 1, 'quantity': 2}]
     args['observations'][131] = {'min_buyout': 1}
+    args['listings'][131] = [(1, 1, 1)] * 100
     result, _, _ = compose(monkeypatch, args, [signal(131)])
     near = next(r for r in result['characters'][0]['professions'][0]['recipes'] if r['recipe_id'] == 33)
     assert near['estimate']['cost_copper'] == near['estimate']['cheap_cost_copper'] == 10

@@ -41,7 +41,8 @@ def calculate(c=None, data=None, **changes):
     observations = {i: {'min_buyout': 200} for i in c['items_by_id']}
     observations[1] = {'min_buyout': 10}
     return build_progression(**(dict(catalogs=[c], observations=observations, market=MARKET, snapshot=SNAPSHOT,
-                                    character_data={CHARACTER: data or evidence(c)}, character=CHARACTER, now=NOW)
+                                    character_data={CHARACTER: data or evidence(c)}, character=CHARACTER, now=NOW,
+                                    listings={1: [(1, 10, 10)] * 1000})
                                 | changes))
 
 
@@ -346,3 +347,111 @@ def test_today_plan_identical_to_before_story070():
     current.pop('unplanned')  # STORY-088 adds display evidence, not a planning change.
     assert json.loads(json.dumps(current, default=str)) == before
     assert TODAY_VERSION == before['today_version'] == 14
+
+
+@pytest.mark.parametrize('held,expected', [(0, 60), (3, 30), (6, 0)])
+def test_reach_holdings_all_part_none_own_first_mail_worth_and_no_reuse(held, expected):
+    from test_today_holdings import evidence as stock_evidence
+
+    from brownstone.progression import reach_supplies, skillup_walk
+    from views.today_rows import reach_notes
+
+    c = progression_catalog()
+    c['recipes_by_id'][30]['inputs'] = [{'item_id': 1, 'quantity': 2}]
+    entries = [(c, c['recipes_by_id'][30])]
+    stock = stock_evidence((1, min(held, 1), 'Basilly', 'bags'),
+                           (1, max(0, held - 1), 'Arille', 'bank'), age=30)
+    # Explicit variants and unresolved identities cannot supply the base recipe.
+    stock[3].extend([stock[3][0] | {'key': (1, 'suffix', 'variant'), 'units': 100},
+                     stock[3][0] | {'key': (1, None, 'unresolved'), 'units': 100}])
+    supplies = reach_supplies(stock, {}, {1: [(1, 10, 10)] * 20}, NOW, 24, .1)
+    original = deepcopy(stock)
+    walk = skillup_walk(entries, evidence(c), 8, 11, {1: 10}, supplies=supplies, character=CHARACTER)
+    estimate = estimate_cost(entries, evidence(c), 8, 75, 11, {1: 10}, walk)
+    assert estimate['complete'] and estimate['cost_copper'] == expected
+    assert sum(r['units'] for r in estimate['held']) == held
+    assert sum(r['worth_copper'] for r in estimate['held']) == held * 9
+    assert estimate['holdings_at_least']
+    assert stock == original
+    if held:
+        assert estimate['held'][0]['character'] == 'Basilly'
+        assert 'at least' in reach_notes(estimate)[0]
+    if held > 1:
+        assert 'mail from Arille' in ' '.join(reach_notes(estimate))
+    again = skillup_walk(entries, evidence(c), 8, 9, {1: 10}, supplies=supplies,
+                         character=('Zed', 'Beta', 'Alliance'))
+    assert again[0][0]['cost_copper'] == 20
+    assert not again[0][0]['materials'][0]['held']
+
+
+def test_reach_cash_choice_changes_then_returns_to_auction_cheapest():
+    from test_today_holdings import evidence as stock_evidence
+
+    from brownstone.progression import reach_supplies, skillup_walk
+
+    c = progression_catalog()
+    base = c['recipes_by_id'][30]
+    base['inputs'] = [{'item_id': 1, 'quantity': 1}]
+    other = base | {'recipe_id': 34, 'name': 'Auction dearer', 'inputs': [{'item_id': 131, 'quantity': 1}]}
+    c['recipes_by_id'][34] = other
+    data = evidence(c)
+    data['recipes']['Arbitrary title']['known_recipes']['rows'][-1]['learned'] = True
+    supplies = reach_supplies(stock_evidence((131, 2, 'Basilly', 'bags')), {},
+                               {1: [(1, 10, 10)] * 10, 131: [(1, 50, 50)] * 10}, NOW, 24, .05)
+    walk, gap = skillup_walk([(c, base), (c, other)], data, 8, 12, {1: 10, 131: 50},
+                             supplies=supplies, character=CHARACTER)
+    assert gap is None
+    assert [s['recipe_id'] for s in walk] == [34, 34, 30, 30]
+    assert [s['cost_copper'] for s in walk] == [0, 0, 10, 10]
+    # Alternative trials neither spend held units nor reserve auction listings.
+    assert supplies['reserved'] == {1: 2}
+
+
+def test_reach_listing_depth_surplus_yellow_shortfall_and_measured_farm_hours():
+    from test_farming import loot
+
+    from brownstone.progression import reach_supplies, skillup_walk
+    from views.today_rows import reach_notes
+
+    c = progression_catalog()
+    recipe = c['recipes_by_id'][30]
+    recipe.update(inputs=[{'item_id': 1, 'quantity': 2}], skillup_colors=[1, 8, 12, 14])
+    data = {CHARACTER: {'observations': sum((loot(t, item=1) for t in (0, 150, 300)), [])},
+            ('Arille', 'Beta', 'Alliance'): {'observations': sum((loot(t, item=1, quantity=2)
+                                                               for t in (0, 150, 300)), [])}}
+    supplies = reach_supplies(None, data, {1: [(3, 30, 10), (2, 40, 20)]}, NOW, 24, .05)
+    entries = [(c, recipe)]
+    walk = skillup_walk(entries, evidence(c), 8, 11, {1: 10}, supplies=supplies, character=CHARACTER)
+    assert [s['expected_crafts'] for s in walk[0]] == ['1', '6/5']
+    assert [s['cost_copper'] for s in walk[0]] == [30, 40]
+    complete = estimate_cost(entries, evidence(c), 8, 75, 10, {1: 10}, walk)
+    assert complete['cost_copper'] == 70
+    assert complete['buy'][0]['quantity'] == 4.4
+    assert complete['buy'][0]['purchased_units'] == 5
+    assert complete['buy'][0]['farm_hours'] == .1  # 4.4 / 72, up to a tenth.
+    assert complete['buy'][0]['farm']['character'][0] == 'Arille'
+    assert 'own past sessions, not a promise' in ' '.join(reach_notes(complete))
+    short = estimate_cost(entries, evidence(c), 8, 75, 11, {1: 10}, walk)
+    assert short['cost_copper'] is None and not short['complete']
+    assert 'insufficient listings' in short['reasons'][0]
+    supplies = reach_supplies(None, {}, {1: [(1, 10, 10)] * 20}, NOW, 24, .05)
+    walk = skillup_walk(entries, evidence(c), 8, 9, {1: 10}, supplies=supplies, character=CHARACTER)
+    assert not any('Or farm' in s for s in reach_notes(estimate_cost(entries, evidence(c), 8, 75, 9, {1: 10}, walk)))
+
+
+def test_reach_held_intermediate_replaces_leaves_and_missing_held_price_is_worth_unknown():
+    from test_today_holdings import evidence as stock_evidence
+
+    from brownstone.progression import reach_supplies, skillup_walk
+
+    c = progression_catalog()
+    base, intermediate = c['recipes_by_id'][30], c['recipes_by_id'][31]
+    c['items_by_id'][131]['role'] = 'intermediate'
+    base['inputs'] = [{'item_id': 131, 'quantity': 2}]
+    intermediate['inputs'] = [{'item_id': 1, 'quantity': 2}]
+    supplies = reach_supplies(stock_evidence((131, 2, 'Basilly', 'bank')), {}, {}, NOW, 24, .05)
+    walk = skillup_walk([(c, base)], evidence(c), 8, 9, {1: 10}, supplies=supplies, character=CHARACTER)
+    result = estimate_cost([(c, base)], evidence(c), 8, 75, 9, {1: 10}, walk)
+    assert result['complete'] and result['cost_copper'] == 0
+    assert result['held'][0]['item_id'] == 131 and result['held'][0]['worth_copper'] is None
+    assert result['buy'] == []

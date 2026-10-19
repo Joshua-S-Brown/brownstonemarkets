@@ -23,7 +23,9 @@ def test_session_every_character_next_steps_bands_costs_and_rank(browser, tmp_pa
         assert ch['options_text']
         assert ch['professions'][0]['rank'] in (8, 3)
         assert ch['professions'][0]['recipes'][0]['skillup_band']
-        assert ch['professions'][0]['recipes'][0]['estimate']['cost_copper'] is not None
+        estimate = ch['professions'][0]['recipes'][0]['estimate']
+        assert estimate['cost_copper'] is None and not estimate['complete']
+        assert 'insufficient listings' in estimate['reasons'][0]
     craft_stops = [s for s in result['stops'] if s['stage'] == 'craft']
     assert all('rank unknown' not in s['place'] for s in craft_stops)
     assert result['plan']['today_version'] == 14

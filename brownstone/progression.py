@@ -2,9 +2,10 @@
 from fractions import Fraction
 from math import ceil
 
-from . import action_board, professions, today_characters
+from . import action_board, professions, progression_stock, today_characters
 from .crafting import basis_prices, evaluate_recipe
 from .markets import MARKET_KEYS
+from .progression_stock import reach_supplies as reach_supplies
 from .recipe_catalogs import LEARNING_LABELS
 from .recipe_graph import RecipeGraph, route_catalog
 from .today import Ladder, _quote, _sell
@@ -27,7 +28,7 @@ def _usable(recipe, state, rank):
     return status in ('Known', 'Train now'), status == 'Train now'
 
 
-def _step_options(entries, state, rank, prices, trained):
+def _step_options(entries, state, rank, prices, trained, supplies=None, character=None):
     options, reasons = [], []
     for catalog, recipe in entries:
         usable, trainer = _usable(recipe, state, rank)
@@ -53,27 +54,35 @@ def _step_options(entries, state, rank, prices, trained):
             reasons.append(f'{label}: {error}')
             continue
         cost = result['craft_cost_copper']
-        if cost is None:
+        if cost is None and supplies is None:
             missing = [r['item_name'] for r in result['choices'] if r['unit_cost_copper'] is None]
             reasons.append(f"{label} has no price for {' and '.join(missing)}")
             continue
-        options.append({'rank': rank, 'catalog_id': key[0], 'recipe_id': key[1], 'recipe': label,
-                        'expected_crafts': str(crafts), 'cost_copper': ceil(cost * crafts) + training,
+        try:
+            cash = (progression_stock.cash_step(catalog, result, crafts, supplies, character, prices)
+                    if supplies is not None else {'cost_copper': ceil(cost * crafts)})
+        except ValueError as error:
+            reasons.append(f'{label}: {error}')
+            continue
+        options.append({**cash, 'rank': rank, 'catalog_id': key[0], 'recipe_id': key[1], 'recipe': label,
+                        'expected_crafts': str(crafts), 'cost_copper': cash['cost_copper'] + training,
                         'training_cost_copper': training})
     return options, reasons
 
 
-def skillup_walk(entries, state, rank, stop, prices):
+def skillup_walk(entries, state, rank, stop, prices, *, supplies=None, character=None):
     """Greedy cheapest usable craft for each point from ``rank`` up to ``stop``, ending at the first gap.
 
     Every target shares this walk (each stops earlier), so one walk per profession serves them all.
     """
     steps, trained = [], set()
     for point in range(rank, stop):
-        options, gaps = _step_options(entries, state, point, prices, trained)
+        options, gaps = _step_options(entries, state, point, prices, trained, supplies, character)
         if not options:
             return steps, f'Rank {point}: ' + ('; '.join(gaps) or 'no qualifying skill-up craft')
         step = min(options, key=lambda r: (r['cost_copper'], r['recipe_id'], r['catalog_id']))
+        if supplies is not None:
+            supplies.update(step.pop('_supplies'))
         steps.append(step)
         trained.add((step['catalog_id'], step['recipe_id']))
     return steps, None
@@ -95,7 +104,9 @@ def estimate_cost(entries, state, rank, maximum, target, prices, walk=None):
     if target > maximum:
         reasons.append('train the next tier first')
     return {'cost_copper': sum(s['cost_copper'] for s in steps) if not reasons else None,
-            'complete': not reasons, 'reasons': reasons, 'steps': steps}
+            'complete': not reasons, 'reasons': reasons, 'steps': steps,
+            **(progression_stock.summarize(steps, steps[0]['auction_cut'])
+               if steps and 'materials' in steps[0] else {})}
 
 
 def _confidence(catalog, recipe, row, board, ladders, metrics, max_age_hours, auction_cut):
@@ -156,7 +167,7 @@ def summary_sort(row):
 
 def build_progression(catalogs, observations, market, snapshot, character_data, character, *, now,
                       window=25, max_age_hours=24, auction_cut=.05, listings=None, metrics=None,
-                      recipe_graph=None, board=None):
+                      recipe_graph=None, board=None, supplies=None):
     """One character, full-market current scan; callers supply all evidence, the clock and optionally
     a team RecipeGraph and its Action Board already built from the same catalogs, market and character data."""
     if type(window) is not int or not 5 <= window <= 100:
@@ -174,23 +185,29 @@ def build_progression(catalogs, observations, market, snapshot, character_data, 
         board = action_board.rank_catalogs(catalogs, observations, market, snapshot, now=now,
                                           max_age_hours=max_age_hours, auction_cut=auction_cut, recipe_graph=graph)
     rows = {(r['catalog_id'], r['recipe_id']): r for r in board['rows']} if board else {}
-    prices, _ = basis_prices(observations, 'cautious')
+    prices, sell_prices = basis_prices(observations, 'cautious')
     groups, unlisted = _groups(catalogs, state)
     for group in groups.values():
         group["entries"] = _routed_entries(group["entries"], prices, graph)
     ladders = {i: Ladder(values) for i, values in listings.items()} if listings is not None else None
+    if supplies is None:
+        supplies = reach_supplies(None, character_data, listings, now, max_age_hours, auction_cut)
+    supplies['worth_prices'] = sell_prices
     for group in groups.values():
-        _populate(group, state, rows, prices, board, window, ladders, metrics, max_age_hours, auction_cut)
+        _populate(group, state, rows, prices, board, window, ladders, metrics, max_age_hours, auction_cut,
+                  supplies, character)
     result = {'professions': sorted(groups.values(), key=summary_sort), 'unlisted': unlisted,
               'freshness': board['freshness'] if board else None}
     return result | {'catalog_warnings': graph.warnings} if graph is not None else result
 
 
-def _populate(group, state, rows, prices, board, window, ladders, metrics, max_age_hours, auction_cut):
+def _populate(group, state, rows, prices, board, window, ladders, metrics, max_age_hours, auction_cut,
+              supplies, character):
     rank, maximum = group['rank'], group['max_rank']
     if rank is not None and maximum is not None and rank >= maximum:
         group['note'] = 'train the next tier first'
-    walk = (skillup_walk(group['entries'], state, rank, min(rank + window, maximum), prices)
+    walk = (skillup_walk(group['entries'], state, rank, min(rank + window, maximum), prices,
+                         supplies=supplies, character=character)
             if rank is not None and maximum is not None else None)
     for catalog, recipe in group['entries']:
         status = today_characters.recipe_status(recipe, state)

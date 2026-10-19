@@ -78,7 +78,8 @@ def test_roster_progression_matches_shared_build_and_window(browser):
     assert 'Recipe 32' not in [r['name'] for r in groups[0]['recipes']]
     later = get(browser, window=26).json()
     assert 'Recipe 32' in [r['name'] for r in later['roster'][0]['progression']['professions'][0]['recipes']]
-    assert all(r['estimate']['steps'] for r in groups[0]['recipes'])
+    assert all(not r['estimate']['complete'] and 'insufficient listings' in r['estimate']['reasons'][0]
+               for r in groups[0]['recipes'])
     assert get(browser, window=101).status_code == 422
 
 

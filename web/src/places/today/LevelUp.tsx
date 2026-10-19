@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Materials } from "../team/Path";
 import { Panel } from "../../ui/Panel";
 import { Pill, Tip } from "../../ui/parts";
 import kit from "../../ui/components.module.css";
@@ -25,6 +26,7 @@ type Recipe = {
   skillup_band: string;
   required_skill: number;
   estimate: {
+    material_notes: string[];
     complete: boolean;
     cost_copper: number | null;
     reasons: string[];
@@ -218,14 +220,12 @@ export function LevelUp({
                         )}
                       </dd>
                     </dl>
+                    <Materials estimate={best.estimate} />
                     <div className={kit.muted}>
                       {best.confidence} confidence
                       {best.needs_pattern && " · needs a pattern"}
                     </div>
-                    <details>
-                      <summary>All tiers and recipes</summary>
-                      <Tiers group={g} />
-                    </details>
+                    <Tiers group={g} summary="All tiers and recipes" />
                   </div>
                 </section>
               );
@@ -267,10 +267,10 @@ export function LevelUp({
                 characters={[c.character]}
               />
               {g && (
-                <details>
-                  <summary>All tiers and recipes · {g.profession}</summary>
-                  <Tiers group={g} />
-                </details>
+                <Tiers
+                  group={g}
+                  summary={`All tiers and recipes · ${g.profession}`}
+                />
               )}
             </li>
           ));
@@ -370,33 +370,47 @@ export function LevelUp({
   );
 }
 
-function Tiers({ group: g }: { group: Group }) {
+function Tiers({ group: g, summary }: { group: Group; summary: string }) {
+  const [open, setOpen] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   return (
-    <>
-      {g.capped && <p>Capped · train the next tier first.</p>}
-      {g.milestones.map((m) => (
-        <section key={m.skill}>
-          <h4>
-            Reach {m.skill} · cost{" "}
-            {m.estimate.complete ? (
-              <Money copper={m.estimate.cost_copper} />
-            ) : (
-              <>
-                unknown · <PlanText text={m.estimate.reasons.join("; ")} />
-              </>
-            )}
-          </h4>
-          <TierRecipes recipes={m.recipes} />
-        </section>
-      ))}
-      <details>
-        <summary>Tier steps and profession evidence</summary>
-        <Evidence data={g} />
-      </details>
-    </>
+    <details onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary>{summary}</summary>
+      {open && (
+        <>
+          {g.capped && <p>Capped · train the next tier first.</p>}
+          {g.milestones.map((m) => (
+            <section key={m.skill}>
+              <h4>
+                Reach {m.skill} · cost{" "}
+                {m.estimate.complete ? (
+                  <Money copper={m.estimate.cost_copper} />
+                ) : (
+                  <>
+                    unknown · <PlanText text={m.estimate.reasons.join("; ")} />
+                  </>
+                )}
+              </h4>
+              <Materials estimate={m.estimate} />
+              <TierRecipes recipes={m.recipes} />
+            </section>
+          ))}
+          <details
+            onToggle={(e) => {
+              e.stopPropagation();
+              setEvidenceOpen(e.currentTarget.open);
+            }}
+          >
+            <summary>Tier steps and profession evidence</summary>
+            {evidenceOpen && <Evidence data={g} />}
+          </details>
+        </>
+      )}
+    </details>
   );
 }
 function RecipeRow({ recipe: r }: { recipe: Recipe }) {
+  const [open, setOpen] = useState(false);
   return (
     <div>
       <ItemLink id={r.output_item_id} name={r.name} />
@@ -404,9 +418,14 @@ function RecipeRow({ recipe: r }: { recipe: Recipe }) {
         <SkillBand text={r.skillup_band} /> · profit per craft{" "}
         <Money copper={r.profit_copper} />
       </p>
-      <details>
+      <details
+        onToggle={(e) => {
+          e.stopPropagation();
+          setOpen(e.currentTarget.open);
+        }}
+      >
         <summary>Cost and confidence evidence</summary>
-        <Evidence data={r} />
+        {open && <Evidence data={r} />}
       </details>
     </div>
   );

@@ -128,7 +128,7 @@ def summary_sort(row):
             row['profession'])
 
 
-def summaries(context, *, window=25):
+def summaries(context, *, window=25, results=None):
     """Rank-300 estimates are needed for sorting; tier feed graphs wait until a disclosure opens."""
     rows = []
     names = sorted({c['profession'] for c in context['catalogs']})
@@ -140,19 +140,21 @@ def summaries(context, *, window=25):
                      'estimate': progression.estimate_cost([], {}, 1, 300, 300, context['prices'], walk)})
     return {'rows': sorted(rows, key=summary_sort),
             'no_catalog': sorted(set((*PROFESSIONS, 'herbalism', 'skinning', 'fishing')) - set(names)),
-            'comparisons': comparisons(context, window=window)}
+            'comparisons': comparisons(context, window=window, results=results)}
 
 
-def comparisons(context, *, window=25):
-    """Two primary slots, with CRAFT-11's best reachable profit at Team's remembered window."""
+def comparisons(context, *, window=25, results=None):
+    """Two primary slots, with CRAFT-11's best reachable profit at Team's remembered window.
+
+    Team passes its own results so the comparison shows the same holdings-first reach costs."""
     result = []
     for character, state in sorted(context['data'].items()):
         primary = [name for name, sid in SKILL_IDS.items() if sid not in SECONDARY
                    and _holders(context['catalogs'], {character: state}, name)]
         if len(primary) != 2:
             continue
-        progress = progression.build_progression(**context['progression_arguments'], character=character,
-                                                 window=window, board=context['board'])
+        progress = (results or {}).get(character) or progression.build_progression(
+            **context['progression_arguments'], character=character, window=window, board=context['board'])
         groups = []
         for name in sorted(primary):
             matches = [g for g in progress['professions'] if any(r.get('profession') == name for r in g['recipes'])

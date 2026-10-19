@@ -18,6 +18,9 @@ import { InspectorContext } from "../../app/InspectorContext";
 import { readWindow, writeWindow } from "./state";
 import type { Group, TeamData } from "./types";
 const estimate = {
+  material_notes: [
+    "Held 3 Linen Cloth from Basilly’s bags · worth 30c if sold",
+  ],
   complete: false,
   cost_copper: null,
   reasons: ["training cost unknown"],
@@ -231,7 +234,7 @@ it("loads hire detail only on first opening and retains it when reopened", async
     screen.getAllByText("tier fees not included (unknown)").length,
   ).toBeGreaterThan(0);
 });
-it("retains alternatives, learning columns, gathering IDs and empty catalog sentences", () => {
+it("retains alternatives, learning columns, gathering IDs and empty catalog sentences", async () => {
   const view = wrap(
     <Path
       groups={[
@@ -254,10 +257,12 @@ it("retains alternatives, learning columns, gathering IDs and empty catalog sent
       window={25}
     />,
   );
+  expect(screen.getAllByText(/Held 3 Linen Cloth/).length).toBeGreaterThan(0);
   const hidden = screen.getByText("1 more without a price").closest("details")!;
   expect(hidden.open).toBe(false);
   fireEvent.click(screen.getByText("1 more without a price"));
   expect(hidden.open).toBe(true);
+  await userEvent.click(screen.getByText("Smelt Copper · How to get there"));
   expect(
     screen.getAllByText(/Smelt Copper’s skill-up colour is unknown/).length,
   ).toBeGreaterThan(0);
@@ -269,6 +274,7 @@ it("retains alternatives, learning columns, gathering IDs and empty catalog sent
     screen.getByRole("columnheader", { name: "Skill" }).closest("tr")?.children,
   ).toHaveLength(4);
   expect(screen.queryByRole("columnheader", { name: /Learn from/ })).toBeNull();
+  await userEvent.click(screen.getByText("Raptor Bites · How to get there"));
   expect(
     screen.getAllByText("pays back training in 1 crafts", { exact: false })
       .length,

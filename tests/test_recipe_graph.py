@@ -222,7 +222,8 @@ def test_team_cost_to_reach_uses_team_made_bar():
     data = evidence(catalogs)
     data[SMITH]["recipes"]["Arbitrary title"]["known_recipes"]["rows"][-1]["learned"] = False
     args = dict(catalogs=catalogs, observations=observed({1: 5, 2: 100, 3: 1000, 5: 1000}), market=MARKET,
-                snapshot=SNAPSHOT, character=SMITH, now=NOW)
+                snapshot=SNAPSHOT, character=SMITH, now=NOW,
+                listings={1: [(1, 5, 5)] * 500, 2: [(1, 100, 100)] * 500})
     result = build_progression(**args, character_data=data)
     assert result['professions'][0]['recipes'][0]['estimate']['cost_copper'] == 30
     data.pop(MINER)
@@ -304,7 +305,8 @@ def test_session_estimate_materials_expand_through_team_graph(monkeypatch):
     data[SMITH]['recipes']['Arbitrary title']['known_recipes']['rows'][-1]['learned'] = False
     args = dict(catalogs=catalogs, observations=observed({1: 5, 2: 100, 3: 1000, 5: 1000}),
                 market=MARKET, snapshot=SNAPSHOT, character_data=data, now=NOW, max_age_hours=24,
-                auction_cut=.05, listings=None, metrics=None, settings=TodaySettings(1000, 1, 'fixed'))
+                auction_cut=.05, listings={1: [(1, 5, 5)] * 500}, metrics=None,
+                settings=TodaySettings(1000, 1, 'fixed'))
     plan = build_today(**args)
     original = deepcopy(plan)
     monkeypatch.setattr('brownstone.flood_signals.signals', lambda *args: {'rows': [], 'note': ''})
@@ -312,8 +314,10 @@ def test_session_estimate_materials_expand_through_team_graph(monkeypatch):
     armorer = next(c for c in options['characters'] if c['character'] == SMITH)
     estimate = armorer['professions'][0]['recipes'][0]['estimate']
     assert estimate['cost_copper'] == 30
-    assert estimate['steps'][0]['materials'] == [{'item_id': 1, 'quantity': 6, 'method': 'buy',
-        'unit_cost_copper': 5, 'total_cost_copper': 30, 'item_name': 'Ore', 'signal': None}]
+    material = estimate['steps'][0]['materials'][0]
+    assert (material['item_id'], material['quantity'], material['method'], material['cash_cost_copper']) == (
+        1, 6, 'buy', 30)
+    assert material['item_name'] == 'Ore' and material['signal'] is None
     assert plan == original
 
 

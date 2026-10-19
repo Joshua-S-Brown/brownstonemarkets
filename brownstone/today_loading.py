@@ -15,8 +15,8 @@ def load_today(config, catalogs, settings, character_data, now: datetime, *,
 
     Reads retain the existing full market/source predicates. The caller owns settings,
     character evidence error presentation, and session choices; this function never writes.
-    Only Today needs UI-11 signals (flood=True) and team holdings (holdings=True); other pages
-    skip those reads. Callers that already hold the evidence pass ``holdings_data`` instead.
+    Today needs UI-11 signals (flood=True); Today and Team use holdings=True for captured stock.
+    Callers that already hold the evidence pass ``holdings_data`` instead.
     """
     manifest, sid, _ = latest_snapshot(config)
     if manifest is None:

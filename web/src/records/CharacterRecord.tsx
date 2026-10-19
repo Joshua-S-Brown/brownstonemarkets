@@ -27,7 +27,7 @@ import {
   writeState,
 } from "../places/today/state";
 import type { components } from "../api/schema";
-import { Path, Cost } from "../places/team/Path";
+import { Path, Cost, Materials } from "../places/team/Path";
 import { Hire, title } from "../places/team/Hiring";
 import { EstimatePill } from "../places/team/HiringTables";
 import { readWindow } from "../places/team/state";
@@ -207,6 +207,7 @@ export function CharacterRecord({
                   <p>
                     Cost to reach: <Cost estimate={g.best.estimate} />
                   </p>
+                  <Materials estimate={g.best.estimate} />
                   <p>
                     Earns <Money copper={g.best.profit_copper} /> per craft
                   </p>

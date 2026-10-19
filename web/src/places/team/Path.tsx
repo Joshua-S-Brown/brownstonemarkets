@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useInspector } from "../../app/InspectorContext";
 import { PlanText } from "../today/PlanText";
 import { Evidence } from "../../ui/Evidence";
@@ -7,12 +8,40 @@ import { DataGrid } from "../../ui/DataGrid";
 import { Tip } from "../../ui/parts";
 import record from "../../records/records.module.css";
 import type { Estimate, Group, Recipe } from "./types";
-export function Cost({ estimate }: { estimate: Estimate }) {
-  return estimate.complete ? (
-    <Money copper={estimate.cost_copper ?? null} />
-  ) : (
+export function Cost({
+  estimate,
+  tip = false,
+}: {
+  estimate: Estimate;
+  tip?: boolean;
+}) {
+  return (
     <>
-      incomplete: <PlanText text={estimate.reasons?.join("; ") ?? ""} />
+      {estimate.complete ? (
+        <Money copper={estimate.cost_copper ?? null} />
+      ) : (
+        <>
+          incomplete: <PlanText text={estimate.reasons?.join("; ") ?? ""} />
+        </>
+      )}
+      {tip && !!estimate.material_notes?.length && (
+        <Tip text={estimate.material_notes.join("\n")}>Materials ⓘ</Tip>
+      )}
+    </>
+  );
+}
+export function Materials({
+  estimate,
+}: {
+  estimate: Pick<Estimate, "material_notes">;
+}) {
+  return (
+    <>
+      {estimate.material_notes?.map((text, i) => (
+        <p key={i}>
+          <PlanText text={text} />
+        </p>
+      ))}
     </>
   );
 }
@@ -64,31 +93,42 @@ export function NextStep({ group }: { group: Group }) {
   );
 }
 function RecipeDetails({ recipe: r }: { recipe: Recipe }) {
+  const [open, setOpen] = useState(false);
   return (
-    <details>
+    <details
+      onToggle={(e) => {
+        e.stopPropagation();
+        setOpen(e.currentTarget.open);
+      }}
+    >
       <summary>{r.name} · How to get there</summary>
-      <p>
-        {String(r.craft_status ?? "unknown")} ·{" "}
-        {String(r.character_reason ?? "")}
-      </p>
-      <p>
-        Learning: {r.learn_from} · Training:{" "}
-        {r.training_cost_copper == null ? (
-          "cost unknown"
-        ) : (
-          <Money copper={r.training_cost_copper} />
-        )}
-        {r.payback.status === "crafts"
-          ? ` · pays back training in ${r.payback.crafts} crafts`
-          : r.payback.status !== "absent"
-            ? ` · pays back training: ${r.payback.status}`
-            : ""}
-      </p>
-      <p>
-        Estimated cost: <Cost estimate={r.estimate} />
-      </p>
-      <Steps estimate={r.estimate} />
-      <Evidence data={r} />
+      {open && (
+        <>
+          <p>
+            {String(r.craft_status ?? "unknown")} ·{" "}
+            {String(r.character_reason ?? "")}
+          </p>
+          <p>
+            Learning: {r.learn_from} · Training:{" "}
+            {r.training_cost_copper == null ? (
+              "cost unknown"
+            ) : (
+              <Money copper={r.training_cost_copper} />
+            )}
+            {r.payback.status === "crafts"
+              ? ` · pays back training in ${r.payback.crafts} crafts`
+              : r.payback.status !== "absent"
+                ? ` · pays back training: ${r.payback.status}`
+                : ""}
+          </p>
+          <p>
+            Estimated cost: <Cost estimate={r.estimate} />
+          </p>
+          <Materials estimate={r.estimate} />
+          <Steps estimate={r.estimate} />
+          <Evidence data={r} />
+        </>
+      )}
     </details>
   );
 }
@@ -141,6 +181,7 @@ export function Path({
               <p>
                 Cost to get there: <Cost estimate={g.best.estimate} />
               </p>
+              <Materials estimate={g.best.estimate} />
             </section>
           )}
           {g.alternative && (
@@ -209,7 +250,7 @@ export function Path({
                     id: "cost",
                     header: "Cost to reach",
                     accessorFn: (r) => r.estimate.cost_copper,
-                    cell: (c) => <Cost estimate={c.row.original.estimate} />,
+                    cell: (c) => <Cost estimate={c.row.original.estimate} tip />,
                   },
                 ]}
               />

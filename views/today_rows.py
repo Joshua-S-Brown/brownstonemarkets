@@ -402,10 +402,16 @@ def session_display(options, arguments):
     for character in options['characters']:
         groups = []
         for group in character['professions']:
-            recipes = [r | {'skillup_band': recipe_band(r, group['rank'], arguments['catalogs'])}
+            recipes = [r | {'skillup_band': recipe_band(r, group['rank'], arguments['catalogs']),
+                            'estimate': r['estimate'] | {'material_notes': reach_notes(r['estimate'])}}
                        for r in group['recipes']]
-            groups.append(group | {'recipes': recipes, 'milestones': [
-                m | {'recipes': [r for r in recipes if r['required_skill'] == m['skill']]}
+            groups.append(group | {'recipes': recipes,
+                'best': next((r for r in recipes if group['best'] is not None and
+                              (r['catalog_id'], r['recipe_id']) ==
+                              (group['best']['catalog_id'], group['best']['recipe_id'])), None),
+                'milestones': [
+                m | {'estimate': m['estimate'] | {'material_notes': reach_notes(m['estimate'])},
+                     'recipes': [r for r in recipes if r['required_skill'] == m['skill']]}
                 for m in group['milestones']]})
         farming = character['farming']
         spots = [spot | {'mob': mob_label(spot['npc_id'], farming.get('npc_names', {})),
@@ -447,3 +453,23 @@ def band_colour(rank, colors):
         return 'no reliable skill-ups'
     return next((label for threshold, label in ((yellow, 'orange'), (green, 'yellow'), (grey, 'green'))
                  if rank < threshold), 'grey')
+
+
+def reach_notes(estimate):
+    """Held value is worth, and measured farming time is an alternative to cash."""
+    notes = []
+    if estimate.get('holdings_at_least'):
+        notes.append('Held amounts are at least the captured count; captures are partial, missing or stale.')
+    for row in estimate.get('held', []):
+        worth = format_money(row['worth_copper']) if row['worth_copper'] is not None else 'unknown'
+        notes.append(f"Held {row['units']:g} {row['item_name']} from {row['character']}’s {row['kind']} · "
+                     f"worth {worth} if sold" + (f" · mail from {row['character']}" if row.get('mail') else ''))
+    for row in estimate.get('buy', []):
+        purchase = f"Buy {row['purchased_units']}" if row['purchased_units'] else 'Use earlier reach purchases for'
+        notes.append(f"{purchase} {row['item_name']} · ≈ {row['quantity']:g} units needed")
+        rate = row['farm']
+        if rate:
+            notes.append(f"Or farm ≈ {row['farm_hours']:.1f} h at {rate['zone'] or 'unknown zone'} "
+                         f"({rate['character'][0]}’s own rate) · your own past sessions, not a promise; "
+                         'launch respawn competition differs; listings are not sales.')
+    return notes

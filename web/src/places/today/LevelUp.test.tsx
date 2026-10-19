@@ -1,8 +1,14 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  within,
+  waitFor,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { InspectorContext } from "../../app/InspectorContext";
 import { LevelUp } from "./LevelUp";
-it("groups equal reaches once, preserves unknown costs/bands, farming rates and NPC links", () => {
+it("groups equal reaches once, preserves unknown costs/bands, farming rates and NPC links", async () => {
   const recipe = {
     output_item_id: 1,
     name: "Cloth",
@@ -11,6 +17,10 @@ it("groups equal reaches once, preserves unknown costs/bands, farming rates and 
     skillup_band: "skill-up range unknown: catalog has no colour bands",
     required_skill: 25,
     estimate: {
+      material_notes: [
+        "Held 3 Linen Cloth from Basilly’s bags · worth 30c if sold",
+        "Or farm ≈ 0.5 h at Forest (Basilly’s own rate) · your own past sessions, not a promise",
+      ],
       complete: false,
       cost_copper: null,
       reasons: ["training cost unknown"],
@@ -86,7 +96,14 @@ it("groups equal reaches once, preserves unknown costs/bands, farming rates and 
     ),
   );
   fireEvent.click(screen.getByText("All tiers and recipes · Tailoring"));
+  await waitFor(() =>
+    expect(screen.getByText("2 with missing prices")).toBeTruthy(),
+  );
   fireEvent.click(screen.getByText("2 with missing prices"));
+  expect(
+    screen.getByText(/Held 3 Linen Cloth/, { selector: "p" }),
+  ).toBeTruthy();
+  expect(screen.getByText(/Or farm ≈ 0.5 h/, { selector: "p" })).toBeTruthy();
   expect(inspect).toHaveBeenCalledWith({
     character: ["Basilly", "Beta", "Alliance"],
   });
@@ -291,7 +308,9 @@ it("orders levelling cards, marks ranks, preserves unknown costs and no-step rea
   );
 
   fireEvent.click(card.getByText("All tiers and recipes"));
-  expect(card.getByRole("heading", { name: /Reach 35/ })).toBeTruthy();
+  await waitFor(() =>
+    expect(card.getByRole("heading", { name: /Reach 35/ })).toBeTruthy(),
+  );
   expect(
     screen.getByText("Craft boots").closest("details")?.textContent,
   ).toContain("Other session options");

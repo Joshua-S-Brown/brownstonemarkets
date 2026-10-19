@@ -138,7 +138,8 @@ def test_effect_counts_use_actual_progression_and_hiring(monkeypatch):
     base.update(skillup_colors=[1, 300, 301, 302], skillup_colors_basis='captured')
     data = {CHARACTER: evidence(c)}
     arguments = dict(observations={i: {'min_buyout': 10} for i in c['items_by_id']}, market=MARKET,
-                     snapshot=SNAPSHOT, now=NOW, max_age_hours=24, auction_cut=.05, listings=None, metrics=None)
+                     snapshot=SNAPSHOT, now=NOW, max_age_hours=24, auction_cut=.05,
+                     listings={1: [(1, 10, 10)] * 500, 2: [(1, 10, 10)] * 500}, metrics=None)
     monkeypatch.setattr(evidence_report.today_loading, 'load_today_characters', lambda _: (data, None))
     monkeypatch.setattr(evidence_report.today_loading, 'load_today', lambda *args: (SNAPSHOT, arguments))
     before = deepcopy(c)

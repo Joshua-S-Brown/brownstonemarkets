@@ -55,8 +55,13 @@ def team_results(catalogs, data, arguments, window, shared=None):
     if arguments is None:
         return {}
     graph, board = shared or (None, None)
+    supplies = progression.reach_supplies(arguments.get('holdings_data'), data, arguments['listings'],
+                                         arguments['now'], arguments['max_age_hours'], arguments['auction_cut'],
+                                         arguments['market'].get('farming_idle_minutes', 10),
+                                         arguments['market'].get('farming_cell_percent', 5))
     return {c: progression.build_progression(
         catalogs=catalogs, character_data=data, character=c, window=window, recipe_graph=graph, board=board,
+        supplies=supplies,
         **{key: arguments[key] for key in (*BOARD_KEYS, 'listings', 'metrics')}) for c in available_characters(data)}
 
 

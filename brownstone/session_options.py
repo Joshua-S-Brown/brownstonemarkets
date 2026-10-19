@@ -1,11 +1,7 @@
 """This session: read-only composition of the reserved plan and Team estimates (UI-12)."""
-from fractions import Fraction
-from math import ceil
-
 from . import action_board, farming, flood_signals, progression, tier_levels, today_characters
-from .crafting import basis_prices, evaluate_recipe
+from .crafting import basis_prices
 from .markets import MARKET_KEYS
-from .recipe_graph import route_catalog
 from .today_session import headline_profit
 
 PROGRESSION_KEYS = ('observations', 'market', 'snapshot', 'now', 'max_age_hours', 'auction_cut', 'listings', 'metrics')
@@ -32,23 +28,9 @@ def profession_order(group):
     return (profit is None, -(profit or 0), cost is None, cost or 0, group['profession'])
 
 
-def _materials(estimate, catalogs, prices, graph):
-    """Retain existing cheapest-route quantities for the chosen cost steps, with no new price read."""
-    steps = []
-    for step in estimate['steps']:
-        catalog = catalogs[step['catalog_id']]
-        catalog = route_catalog(catalog, step['recipe_id'], prices, graph)
-        choices = evaluate_recipe(catalog, step['recipe_id'], prices)['shopping_choices']
-        steps.append(step | {'materials': [m | {'item_name': catalog['items_by_id'][m['item_id']]['name']}
-                                           for m in choices]})
-    return steps
-
-
-def _profession(group, catalogs, prices, graph):
+def _profession(group):
     capped = group['rank'] is not None and group['max_rank'] is not None and group['rank'] >= group['max_rank']
-    recipes = [] if capped else [r | {'estimate': r['estimate'] | {
-        'steps': _materials(r['estimate'], catalogs, prices, graph)}} for r in group['recipes']]
-    return group | {'capped': capped, 'recipes': recipes}
+    return group | {'capped': capped, 'recipes': [] if capped else group['recipes']}
 
 
 def _crafts(plan, catalogs, state):
@@ -82,9 +64,10 @@ def _label_estimate(estimate, rows):
     cheap = 0
     for step in estimate['steps']:
         materials = [m | {'signal': base_signal(rows, m['item_id'])} for m in step['materials']]
-        cheap_per_craft = sum(m['total_cost_copper'] for m in materials if m['method'] == 'buy'
+        cheap_per_craft = sum(m['cash_cost_copper'] for m in materials
+                              if m['method'] == 'buy'
                               and m['signal'] and m['signal']['overshoot']['label'] == 'cheap')
-        cheap += ceil(cheap_per_craft * Fraction(step['expected_crafts']))
+        cheap += cheap_per_craft
         steps.append(step | {'materials': materials})
     # A partial walk is not an estimate of the total or its cheap share.
     return estimate | {'steps': steps, 'cheap_cost_copper': cheap if estimate['complete'] else None}
@@ -161,13 +144,16 @@ def build_options(db, config, arguments, plan, *, window=25):
     levels = tier_levels.load()
     catalogs = action_board.compatible_catalogs(arguments['catalogs'], arguments['market'])
     by_id = {action_board.catalog_identity(c): c for c in catalogs}
-    prices, sell_prices = basis_prices(arguments['observations'], 'cautious')
+    _, sell_prices = basis_prices(arguments['observations'], 'cautious')
     data = arguments['character_data']
     graph = progression.team_graph(catalogs, data, arguments['market'])
+    supplies = progression.reach_supplies(arguments.get('holdings_data'), data, arguments['listings'],
+                                         arguments['now'], arguments['max_age_hours'], arguments['auction_cut'],
+                                         config.get('farming_idle_minutes', 10), config.get('farming_cell_percent', 5))
     characters = []
     for identity in today_characters.available_characters(data):
         result = progression.build_progression(catalogs=catalogs, character_data=data, character=identity,
-                                              window=window, recipe_graph=graph,
+                                              window=window, recipe_graph=graph, supplies=supplies,
                                               **{k: arguments[k] for k in PROGRESSION_KEYS})
         level = data[identity].get('bags', {}).get('level')
         characters.append({'character': identity, 'level': level if type(level) is int else None,
@@ -175,7 +161,7 @@ def build_options(db, config, arguments, plan, *, window=25):
                            'farming': farming.history(data[identity].get('observations', []),
                                                       config.get('farming_idle_minutes', 10),
                                                       config.get('farming_cell_percent', 5)),
-                           'professions': [_profession(g, by_id, prices, graph) for g in result['professions']],
+                           'professions': [_profession(g) for g in result['professions']],
                            'unlisted': result['unlisted']})
     signals = arguments.get('flood_evidence')
     if signals is None:  # Direct callers may still supply evidence without the shared loader.

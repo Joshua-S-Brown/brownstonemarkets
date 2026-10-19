@@ -715,6 +715,8 @@ export interface components {
             complete: boolean;
             /** Cost Copper */
             cost_copper?: number | null;
+            /** Material Notes */
+            material_notes?: string[];
             /**
              * Reasons
              * @default []

@@ -141,6 +141,13 @@ def test_existing_holders_exact_ids_rank_and_two_primary_comparison():
     assert len(comparison) == 1
     assert [g['profession'] for g in comparison[0]['professions']] == ['blacksmithing', 'mining']
     assert comparison[0]['professions'][0]['best']['recipe_id'] == 21
+    # Team's holdings-first results are shown as they are, never re-walked without holdings.
+    team = {SMITH: {'professions': [g | {'best': g['best'] and g['best'] | {'estimate': {'cost_copper': 7}}}
+                                    for g in hiring.progression.build_progression(
+                                        **ctx['progression_arguments'], character=SMITH, board=ctx['board'])[
+                                        'professions']]}}
+    shown = hiring.comparisons(ctx, results=team)[0]['professions'][0]['best']
+    assert shown['estimate'] == {'cost_copper': 7}
     data[SMITH]['bags']['skills']['modern']['rows'].pop(1)
     assert hiring.comparisons(context(catalogs, data)) == []
 
