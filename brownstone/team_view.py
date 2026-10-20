@@ -72,20 +72,91 @@ def roster_step(groups):
     return min(groups, key=progression.summary_sort, default=None)
 
 
-def profession_suggestions(card, rows):
-    """Filter the shared hire order by observed primary slots; never walk per character."""
+GATHERING = ('mining', 'herbalism', 'skinning')
+GATHERING_NOTE = "gathering: income not modelled; supplies the team's crafts"
+COVERED_NOTE = 'every priced profession is held, planned or suggested for another character'
+COVERAGE_ORDER = {'yours': 0, 'uncovered': 1, 'planned': 2, 'held': 2, 'suggested': 2}  # Covered: hire order.
+
+
+def team_coverage(cards, plan):
+    """Who holds (captured skill IDs) and who plans (personal roster) each profession; never names."""
+    names = {skill: name for name, skill in hiring.SKILL_IDS.items()}
+    held: dict[str, list] = {}
+    for card in cards:
+        for row in card['professions']:
+            if row.get('skill_id') in names:
+                held.setdefault(names[row['skill_id']], []).append(
+                    {'character': (card['name'], card['realm'], card['faction']),
+                     'rank': row['rank'], 'max_rank': row['max_rank']})
+    planned: dict[str, list] = {}
+    for entry in plan:
+        for skill in entry['professions']:
+            planned.setdefault(names[skill], []).append(entry)
+    return held, planned
+
+
+def _coverage(name, card, held, planned):
+    own = (card['name'].casefold(), card['faction'].lower())
+    entries = planned.get(name, [])
+    if any(e.get('name') and (e['name'].casefold(), e['faction']) == own for e in entries):
+        return 'yours', []
+    others = [e.get('name') or e['role'] for e in entries]
+    return ('held' if held.get(name) else 'planned' if others else 'uncovered'), others
+
+
+def profession_suggestions(card, rows, coverage=({}, {})):
+    """Order the shared hire rows for one character's free primary slots: their own plan, then professions
+    nobody holds or plans, then covered ones in hire order; gathering follows, labelled, never ranked by profit."""
     if card['skills_status'] != 'observed':
         return dict(free_slots=None, suggestions=[], suggestion_note='professions unknown')
-    held = {p['skill_id'] for p in card['professions'] if p.get('skill_id') is not None}
-    slots = max(0, 2 - len(held & (set(hiring.SKILL_IDS.values()) - hiring.SECONDARY)))
+    own = {p['skill_id'] for p in card['professions'] if p.get('skill_id') is not None}
+    slots = max(0, 2 - len(own & (set(hiring.SKILL_IDS.values()) - hiring.SECONDARY)))
     if not slots:
         return dict(free_slots=0, suggestions=[], suggestion_note='')
-    candidates = [r for r in rows if hiring.SKILL_IDS.get(r['profession']) not in held | hiring.SECONDARY
-                  and r['profession'] not in ('herbalism', 'skinning')]
-    if not any(r['best'] and r['best']['profit_copper'] > 0 for r in candidates):
-        return dict(free_slots=slots, suggestions=[],
+    held, planned = coverage
+    by_name = {r['profession']: r for r in rows}
+    gathering = [by_name.get(name) or dict(profession=name, holders=held.get(name, []), best=None, best_now=None,
+                                          estimate=dict(complete=False, cost_copper=None, reasons=[GATHERING_NOTE]))
+                 for name in GATHERING]
+    options = [r for r in rows if r['profession'] not in GATHERING] + gathering
+    annotated = []
+    for row in options:
+        if hiring.SKILL_IDS.get(row['profession']) in own | hiring.SECONDARY:
+            continue
+        kind, planned_by = _coverage(row['profession'], card, held, planned)
+        annotated.append(row | {'coverage': kind, 'planned_by': planned_by,
+                                'gathering': row['profession'] in GATHERING})
+    order = sorted(annotated, key=_suggestion_order)
+    crafting = [r for r in order if not r['gathering']]
+    if not any(r['best'] and r['best']['profit_copper'] > 0 for r in crafting):
+        return dict(free_slots=slots, suggestions=[r for r in order if r['gathering']],
                     suggestion_note='no profession has a priced recipe at 300')
-    return dict(free_slots=slots, suggestions=candidates[:3], suggestion_note='')
+    return dict(free_slots=slots, suggestions=order, suggestion_note='')
+
+
+def _suggestion_order(row):
+    return row['gathering'], COVERAGE_ORDER[row['coverage']], hiring.summary_sort(row)
+
+
+def spread_suggestions(members, shown=3):
+    """Characters with free slots, in roster order, get different top picks while an uncovered priced
+    profession remains; a pick reads *suggested for* on later cards. Each keeps ``shown`` crafting options
+    plus the gathering ones."""
+    taken: dict[str, str] = {}
+    for member in members:
+        options = sorted((r | {'coverage': 'suggested', 'planned_by': [taken[r['profession']]]}
+                          if r['coverage'] == 'uncovered' and r['profession'] in taken else r
+                          for r in member['suggestions']), key=_suggestion_order)
+        priced = [r for r in options if not r['gathering'] and r['best'] and r['best']['profit_copper'] > 0]
+        pick = next((r for r in priced if r['coverage'] in ('yours', 'uncovered')), None)
+        if pick:
+            taken.setdefault(pick['profession'], member['character'][0])
+            options = [pick] + [r for r in options if r is not pick]
+        elif priced:
+            member['suggestion_note'] = COVERED_NOTE
+        crafting = [r for r in options if not r['gathering']][:shown]
+        member['suggestions'] = crafting + [r for r in options if r['gathering']]
+    return members
 
 
 def path_result(result):

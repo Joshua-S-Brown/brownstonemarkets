@@ -501,6 +501,7 @@ character without `uses`, sums `today_funds.recorded_balances` and values, and a
 `journal.active_auction_rows` counts (unreadable: all unknown, with a note). Capital never uses the lazy character record path.
 
 `team_plan` validates the optional personal roster; `api/team` appends unreplaced plans with existing hiring walks/best-cap output, separately from captured evidence and current-team comparisons.
+`team_view.team_coverage` maps captured skill IDs and plans to professions; `profession_suggestions` orders each card's options and `spread_suggestions` assigns distinct top picks in roster order.
 
 Rules: [CRAFT-11/13](requirements.md#crafting), [Team character cards](requirements.md#team-character-cards).
 `api/team.py` uses load_today_characters/load_today with TodaySettings defaults. Full-key records

@@ -650,7 +650,7 @@ export interface components {
             /** Suggestion Note */
             suggestion_note: string;
             /** Suggestions */
-            suggestions: components["schemas"]["HireRow"][];
+            suggestions: components["schemas"]["Suggestion"][];
         };
         /** CharacterStatus */
         CharacterStatus: {
@@ -1329,7 +1329,7 @@ export interface components {
             /** Suggestion Note */
             suggestion_note: string;
             /** Suggestions */
-            suggestions: components["schemas"]["HireRow"][];
+            suggestions: components["schemas"]["Suggestion"][];
         };
         /** Movement */
         Movement: {
@@ -1962,6 +1962,25 @@ export interface components {
             wait_units?: number | null;
             /** Whole Stack Units */
             whole_stack_units?: number | null;
+        };
+        /** Suggestion */
+        Suggestion: {
+            best: components["schemas"]["HireBest"] | null;
+            best_now: components["schemas"]["HireBest"] | null;
+            /**
+             * Coverage
+             * @enum {string}
+             */
+            coverage: "yours" | "uncovered" | "planned" | "held" | "suggested";
+            estimate: components["schemas"]["Estimate"];
+            /** Gathering */
+            gathering: boolean;
+            /** Holders */
+            holders: components["schemas"]["Holder"][];
+            /** Planned By */
+            planned_by: string[];
+            /** Profession */
+            profession: string;
         };
         /** Target */
         Target: {

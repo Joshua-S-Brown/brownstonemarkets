@@ -62,9 +62,11 @@ def test_roster_progression_matches_shared_build_and_window(browser):
     assert result['roster'][0]['card']['gold_copper'] == 255
     assert result['roster'][0]['card']['stale']
     assert result['all_incomplete']
+    coverage = team_view.team_coverage([m['card'] for m in result['roster']], [])
     for member in result['roster']:
-        assert member['suggestions'] == team_view.profession_suggestions(
-            member['card'], result['hires'])['suggestions']
+        expected = team_view.profession_suggestions(member['card'], result['hires'], coverage)
+        crafting = [r['profession'] for r in expected['suggestions'] if not r['gathering']]
+        assert [r['profession'] for r in member['suggestions'] if not r['gathering']] == crafting[:3]
     assert 'listings never sales' in result['hiring_labels']
     _, args = today_loading.load_today(browser[1], [browser[2]], TodaySettings(), browser[3], datetime.now(UTC))
     expected = team_view.team_results([browser[2]], browser[3], args, 25)
@@ -384,32 +386,73 @@ def test_character_next_reuses_today_plan_numbering_settings_and_holdings_read(b
     assert len(calls) == 2
 
 
+def suggestion_rows():
+    return [dict(profession=name, holders=[], best=dict(profit_copper=profit), best_now=None,
+                 estimate=dict(complete=False, cost_copper=None, reasons=['unknown starter']))
+            for name, profit in [('blacksmithing', 300), ('tailoring', 200), ('engineering', 100),
+                                 ('mining', 50), ('cooking', 500), ('first-aid', 400)]]
+
+
+def card(name, ids=(), status='observed', ranks=None):
+    return dict(name=name, realm='Beta', faction='Alliance', skills_status=status,
+                professions=[dict(skill_id=i, name='Misleading name', rank=(ranks or {}).get(i, 31), max_rank=75)
+                             for i in ids])
+
+
 @pytest.mark.parametrize('status,ids,slots', [
-    ('observed', [164, 186], 0), ('observed', [164], 1),
+    ('observed', [164, 197], 0), ('observed', [164], 1),
     ('observed', [185, 129, 356, 95], 2), ('skills unknown', [], None),
     ('possibly incomplete', [164], None)])
-def test_profession_suggestions_observed_slots_hire_order_gaps_and_no_profit(status, ids, slots):
-    rows = [dict(profession=name, best=dict(profit_copper=profit), best_now=now,
-                 estimate=dict(complete=False, cost_copper=None, reasons=['unknown starter']))
-            for name, profit, now in [('blacksmithing', 300, dict(profit_copper=-80)),
-                                      ('tailoring', 200, None), ('engineering', 100, dict(profit_copper=309)),
-                                      ('mining', 50, None), ('cooking', 500, None),
-                                      ('first-aid', 400, None), ('herbalism', 400, None), ('skinning', 400, None)]]
-    card = dict(skills_status=status, professions=[dict(skill_id=i, name='Misleading name') for i in ids])
-    result = team_view.profession_suggestions(card, rows)
+def test_profession_suggestions_slots_secondary_and_no_profit(status, ids, slots):
+    rows = suggestion_rows()
+    result = team_view.profession_suggestions(card('Lira', ids, status), rows)
     assert result['free_slots'] == slots
-    if slots:
-        expected = [r for r in rows[:4] if hiring.SKILL_IDS[r['profession']] not in ids][:3]
-        assert result['suggestions'] == expected
-        assert all(not r['estimate']['complete'] for r in result['suggestions'])
-        assert result['suggestions'][0] is expected[0]
-        for r in rows:
-            r['best']['profit_copper'] = 0
-        gap = team_view.profession_suggestions(card, rows)
-        assert not gap['suggestions'] and gap['suggestion_note'] == 'no profession has a priced recipe at 300'
-    else:
+    if not slots:
         assert not result['suggestions']
         assert result['suggestion_note'] == ('professions unknown' if slots is None else '')
+        return
+    names = [r['profession'] for r in result['suggestions']]
+    # Secondary skills take no slot and are never offered; own professions are skipped; gathering trails.
+    assert names == [n for n in ('blacksmithing', 'tailoring', 'engineering') if hiring.SKILL_IDS[n] not in ids] + [
+        'mining', 'herbalism', 'skinning']
+    gathering = [r for r in result['suggestions'] if r['gathering']]
+    assert gathering[1]['estimate']['reasons'] == [team_view.GATHERING_NOTE] and gathering[1]['best'] is None
+    for r in rows:
+        r['best']['profit_copper'] = 0
+    gap = team_view.profession_suggestions(card('Lira', ids, status), rows)
+    assert gap['suggestion_note'] == 'no profession has a priced recipe at 300'
+    assert all(r['gathering'] for r in gap['suggestions'])
+
+
+def test_profession_suggestions_fill_team_gaps_plans_and_spread_top_picks():
+    from brownstone import team_plan
+
+    cards = [card('Arille', [164, 186], ranks={164: 31, 186: 48}), card('Basilly', [197]), card('Lira'),
+             card('Star'), card('Raaem'), card('Cicelyna')]
+    plan = [dict(name='Raaem', faction='alliance', role='priest', professions=[333]),
+            dict(faction='alliance', role='warrior', professions=[202])]
+    rows = suggestion_rows() + [dict(suggestion_rows()[0], profession=name, best=dict(profit_copper=p))
+                                for name, p in [('enchanting', 90), ('leatherworking', 80)]]
+    coverage = team_view.team_coverage(cards, plan)
+    assert coverage[0]['blacksmithing'][0]['character'] == ('Arille', 'Beta', 'Alliance')
+    members = [team_view.profession_suggestions(c, rows, coverage) | {'character': (c['name'],)}
+               for c in cards[2:]]
+    lira = {r['profession']: r for r in members[0]['suggestions']}
+    assert lira['blacksmithing']['coverage'] == 'held' and lira['tailoring']['coverage'] == 'held'
+    assert lira['enchanting']['coverage'] == 'planned' and lira['enchanting']['planned_by'] == ['Raaem']
+    assert lira['engineering']['planned_by'] == ['warrior'] and lira['leatherworking']['coverage'] == 'uncovered'
+    assert lira['mining']['coverage'] == 'held' and lira['herbalism']['coverage'] == 'uncovered'
+    # Raaem's own plan comes first for Raaem; the others share out what nobody holds or plans.
+    assert members[2]['suggestions'][0]['coverage'] == 'yours'
+    team_view.spread_suggestions(members, shown=10)
+    tops = [m['suggestions'][0]['profession'] for m in members]
+    assert tops == ['leatherworking', 'blacksmithing', 'enchanting', 'blacksmithing']
+    assert [m['suggestion_note'] for m in members] == ['', team_view.COVERED_NOTE, '', team_view.COVERED_NOTE]
+    star = {r['profession']: r for r in members[1]['suggestions']}
+    assert star['leatherworking']['coverage'] == 'suggested' and star['leatherworking']['planned_by'] == ['Lira']
+    assert all(len([r for r in m['suggestions'] if not r['gathering']]) == 5 for m in members)
+    assert [r['profession'] for r in members[0]['suggestions'] if r['gathering']] == ['herbalism', 'skinning', 'mining']
+    assert team_plan.roster([], cards, None, rows) == []
 
 
 @pytest.mark.parametrize('content,field', [
@@ -468,7 +511,13 @@ def test_planned_order_capture_replacement_hire_reuse_and_independence(browser, 
     assert team_plan.load(path) == entries
     result = get(browser).json()
     planned = result.pop('planned')
-    assert result == {key: value for key, value in baseline.items() if key != 'planned'}
+    # Plans only relabel profession suggestions (STORY-117); everything else is unchanged.
+    def strip(roster):
+        return [dict(m, suggestions={r['profession'] for r in m['suggestions'] if r['gathering']}) for m in roster]
+    assert strip(result['roster']) == strip(baseline['roster'])
+    assert any(r['coverage'] == 'planned' for m in result['roster'] for r in m['suggestions'])
+    assert {key: value for key, value in result.items() if key != 'roster'} == {
+        key: value for key, value in baseline.items() if key not in ('planned', 'roster')}
     assert [p['role'] for p in planned] == ['priest', 'warrior', 'other faction']
     assert [p['profession'] for p in planned[0]['professions']] == ['tailoring', 'enchanting']
     hire = get(browser, 'team/hire/tailoring').json()['tiers'][:2]

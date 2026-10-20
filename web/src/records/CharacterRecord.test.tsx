@@ -82,7 +82,9 @@ function data(realm = "First"): RecordData {
               learn_from: "trainer",
               profit_copper: 40,
               estimate: {
-                material_notes: ["Held 3 Linen Cloth from Maker’s bags · worth 30c if sold"],
+                material_notes: [
+                  "Held 3 Linen Cloth from Maker’s bags · worth 30c if sold",
+                ],
                 complete: true,
                 cost_copper: 20,
                 reasons: [],
@@ -344,8 +346,19 @@ it("opens Next with the shared Today query, original Route numbers and per-profe
         reasons: ["unknown starter"],
         steps: [],
       },
+      coverage: (["held", "planned", "uncovered"] as const)[i],
+      planned_by: i === 1 ? ["priest"] : [],
+      gathering: false,
     }),
   );
+  record.suggestions.push({
+    ...record.suggestions[2],
+    profession: "herbalism",
+    holders: [],
+    best: null,
+    best_now: null,
+    gathering: true,
+  });
   const g = record.progression.professions[0];
   g.best = {
     ...g.recipes[0],
@@ -411,6 +424,17 @@ it("opens Next with the shared Today query, original Route numbers and per-profe
     "Take up Leatherworking",
     "Take up Engineering",
   ]);
+  expect(screen.queryByText(/already held/)).toBeNull(); // Holder lines already say it.
+  expect(screen.getByText("planned: priest")).toBeTruthy();
+  expect(screen.getAllByText("nobody on the team has it")).toHaveLength(2);
+  expect(
+    screen.getByRole("heading", { name: "Or gather: Herbalism" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(
+      "gathering: income not modelled; supplies the team's crafts",
+    ),
+  ).toBeTruthy();
   expect(
     screen.getByText("Best now: nothing priced within 25 points"),
   ).toBeTruthy();
@@ -421,13 +445,15 @@ it("opens Next with the shared Today query, original Route numbers and per-profe
   expect(
     screen.getAllByText("unknown starter")[0].closest("details")?.open,
   ).toBe(true);
-  expect(screen.getAllByText(/has it/)).toHaveLength(3);
+  expect(screen.getAllByText(/has it/)).toHaveLength(5); // Three holder lines, two uncovered.
   expect(
     fetcher.mock.calls.some(([url]) => url.pathname.includes("/hire/")),
   ).toBe(false);
 
   expect(screen.getByText("needs skill 2 · trainer")).toBeTruthy();
-  expect(screen.getByText(/Held 3 Linen Cloth/, { selector: "p" })).toBeTruthy();
+  expect(
+    screen.getByText(/Held 3 Linen Cloth/, { selector: "p" }),
+  ).toBeTruthy();
   expect(screen.getByText("pays back training in 3 crafts")).toBeTruthy();
   expect(screen.getByText(/Came in/).textContent).toContain("Net: 70c");
   expect(

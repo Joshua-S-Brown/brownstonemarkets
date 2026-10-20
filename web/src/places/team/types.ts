@@ -7,3 +7,4 @@ export type Estimate = components["schemas"]["Estimate"];
 export type RecordData = components["schemas"]["CharacterRecord"];
 export type HireRow = components["schemas"]["HireRow"];
 export type HireDetailData = components["schemas"]["HireDetail"];
+export type Suggestion = components["schemas"]["Suggestion"];

@@ -28,7 +28,12 @@ import {
 } from "../places/today/state";
 import type { components } from "../api/schema";
 import { Path, Cost, Materials } from "../places/team/Path";
-import { Hire, title } from "../places/team/Hiring";
+import {
+  GATHERING_NOTE,
+  Hire,
+  coverageText,
+  title,
+} from "../places/team/Hiring";
 import { EstimatePill } from "../places/team/HiringTables";
 import { readWindow } from "../places/team/state";
 import type { RecordData } from "../places/team/types";
@@ -236,58 +241,71 @@ export function CharacterRecord({
             </h2>
           )}
           {data.suggestion_note && <p>{data.suggestion_note}</p>}
-          {data.suggestions.map((r) => (
-            <section key={r.profession}>
-              <h3>Take up {title(r.profession)}</h3>
-              {r.holders.map((h) => (
-                <p key={h.character.join("|")}>
-                  <CharacterName character={h.character} /> has it
+          {data.suggestions.map((r) =>
+            r.gathering ? (
+              <section key={r.profession}>
+                <h3>Or gather: {title(r.profession)}</h3>
+                <p>{coverageText(r)}</p>
+                <p>{GATHERING_NOTE}</p>
+              </section>
+            ) : (
+              <section key={r.profession}>
+                <h3>Take up {title(r.profession)}</h3>
+                {!(r.coverage === "held" && r.holders.length > 0) && (
+                  <p>{coverageText(r)}</p>
+                )}
+                {r.holders.map((h) => (
+                  <p key={h.character.join("|")}>
+                    <CharacterName character={h.character} /> has it
+                  </p>
+                ))}
+                <p>
+                  Best now:{" "}
+                  {r.best_now ? (
+                    <>
+                      <ItemLink
+                        id={r.best_now.output_item_id}
+                        name={r.best_now.output_name}
+                      />{" "}
+                      · <Money copper={r.best_now.profit_copper} /> per craft
+                    </>
+                  ) : (
+                    `nothing priced within ${window} points`
+                  )}
                 </p>
-              ))}
-              <p>
-                Best now:{" "}
-                {r.best_now ? (
-                  <>
-                    <ItemLink
-                      id={r.best_now.output_item_id}
-                      name={r.best_now.output_name}
-                    />{" "}
-                    · <Money copper={r.best_now.profit_copper} /> per craft
-                  </>
-                ) : (
-                  `nothing priced within ${window} points`
+                <p>
+                  Best at 300:{" "}
+                  {r.best ? (
+                    <>
+                      <ItemLink
+                        id={r.best.output_item_id}
+                        name={r.best.output_name}
+                      />{" "}
+                      · <Money copper={r.best.profit_copper} /> per craft
+                    </>
+                  ) : (
+                    "no priced recipe"
+                  )}
+                </p>
+                <p>
+                  Cost to 300: <Money copper={r.estimate.cost_copper ?? null} />{" "}
+                  <EstimatePill estimate={r.estimate} />
+                </p>
+                {r.estimate.reasons.length > 0 && (
+                  <details>
+                    <summary>Estimate reasons</summary>
+                    {r.estimate.reasons.map((reason, i) => (
+                      <p key={i}>{reason}</p>
+                    ))}
+                  </details>
                 )}
-              </p>
-              <p>
-                Best at 300:{" "}
-                {r.best ? (
-                  <>
-                    <ItemLink
-                      id={r.best.output_item_id}
-                      name={r.best.output_name}
-                    />{" "}
-                    · <Money copper={r.best.profit_copper} /> per craft
-                  </>
-                ) : (
-                  "no priced recipe"
-                )}
-              </p>
-              <p>
-                Cost to 300: <Money copper={r.estimate.cost_copper ?? null} />{" "}
-                <EstimatePill estimate={r.estimate} />
-              </p>
-              {r.estimate.reasons.length > 0 && (
-                <details>
-                  <summary>Estimate reasons</summary>
-                  {r.estimate.reasons.map((reason, i) => (
-                    <p key={i}>{reason}</p>
-                  ))}
-                </details>
-              )}
-              <p>What it feeds · open {title(r.profession)} for tier detail</p>
-              <Hire row={r} source={source} />
-            </section>
-          ))}
+                <p>
+                  What it feeds · open {title(r.profession)} for tier detail
+                </p>
+                <Hire row={r} source={source} />
+              </section>
+            ),
+          )}
           <h2>Last 7 UTC days</h2>
           <p>
             Came in:{" "}

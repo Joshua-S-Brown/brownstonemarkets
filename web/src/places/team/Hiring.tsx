@@ -6,7 +6,7 @@ import { Evidence } from "../../ui/Evidence";
 import { Money } from "./Money";
 import { ErrorState } from "../../ui/parts";
 import { Cost, Steps } from "./Path";
-import type { Estimate, HireDetailData, HireRow } from "./types";
+import type { Estimate, HireDetailData, HireRow, Suggestion } from "./types";
 type Tier = {
   cap: number;
   required_level: number | null;
@@ -24,6 +24,25 @@ export const title = (name: string) =>
     .split("-")
     .map((s) => s[0].toUpperCase() + s.slice(1))
     .join(" ");
+
+/** Who already covers a suggested profession (STORY-117); evidence, not advice. */
+export function coverageText(s: Suggestion): string {
+  if (s.coverage === "yours") return "in your plan";
+  if (s.coverage === "uncovered") return "nobody on the team has it";
+  if (s.coverage === "planned") return `planned: ${s.planned_by.join(", ")}`;
+  if (s.coverage === "suggested")
+    return `suggested for ${s.planned_by.join(", ")}`;
+  const holders = s.holders.map(
+    (h) => `${h.character[0]} ${h.rank ?? "?"}/${h.max_rank ?? "?"}`,
+  );
+  return holders.length
+    ? `already held: ${holders.join(", ")}`
+    : "already held on the team";
+}
+
+export const GATHERING_NOTE =
+  "gathering: income not modelled; supplies the team's crafts";
+
 export function HireDetail({ data }: { data: HireDetailData }) {
   return (
     <>

@@ -13,7 +13,7 @@ import { Coverage, coverageRows } from "./Coverage";
 import { HiringTables } from "./HiringTables";
 import { Team } from "./Team";
 import { Path, Steps } from "./Path";
-import { Hire, HireDetail } from "./Hiring";
+import { Hire, HireDetail, coverageText } from "./Hiring";
 import { InspectorContext } from "../../app/InspectorContext";
 import { readWindow, writeWindow } from "./state";
 import type { Group, TeamData } from "./types";
@@ -449,9 +449,21 @@ it("keeps a best recipe action and replaces only missing recipe actions with a s
   member.suggestions = [
     {
       ...row,
+      profession: "mining",
+      best: null,
+      best_now: null,
+      coverage: "uncovered",
+      planned_by: [],
+      gathering: true,
+    },
+    {
+      ...row,
       profession: "blacksmithing",
       best: { output_item_id: 10, output_name: "Helm", profit_copper: 26131 },
       best_now: { output_item_id: 11, output_name: "Mace", profit_copper: 172 },
+      coverage: "uncovered",
+      planned_by: [],
+      gathering: false,
     },
   ];
   view.rerender(<MemberCard member={member} />);
@@ -460,10 +472,25 @@ it("keeps a best recipe action and replaces only missing recipe actions with a s
   member.card.professions = [];
   view.rerender(<MemberCard member={member} />);
   expect(screen.getByText(/Take up Blacksmithing/).textContent).toBe(
-    "Take up Blacksmithing: 1s 72c per craft now, 2g 61s 31c at 300",
+    "Take up Blacksmithing: 1s 72c per craft now, 2g 61s 31c at 300 · nobody on the team has it",
   );
+  member.suggestions[1].coverage = "held";
+  member.suggestion_note =
+    "every priced profession is held, planned or suggested for another character";
+  view.rerender(<MemberCard member={member} />);
+  expect(screen.queryByText(/Take up/)).toBeNull();
+  expect(screen.getByText(member.suggestion_note)).toBeTruthy();
+  member.suggestions[1].coverage = "uncovered";
+  member.suggestion_note = "";
+  expect(
+    coverageText({
+      ...member.suggestions[1],
+      coverage: "suggested",
+      planned_by: ["Lira"],
+    }),
+  ).toBe("suggested for Lira");
   member.card.professions = fixture().roster[0].card.professions;
-  member.suggestions[0].best_now = null;
+  member.suggestions[1].best_now = null;
   view.rerender(<MemberCard member={member} />);
   expect(screen.getByText(/Take up Blacksmithing/).textContent).toContain(
     "nothing priced within the selected window",

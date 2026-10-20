@@ -36,16 +36,15 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 1. STORY-114 Launch-day checklist
 2. STORY-115 Cold-start states and evidence unlock
 3. STORY-116 Vendor resale
-4. STORY-117 Profession advice that fills gaps
-5. STORY-118 Loot names and vendor value in farming
-6. STORY-119 Gathering skill-up guide
-7. STORY-120 Camp items check
-8. STORY-121 First seen and scarcity
-9. STORY-122 Full-house load test
+4. STORY-118 Loot names and vendor value in farming
+5. STORY-119 Gathering skill-up guide
+6. STORY-120 Camp items check
+7. STORY-121 First seen and scarcity
+8. STORY-122 Full-house load test
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113 and SPIKE-009/009b.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 117 and SPIKE-009/009b.
 
 ### STORY-114 — Launch-day checklist
 
@@ -102,28 +101,6 @@ Acceptance:
 - **Real data:** the beta copy lists the items above with their vendors; report the top five.
 - Compare Market at 1280 and 390 px with the prototype (UI-18).
 - Depends on nothing. Rules: ADDON-12 (Vendor lists), *Today (today_version 15)* (Sell, Auction deposits, Below vendor), UI-19, UI-09, MONEY-01/02, DATA-08. Design: *Market explorer (STORY-055)*, *Beta evidence report*, *Removal speed (STORY-062)*.
-
-### STORY-117 — Profession advice that fills gaps
-
-New at the 2026-10-19 grooming, from using the app on the beta copy.
-
-As a gold maker building a team, I want each character's *take up* advice to fill a gap in the team, so that I don't end up with five blacksmiths.
-
-Today: `team_view.profession_suggestions` filters the shared hire order (best profit at 300) by the character's own professions only. On the beta copy all five characters without a crafting profession read *Take up Blacksmithing*, although Arille already holds it and Leatherworking, Engineering, Alchemy, Enchanting and Herbalism/Skinning have no holder. Gathering professions are dropped entirely.
-
-Decisions:
-- **Coverage first:** suggest professions no team member holds before ones already held; a held one says *Arille already has it (31/75)*. Within each group keep the hire order.
-- **Planned roster:** a profession claimed by a `[[planned]]` entry in `config/team.local.toml` counts as covered by *planned: priest*, so the advice doesn't duplicate the plan.
-- **Spread the advice:** when several characters have free slots, don't give them all the same top pick: assign the top uncovered profession to the first character in Today order, the next to the next, and so on; each card still lists the other options on demand.
-- **Gathering:** Mining, Herbalism and Skinning appear as options, labelled *gathering: income not modelled; supplies the team's crafts*; they never rank above a priced crafting profession.
-
-Acceptance:
-- Covered, planned and uncovered professions labelled and ordered as above; no two characters share a top pick while an uncovered profession remains.
-- Gathering shown with its label, never ranked by profit.
-- **Offline tests:** coverage ordering, planned roster claims, distribution across several free characters, gathering label, a character with no free slot and unknown professions (unchanged notes). Extend `tests/test_team_*.py` and the Roster/CharacterRecord Vitest.
-- **Real data:** on the beta copy the five free characters get different suggestions, none *Blacksmithing* while uncovered professions remain.
-- Compare Team at 1280 and 390 px with the prototype (UI-18).
-- Depends on nothing. Rules: CRAFT-13, CRAFT-11, *Team character cards*. Design: *Team contracts*.
 
 ### STORY-118 — Loot names and vendor value in farming
 

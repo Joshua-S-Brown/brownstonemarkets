@@ -134,12 +134,18 @@ class HireRow(BaseModel):
     estimate: Estimate
 
 
+class Suggestion(HireRow):
+    coverage: Literal['yours', 'uncovered', 'planned', 'held', 'suggested']
+    planned_by: list[str]
+    gathering: bool
+
+
 class Member(BaseModel):
     character: tuple[str, str, str]
     card: Card
     progression: Progression
     free_slots: int | None
-    suggestions: list[HireRow]
+    suggestions: list[Suggestion]
     suggestion_note: str
 
 
@@ -327,17 +333,19 @@ def build(chosen, window, now):
             notes.append(f'Unable to compare new hires: {error}')
     else:
         notes.append('No snapshot for this source and market. Import a current scan to compare new hires.')
-    roster = []
-    for card in cards:
-        key = (card['name'], card['realm'], card['faction'])
-        result = results.get(key, {'professions': []})
-        roster.append(dict(character=key, card=card, progression=team_view.path_result(result),
-                           **team_view.profession_suggestions(card, summaries['rows'])))
     try:
         plan = team_plan.load(context.ROOT / 'config/team.local.toml')
     except (OSError, ValueError) as error:
         notes.append(f'Unable to read planned roster: {error}')
         plan = []
+    coverage = team_view.team_coverage(cards, plan)
+    roster = []
+    for card in cards:
+        key = (card['name'], card['realm'], card['faction'])
+        result = results.get(key, {'professions': []})
+        roster.append(dict(character=key, card=card, progression=team_view.path_result(result),
+                           **team_view.profession_suggestions(card, summaries['rows'], coverage)))
+    team_view.spread_suggestions(roster)
     planned = team_plan.roster(plan, cards, hire_context, summaries['rows'])
     payload = dict(capital=capital, roster=roster, planned=planned, hires=summaries['rows'],
                    no_catalog=summaries['no_catalog'],
