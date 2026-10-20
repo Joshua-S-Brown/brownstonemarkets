@@ -9,7 +9,7 @@ import { PlanText } from "./PlanText";
 import { Evidence } from "../../ui/Evidence";
 import { Money } from "../../ui/Money";
 import { ItemLink } from "../../ui/ItemLink";
-import { type CharacterKey } from "../../app/InspectorContext";
+import { useInspector, type CharacterKey } from "../../app/InspectorContext";
 import type { Plan } from "./state";
 import styles from "../../theme/app.module.css";
 type Recipe = {
@@ -89,6 +89,7 @@ export function LevelUp({
   focusCard?: boolean;
 }) {
   const characters = (session.characters || []) as Character[];
+  const inspect = useInspector();
   const firstCard = useRef<HTMLElement>(null);
   useEffect(() => {
     if (focusCard) {
@@ -281,6 +282,15 @@ export function LevelUp({
           <h3>
             <CharacterName character={c.character} /> · Farming
           </h3>
+          <p>
+            <button
+              onClick={() =>
+                inspect({ character: c.character, tab: "Earnings" })
+              }
+            >
+              Is it paying off? · {c.character[0]}
+            </button>
+          </p>
           <details>
             <summary>Other session options</summary>
             {c.options_text

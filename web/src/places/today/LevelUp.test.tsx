@@ -95,6 +95,13 @@ it("groups equal reaches once, preserves unknown costs/bands, farming rates and 
       { name: "Basilly" },
     ),
   );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Is it paying off? · Basilly" }),
+  );
+  expect(inspect).toHaveBeenCalledWith({
+    character: ["Basilly", "Beta", "Alliance"],
+    tab: "Earnings",
+  });
   fireEvent.click(screen.getByText("All tiers and recipes · Tailoring"));
   await waitFor(() =>
     expect(screen.getByText("2 with missing prices")).toBeTruthy(),

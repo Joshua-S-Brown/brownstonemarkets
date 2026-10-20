@@ -15,6 +15,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { todayKey } from "../places/today/state";
 import { CharacterRecord } from "./CharacterRecord";
 import type { RecordData } from "../places/team/types";
+import earnings from "../../../tests/fixtures/earnings.json";
 vi.mock("./CharacterHistory", () => ({
   CharacterHistory: () => <p>No readable level or rank history yet.</p>,
 }));
@@ -24,6 +25,7 @@ afterEach(() => {
 });
 function data(realm = "First"): RecordData {
   return {
+    earnings: earnings.characters[0] as unknown as RecordData["earnings"],
     catalog_professions: {},
     free_slots: null,
     suggestions: [],
@@ -222,12 +224,40 @@ it("renders unknown values, recipe provenance, partial captures, exact variants 
     <CharacterRecord
       source="source"
       character={["Maker", "First", "Alliance"]}
+      initialTab="Earnings"
     />,
   );
   await screen.findByRole("heading", { name: "Maker" });
   expect(screen.getByText(/Level unknown/).textContent).toContain(
     "17 Oct 10:00 UTC",
   );
+  expect(
+    screen.getByRole("tab", { name: "Earnings" }).getAttribute("aria-selected"),
+  ).toBe("true");
+  expect(
+    screen.getByRole("heading", { name: "Is it paying off?" }),
+  ).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Last session" })).toBeTruthy();
+  expect(
+    screen.getByRole("tabpanel", { name: "Earnings" }).textContent,
+  ).toContain("XP not captured");
+  expect(
+    screen.getByRole("tabpanel", { name: "Earnings" }).textContent,
+  ).toContain("value if sold, not gold");
+  expect(
+    screen.getByRole("region", { name: "world gold" }).textContent,
+  ).toContain("vendor sale");
+  expect(
+    screen.getByRole("region", { name: "market gold" }).textContent,
+  ).toContain("training");
+  expect(
+    screen.getByRole("region", { name: "not assigned gold" }).textContent,
+  ).toContain("other");
+  expect(
+    screen.getByRole("table", { name: "Measured earnings per hour" })
+      .textContent,
+  ).toContain("level unknown");
+  await userEvent.click(screen.getByRole("tab", { name: "Next" }));
   const facts = screen.getByLabelText("Character facts");
   expect(facts.textContent).toContain(
     "GoldunknownProfessions1Known recipesat least 3",

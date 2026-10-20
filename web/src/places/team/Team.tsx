@@ -10,6 +10,7 @@ import { Money } from "./Money";
 import { title } from "./Hiring";
 import { MemberCard } from "./Roster";
 import { Coverage } from "./Coverage";
+import { TeamEarnings } from "./Earnings";
 import { HiringTables } from "./HiringTables";
 import type { TeamData } from "./types";
 import styles from "./team.module.css";
@@ -149,6 +150,7 @@ export function Team({ source }: { source: string }) {
                 ))}
               </div>
             </Panel>
+            {data.earnings && <TeamEarnings data={data.earnings} />}
             <Coverage data={data} />
             <HiringTables data={data} source={source} window={window} />
           </div>

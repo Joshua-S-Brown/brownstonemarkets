@@ -402,6 +402,18 @@ Minimap and /bscan panel open a movable Escape-closeable status/manual routine v
   6. **Consistent components** from the shared theme module; no page invents its own look.
   7. **Readable:** UI-18 theme, text contrast at least 4.5:1, controls at least 44 px, selectable text, and layouts that wrap at narrow widths.
 
+### UI-20 Time and earnings (STORY-124)
+
+Source/full-market, character/realm/faction and machine isolate login-marker sessions (reloads stay). End at the last journal entry before the next login; use journal times, never RequestTimePlayed. Gaps over `farming_idle_minutes` (UI-13) contribute no time.
+
+Market time: auction_house/mailbox/merchant/trainer/trade_skill windows, from first true flag or SHOW to CLOSED, otherwise last true flag; stop at gaps/session end. Merge overlaps; bank/loot are world time. Remaining active time is world time.
+
+Use UI-15 categories: world = quest reward + coin loot + vendor sale − repairs − quest cost; market = auction sale + deposit refund − auction deposit − auction purchase − vendor purchase − training. Movement time chooses session, irrespective of windows. Exclude mail whose sender/SendMail recipient uniquely matches a captured character in this source/house/realm (UI-16 first-word matching). Other mail, mail in (unidentified) and other stay separate, shown as not assigned. Hourly rates round toward zero.
+
+World-time UI-16 gathered/looted gains and observed fixed/chosen quest rewards: cautious price after cut, else positive vendor, else unpriced. Label “value if sold, not gold”, separate from gold. XP checkpoints assign quest/other XP to their session; missing other XP means “at least”, no checkpoints “XP not captured”. Show XP/world hour and levels gained.
+
+Record: last-session minutes/categories/loot/XP/levels, sessions and five-level bands (1–5, 6–10, …). Split at PLAYER_LEVEL_UP checkpoints; otherwise latest readable bags level at/before login, else level unknown. Bands show world gold/hour, loot value/hour, XP/hour and market gold/hour. Team: character rows and total; Today Level up links to record. Under 30 minutes: thin evidence. Own past sessions, not a promise; launch competition differs; market sales can come from earlier gathering/crafting, without cost basis.
+
 ### UI-18 Web app (decided 2026-10-16)
 
 Prototype: `docs/prototype/web-app.html`. A page story's report puts 1280/390 px screenshots beside its matching view and review compares them; structure follows it unless the story says why.

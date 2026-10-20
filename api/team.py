@@ -11,6 +11,7 @@ from brownstone import (
     action_board,
     character_snapshots,
     characters,
+    earnings,
     hiring,
     journal,
     market_explorer,
@@ -204,8 +205,55 @@ class Capital(BaseModel):
     characters: list[CapitalCharacter]
 
 
+class EarningsRow(BaseModel):
+    label: str
+    seconds: int
+    world_seconds: int
+    market_seconds: int
+    world_copper: int
+    market_copper: int
+    loot_copper: int
+    unpriced_units: int
+    categories: dict[str, int]
+    groups: dict[str, dict[str, int]]
+    own_mail_copper: int
+    quest_xp: int
+    other_xp: int
+    levels: int
+    xp_label: str
+    thin: bool
+    world_per_hour_copper: int | None
+    market_per_hour_copper: int | None
+    loot_per_hour_copper: int | None
+    xp_per_hour: int | None
+
+
+class EarningsSession(EarningsRow):
+    start: int
+    end: int
+    login_at: int | None
+    machine: str | None
+    bands: list[EarningsRow]
+
+
+class CharacterEarnings(BaseModel):
+    character: tuple[str, str, str]
+    sessions: list[EarningsSession]
+    total: EarningsRow
+    bands: list[EarningsRow]
+
+
+class Earnings(BaseModel):
+    characters: list[CharacterEarnings]
+    total: EarningsRow
+    caveat: str
+    excluded_money: int
+    unknown_login_entries: int
+
+
 class Team(BaseModel):
     capital: Capital
+    earnings: Earnings
     roster: list[Member]
     planned: list[PlannedMember]
     hires: list[HireRow]
@@ -230,6 +278,7 @@ class CharacterRecord(Member):
     catalog_professions: dict[int, str] = {}
     holdings: Holdings
     evidence: dict[str, Any]
+    earnings: CharacterEarnings
 
 
 class ProfessionHolder(Holder):
@@ -315,7 +364,7 @@ def build(chosen, window, now):
     held, holdings_warning = today_loading.load_holdings(chosen, now)
     held = held or ({}, {}, [], [])
     manifest, arguments = today_loading.load_today(chosen, catalogs, TodaySettings(), data, now,
-        item_ids={u['item_id'] for u in held[3]}, holdings_data=held)
+        item_ids={u['item_id'] for u in held[3]} | earnings.item_ids(data), holdings_data=held)
     _, prices = basis_prices((arguments or {}).get('observations', {}), 'cautious')
     auctions, auctions_warning = _auctions(chosen)
     capital = team_view.capital(data, held, prices, (arguments or {}).get('vendor_prices', {}),
@@ -347,7 +396,8 @@ def build(chosen, window, now):
                            **team_view.profession_suggestions(card, summaries['rows'], coverage)))
     team_view.spread_suggestions(roster)
     planned = team_plan.roster(plan, cards, hire_context, summaries['rows'])
-    payload = dict(capital=capital, roster=roster, planned=planned, hires=summaries['rows'],
+    measured = earnings.load(chosen, prices, (arguments or {}).get('vendor_prices', {}))
+    payload = dict(capital=capital, earnings=measured, roster=roster, planned=planned, hires=summaries['rows'],
                    no_catalog=summaries['no_catalog'],
                    comparisons=summaries['comparisons'], all_incomplete=team_view.all_incomplete(summaries['rows']),
                    notes=notes, labels=team_view.HONESTY, hiring_labels=team_view.HIRING_LABELS,
@@ -421,7 +471,8 @@ def character(name: str, realm: str, faction: str, source: str = '', window: int
                     for i in {u['item_id'] for u in items if u['variant_state'] == 'base'}}
             held = team_view.character_holdings(items, captures, {}, [], prices, arguments.get('vendor_prices', {}),
                                                  chosen['auction_cut'], uses=uses)
-            entry['records'][key] = member | dict(holdings=held, evidence=evidence,
+            measured = earnings.character_record(entry['payload']['earnings'], key)
+            entry['records'][key] = member | dict(holdings=held, evidence=evidence, earnings=measured,
                 catalog_professions={hiring.SKILL_IDS[c['profession']]: c['profession'] for c in entry['catalogs']
                                      if c['profession'] in hiring.SKILL_IDS})
         return jsonable_encoder(entry['records'][key])

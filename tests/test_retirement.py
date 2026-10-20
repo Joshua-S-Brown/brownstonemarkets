@@ -74,7 +74,7 @@ def test_document_size_and_rule_id_inventory():
         assert doc_size(ROOT / name) <= limit, name
     expected = {f'{prefix}-{i:02}' for prefix, numbers in {
         'DATA': [1, 2, 3, 4, 5, 8], 'ADDON': range(1, 14), 'CRAFT': range(1, 14),
-        'MONEY': [1, 2], 'OPS': [1, 2, 3], 'UI': range(1, 20),
+        'MONEY': [1, 2], 'OPS': [1, 2, 3], 'UI': range(1, 21),
     }.items() for i in numbers}
     actual = set(re.findall(r'\b(?:DATA|ADDON|CRAFT|MONEY|UI|OPS)-\d+\b', requirements.read_text(encoding='utf-8')))
     assert actual == expected

@@ -105,3 +105,17 @@
   white-space: normal;
   min-width: 160px;
 }
+
+.earnings th,
+.earnings td {
+  white-space: normal;
+  min-width: 8rem;
+  vertical-align: top;
+}
+.earnings p {
+  margin: 6px 0 0;
+}
+.earnings caption {
+  text-align: left;
+  padding-block: 8px;
+}

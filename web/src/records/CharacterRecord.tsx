@@ -37,18 +37,21 @@ import {
 import { EstimatePill } from "../places/team/HiringTables";
 import { readWindow } from "../places/team/state";
 import type { RecordData } from "../places/team/types";
+import { CharacterEarnings } from "../places/team/Earnings";
 const History = lazy(() =>
   import("./CharacterHistory").then((m) => ({ default: m.CharacterHistory })),
 );
 export function CharacterRecord({
   source,
   character,
+  initialTab = "Next",
 }: {
   source: string;
   character: CharacterKey;
+  initialTab?: string;
 }) {
   const inspect = useInspector();
-  const [tab, setTab] = useState("Next");
+  const [tab, setTab] = useState(initialTab);
   const window = readWindow(source);
   const query = useQuery({
     queryKey: [source, "team-character", character, window],
@@ -147,7 +150,7 @@ export function CharacterRecord({
       </div>
       <Tabs.Root value={tab} onValueChange={setTab}>
         <Tabs.List aria-label="Character record">
-          {["Next", "Professions", "Path", "Holdings", "History"].map((t) => (
+          {["Next", "Earnings", "Professions", "Path", "Holdings", "History"].map((t) => (
             <Tabs.Trigger key={t} value={t}>
               {t}
             </Tabs.Trigger>
@@ -331,6 +334,9 @@ export function CharacterRecord({
               <Money copper={row.out_copper} />
             </p>
           ))}
+        </Tabs.Content>
+        <Tabs.Content value="Earnings">
+          {data.earnings && <CharacterEarnings data={data.earnings} />}
         </Tabs.Content>
         <Tabs.Content value="Professions">
           {!c.professions.length && <p>No profession reported yet.</p>}

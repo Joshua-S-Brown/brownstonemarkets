@@ -97,9 +97,10 @@ export function Inspector({
                     />
                   ) : (
                     <CharacterRecord
-                      key={source + current.character.join("|")}
+                      key={source + current.character.join("|") + (current.tab ?? "")}
                       source={source}
                       character={current.character}
+                      initialTab={current.tab}
                     />
                   )}
                 </Suspense>

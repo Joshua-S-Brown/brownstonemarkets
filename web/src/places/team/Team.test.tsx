@@ -17,6 +17,7 @@ import { Hire, HireDetail, coverageText } from "./Hiring";
 import { InspectorContext } from "../../app/InspectorContext";
 import { readWindow, writeWindow } from "./state";
 import type { Group, TeamData } from "./types";
+import earnings from "../../../../tests/fixtures/earnings.json";
 const estimate = {
   material_notes: [
     "Held 3 Linen Cloth from Basilly’s bags · worth 30c if sold",
@@ -98,6 +99,7 @@ const detail = {
 };
 function fixture(): TeamData {
   return {
+    earnings: earnings as unknown as TeamData["earnings"],
     capital: {
       gold_copper: 255,
       holdings_copper: 20,
@@ -206,6 +208,16 @@ it("keeps windows per tab/source, commits only on release, and opens exact same-
   expect(requests.filter((r) => r.pathname === "/api/team")).toHaveLength(1);
   expect(requests.some((r) => r.pathname.includes("/hire/"))).toBe(false);
   expect(screen.getByText("Capital")).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Is it paying off?" }),
+  ).toBeTruthy();
+  const rates = screen.getByRole("table", {
+    name: "Measured earnings per hour",
+  });
+  expect(rates.textContent).toContain("Team total");
+  expect(rates.textContent).toContain("XP not captured");
+  expect(rates.textContent).toContain("thin evidence");
+  expect(rates.textContent).toContain("value if sold, not gold");
   expect(screen.getByText("1 characters without captured gold")).toBeTruthy();
   expect(screen.getByText("2 stacks without a price")).toBeTruthy();
   expect(screen.getByText("Mailboxes: not captured")).toBeTruthy();

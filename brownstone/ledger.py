@@ -131,7 +131,8 @@ def _mail_parts(record, message):
         return None
     outcomes = sales.project([mail_record])['outcomes']
     if not outcomes:
-        return [{'category': 'mail in', 'copper': amount}]
+        return [{'category': 'mail in', 'copper': amount,
+                 **({'counterparty': messages[0]['sender']} if messages[0]['sender'] else {})}]
     sale = outcomes[0]
     net = sale.get('net_copper')
     if type(net) is not int or not 0 <= net <= amount:
@@ -172,6 +173,8 @@ def _classify(movement, r, hook, pending, coin_ids):
     if category == 'other' and r.get('login_at') is not None and r['entry_id'] in coin_ids:
         category = 'coin loot'
     movement['parts'] = [{'category': category, 'copper': amount}]
+    if category == 'mail out':
+        movement['parts'][0]['counterparty'] = hook.get('arguments', {}).get('1')
 
 
 def summarize(movements):

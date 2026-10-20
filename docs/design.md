@@ -636,6 +636,10 @@ shapes days, filters, totals and evidence. The target dialog drafts saved entrie
 and atomically replaces them. Malformed files are preserved and explained. No schema or Today
 state changes. Offline coverage: `tests/test_stock.py`, `tests/test_ledger_web.py` and Ledger Vitest.
 
+## Time and earnings contracts
+
+Rules: [UI-20](requirements.md#ui-20-time-and-earnings-story-124). `earnings.load` reads scoped journal/snapshots read-only; `project` reuses ledger/item-ledger classifications, merges windows per active stretch and splits sessions at level checkpoints. Integer copper totals/rates retain categories grouped world/market/not assigned, unpriced units, missing XP and provenance. Team caches one report alongside its existing prices; character records select it. API models feed shared web tables and record tiles; no migration, price query or addon change.
+
 ## Gold ledger contracts
 
 Rules: [UI-15](requirements.md#ui-15-gold-ledger-story-034). `ledger.load` opens read-only,

@@ -5,6 +5,11 @@ contracts in [design](design.md); history, story outcomes and dated beta evidenc
 
 ## Implemented
 
+- **Time and earnings (STORY-124, UI-20):** character record Earnings shows the last login's debrief,
+  earlier sessions and five-level bands; Team sums measured world/market rates and Today Level up
+  links to the record. Loot value stays separate from gold, mail/other stay unassigned, own mail is
+  excluded. Idle gaps, thin evidence and missing XP remain explicit; beta predates XP capture.
+
 - **Profession advice (STORY-117):** Team's *Take up* fills gaps: the character's own plan, then professions no captured character holds or plans, a different top pick per card in roster order (*suggested for X* after), and *every priced profession is held, planned or suggested* once none remain; gathering options are labelled, never ranked. Rules: *Team character cards*. Copied beta: Lira, Star and Baspion get Leatherworking, Engineering and Alchemy; the rest say every profession is covered.
 
 - **App:** one web app (UI-07, UI-18). `brownstone_app.py` serves FastAPI/uvicorn on loopback with a
@@ -109,7 +114,7 @@ git diff --check
 `gates` runs ruff, mypy, `pytest -n auto --cov` (pytest-xdist), then `npm run check` in web/ on macOS;
 it stops at the first failure and prints tests, coverage, time and the bytes left under the document
 size guards. Opt-in pre-commit hook (ruff and mypy only): `git config core.hooksPath tools/git-hooks`.
-Expected: 2,049 Python tests pass (one platform skip), plus the Vitest suite. Tests are offline;
+Expected: 2,063 Python tests pass (one platform skip), plus 112 Vitest tests. Tests are offline;
 coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows from requirements.lock.txt.
 Windows uses `.venv\Scripts\python.exe`. Retirement checks live in `tests/test_retirement.py`; launcher
 tests in `tests/test_launch_app.py`.

@@ -19,7 +19,7 @@ So the dependable path to Forever prices, and to the listing-level inventory tha
 
 ## Now
 
-Nothing in progress; the next story is the top of *Order* under Next. **Regroomed 2026-10-18 (product owner): live starts fresh.** On 4 November the live source begins in an empty `data/` and the beta folder is archived read-only (`requirements.md` → *Product direction*); the live market will differ, so nothing relies on beta prices. The beta data stays in use for building and checking stories until it is archived just before go-live. **Launch plan:** for the first one to two weeks the owner levels characters and scans to build a baseline, rather than trading in a volatile market; trading starts once the app has that history. Next carries Today's money-makers and Team and polish work; launch-week market ideas wait under Later (*Launch week, from the first scan*). **Beta testing is wrapped** (2026-10-17): 31 complete scans and the character captures are the data we build on, with no further in-game sessions before go-live; the launch-day checklist is STORY-114 and remaining in-game checks wait until after go-live. Team's job is set as *what should each character do next, and is it paying off?* (STORY-097, STORY-099; *Is it paying off?* under Later).
+Nothing in progress; the next story is the top of *Order* under Next. **Regroomed 2026-10-18 (product owner): live starts fresh.** On 4 November the live source begins in an empty `data/` and the beta folder is archived read-only (`requirements.md` → *Product direction*); the live market will differ, so nothing relies on beta prices. The beta data stays in use for building and checking stories until it is archived just before go-live. **Launch plan:** for the first one to two weeks the owner levels characters and scans to build a baseline, rather than trading in a volatile market; trading starts once the app has that history. Next carries Today's money-makers and Team and polish work; launch-week market ideas wait under Later (*Launch week, from the first scan*). **Beta testing is wrapped** (2026-10-17): 31 complete scans and the character captures are the data we build on, with no further in-game sessions before go-live; the launch-day checklist is STORY-114 and remaining in-game checks wait until after go-live. Team's job is set as *what should each character do next, and is it paying off?* (STORY-097, STORY-099, STORY-124).
 
 **Scanning:** keep the usual routine (scan, `/reload`, import, then `/bscan clear` and `/reload`) whenever you happen to be at the auction house; nothing else is needed (STORY-026 dropped 2026-10-17).
 
@@ -33,45 +33,18 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-19, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading; no rush on launch day; 2026-10-20: quest/XP capture and gold per hour by activity go first, to compare levelling with crafting from day one):
-1. STORY-124 Gold and XP per hour by activity
-2. STORY-114 Launch-day checklist
-3. STORY-115 Cold-start states and evidence unlock
-4. STORY-116 Vendor resale
-5. STORY-118 Loot names and vendor value in farming
-6. STORY-119 Gathering skill-up guide
-7. STORY-120 Camp items check
-8. STORY-121 First seen and scarcity
-9. STORY-122 Full-house load test
+1. STORY-114 Launch-day checklist
+2. STORY-115 Cold-start states and evidence unlock
+3. STORY-116 Vendor resale
+4. STORY-118 Loot names and vendor value in farming
+5. STORY-119 Gathering skill-up guide
+6. STORY-120 Camp items check
+7. STORY-121 First seen and scarcity
+8. STORY-122 Full-house load test
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 117, 123 and SPIKE-009/009b.
-
-### STORY-124 — Gold and XP per hour by activity
-
-New on 2026-10-20 (product owner, top of Order). Replaces *Is it paying off?* under Later (first version) and absorbs *Tonight's debrief*.
-
-As a gold maker, I want to see what an hour of each kind of play earns per character and level band, so that I know whether questing, farming or crafting and the auction house is the better use of my time, and when that changes.
-
-Decisions:
-- **Sessions:** a play session is one login (ADDON-11 `sessions` marker, reloads included) to that character's last journal entry before the next login. Minutes come from the journal's own times; no `RequestTimePlayed`. Sessions with gaps longer than `idle_minutes` (UI-13's setting) count only active stretches.
-- **Activities** from evidence, never names:
-  - **Market time:** minutes with an auction, mailbox, merchant, trainer or crafting window observed open (ADDON-12 window flags), merged where they overlap.
-  - **World time:** the rest of active session time (questing, killing, gathering, travel; not split further).
-- **Gold:** UI-15 movements by category per session: *world gold* = quest reward + coin loot + vendor sale; *market gold* = auction sale + deposit refund − auction deposit − auction purchase − vendor purchase − training; mail between own characters excluded. Each shown in copper with its categories; **other** shown separately, never assigned.
-- **Loot value:** items gained in world time (UI-16 gathered/looted and quest reward items) valued at the cautious after-cut price, else vendor price, labelled *value if sold, not gold* and kept separate from gold.
-- **XP** (needs STORY-123; *XP not captured* before it): quest XP and other XP per session, XP per hour of world time, levels gained.
-- **Views:** the character record gets *Is it paying off?*: last session (the nightly debrief: minutes, gold by category, loot value, XP, levels) and per level band of five levels (1–5, 6–10, …): world gold/hour, loot value/hour, XP/hour, market gold/hour. Team gets one summary row per character and a team total. Today's Level up links to it.
-- **Honesty:** own past sessions, not a promise; launch competition differs; market gold per hour includes sales of items gathered or crafted earlier (no cost basis yet: *Lots and cost basis* under Later). Thin evidence (under 30 minutes in a band) says so.
-
-Acceptance:
-- Sessions, active minutes and window minutes from journal evidence as above; overlapping windows counted once.
-- Gold per hour by activity from UI-15 categories; loot value separate and labelled; XP when captured.
-- Per-session and per-band views in the character record and a Team summary; Today Level up link.
-- **Offline tests:** session boundaries (reload, idle gap, two characters), window minute merging, category grouping and the excluded own mail, loot valuation (auction, vendor, none), XP with and without STORY-123 evidence, level bands, thin-evidence label. Extend ledger, item-ledger and Team tests before adding files.
-- **Real data:** the beta copy's characters per session and band (XP shows *not captured*); report Arille's and Baspion's world against market gold per hour.
-- Compare the record and Team at 1280 and 390 px with the prototype (UI-18).
-- Depends on STORY-123 for quest and XP figures; everything else works on today's evidence. Rules: UI-15, UI-16, UI-13, ADDON-11, ADDON-12, *Team character cards*, MONEY-01/02. Design: *Gold ledger contracts*, *Item ledger contracts*, *Farming (STORY-065, STORY-074, STORY-075, STORY-077)*, *Team contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 117, 123, 124 and SPIKE-009/009b.
 
 ### STORY-114 — Launch-day checklist
 
@@ -218,6 +191,7 @@ Acceptance:
 - **Honest limits:** rates are the owner's own past runs, not a promise; launch respawn competition differs from beta; cells are coarse (`farming_cell_percent`), so *route* means an ordered set of cells, not a path. Needs enough gathering stretches per spot after launch.
 
 **Lots and cost basis** (deferred from STORY-034 on 2026-10-15): which purchase each sold or crafted unit came from, for realised profit. Needs STORY-034b's item movements and a rule for held stock of unknown cost.
+
 
 **Launch week, from the first scan** (ideas from the 2026-10-18 grooming, not scheduled). With a fresh start, UI-11's typical needs three priced UTC days, so cheap/high flags, overshoots and Today's confidence have no basis on 4 to 6 November, and removal speed needs scan gaps. These would make the first week useful (cold-start states, the unlock strip, first seen, scarcity and the load test became STORY-115, 121 and 122 on 2026-10-19):
 - **Since-launch trend:** per item, first-seen price, lowest so far and change across scans, to answer *sell now or wait?* before a typical exists. Descriptive, never a forecast. M.

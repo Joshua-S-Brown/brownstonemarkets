@@ -62,6 +62,8 @@ def test_roster_progression_matches_shared_build_and_window(browser):
     assert result['roster'][0]['card']['gold_copper'] == 255
     assert result['roster'][0]['card']['stale']
     assert result['all_incomplete']
+    assert result['earnings']['total']['xp_label'] == 'XP not captured'
+    assert 'own past sessions' in result['earnings']['caveat']
     coverage = team_view.team_coverage([m['card'] for m in result['roster']], [])
     for member in result['roster']:
         expected = team_view.profession_suggestions(member['card'], result['hires'], coverage)
@@ -92,6 +94,8 @@ def test_same_name_keys_outside_source_and_unknown_evidence(browser, monkeypatch
     two = get(browser, 'team/character', name=twin[0], realm=twin[1], faction=twin[2])
     assert one.status_code == two.status_code == 200
     assert one.json()['character'] != two.json()['character']
+    assert one.json()['earnings']['character'] == list(CHARACTER)
+    assert two.json()['earnings']['character'] == list(twin)
     assert one.json()['card']['level'] == 5
     assert two.json()['card']['level'] is None and two.json()['card']['gold_copper'] is None
     assert not two.json()['card']['stale'] and not two.json()['card']['history']

@@ -613,6 +613,20 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** CharacterEarnings */
+        CharacterEarnings: {
+            /** Bands */
+            bands: components["schemas"]["EarningsRow"][];
+            /** Character */
+            character: [
+                string,
+                string,
+                string
+            ];
+            /** Sessions */
+            sessions: components["schemas"]["EarningsSession"][];
+            total: components["schemas"]["EarningsRow"];
+        };
         /** CharacterNext */
         CharacterNext: {
             /** Gold */
@@ -639,6 +653,7 @@ export interface components {
                 string,
                 string
             ];
+            earnings: components["schemas"]["CharacterEarnings"];
             /** Evidence */
             evidence: {
                 [key: string]: unknown;
@@ -739,6 +754,126 @@ export interface components {
         Discard: {
             /** Review Id */
             review_id?: string | null;
+        };
+        /** Earnings */
+        Earnings: {
+            /** Caveat */
+            caveat: string;
+            /** Characters */
+            characters: components["schemas"]["CharacterEarnings"][];
+            /** Excluded Money */
+            excluded_money: number;
+            total: components["schemas"]["EarningsRow"];
+            /** Unknown Login Entries */
+            unknown_login_entries: number;
+        };
+        /** EarningsRow */
+        EarningsRow: {
+            /** Categories */
+            categories: {
+                [key: string]: number;
+            };
+            /** Groups */
+            groups: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            /** Label */
+            label: string;
+            /** Levels */
+            levels: number;
+            /** Loot Copper */
+            loot_copper: number;
+            /** Loot Per Hour Copper */
+            loot_per_hour_copper: number | null;
+            /** Market Copper */
+            market_copper: number;
+            /** Market Per Hour Copper */
+            market_per_hour_copper: number | null;
+            /** Market Seconds */
+            market_seconds: number;
+            /** Other Xp */
+            other_xp: number;
+            /** Own Mail Copper */
+            own_mail_copper: number;
+            /** Quest Xp */
+            quest_xp: number;
+            /** Seconds */
+            seconds: number;
+            /** Thin */
+            thin: boolean;
+            /** Unpriced Units */
+            unpriced_units: number;
+            /** World Copper */
+            world_copper: number;
+            /** World Per Hour Copper */
+            world_per_hour_copper: number | null;
+            /** World Seconds */
+            world_seconds: number;
+            /** Xp Label */
+            xp_label: string;
+            /** Xp Per Hour */
+            xp_per_hour: number | null;
+        };
+        /** EarningsSession */
+        EarningsSession: {
+            /** Bands */
+            bands: components["schemas"]["EarningsRow"][];
+            /** Categories */
+            categories: {
+                [key: string]: number;
+            };
+            /** End */
+            end: number;
+            /** Groups */
+            groups: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            /** Label */
+            label: string;
+            /** Levels */
+            levels: number;
+            /** Login At */
+            login_at: number | null;
+            /** Loot Copper */
+            loot_copper: number;
+            /** Loot Per Hour Copper */
+            loot_per_hour_copper: number | null;
+            /** Machine */
+            machine: string | null;
+            /** Market Copper */
+            market_copper: number;
+            /** Market Per Hour Copper */
+            market_per_hour_copper: number | null;
+            /** Market Seconds */
+            market_seconds: number;
+            /** Other Xp */
+            other_xp: number;
+            /** Own Mail Copper */
+            own_mail_copper: number;
+            /** Quest Xp */
+            quest_xp: number;
+            /** Seconds */
+            seconds: number;
+            /** Start */
+            start: number;
+            /** Thin */
+            thin: boolean;
+            /** Unpriced Units */
+            unpriced_units: number;
+            /** World Copper */
+            world_copper: number;
+            /** World Per Hour Copper */
+            world_per_hour_copper: number | null;
+            /** World Seconds */
+            world_seconds: number;
+            /** Xp Label */
+            xp_label: string;
+            /** Xp Per Hour */
+            xp_per_hour: number | null;
         };
         /** Edge */
         Edge: {
@@ -2005,6 +2140,7 @@ export interface components {
             capital: components["schemas"]["Capital"];
             /** Comparisons */
             comparisons: components["schemas"]["Comparison"][];
+            earnings: components["schemas"]["Earnings"];
             evidence: components["schemas"]["Evidence"];
             /** Hires */
             hires: components["schemas"]["HireRow"][];

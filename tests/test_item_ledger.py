@@ -10,8 +10,8 @@ from test_scans import NOW
 from test_stock import fixture
 from test_today import plan
 
+from brownstone import earnings, ledger, sales, stock
 from brownstone import item_ledger as items
-from brownstone import ledger, sales, stock
 from brownstone.storage import ensure_schema
 
 CATEGORIES = json.loads((Path(__file__).parent / 'fixtures/item_ledger/categories.json').read_text())
@@ -185,14 +185,15 @@ def test_scoped_read_database_machine_and_empty_read_only(tmp_path):
     config = fixture(tmp_path)
     assert items.load(config)['movements'] == []
     assert items.load(config | {'data_dir': tmp_path / 'absent'})['movements'] == []
-    with duckdb.connect(':memory:') as db:
+    with duckdb.connect(str(tmp_path / 'brownstone.duckdb')) as db:
         assert items.load(config, db)['totals'] == []
         ensure_schema(db)
         scope = {k: config[k] for k in ('source_id', 'market_id', 'game_version', 'region', 'scope',
                                       'realm', 'server_type', 'faction', 'environment')}
         for key in [*scope, None]:
             data = scope | ({key: 'other'} if key else {})
-            data.update(entry_id=str(key), family='bags', record_json=json.dumps(row()), machine='db-machine',
+            record = row(entry_id=f'scope:{key}', character='Outside' if key else 'Fixture')
+            data.update(entry_id=str(key), family='bags', record_json=json.dumps(record), machine='db-machine',
                         character='Fixture', character_realm='Fixture Realm', character_faction='Alliance',
                         captured_at='2026-10-15T00:00:00Z', collection_id='fixture', source_sha256='fixture',
                         record_sha256='fixture')
@@ -200,6 +201,12 @@ def test_scoped_read_database_machine_and_empty_read_only(tmp_path):
                        list(data.values()))
         out = items.load(config, db)
         assert len(out['movements']) == 1 and out['movements'][0]['machine'] == 'db-machine'
+
+    measured = earnings.load(config | {'data_dir': tmp_path}, {}, {})
+    assert len(measured['characters']) == 1
+    assert measured['characters'][0]['sessions'][0]['machine'] == 'db-machine'
+    assert measured['characters'][0]['bands'][0]['label'] == 'level unknown'
+    assert earnings.load(config | {'data_dir': tmp_path / 'absent'}, {}, {})['characters'] == []
 
 
 def test_bank_inaccessible_and_unknown_slots_excluded_without_invented_changes():
@@ -334,3 +341,28 @@ def test_load_reads_families_and_snapshots_once(tmp_path):
         assert len(reads) == 2
         assert sum('FROM character_journal' in q for q in reads) == 1
         assert "('bags','loot','craft','vendor','mail','auction')" in reads[0]
+
+
+@pytest.mark.parametrize('prices,vendors,expected,rate,unpriced', [
+    ({2589: 101}, {2589: 50}, 285, 1710, 0), ({2589: 0}, {2589: 50}, 150, 900, 0),
+    ({}, {2589: 0}, 0, None, 3)])
+def test_earnings_world_loot_values_auction_vendor_unknown_and_quest_choices(prices, vendors, expected, rate, unpriced):
+    records = [row('OBSERVE', at=100, login_at=100), chat(at=200, login_at=100), row(at=200, login_at=100),
+               row('GetQuestReward', at=250, login_at=100, arguments={'1': 2}),
+               row('QUEST_TURNED_IN', at=250, login_at=100, seq=3, family='quest', rewards={'items': [
+                   {'kind': 'reward', 'link': '|Hitem:2589:|h[Cloth]', 'info': {'3': 1}},
+                   {'kind': 'choice', 'index': 1, 'link': '|Hitem:2589:|h[Cloth]', 'info': {'3': 99}},
+                   {'kind': 'choice', 'index': 2, 'link': '|Hitem:2589:|h[Cloth]', 'info': {'3': 1}}]}),
+               row('MERCHANT_SHOW', at=300, login_at=100), chat(at=350, login_at=100, seq=4),
+               row(at=350, login_at=100, seq=5), row('MERCHANT_CLOSED', at=400, login_at=100),
+               row('OBSERVE', at=800, login_at=100)]
+    out = earnings.project(records, prices=prices, vendors=vendors)['characters'][0]['total']
+    assert out['loot_copper'] == expected and out['loot_per_hour_copper'] == rate
+    assert out['unpriced_units'] == unpriced
+    assert out['world_copper'] == 0 and out['xp_label'] == 'XP not captured'
+    assert earnings.item_ids({('Fixture',): {'observations': [(r, 'fixture') for r in records]}}) == {2589}
+    loot = row('LOOT_OPENED', at=199, login_at=100, loot_slots=[
+        {'link': '|Hitem:2589:|h[Cloth]', 'vendor_sell_copper': 20}])
+    fallback = earnings.project(records + [loot], prices=prices, vendors=vendors)['characters'][0]['total']
+    assert fallback['loot_copper'] == (expected if expected else 60)
+    assert fallback['unpriced_units'] == 0

@@ -1,0 +1,164 @@
+{
+  "characters": [
+    {
+      "character": [
+        "Maker",
+        "First",
+        "Alliance"
+      ],
+      "sessions": [
+        {
+          "label": "Session",
+          "seconds": 300,
+          "world_seconds": 200,
+          "market_seconds": 100,
+          "world_copper": 0,
+          "market_copper": 0,
+          "loot_copper": 0,
+          "unpriced_units": 0,
+          "categories": {
+            "vendor sale": 120,
+            "training": -50,
+            "other": 10
+          },
+          "own_mail_copper": 0,
+          "quest_xp": 0,
+          "other_xp": 0,
+          "levels": 0,
+          "xp_label": "XP not captured",
+          "thin": true,
+          "world_per_hour_copper": 0,
+          "market_per_hour_copper": 0,
+          "loot_per_hour_copper": 0,
+          "xp_per_hour": null,
+          "start": 100,
+          "end": 400,
+          "login_at": 100,
+          "machine": "test",
+          "bands": [
+            {
+              "label": "level unknown",
+              "seconds": 300,
+              "world_seconds": 200,
+              "market_seconds": 100,
+              "world_copper": 0,
+              "market_copper": 0,
+              "loot_copper": 0,
+              "unpriced_units": 0,
+              "categories": {},
+              "own_mail_copper": 0,
+              "quest_xp": 0,
+              "other_xp": 0,
+              "levels": 0,
+              "xp_label": "XP not captured",
+              "thin": true,
+              "world_per_hour_copper": 0,
+              "market_per_hour_copper": 0,
+              "loot_per_hour_copper": 0,
+              "xp_per_hour": null,
+              "groups": {
+                "world": {},
+                "market": {},
+                "not assigned": {}
+              }
+            }
+          ],
+          "groups": {
+            "world": {
+              "vendor sale": 120
+            },
+            "market": {
+              "training": -50
+            },
+            "not assigned": {
+              "other": 10
+            }
+          }
+        }
+      ],
+      "total": {
+        "label": "Maker",
+        "seconds": 300,
+        "world_seconds": 200,
+        "market_seconds": 100,
+        "world_copper": 0,
+        "market_copper": 0,
+        "loot_copper": 0,
+        "unpriced_units": 0,
+        "categories": {},
+        "own_mail_copper": 0,
+        "quest_xp": 0,
+        "other_xp": 0,
+        "levels": 0,
+        "xp_label": "XP not captured",
+        "thin": true,
+        "world_per_hour_copper": 0,
+        "market_per_hour_copper": 0,
+        "loot_per_hour_copper": 0,
+        "xp_per_hour": null,
+        "groups": {
+          "world": {},
+          "market": {},
+          "not assigned": {}
+        }
+      },
+      "bands": [
+        {
+          "label": "level unknown",
+          "seconds": 300,
+          "world_seconds": 200,
+          "market_seconds": 100,
+          "world_copper": 0,
+          "market_copper": 0,
+          "loot_copper": 0,
+          "unpriced_units": 0,
+          "categories": {},
+          "own_mail_copper": 0,
+          "quest_xp": 0,
+          "other_xp": 0,
+          "levels": 0,
+          "xp_label": "XP not captured",
+          "thin": true,
+          "world_per_hour_copper": 0,
+          "market_per_hour_copper": 0,
+          "loot_per_hour_copper": 0,
+          "xp_per_hour": null,
+          "groups": {
+            "world": {},
+            "market": {},
+            "not assigned": {}
+          }
+        }
+      ]
+    }
+  ],
+  "total": {
+    "label": "Team total",
+    "seconds": 300,
+    "world_seconds": 200,
+    "market_seconds": 100,
+    "world_copper": 0,
+    "market_copper": 0,
+    "loot_copper": 0,
+    "unpriced_units": 0,
+    "categories": {},
+    "own_mail_copper": 0,
+    "quest_xp": 0,
+    "other_xp": 0,
+    "levels": 0,
+    "xp_label": "XP not captured",
+    "thin": true,
+    "world_per_hour_copper": 0,
+    "market_per_hour_copper": 0,
+    "loot_per_hour_copper": 0,
+    "xp_per_hour": null,
+    "groups": {
+      "world": {},
+      "market": {},
+      "not assigned": {}
+    }
+  },
+  "caveat": "Your own past sessions, not a promise; launch competition differs. Market gold includes sales of items gathered or crafted earlier; no cost basis yet.",
+  "excluded_money": 0,
+  "unknown_login_entries": 0
+}

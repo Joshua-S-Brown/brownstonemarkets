@@ -9,7 +9,7 @@ from test_scans import NOW
 from test_stock import fixture as stock_fixture
 from test_today import plan
 
-from brownstone import ledger, sales, stock
+from brownstone import earnings, ledger, sales, stock
 from brownstone.storage import ensure_schema
 
 FIXTURES = Path(__file__).parent / 'fixtures' / 'ledger'
@@ -202,9 +202,97 @@ def test_quest_exact_unmatched_two_same_second_cost_and_reconciliation():
     assert [m['parts'][0]['category'] for m in out['movements']] == [
         'quest reward', 'quest reward', 'other', 'quest cost', 'other', 'other']
     assert out['reconciliation'][0]['unexplained_copper'] == 0
+    assert earnings.project(records)['total']['world_copper'] == 25
     assert ledger.project(records + records) == ledger.project(records)
     for change in ({'machine': 'different'}, {'login_at': None}, {'character': 'Different'}):
         assert ledger.project([quest, money(10, **change)])['movements'][0]['parts'][0]['category'] == 'other'
     for arguments in ({'3': 11}, {'3': '10'}, {}, {'3': 0}):
         assert ledger.project([quest | {'arguments': arguments}, money(10)])['movements'][0]['parts'][0][
             'category'] == 'other'
+
+
+@pytest.mark.parametrize('category', sorted(CATEGORIES))
+def test_earnings_exact_ledger_category_grouping(category):
+    out = earnings.project(CATEGORIES[category])['characters'][0]['total']
+    copper = sum(p['copper'] for m in ledger.project(CATEGORIES[category])['movements'] for p in m['parts'])
+    assert out['world_copper'] == (copper if category in earnings.WORLD else 0)
+    assert out['market_copper'] == (copper if category in earnings.MARKET else 0)
+    assert sum(out['categories'].values()) + out['own_mail_copper'] == copper
+
+
+def test_earnings_login_reload_idle_windows_bands_and_xp():
+    def entry(at, event='OBSERVE', **extra):
+        return money(at=at, login_at=100, **extra) | {'event': event, 'family': 'window'}
+
+    rows = [entry(100), entry(160, 'MERCHANT_SHOW'),
+            entry(180, 'MAIL_SHOW'), entry(200, windows={'merchant': True, 'mailbox': True}),
+            entry(220, 'MERCHANT_CLOSED'), entry(240, 'MAIL_CLOSED'),
+            entry(300, 'PLAYER_ENTERING_WORLD', arguments={'1': False, '2': True}),
+            money(at=400, login_at=100) | {'event': 'PLAYER_LEVEL_UP', 'family': 'xp',
+                                          'arguments': {'1': 6}, 'level': 6, 'quest_xp': 40, 'other_xp': 60},
+            entry(500, windows={'trainer': True}), entry(520, windows={'trainer': True}),
+            entry(1200, windows={'trainer': True}), entry(1260),
+            money(at=1260, seq=3, login_at=100) | {'family': 'xp', 'event': 'PLAYER_LOGOUT', 'quest_xp': 20},
+            money(at=2000, login_at=2000), money(at=2100, login_at=2000),
+            money(at=1200, character='Second', login_at=1100),
+            money(at=1800, character='Second', login_at=1100),
+            money(at=1300, machine='pc', login_at=1300), money(at=1400, machine='pc', login_at=1300),
+            money(at=1500, login_at=None)]
+    for at, amount in ((350, 20), (450, -5)):
+        rows.extend([money(at=at, seq=1, login_at=100) | {'event': 'QUEST_TURNED_IN', 'family': 'quest',
+                                                       'arguments': {'3': amount}},
+                     money(amount, at=at, login_at=100)])
+    rows = [r | {'entry_id': f"{r['character']}:{r['machine']}:{r['entry_id']}"} for r in rows]
+    snapshots = [bags(90, 100, level=5), bags(101, 100, level=50)]
+    out = earnings.project(rows, snapshots)
+    first = out['characters'][0]
+    assert len(first['sessions']) == 3
+    session = first['sessions'][0]
+    assert (session['start'], session['end'], session['seconds']) == (100, 1260, 480)
+    assert session['market_seconds'] == 100
+    assert session['world_seconds'] == 380
+    assert [(b['label'], b['seconds']) for b in session['bands']] == [('1–5', 300), ('6–10', 180)]
+    assert [b['world_copper'] for b in session['bands']] == [20, -5]
+    assert session['levels'] == 1 and session['quest_xp'] == 60 and session['other_xp'] == 60
+    assert session['xp_label'] == 'at least' and session['xp_per_hour'] == 1136
+    assert first['sessions'][1]['xp_label'] == 'XP not captured'
+    assert first['bands'][0]['thin']
+    assert out['unknown_login_entries'] == 1
+    assert out['characters'][1]['total']['seconds'] == 700
+    assert out['total']['seconds'] == 1380
+    assert earnings.project(rows + rows, snapshots) == out
+    assert earnings.project(rows, snapshots, idle=20)['characters'][0]['sessions'][0]['seconds'] == 1160
+    reloaded = [entry(100, windows={'merchant': True}), entry(130, windows={'merchant': True}),
+                entry(160, windows={}), entry(400, 'MERCHANT_SHOW'), entry(460, 'MERCHANT_CLOSED')]
+    assert earnings.project(reloaded)['characters'][0]['sessions'][0]['market_seconds'] == 90
+    complete = [entry(at, windows={'bank': True, 'loot': True}) for at in (100, 700, 1300)]
+    complete.append(money(at=1900, login_at=100) | {'family': 'xp', 'event': 'PLAYER_LOGOUT',
+                                                  'quest_xp': 0, 'other_xp': 120})
+    band = earnings.project(complete, snapshots)['characters'][0]['bands'][0]
+    assert not band['thin'] and band['world_seconds'] == 1800 and band['market_seconds'] == 0
+    assert band['xp_label'] == 'captured' and band['xp_per_hour'] == 240
+    complete[-1] |= {'other_xp': None}
+    assert earnings.project(complete, snapshots)['characters'][0]['bands'][0]['xp_label'] == 'at least'
+
+
+def test_earnings_own_mail_is_excluded_but_unidentified_and_other_stay_separate():
+    def receive(sender, seq):
+        return [money(seq=seq) | {'event': 'MAIL_INBOX_UPDATE', 'inbox': {'messages': [
+            {'index': 1, 'header': {'3': sender, '5': 200, '7': 30}}]}},
+            money(seq=seq+1) | {'event': 'TakeInboxMoney', 'arguments': {'1': 1}}, money(200, seq=seq+2)]
+    rows = [*receive('bOB Surname', 0), *receive('Stranger', 3),
+            money(seq=6) | {'event': 'SendMail', 'arguments': {'1': 'Bob Surname'},
+                            'draft': {'recipient': 'Stranger'}}, money(-100, seq=7),
+            money(seq=8) | {'event': 'TakeInboxMoney', 'arguments': {'1': 99}}, money(300, seq=9),
+            money(10, seq=10), money(100, character='Bob', at=110)]
+    out = earnings.project(rows)['characters'][1]['total']
+    assert out['own_mail_copper'] == 100
+    assert out['categories'] == {'mail in': 200, 'mail in (unidentified)': 300, 'other': 10}
+    assert out['groups'] == {'world': {}, 'market': {}, 'not assigned': out['categories']}
+    repair = [money(0, at=0, login_at=0), money(at=3600, seq=1, login_at=0) | {'event': 'RepairAllItems'},
+              money(-7, at=3600, login_at=0), money(0, at=3601, login_at=0, seq=3)]
+    lost = earnings.project(repair, idle=120)['total']
+    assert lost['groups']['world'] == {'repairs': -7} and lost['world_per_hour_copper'] == -6  # toward zero
+    assert out['world_copper'] == out['market_copper'] == 0
+    assert earnings.project([money(login_at=None)])['total']['xp_per_hour'] is None
+    assert earnings.character_record(earnings.project([]), ('Absent', 'Realm', 'Alliance'))['sessions'] == []
