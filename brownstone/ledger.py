@@ -10,7 +10,7 @@ from . import character_snapshots, farming, sales
 from .markets import scope_predicate
 from .storage import has_table
 
-LEDGER_VERSION = 1
+LEDGER_VERSION = 2
 MATCH_SECONDS = 1
 HOOKS = {
     'BuyMerchantItem': ('vendor purchase', -1), 'RepairAllItems': ('repairs', -1),
@@ -35,7 +35,7 @@ def load(config, db=None):
     if has_table(db, 'character_journal'):
         records = [json.loads(raw) | {'machine': machine} for raw, machine in db.execute(
             f"SELECT record_json, machine FROM character_journal WHERE {scope} "
-            "AND family IN ('money','vendor','auction','mail','loot')", params).fetchall()]
+            "AND family IN ('money','vendor','auction','mail','loot','quest')", params).fetchall()]
     if has_table(db, 'character_snapshots'):
         snapshots = [json.loads(raw) for (raw,) in db.execute(
             f"SELECT record_json FROM character_snapshots WHERE {scope} AND kind = 'bags'", params).fetchall()]
@@ -73,6 +73,7 @@ def _session(rows):
     movements, pending = [], []
     inbox = []
     hook = None
+    quests = []
     # Reuse farming's exact coin matching, including its five-second and interference rules.
     coin_ids = _coin_ids(rows)
     for r in rows:
@@ -82,12 +83,24 @@ def _session(rows):
             index = r.get('arguments', {}).get('1')
             message = inbox.pop(index - 1) if type(index) is int and 0 < index <= len(inbox) else None
             pending.append((r['captured_at'], _mail_parts(r, message)))
+        if r['event'] == 'QUEST_TURNED_IN' and r.get('family') == 'quest':
+            quests.append(r)
         if r['event'] in HOOKS:
             hook = r
         if r['event'] == 'PLAYER_MONEY' and _valid(r):
             movement = _movement(r)
             pending = [(at, parts) for at, parts in pending if r['captured_at'] - at <= MATCH_SECONDS]
-            _classify(movement, r, hook, pending, coin_ids)
+            quests = [q for q in quests if r['captured_at'] - q['captured_at'] <= MATCH_SECONDS]
+            quest = next((q for q in quests if r.get('login_at') is not None
+                          and 0 <= r['captured_at'] - q['captured_at'] <= MATCH_SECONDS
+                          and type(q.get('arguments', {}).get('3')) is int
+                          and q['arguments']['3'] == movement['copper'] != 0), None)
+            if quest is not None:
+                category = 'quest reward' if movement['copper'] > 0 else 'quest cost'
+                movement['parts'] = [{'category': category, 'copper': movement['copper']}]
+                quests.remove(quest)
+            else:
+                _classify(movement, r, hook, pending, coin_ids)
             movements.append(movement)
     return movements
 

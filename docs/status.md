@@ -66,7 +66,10 @@ contracts in [design](design.md); history, story outcomes and dated beta evidenc
   source's bronze manifests (`.lua` and `.lua.gz`) into fresh silver and DuckDB with recorded times,
   identities, hashes and selections. Invalid collections are listed and rolled back (exit 1); no
   downloads or bronze writes occur; results are deterministic.
-- **Addon:** 0.12.8, account format 6 / scan format 4. Usage, capture fields and pending game checks
+- **Quest/XP (STORY-123):** addon 0.13.0 captures quest rewards/costs and XP checkpoints;
+  Data shows both families, ledger version 2 matches exact quest money (ADDON-12/UI-15).
+  Forever event/API confirmation is pending one session after launch; no rehearsal required.
+- **Addon:** 0.13.0, account format 6 / scan format 4. Usage, capture fields and pending game checks
   live in the [addon README](../addon/README.md).
 
 ## Limitations
@@ -106,7 +109,7 @@ git diff --check
 `gates` runs ruff, mypy, `pytest -n auto --cov` (pytest-xdist), then `npm run check` in web/ on macOS;
 it stops at the first failure and prints tests, coverage, time and the bytes left under the document
 size guards. Opt-in pre-commit hook (ruff and mypy only): `git config core.hooksPath tools/git-hooks`.
-Expected: 2,044 Python tests pass (one platform skip), plus the Vitest suite. Tests are offline;
+Expected: 2,049 Python tests pass (one platform skip), plus the Vitest suite. Tests are offline;
 coverage must meet the 88% branch-inclusive floor. CI runs macOS/Windows from requirements.lock.txt.
 Windows uses `.venv\Scripts\python.exe`. Retirement checks live in `tests/test_retirement.py`; launcher
 tests in `tests/test_launch_app.py`.

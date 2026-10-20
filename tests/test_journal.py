@@ -743,3 +743,149 @@ def test_merchant_journal_import_scope_deduplication_and_raw(tmp_path):
     vendor.update(faction="Horde", entry_id="other-house")
     write(path, [vendor])
     assert preview_scans(config, now=NOW).non_scan_mismatches[0]
+
+
+def test_lua_quest_rewards_choice_cost_name_and_unknowns():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        function QuestUtils_GetQuestName(id) return "Loaded quest " .. id end
+        function GetNumQuestRewards() return 1 end
+        function GetNumQuestChoices() return 2 end
+        function GetQuestItemLink(kind, i) return kind .. " |Hitem:" .. i .. "|h" end
+        function GetQuestItemInfo(kind, i) return nil, nil, i + 1 end
+        function UnitXP() return 80 end
+        function UnitXPMax() return 100 end
+        function GetXPExhaustion() return 25 end
+    ''')
+    before = len(g.messages)
+    g.GetQuestReward(2)
+    assert entries(g)[-1]['reward_choice'] == 2
+    fire(g, 'QUEST_TURNED_IN', 42, 50, -25)
+    quest = entries(g)[-1]  # Its XP checkpoint waits for the quest's XP update.
+    assert quest['family'] == 'quest' and quest['arguments'] == {'n': 3, 1: 42, 2: 50, 3: -25}
+    assert quest['quest_name'] == 'Loaded quest 42' and 'reward_choice' not in quest
+    assert quest['xp'] == 80 and quest['zone']['subzone'] == 'Trade District'
+    assert quest['rewards']['items'][2] == {'kind': 'choice', 'index': 2, 'link': 'choice |Hitem:2|h',
+                                          'info': {'n': 3, 3: 3}}
+    lua.execute('QuestUtils_GetQuestName=nil; C_QuestLog={GetTitleForQuestID=function() return "Fallback" end}')
+    fire(g, 'QUEST_TURNED_IN', 43, 0, 20)
+    fallback, flushed, checkpoint = entries(g)[-3:]
+    assert fallback['quest_name'] == 'Fallback' and 'reward_choice' not in fallback
+    # The earlier turn-in's XP never arrived: its checkpoint is saved first, with other XP missing.
+    assert flushed['arguments'][1] == 42 and flushed['quest_xp'] == 50 and 'other_xp' not in flushed
+    assert checkpoint['arguments'][1] == 43 and checkpoint['quest_xp'] == 0
+    lua.execute('C_QuestLog=nil; GetQuestItemInfo=nil; GetNumQuestRewards=nil; '
+                'UnitXP=nil; UnitXPMax=nil; GetXPExhaustion=nil')
+    fire(g, 'QUEST_TURNED_IN', 44, None, None)
+    quest, checkpoint = entries(g)[-2:]
+    assert 'quest_name' not in quest and 'xp' not in checkpoint and 'other_xp' not in checkpoint
+    assert 'reward_count' not in quest['rewards'] and quest['rewards']['choice_count'] == 2
+    lua.execute('UnitLevel=nil')
+    fire(g, 'PLAYER_LEVEL_UP', 2)
+    checkpoint = entries(g)[-1]
+    assert checkpoint['event'] == 'PLAYER_LEVEL_UP' and checkpoint['level'] == 2
+    assert 'xp' not in checkpoint and 'other_xp' not in checkpoint
+    assert len(g.messages) == before and g.actionCalls == 1
+    g.SlashCmdList.BROWNSTONESCAN('status')
+    assert any('Missing read API UnitXP:' in m for m in g.messages.values())
+
+
+def test_lua_xp_kills_quest_boundary_rested_reload_and_checkpoints():
+    lua, g, _ = journal_client()
+    lua.execute('''
+        xp, xpMax, level, rested = 10, 100, 1, 40
+        function UnitXP() return xp end
+        function UnitXPMax() return xpMax end
+        function UnitLevel() return level end
+        function GetXPExhaustion() return rested end
+    ''')
+    # Reload sets a transient baseline, without adding a journal entry per kill.
+    lua.execute((ROOT / 'addon/BrownstoneScan/BrownstoneScan.lua').read_text())
+    fire(g, 'ADDON_LOADED', 'BrownstoneScan')
+    fire(g, 'PLAYER_ENTERING_WORLD', False, True)
+    before = len(g.messages)
+    for xp in range(11, 31):
+        g.xp = xp
+        fire(g, 'PLAYER_XP_UPDATE', 'player')
+    fire(g, 'PLAYER_XP_UPDATE', 'party1')
+    assert not entries(g)
+    fire(g, 'ZONE_CHANGED_NEW_AREA')
+    first = entries(g)[-1]
+    assert first['other_xp'] == 20 and first['quest_xp'] == 0 and first['rested'] == 40
+    # Turn-in before XP update: the checkpoint waits for that update, so its reward isn't other XP.
+    fire(g, 'QUEST_TURNED_IN', 1, 50, 10)
+    assert entries(g)[-1]['family'] == 'quest'
+    g.xp = 80
+    fire(g, 'PLAYER_XP_UPDATE', 'player')
+    second = entries(g)[-1]
+    assert second['previous_checkpoint_id'] == first['entry_id'] and second['quest_xp'] == 50
+    assert second['other_xp'] == 0
+    # Cross a boundary with a different maximum, then 5 XP from another kill.
+    before_level = len(entries(g))
+    fire(g, 'PLAYER_LEVEL_UP', 2)  # UnitLevel can still report the previous level.
+    assert len(entries(g)) == before_level
+    g.xp, g.xpMax, g.level, g.rested = 5, 200, 2, 0
+    fire(g, 'PLAYER_XP_UPDATE', 'player')
+    third = entries(g)[-1]
+    assert third['event'] == 'PLAYER_LEVEL_UP' and third['other_xp'] == 25 and third['xp_max'] == 200
+    g.xp = 10
+    fire(g, 'PLAYER_XP_UPDATE', 'player')
+    g.xp = 60
+    fire(g, 'PLAYER_XP_UPDATE', 'player')  # This client delivered XP before the turn-in event.
+    fire(g, 'QUEST_TURNED_IN', 2, 50, 20)
+    fourth = entries(g)[-1]
+    assert fourth['quest_xp'] == 50 and fourth['other_xp'] == 5
+    assert fourth['previous_checkpoint_id'] == third['entry_id']
+    # A kill, then a turn-in reported before its XP: the kill stays other XP at that checkpoint.
+    g.xp = 70
+    fire(g, 'PLAYER_XP_UPDATE', 'player')
+    fire(g, 'QUEST_TURNED_IN', 3, 30, 0)
+    g.xp = 100
+    fire(g, 'PLAYER_XP_UPDATE', 'player')
+    fifth = entries(g)[-1]
+    assert fifth['quest_xp'] == 30 and fifth['other_xp'] == 10
+    # Logout saves a turn-in still waiting for XP, then the logout checkpoint.
+    fire(g, 'QUEST_TURNED_IN', 4, 40, 0)
+    fire(g, 'PLAYER_LOGOUT')
+    flushed, last = entries(g)[-2:]
+    assert flushed['arguments'][1] == 4 and 'other_xp' not in flushed
+    assert last['other_xp'] == 0 and last['rested'] == 0 and last['previous_checkpoint_id'] == flushed['entry_id']
+    lua.execute((ROOT / 'addon/BrownstoneScan/BrownstoneScan.lua').read_text())
+    fire(g, 'ADDON_LOADED', 'BrownstoneScan')
+    fire(g, 'PLAYER_ENTERING_WORLD', False, True)
+    fire(g, 'ZONE_CHANGED_NEW_AREA')
+    assert entries(g)[-1]['previous_checkpoint_id'] == last['entry_id'] and entries(g)[-1]['other_xp'] == 0
+    # UnitXP reset while UnitLevel still lags: the boundary gain is unknown, not a whole level.
+    g.xp = 2
+    fire(g, 'PLAYER_XP_UPDATE', 'player')
+    g.level = 3
+    fire(g, 'PLAYER_XP_UPDATE', 'player')
+    fire(g, 'ZONE_CHANGED_NEW_AREA')
+    assert 'other_xp' not in entries(g)[-1] and entries(g)[-1]['level'] == 3
+    assert len(g.messages) == before
+
+
+@pytest.mark.parametrize('family,event', [('quest', 'QUEST_TURNED_IN'), ('xp', 'ZONE_CHANGED_NEW_AREA')])
+def test_new_journal_families_import_preview_scope_dedupe_and_conflict(tmp_path, family, event):
+    raw = entry('new', rewards={'items': [{'link': '|Hitem:1|h', 'info': {'n': 3, 3: 2}}]},
+                quest_xp=50, other_xp=10)
+    raw.update(family=family, event=event)
+    foreign = raw | {'entry_id': 'foreign', 'faction': 'Horde'}
+    path = write(tmp_path / 'own.lua', [raw, foreign])
+    config = addon_source(tmp_path / 'data', path)
+    preview = preview_scans(config, now=NOW)
+    rows = journal.preview_rows(preview, 'mac')
+    assert rows[0]['Family'] == family and rows[0]['new'] == 1 and rows[1]['other house'] == 1
+    result = import_scans(config, now=NOW, reviewed=preview)
+    assert not result['fully_imported'] and result['other_house'] == 1
+    latest = journal.latest_rows(config)
+    assert latest[0]['Family'] == family and latest[0]['Entries'] == 1
+    assert latest[0]['Latest (UTC)'] == datetime.fromtimestamp(FINISHED, UTC).isoformat()
+    assert journal.latest_rows(config | {'source_id': 'another'}) == []
+    assert journal.latest_rows(config | {'environment': 'beta'}) == []
+    assert not preview_scans(config, now=NOW).new_record_ids
+    archive = next((config['data_dir'] / 'bronze' / config['source_id']).glob('*.gz'))
+    assert gzip.decompress(archive.read_bytes()) == path.read_bytes()
+    write(path, [raw | {'other_xp': 11}])
+    with pytest.raises(ValueError, match='conflict'):
+        preview_scans(config, now=NOW)

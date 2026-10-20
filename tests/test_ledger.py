@@ -133,7 +133,13 @@ def test_load_empty_scoped_once_and_read_only(tmp_path):
             cols = ','.join(data)
             db.execute(f"INSERT INTO character_journal ({cols}) VALUES ({','.join('?' for _ in data)})",
                        list(data.values()))
-        assert len(ledger.load(config, db)['movements']) == 1
+        data.update(entry_id='quest', family='quest', record_json=json.dumps(
+            row | {'entry_id': 'quest', 'event': 'QUEST_TURNED_IN', 'family': 'quest',
+                   'sequence': 1, 'arguments': {'3': 10}}))
+        db.execute(f"INSERT INTO character_journal ({cols}) VALUES ({','.join('?' for _ in data)})",
+                   list(data.values()))
+        loaded = ledger.load(config, db)['movements']
+        assert len(loaded) == 1 and loaded[0]['parts'][0]['category'] == 'quest reward'
     assert ledger.load(config | {'data_dir': tmp_path / 'missing'})['movements'] == []
 
 
@@ -181,3 +187,24 @@ def test_same_second_uses_numeric_sequence_even_without_sequence_field():
     for r in rows:
         r.pop('sequence', None)
     assert ledger.project(rows)['movements'][-1]['parts'][0]['category'] == 'coin loot'
+
+
+def test_quest_exact_unmatched_two_same_second_cost_and_reconciliation():
+    quest = money(seq=1) | {'event': 'QUEST_TURNED_IN', 'family': 'quest', 'entry_id': 'q1',
+                            'arguments': {'1': 42, '2': 100, '3': 10}}
+    another = quest | {'entry_id': 'q2', 'sequence': 2, 'arguments': {'3': 20}}
+    cost = quest | {'entry_id': 'cost', 'captured_at': 102, 'arguments': {'3': -5}}
+    records = [quest, quest | {'entry_id': 'xp', 'family': 'xp'}, another, money(10, seq=3),
+               money(20, seq=4), money(10, seq=5),
+               cost, money(-5, at=103), money(11, at=104), money(20, at=105)]
+    out = ledger.project(records, [bags(90, 100), bags(110, 166)])
+    assert out['ledger_version'] == 2
+    assert [m['parts'][0]['category'] for m in out['movements']] == [
+        'quest reward', 'quest reward', 'other', 'quest cost', 'other', 'other']
+    assert out['reconciliation'][0]['unexplained_copper'] == 0
+    assert ledger.project(records + records) == ledger.project(records)
+    for change in ({'machine': 'different'}, {'login_at': None}, {'character': 'Different'}):
+        assert ledger.project([quest, money(10, **change)])['movements'][0]['parts'][0]['category'] == 'other'
+    for arguments in ({'3': 11}, {'3': '10'}, {}, {'3': 0}):
+        assert ledger.project([quest | {'arguments': arguments}, money(10)])['movements'][0]['parts'][0][
+            'category'] == 'other'

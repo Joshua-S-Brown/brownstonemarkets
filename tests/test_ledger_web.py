@@ -118,7 +118,7 @@ def test_gold_cached_categories_reconciliation_lazy_movements(browser, monkeypat
     )
     assert movements[0]["entry_id"] == data["movements"][0]["entry_id"]
     assert movements[0]["machine"] == "fixture" and movements[0]["copper"] == 268
-    assert movements[0]["ledger_version"] == 1 and movements[0]["utc"].endswith("+00:00")
+    assert movements[0]["ledger_version"] == 2 and movements[0]["utc"].endswith("+00:00")
     get(browser, q="2589")
     assert len(calls) == 1
     assert (

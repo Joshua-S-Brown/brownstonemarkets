@@ -33,41 +33,19 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
 **Order** (regroomed 2026-10-19, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading; no rush on launch day; 2026-10-20: quest/XP capture and gold per hour by activity go first, to compare levelling with crafting from day one):
-1. STORY-123 Quest and XP capture
-2. STORY-124 Gold and XP per hour by activity
-3. STORY-114 Launch-day checklist
-4. STORY-115 Cold-start states and evidence unlock
-5. STORY-116 Vendor resale
-6. STORY-118 Loot names and vendor value in farming
-7. STORY-119 Gathering skill-up guide
-8. STORY-120 Camp items check
-9. STORY-121 First seen and scarcity
-10. STORY-122 Full-house load test
+1. STORY-124 Gold and XP per hour by activity
+2. STORY-114 Launch-day checklist
+3. STORY-115 Cold-start states and evidence unlock
+4. STORY-116 Vendor resale
+5. STORY-118 Loot names and vendor value in farming
+6. STORY-119 Gathering skill-up guide
+7. STORY-120 Camp items check
+8. STORY-121 First seen and scarcity
+9. STORY-122 Full-house load test
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
-**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 117 and SPIKE-009/009b.
-
-### STORY-123 — Quest and XP capture
-
-New on 2026-10-20 (product owner, top of Order): to answer *is levelling worth more than crafting early on?*, the app must see quest rewards and experience. Today quest money lands in UI-15's **other** (*quests and flights have no event*), and XP isn't recorded at all, only level from bags.
-
-As a gold maker levelling several characters, I want the addon to record each quest's rewards and how my experience grows, so that the app can compare gold and XP per hour from questing and killing with my crafting and auction time.
-
-Decisions (2026-10-20, product owner: capture now, before launch, so the first live week is measured):
-- **Read-only, event-driven,** like ADDON-12: no requests, timers or actions. Addon version bumps to 0.13.0; account format stays 6 if the new families fit the existing `journal` entry shape, otherwise 7 with older formats readable.
-- **Quests (family `quest`):** guarded `QUEST_TURNED_IN(questID, xpReward, moneyReward)` journals the raw arguments, quest name if already loaded (`QuestUtils_GetQuestName` or `C_QuestLog.GetTitleForQuestID`, guarded; missing stays missing, never requested), zone via `journal.zone()`, level and XP after. A guarded `hooksecurefunc("GetQuestReward", ...)` records the chosen reward index; at turn-in, guarded `GetNumQuestRewards`/`GetQuestItemLink("reward"|"choice", i)`/`GetQuestItemInfo` record reward item links and quantities while the quest frame still holds them. A negative `moneyReward` is a quest cost, kept as reported. Pattern from Journalator's `QuestsClassic.lua` (MIT; credit comment if code is borrowed).
-- **XP (family `xp`), checkpoints not per kill:** the 10,000-entry journal cap (ADDON-12 *Cap*) can't take an entry per kill during levelling. Keep in memory the XP gained since the last checkpoint, split into *quest* (the turn-in's `xpReward`) and *other* (kills, exploration, everything else; never guessed further), from guarded `PLAYER_XP_UPDATE("player")` with `UnitXP`, `UnitXPMax` and `GetXPExhaustion` (rested). Journal one checkpoint at each level-up, zone change (`ZONE_CHANGED_NEW_AREA`), quest turn-in and logout/reload, carrying level, XP, XP max, rested, and the quest/other XP gained since the previous checkpoint, with the previous checkpoint's ID. Level-ups split the gain correctly across the level boundary (XP max differs per level). Unknown values stay missing.
-- **Import:** the new families import, preview and deduplicate like other journal entries (ADDON-12 *Clear/import*), house checks unchanged, raw bytes preserved. Data shows scoped counts and latest time per family.
-- **Ledger:** a positive `PLAYER_MONEY` movement within one second after a `QUEST_TURNED_IN` whose `moneyReward` equals the delta becomes **quest reward** (UI-15 item 8 changes; `ledger_version` 2). Unmatched stays **other**. Quest costs match the same way as **quest cost**.
-
-Acceptance:
-- **Addon:** quest turn-ins and XP checkpoints recorded as above, silent in normal play; missing APIs counted in `/bscan status` like other journal events; a long session stays well under the cap (estimate entries per hour in the hand-off).
-- **Import and Data:** both families import and show; older files import unchanged.
-- **Ledger:** quest rewards and costs categorised; other categories unchanged; reconciliation unchanged.
-- **Offline tests:** addon Lua tests for turn-in recording (with and without loaded name, reward choice, negative money), XP checkpoints (kills, quest XP, level boundary, rested, reload/logout, missing APIs); importer fixtures for the new families (dedupe, conflict, other house); ledger matching (exact, unmatched, two quests in one second, a cost). Extend existing addon, journal and ledger tests before adding files.
-- **In game after launch** (no rehearsal needed now): one session confirms the events fire on Forever; record the result in `status.md`.
-- Depends on nothing. Rules: ADDON-12, ADDON-11 (session/clear), ADDON-13, UI-15, DATA-01, OPS-03. Design: *Character evidence*, *Gold ledger contracts*.
+**Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 117, 123 and SPIKE-009/009b.
 
 ### STORY-124 — Gold and XP per hour by activity
 

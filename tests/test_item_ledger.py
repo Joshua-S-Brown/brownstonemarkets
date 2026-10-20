@@ -178,7 +178,7 @@ def test_additive_gold_sales_today_holdings_and_targets_unchanged(tmp_path):
     items.load(config)
     assert rows == original
     assert (ledger.project(rows), sales.project(rows), stock.load_stock(config, [], NOW), plan()) == before
-    assert ledger.LEDGER_VERSION == 1 and items.ITEM_LEDGER_VERSION == 1
+    assert ledger.LEDGER_VERSION == 2 and items.ITEM_LEDGER_VERSION == 1
 
 
 def test_scoped_read_database_machine_and_empty_read_only(tmp_path):

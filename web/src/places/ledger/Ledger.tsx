@@ -321,7 +321,7 @@ export function Ledger({ source }: { source: string }) {
                 <Evidence data={gold.evidence} />
               </details>
               <p>
-                Quests and flights have no event and remain other. Team sums
+                Unmatched quest money and flights remain other. Team sums
                 include mail between our characters.
               </p>
             </>

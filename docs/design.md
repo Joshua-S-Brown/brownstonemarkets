@@ -639,7 +639,7 @@ state changes. Offline coverage: `tests/test_stock.py`, `tests/test_ledger_web.p
 ## Gold ledger contracts
 
 Rules: [UI-15](requirements.md#ui-15-gold-ledger-story-034). `ledger.load` opens read-only,
-reads source/full-market journal families money/vendor/auction/mail/loot once and bags snapshots
+reads source/full-market journal families money/vendor/auction/mail/loot/quest once and bags snapshots
 once, preserving database machine provenance. `ledger.project` is framework-free and deduplicates
 entry IDs; `sales.order` orders each character/machine/login. `sales.messages`/`sales.project`
 supply inbox identity and seller net copper; `farming.coin_windows` supplies coin matching.
@@ -649,7 +649,7 @@ character, UTC day and category; team totals explicitly sum the groups. Snapshot
 uses capture/sequence intervals and excludes unreadable backpacks; missing baselines leave an
 unknown residual. Stock loads this evidence once, below holdings, and displays cached totals,
 reconciliation and expandable movements/IDs; a ledger failure shows only in the Gold area. Today and existing Stock/sales
-contracts are unchanged. No storage migration, addon capture or price path.
+contracts are unchanged. No storage migration or price path.
 
 
 ## Item ledger contracts

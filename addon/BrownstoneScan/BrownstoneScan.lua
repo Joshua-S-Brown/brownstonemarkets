@@ -10,7 +10,7 @@
 local ADDON = "BrownstoneScan"
 local SCHEMA_VERSION = 6
 local SCAN_VERSION = 4
-local ADDON_VERSION = "0.12.8"
+local ADDON_VERSION = "0.13.0"
 -- Each listing is saved as one short string in this field order (schemas 3/4), with names stored
 -- once per scan, together with sellers, level types, links and item references. Brownstone does all pricing; the addon only records what the client reports.
 local LISTING_FORMAT = "item_id:quantity:buyout:min_bid:bid:flags:name_index:seller_index:time_left:quality:level:level_type_index:link_index"
@@ -862,9 +862,11 @@ end
 -- Economy journal. Event-driven read APIs and secure post-hooks only.
 ---------------------------------------------------------------------------
 local journal = { cap = 10000, windows = {}, hooks = {}, missing = {}, events = {}, lastInbox = nil }
+journal.missingReads = {}  -- read APIs this client lacks, counted per load like fired events
 local journalRejected = 0  -- events this client rejected, reported once with the missing hooks
 local journalEvents = {
     PLAYER_MONEY = "money", BAG_UPDATE_DELAYED = "bags",
+    QUEST_TURNED_IN = "quest", PLAYER_XP_UPDATE = "xp", ZONE_CHANGED_NEW_AREA = "xp",
     MAIL_SHOW = "mail", MAIL_CLOSED = "mail", MAIL_INBOX_UPDATE = "mail",
     MAIL_SEND_INFO_UPDATE = "mail", MAIL_SEND_SUCCESS = "mail", MAIL_FAILED = "mail",
     AUCTION_HOUSE_SHOW = "auction", AUCTION_HOUSE_CLOSED = "auction",
@@ -883,6 +885,7 @@ local journalEvents = {
 -- Ordinary refreshes are counted; profession refreshes also save changed lists.
 local journalCountOnly = { AUCTION_ITEM_LIST_UPDATE = true }
 local journalHooks = {
+    { "GetQuestReward", "quest" },
     { "TakeInboxMoney", "mail" }, { "TakeInboxItem", "mail" }, { "AutoLootMailItem", "mail" },
     { "SendMail", "mail" }, { "ReturnInboxItem", "mail" }, { "DeleteInboxItem", "mail" },
     { "SetSendMailMoney", "mail" }, { "SetSendMailCOD", "mail" },
@@ -1543,10 +1546,117 @@ function journal.protect(fn, label, ...)
     end
 end
 
+-- Quest/XP observation is entirely event-driven. Missing read APIs are counted, never requested.
+function journal.xpRead()
+    local result = {}
+    local readers = { level = "UnitLevel", xp = "UnitXP", xp_max = "UnitXPMax", rested = "GetXPExhaustion" }
+    for key, name in pairs(readers) do
+        if type(_G[name]) ~= "function" then
+            local diagnostics = BrownstoneScanDB.journal_diagnostics
+            diagnostics.missing_reads = diagnostics.missing_reads or {}
+            diagnostics.missing_reads[name] = (diagnostics.missing_reads[name] or 0) + 1
+        end
+        result[key] = safe(_G[name], "player")
+    end
+    return result
+end
+
+function journal.xpUpdate()
+    local current, previous = journal.xpRead(), journal.lastXP
+    local gain
+    if previous and current.level and previous.level and current.xp and previous.xp then
+        if current.level == previous.level then gain = current.xp - previous.xp
+        elseif current.level == previous.level + 1 and previous.xp_max and not journal.xpDropped then
+            gain = previous.xp_max - previous.xp + current.xp
+        end
+    end
+    -- XP falling within one level means UnitLevel lagged the reset: the baseline can't span the boundary.
+    if gain and gain < 0 then journal.xpDropped = true
+    elseif previous and current.level ~= previous.level then journal.xpDropped = nil end
+    if gain and gain >= 0 then
+        journal.otherXP = (journal.otherXP or 0) + gain
+        if gain > 0 then journal.lastGain = gain end
+    else journal.xpUnknown = true end
+    journal.lastXP = current
+    return current, gain
+end
+
+-- Saves one checkpoint: all XP gained since the previous one, less the turn-in's reported quest XP.
+-- Other XP that would come out negative (the quest's XP never seen) stays missing.
+function journal.xpSave(event, arguments, questXP)
+    local context = journal.xpUpdate()
+    if event == "PLAYER_LEVEL_UP" then context.level = arguments[1] end
+    local quest = event == "QUEST_TURNED_IN" and questXP or 0
+    context.quest_xp = quest
+    local other = type(quest) == "number" and (journal.otherXP or 0) - quest
+    if not journal.xpUnknown and other and other >= 0 then context.other_xp = other end
+    context.previous_checkpoint_id = journal.previousXP
+    if journal.add(event, "xp", arguments, context) then
+        journal.previousXP = BrownstoneScanDB.journal[#BrownstoneScanDB.journal].entry_id
+        journal.otherXP, journal.xpUnknown, journal.lastGain = 0, nil, nil
+    end
+end
+
+-- A deferred turn-in or level-up is saved before any later checkpoint, so none is lost at logout.
+function journal.xpCheckpoint(event, arguments, questXP)
+    local quest, level = journal.pendingQuest, journal.pendingLevel
+    journal.pendingQuest, journal.pendingLevel = nil, nil
+    if quest then journal.xpSave("QUEST_TURNED_IN", quest, quest[2]) end
+    if level and event ~= "PLAYER_LEVEL_UP" then journal.xpSave("PLAYER_LEVEL_UP", { n = 1, level }) end
+    journal.xpSave(event, arguments, questXP)
+end
+
+function journal.questRewards()
+    local result = { items = {} }
+    local missing = BrownstoneScanDB.journal_diagnostics.missing_reads
+    for _, name in ipairs({ "GetNumQuestRewards", "GetNumQuestChoices", "GetQuestItemLink", "GetQuestItemInfo" }) do
+        if type(_G[name]) ~= "function" then missing[name] = (missing[name] or 0) + 1 end
+    end
+    for _, kind in ipairs({ "reward", "choice" }) do
+        local reader = GetNumQuestRewards
+        if kind == "choice" then reader = GetNumQuestChoices end
+        local count = boundedCount(reader, 100)
+        result[kind .. "_count"] = count
+        for i = 1, count or 0 do
+            result.items[#result.items + 1] = { kind = kind, index = i,
+                link = safe(GetQuestItemLink, kind, i), info = readAll(GetQuestItemInfo, kind, i) }
+        end
+    end
+    return result
+end
+
+function journal.questTurnIn(arguments)
+    local context = journal.xpRead()
+    if type(QuestUtils_GetQuestName) ~= "function" and
+        not (C_QuestLog and type(C_QuestLog.GetTitleForQuestID) == "function") then
+        local missing = BrownstoneScanDB.journal_diagnostics.missing_reads
+        missing.quest_name = (missing.quest_name or 0) + 1
+    end
+    context.quest_name = safe(QuestUtils_GetQuestName, arguments[1]) or
+        (C_QuestLog and safe(C_QuestLog.GetTitleForQuestID, arguments[1]))
+    context.zone = journal.zone()
+    context.rewards = journal.questRewards()
+    journal.add("QUEST_TURNED_IN", "quest", arguments, context)
+    -- The client may report the turn-in before or after the quest's XP update. Already gained: save now.
+    -- Otherwise wait for the next XP update, so kill XP before the turn-in isn't netted against the quest.
+    local current, quest = journal.xpUpdate(), arguments[2]
+    if type(quest) == "number" and quest > 0 and current.xp and journal.lastGain ~= quest then
+        local earlier = journal.pendingQuest
+        journal.pendingQuest = nil
+        if earlier then journal.xpCheckpoint("QUEST_TURNED_IN", earlier, earlier[2]) end
+        journal.pendingQuest = arguments
+    else
+        journal.xpCheckpoint("QUEST_TURNED_IN", arguments, quest)
+    end
+end
+
 function journal.hook(name, family, label, ...)
     -- Container use is an economy action only at a merchant; elsewhere it can equip/use items.
     if name == "UseContainerItem" and not journal.windows.merchant then return end
     local context = { hook = true }
+    if name == "GetQuestReward" then
+        context.reward_choice = select(1, ...)
+    end
     if name == "SendMail" then
         context.draft = journal.copy(journal.lastDraft)
         context.draft_is_last_observed = true
@@ -1577,7 +1687,8 @@ function journal.installHooks()
         end
     end
     db.journal_diagnostics = { rejected_events = journal.copy(missingEvents), missing_hooks = {},
-        installed_hooks = journal.copy(journal.hooks), fired_events = journal.events }
+        installed_hooks = journal.copy(journal.hooks), fired_events = journal.events,
+        missing_reads = journal.missingReads }
     for label in pairs(journal.missing) do
         if not journal.hooks[label] then db.journal_diagnostics.missing_hooks[#db.journal_diagnostics.missing_hooks + 1] = label end
     end
@@ -1592,6 +1703,31 @@ end
 
 function journal.observe(event, ...)
     if not BrownstoneScanDB or not BrownstoneScanDB.journal then return end
+    if event == "PLAYER_XP_UPDATE" then
+        if select(1, ...) ~= "player" then return end
+        journal.events[event] = (journal.events[event] or 0) + 1
+        local _, gain = journal.xpUpdate()
+        local quest = journal.pendingQuest
+        if quest then
+            journal.pendingQuest = nil
+            if gain ~= quest[2] then journal.xpUnknown = true end  -- this update isn't the quest's XP
+            journal.xpSave("QUEST_TURNED_IN", quest, quest[2])
+        end
+        if journal.pendingLevel and journal.lastXP.level == journal.pendingLevel then
+            journal.xpCheckpoint("PLAYER_LEVEL_UP", { n = 1, journal.pendingLevel })
+        end
+        return
+    elseif event == "PLAYER_LEVEL_UP" then
+        journal.pendingLevel = select(1, ...)
+        local level = safe(UnitLevel, "player")
+        if level and level ~= journal.pendingLevel then return end
+        journal.pendingLevel = nil
+        journal.xpCheckpoint(event, journal.args(...))
+        return
+    elseif event == "PLAYER_LOGOUT" then
+        journal.xpCheckpoint(event, journal.args(...))
+        return
+    end
     local family = journalEvents[event]
     if not family then return end
     -- Only the player's own casts while a crafting window is open: combat and other spells are not economy evidence.
@@ -1629,7 +1765,9 @@ function journal.observe(event, ...)
         TRAINER_CLOSED = "trainer" }
     if open[event] then journal.windows[open[event]] = true end
     local arguments = journal.args(...)
-    if event == "TRADE_SKILL_SHOW" or event == "CRAFT_SHOW" then
+    if event == "QUEST_TURNED_IN" then journal.questTurnIn(arguments)
+    elseif event == "ZONE_CHANGED_NEW_AREA" then journal.xpCheckpoint(event, arguments)
+    elseif event == "TRADE_SKILL_SHOW" or event == "CRAFT_SHOW" then
         local inventory = professions.inventory()
         local result, failure = professions.window(event, arguments, inventory)
         if result ~= "recorded" then
@@ -1746,6 +1884,9 @@ local function printStatus()
     characterStatus()
     say(("%d journal entries; cap %d; missing hooks: %s"):format(#BrownstoneScanDB.journal, journal.cap,
         table.concat(BrownstoneScanDB.journal_diagnostics.missing_hooks, ", ")))
+    for name, count in pairs(BrownstoneScanDB.journal_diagnostics.missing_reads or {}) do
+        say(("Missing read API %s: %d"):format(name, count))
+    end
     say(("Events the client rejected: %s."):format(#missingEvents > 0 and table.concat(missingEvents, ", ") or "none"))
     say(("%d saved scan(s). API: %s. Last: %s."):format(n, tostring(detectApi()),
         last and (last.scan_id .. " " .. last.status .. ", " .. (last.listing_count or 0) .. " listings") or "none"))
@@ -1909,6 +2050,17 @@ frame:SetScript("OnEvent", function(_, event, ...)
             startSession(arg1, arg2)
             -- At a fresh login bag contents are not loaded yet (beta 09 Oct: every login's first bag entry
             -- listed the whole bag as gains), so the first settled bag update sets that baseline instead.
+            journal.lastXP = journal.xpRead()
+            journal.otherXP = 0
+            local name, realm, faction = safe(UnitName, "player"), safe(GetRealmName), safe(UnitFactionGroup, "player")
+            journal.previousXP = nil
+            for i = #BrownstoneScanDB.journal, 1, -1 do
+                local entry = BrownstoneScanDB.journal[i]
+                if entry.family == "xp" and entry.character == name and entry.realm == realm and entry.faction == faction then
+                    journal.previousXP = entry.entry_id
+                    break
+                end
+            end
             journal.lastMoney = journal.money()
             journal.lastBags = arg1 ~= true and journal.bags() or nil
         end

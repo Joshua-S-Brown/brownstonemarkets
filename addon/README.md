@@ -1,4 +1,4 @@
-# Brownstone Scan 0.12.8
+# Brownstone Scan 0.13.0
 
 A **read-only** auction house scanner, character snapshot recorder and silent economy journal for WoW Forever. It captures listings, seller and variant evidence, and official item-reference data for local market research. Brownstone imports its file through an addon source (see the main README and `docs/requirements.md` → *Addon scans*).
 
@@ -306,6 +306,27 @@ counts and machine. Incomplete container coverage has unknown totals. **Fully im
 both scans and snapshots, including snapshot-only files. New/duplicate/other-house snapshot rows
 appear beside scans in page and CLI previews. All matching snapshots in a selected file import;
 `--scan` restricts scans only. Character data does not yet change Today.
+
+## Quest and XP capture (0.13.0)
+
+ADDON-12 specifies capture; UI-15 specifies quest money matching (ledger version 2).
+`quest` turn-ins retain raw ID/XP/money arguments, loaded `quest_name`, `zone`, level/XP,
+`rewards` (reward/choice counts and indexed links/counted info tuples; quantity is info
+position 3). The `GetQuestReward` secure post-hook separately saves `reward_choice`; it is
+never a success claim or a choice inferred for a later turn-in.
+`xp` checkpoints retain `level`, `xp`, `xp_max`, `rested`, `quest_xp`, nullable `other_xp`
+and `previous_checkpoint_id`. XP updates only accumulate in memory; turn-in, level-up, zone
+change and logout/reload save checkpoints. A turn-in reported before its XP waits for the next
+XP update, so earlier kill XP stays other; anything still waiting is saved before the next checkpoint. Reload establishes a fresh baseline and links the
+last saved checkpoint for that character. Missing read APIs are counted in `/bscan status`.
+Normal capture is silent. No timers, requests or game actions are added.
+
+Pending after launch: verify one Forever session's turn-in/reward choice, XP, level-up,
+zone change and reload/logout events, then record the observed result in `docs/status.md`.
+No rehearsal is required before launch. At 20 quests + 10 zone changes + 2 level-ups +
+1 logout/hour this adds 73 entries/hour (60 hook/quest/XP + 13 other checkpoints), regardless
+of kills: about 137 hours to reach 10,000 from these families alone; existing journal
+families also consume the shared cap. Measure actual event/byte rates after launch.
 
 ## Event journal: format 6 (STORY-033)
 

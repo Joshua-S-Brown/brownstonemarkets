@@ -15,7 +15,7 @@ from .markets import scope_predicate
 from .scans import _utc
 from .storage import has_table
 
-FAMILIES = {"auction", "mail", "craft", "vendor", "loot", "money", "bags", "system"}
+FAMILIES = {"auction", "mail", "craft", "vendor", "loot", "money", "bags", "system", "quest", "xp"}
 
 
 def _typed(value):

@@ -28,7 +28,7 @@ def test_skills_both_apis_level_missing_and_raw_tuples():
     ''')
     fire(g, "PLAYER_LOGOUT")
     record = python_value(g.BrownstoneScanDB.snapshots)[-1]
-    assert record["level"] == 22 and record["addon_version"] == "0.12.8"
+    assert record["level"] == 22 and record["addon_version"] == "0.13.0"
     assert record["skills"]["legacy"]["rows"][1]["rank"] == 55
     assert "skill_id" not in record["skills"]["legacy"]["rows"][1]
     assert record["skills"]["modern"]["indexes"]["n"] == 3
@@ -90,7 +90,7 @@ def test_recipe_windows_change_only_raw_quantities_filters_missing_no_actions(cr
     assert len(g.messages) == before and g.forbiddenCalls == 0
     lua.execute(f'{line}=nil; {count}=nil')
     fire(g, event + "_UPDATE")
-    assert len(entries(g)) == first + 2
+    assert len([r for r in entries(g) if r["family"] == "craft"]) == first + 2
 
 
 @pytest.mark.parametrize("event", ["TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "CRAFT_SHOW", "CRAFT_UPDATE"])
@@ -647,7 +647,7 @@ def test_forever_close_list_and_failure_diagnostics_import_and_project(tmp_path)
     fire(g, "TRADE_SKILL_CLOSE")
     fire(g, "PLAYER_LOGOUT")
     raw = entries(g)
-    assert ["trade_skill_read" in e for e in raw] == [True, False]
+    assert ["trade_skill_read" in e for e in raw if e["family"] == "craft"] == [True, False]
     path = write(tmp_path / "forever.lua", raw, python_value(g.BrownstoneScanDB.snapshots))
     config = addon_source(tmp_path / "data", path)
     import_scans(config, now=datetime.fromtimestamp(raw[0]["captured_at"], UTC))
