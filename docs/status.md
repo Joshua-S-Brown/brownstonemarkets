@@ -9,6 +9,10 @@ contracts in [design](design.md); history and dated beta reports live in Git.
   the cheapest cash craft per point after captured team stock, then walk auction listings. Shared
   prefixes retain owners, mail, separate held worth and measured farm alternatives; short supply is
   incomplete. Partial/stale captures say at least. Synthetic hires retain their original costs.
+  STORY-113 walks each window with and without holdings and keeps the further, then cheaper walk
+  (ties keep stock); a discarded walk spends nothing, and a note gives both window costs when held
+  stock is left unused. Copied beta: Basilly Tailoring 32→57 costs 1,514c (was 1,559c with held
+  stock); targets reached early can cost more than before, since they share the window's walk.
   Rules: CRAFT-11; contracts: Team contracts. Offline: progression/session/hiring and web tests.
 
 - **Replay (STORY-006):** `python -m brownstone rebuild --output work/rebuilt-data` replays

@@ -481,4 +481,9 @@ def reach_notes(estimate):
             notes.append(f"Or farm ≈ {row['farm_hours']:.1f} h at {rate['zone'] or 'unknown zone'} "
                          f"({rate['character'][0]}’s own rate) · your own past sessions, not a promise; "
                          'launch respawn competition differs; listings are not sales.')
+    unused = estimate.get('unused_stock')
+    if unused:
+        notes.append(f"Buying everything is cheaper over these {unused['points']} points: "
+                     f"{format_money(unused['cost_copper'])}, against {format_money(unused['held_cost_copper'])} "
+                     'using held stock; held stock stays for later.')
     return notes

@@ -206,9 +206,9 @@ def _populate(group, state, rows, prices, board, window, ladders, metrics, max_a
     rank, maximum = group['rank'], group['max_rank']
     if rank is not None and maximum is not None and rank >= maximum:
         group['note'] = 'train the next tier first'
-    walk = (skillup_walk(group['entries'], state, rank, min(rank + window, maximum), prices,
-                         supplies=supplies, character=character)
-            if rank is not None and maximum is not None else None)
+    walk, unused = (_kept_walk(group['entries'], state, rank, min(rank + window, maximum), prices,
+                               supplies, character)
+                    if rank is not None and maximum is not None else (None, None))
     for catalog, recipe in group['entries']:
         status = today_characters.recipe_status(recipe, state)
         required = recipe.get('required_skill')
@@ -218,6 +218,7 @@ def _populate(group, state, rows, prices, board, window, ladders, metrics, max_a
         row = rows.get((action_board.catalog_identity(catalog), recipe['recipe_id']),
                        {'profit_copper': None, 'action': 'intermediate: not ranked by the Action Board'})
         estimate = estimate_cost(group['entries'], state, rank, maximum, required, prices, walk)
+        estimate |= {'unused_stock': unused} if unused else {}
         group['recipes'].append(recipe | status | {'catalog_id': action_board.catalog_identity(catalog),
             'points_needed': required - rank, 'profit_copper': row['profit_copper'],
             'vendor_price_cap_copper': row.get('vendor_price_cap_copper'), 'vendor_capped': row.get('vendor_capped'),
@@ -227,6 +228,28 @@ def _populate(group, state, rows, prices, board, window, ladders, metrics, max_a
     group['recipes'].sort(key=lambda r: summary_sort({'best': r, 'profession': group['profession']}))
     group['best'], group['alternative'] = choose_best(group['recipes'])
     del group['entries']
+
+
+def _kept_walk(entries, state, rank, stop, prices, supplies, character):
+    """Walk the window with and without holdings; keep the further, then cheaper walk (ties: without).
+
+    Only the kept walk's copy spends the shared pool, listings and surplus (CRAFT-11).
+    """
+    copies = {key: supplies | {'pool': pool, 'bought': dict(supplies['bought']),
+                               'reserved': dict(supplies['reserved'])}
+              for key, pool in (('held', [dict(u) for u in supplies['pool']]), ('buy', []))}
+    copies['buy']['at_least'] = False
+    walks = {key: skillup_walk(entries, state, rank, stop, prices, supplies=copy, character=character)
+             for key, copy in copies.items()}
+    cost = {key: sum(s['cost_copper'] for s in steps) for key, (steps, _) in walks.items()}
+    held_wins = (len(walks['held'][0]), -cost['held']) > (len(walks['buy'][0]), -cost['buy'])
+    kept = 'held' if held_wins else 'buy'
+    supplies.update({key: copies[kept][key] for key in (('pool', 'bought', 'reserved') if held_wins
+                                                         else ('bought', 'reserved'))})
+    used = any(m['held'] for s in walks['held'][0] for m in s.get('materials', []))
+    unused = ({'points': len(walks['buy'][0]), 'cost_copper': cost['buy'], 'held_cost_copper': cost['held']}
+              if used and cost['buy'] < cost['held'] and len(walks['held'][0]) == len(walks['buy'][0]) else None)
+    return walks[kept], unused
 
 
 def learnable(recipe):

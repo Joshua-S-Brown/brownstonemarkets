@@ -526,6 +526,7 @@ evaluate_recipe supplies team-aware cautious costs, including unranked intermedi
 expected_crafts/estimate_cost use rational yellow expectations. One skillup_walk/window/cap and
 listing ladders serve all targets at their prefix. `progression_stock` supplies one base-holdings/listing
 pool per Team/session composition, tried on copies before committing each cash-cheapest point;
+`_kept_walk` walks each window on copies with and without the pool and commits only the kept walk;
 retained intermediate holdings replace their leaf subtree. Whole-stack surplus and rational yellow
 quantities carry forward. Prefixes retain held owners/worth, buys and the best scoped UI-13 rate;
 `views.today_rows.reach_notes` labels them for both adapters. Hire walks omit the pool; Team's profession comparison reuses Team's results.

@@ -407,6 +407,47 @@ def test_reach_cash_choice_changes_then_returns_to_auction_cheapest():
     assert supplies['reserved'] == {1: 2}
 
 
+@pytest.mark.parametrize('case,held,training,listings,kept_cost,spent', [
+    ('lower', 5, 0, {1: [(1, 10, 10)] * 10}, 0, 5),  # Held cloth is free cash: with holdings kept.
+    ('raise', 1, 100, {1: [(10, 200, 20)]}, 200, 0),  # Held cloth adds training; both buy the stack.
+    ('tie', 1, 0, {1: [(10, 200, 20)]}, 200, 0),  # Equal cash keeps the stock.
+    ('further', 5, 100, {}, 100, 5),  # Only held cloth reaches; dearer but further wins.
+])
+def test_reach_keeps_further_then_cheaper_of_with_and_without_holdings(case, held, training, listings,
+                                                                       kept_cost, spent):
+    from test_today_holdings import evidence as stock_evidence
+
+    from brownstone.progression import reach_supplies, skillup_walk
+    from views.today_rows import reach_notes
+
+    c = progression_catalog()
+    c['items_by_id'][140] = c['items_by_id'][1] | {'item_id': 140, 'name': 'Held cloth'}
+    base = c['recipes_by_id'][30]
+    base['inputs'] = [{'item_id': 1, 'quantity': 1}]
+    c['recipes_by_id'][34] = base | {'recipe_id': 34, 'name': 'Held route', 'training_cost_copper': training,
+                                     'inputs': [{'item_id': 140, 'quantity': 1}]}
+    c['recipes'], c['items'] = list(c['recipes_by_id'].values()), list(c['items_by_id'].values())
+    supplies = reach_supplies(stock_evidence((140, held, 'Basilly', 'bags')), {}, listings, NOW, 24, .05)
+    estimate = rows(calculate(c, window=5, supplies=supplies))[0]['estimate']
+    assert estimate['complete'] and estimate['cost_copper'] == kept_cost
+    assert sum(r['units'] for r in estimate['held']) == spent
+    assert sum(u['units'] for u in supplies['pool']) == held - spent
+    note = [n for n in reach_notes(estimate) if n.startswith('Buying everything')]
+    if case != 'raise':
+        assert not note and 'unused_stock' not in estimate
+        return
+    assert note == ['Buying everything is cheaper over these 5 points: 2s, against 3s using held stock; '
+                    'held stock stays for later.']
+    assert not estimate['held'] and not estimate['holdings_at_least']
+    assert [s['training_cost_copper'] for s in estimate['steps']] == [0] * 5
+    # Only the kept walk reserved the listing and carries its surplus; the next character gets the stock.
+    assert supplies['reserved'] == {1: 1} and supplies['bought'] == {1: 5}  # One whole listing, 5 spare.
+    data = evidence(c)
+    walk, gap = skillup_walk([(c, c['recipes_by_id'][34])], data, 8, 9, {1: 10},
+                             supplies=supplies, character=('Zed', 'Beta', 'Alliance'))
+    assert gap is None and walk[0]['materials'][0]['held'][0]['mail']
+
+
 def test_reach_listing_depth_surplus_yellow_shortfall_and_measured_farm_hours():
     from test_farming import loot
 
