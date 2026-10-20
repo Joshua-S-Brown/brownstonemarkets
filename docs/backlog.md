@@ -32,19 +32,68 @@ Launch market remains Forever US, Roleplaying, Alliance (`forever-us-roleplaying
 - An optional AI narration layer can come later. It may only explain those defined metrics, never invent numbers (*Out of scope*).
 - Time-of-day and weekday patterns need weeks of live scans (*Market timing* under Later). Everything in Next works on a single scan or a few, so it can be built and tested on beta scans now.
 
-**Order** (regroomed 2026-10-19, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading; no rush on launch day):
-1. STORY-114 Launch-day checklist
-2. STORY-115 Cold-start states and evidence unlock
-3. STORY-116 Vendor resale
-4. STORY-118 Loot names and vendor value in farming
-5. STORY-119 Gathering skill-up guide
-6. STORY-120 Camp items check
-7. STORY-121 First seen and scarcity
-8. STORY-122 Full-house load test
+**Order** (regroomed 2026-10-19, product owner: levelling characters and professions comes first, since the first weeks after launch are for levelling and scanning, not trading; no rush on launch day; 2026-10-20: quest/XP capture and gold per hour by activity go first, to compare levelling with crafting from day one):
+1. STORY-123 Quest and XP capture
+2. STORY-124 Gold and XP per hour by activity
+3. STORY-114 Launch-day checklist
+4. STORY-115 Cold-start states and evidence unlock
+5. STORY-116 Vendor resale
+6. STORY-118 Loot names and vendor value in farming
+7. STORY-119 Gathering skill-up guide
+8. STORY-120 Camp items check
+9. STORY-121 First seen and scarcity
+10. STORY-122 Full-house load test
 
 **Web app lane (decided 2026-10-16, product owner; finished 2026-10-17):** the owner approved the clickable prototype in `docs/prototype/web-app.html` as the direction: an app shell, an inspector that opens records in place, and Today as one route. The rules are UI-18 in `requirements.md` and the structure is *Web app (UI-18)* in `design.md`. Page stories compare their 1280/390 px screenshots with the matching prototype view.
 
 **Done** (outcomes in `status.md` and `requirements.md`; story text in Git): STORY-006, 015b, 021, 025, 030, 031, 032, 033, 034, 034b, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048, 049, 050, 051, 052, 053, 054, 055, 056, 057, 058, 059, 060, 061, 062, 063, 064, 065, 066, 067, 068, 069, 070, 071, 072, 073, 074, 075, 076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 091, 092, 093, 094, 095, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 117 and SPIKE-009/009b.
+
+### STORY-123 — Quest and XP capture
+
+New on 2026-10-20 (product owner, top of Order): to answer *is levelling worth more than crafting early on?*, the app must see quest rewards and experience. Today quest money lands in UI-15's **other** (*quests and flights have no event*), and XP isn't recorded at all, only level from bags.
+
+As a gold maker levelling several characters, I want the addon to record each quest's rewards and how my experience grows, so that the app can compare gold and XP per hour from questing and killing with my crafting and auction time.
+
+Decisions (2026-10-20, product owner: capture now, before launch, so the first live week is measured):
+- **Read-only, event-driven,** like ADDON-12: no requests, timers or actions. Addon version bumps to 0.13.0; account format stays 6 if the new families fit the existing `journal` entry shape, otherwise 7 with older formats readable.
+- **Quests (family `quest`):** guarded `QUEST_TURNED_IN(questID, xpReward, moneyReward)` journals the raw arguments, quest name if already loaded (`QuestUtils_GetQuestName` or `C_QuestLog.GetTitleForQuestID`, guarded; missing stays missing, never requested), zone via `journal.zone()`, level and XP after. A guarded `hooksecurefunc("GetQuestReward", ...)` records the chosen reward index; at turn-in, guarded `GetNumQuestRewards`/`GetQuestItemLink("reward"|"choice", i)`/`GetQuestItemInfo` record reward item links and quantities while the quest frame still holds them. A negative `moneyReward` is a quest cost, kept as reported. Pattern from Journalator's `QuestsClassic.lua` (MIT; credit comment if code is borrowed).
+- **XP (family `xp`), checkpoints not per kill:** the 10,000-entry journal cap (ADDON-12 *Cap*) can't take an entry per kill during levelling. Keep in memory the XP gained since the last checkpoint, split into *quest* (the turn-in's `xpReward`) and *other* (kills, exploration, everything else; never guessed further), from guarded `PLAYER_XP_UPDATE("player")` with `UnitXP`, `UnitXPMax` and `GetXPExhaustion` (rested). Journal one checkpoint at each level-up, zone change (`ZONE_CHANGED_NEW_AREA`), quest turn-in and logout/reload, carrying level, XP, XP max, rested, and the quest/other XP gained since the previous checkpoint, with the previous checkpoint's ID. Level-ups split the gain correctly across the level boundary (XP max differs per level). Unknown values stay missing.
+- **Import:** the new families import, preview and deduplicate like other journal entries (ADDON-12 *Clear/import*), house checks unchanged, raw bytes preserved. Data shows scoped counts and latest time per family.
+- **Ledger:** a positive `PLAYER_MONEY` movement within one second after a `QUEST_TURNED_IN` whose `moneyReward` equals the delta becomes **quest reward** (UI-15 item 8 changes; `ledger_version` 2). Unmatched stays **other**. Quest costs match the same way as **quest cost**.
+
+Acceptance:
+- **Addon:** quest turn-ins and XP checkpoints recorded as above, silent in normal play; missing APIs counted in `/bscan status` like other journal events; a long session stays well under the cap (estimate entries per hour in the hand-off).
+- **Import and Data:** both families import and show; older files import unchanged.
+- **Ledger:** quest rewards and costs categorised; other categories unchanged; reconciliation unchanged.
+- **Offline tests:** addon Lua tests for turn-in recording (with and without loaded name, reward choice, negative money), XP checkpoints (kills, quest XP, level boundary, rested, reload/logout, missing APIs); importer fixtures for the new families (dedupe, conflict, other house); ledger matching (exact, unmatched, two quests in one second, a cost). Extend existing addon, journal and ledger tests before adding files.
+- **In game after launch** (no rehearsal needed now): one session confirms the events fire on Forever; record the result in `status.md`.
+- Depends on nothing. Rules: ADDON-12, ADDON-11 (session/clear), ADDON-13, UI-15, DATA-01, OPS-03. Design: *Character evidence*, *Gold ledger contracts*.
+
+### STORY-124 — Gold and XP per hour by activity
+
+New on 2026-10-20 (product owner, top of Order). Replaces *Is it paying off?* under Later (first version) and absorbs *Tonight's debrief*.
+
+As a gold maker, I want to see what an hour of each kind of play earns per character and level band, so that I know whether questing, farming or crafting and the auction house is the better use of my time, and when that changes.
+
+Decisions:
+- **Sessions:** a play session is one login (ADDON-11 `sessions` marker, reloads included) to that character's last journal entry before the next login. Minutes come from the journal's own times; no `RequestTimePlayed`. Sessions with gaps longer than `idle_minutes` (UI-13's setting) count only active stretches.
+- **Activities** from evidence, never names:
+  - **Market time:** minutes with an auction, mailbox, merchant, trainer or crafting window observed open (ADDON-12 window flags), merged where they overlap.
+  - **World time:** the rest of active session time (questing, killing, gathering, travel; not split further).
+- **Gold:** UI-15 movements by category per session: *world gold* = quest reward + coin loot + vendor sale; *market gold* = auction sale + deposit refund − auction deposit − auction purchase − vendor purchase − training; mail between own characters excluded. Each shown in copper with its categories; **other** shown separately, never assigned.
+- **Loot value:** items gained in world time (UI-16 gathered/looted and quest reward items) valued at the cautious after-cut price, else vendor price, labelled *value if sold, not gold* and kept separate from gold.
+- **XP** (needs STORY-123; *XP not captured* before it): quest XP and other XP per session, XP per hour of world time, levels gained.
+- **Views:** the character record gets *Is it paying off?*: last session (the nightly debrief: minutes, gold by category, loot value, XP, levels) and per level band of five levels (1–5, 6–10, …): world gold/hour, loot value/hour, XP/hour, market gold/hour. Team gets one summary row per character and a team total. Today's Level up links to it.
+- **Honesty:** own past sessions, not a promise; launch competition differs; market gold per hour includes sales of items gathered or crafted earlier (no cost basis yet: *Lots and cost basis* under Later). Thin evidence (under 30 minutes in a band) says so.
+
+Acceptance:
+- Sessions, active minutes and window minutes from journal evidence as above; overlapping windows counted once.
+- Gold per hour by activity from UI-15 categories; loot value separate and labelled; XP when captured.
+- Per-session and per-band views in the character record and a Team summary; Today Level up link.
+- **Offline tests:** session boundaries (reload, idle gap, two characters), window minute merging, category grouping and the excluded own mail, loot valuation (auction, vendor, none), XP with and without STORY-123 evidence, level bands, thin-evidence label. Extend ledger, item-ledger and Team tests before adding files.
+- **Real data:** the beta copy's characters per session and band (XP shows *not captured*); report Arille's and Baspion's world against market gold per hour.
+- Compare the record and Team at 1280 and 390 px with the prototype (UI-18).
+- Depends on STORY-123 for quest and XP figures; everything else works on today's evidence. Rules: UI-15, UI-16, UI-13, ADDON-11, ADDON-12, *Team character cards*, MONEY-01/02. Design: *Gold ledger contracts*, *Item ledger contracts*, *Farming (STORY-065, STORY-074, STORY-075, STORY-077)*, *Team contracts*.
 
 ### STORY-114 — Launch-day checklist
 
@@ -177,7 +226,6 @@ Acceptance:
 
 **Ideas from the 2026-10-19 grooming** (not scheduled; the product owner asked for bolder ideas after using the app on the beta copy):
 - **Follow the levelling wave:** UI-19 removal speed grouped by catalog skill band (CRAFT-10), so the market's current buying moves from band to band are visible (*Linen and Copper moving; Wool starting*): what to gather and level next. Needs a week of live scans. M.
-- **Tonight's debrief:** after each play session (ADDON-11 login markers), one card of gold in and out, gathered, crafted, posted and sold against the plan. The nightly start of *Is it paying off?*. M.
 - **Which gatherer feeds the team:** for each uncovered gathering profession, the share of the team's reach material bill (CRAFT-11 buys) it would supply, with the item-to-profession link from evidence, never names. Extends STORY-117. M.
 - **Keep, post or vendor in game:** the decision in the bag tooltip. Needs Brownstone to write a file the addon reads, which *In-game plan list* under *Deferred* rules out today; a product decision, after launch.
 - **Polish pass:** when every line is Low confidence, say it once; round displayed expected units (*≈ 70*, not *≈ 69.7508*); Opportunities' negative *Vendor value* reads *vendoring loses X*; collapse repeated *Not enough farming history* rows; open on the only enabled source. S.
@@ -185,8 +233,6 @@ Acceptance:
 **Holdings per target** (found in the STORY-113 review, 2026-10-19; needs an owner decision): STORY-113 compares with and without holdings once per profession window, and every target slices the kept walk. A target reached early can then cost more than with its own stock: on the copied beta, Basilly's Heavy Linen Gloves went from 0c (all held) to 1,215c and the linen shirts and robe from 30c to 1,245c, because the window's walk buys the whole Linen listing first. The note also always cites the whole window (*these 25 points*), even on Blue Linen Vest at 24 points, and repeats on every target. Options: compare per target (a second walk per target prefix), or keep the window rule and say on short targets that stock covers them alone.
 
 **Captured colours: remaining gaps** (found in the STORY-098 review, 2026-10-18; revisit with live captures after go-live): the copied beta has only 26 learned recipes, so captures fill two colour gaps (Smelt Copper, Copper Rod) and no hire or window-25 path becomes complete; starter, training and price evidence still block costs. Four learned recipes contradict their Wowhead colours and await owner review (`python -m brownstone skillups --source forever-us-normal-alliance-addon`). The catalog's `required_skill` 25 for Smelt Copper also looks wrong for Forever (learned and orange at rank 3). `--write` updates only existing picks; a derived intermediate with no pick of its own is listed, not written (adding a pick would make it a selected recipe), so capturing intermediates' colours needs a decision.
-
-**Is it paying off?** (groomed 2026-10-17; the second half of Team's job): profit by activity (crafting, farming, vendoring, auction) per character, in total and per hour played, from the gold ledger (UI-15), item movements (UI-16), farming rates (UI-13) and journal session times. Shown in the character record and as a Team summary. Needs a rule for attributing a crafted sale's profit to the crafting activity and for what counts as time played.
 
 **Farming routes with a node addon** (idea from the product owner, 2026-10-19; not scheduled, after go-live): when STORY-112 says *or farm ≈ H h*, help pick where and how. A node addon such as Gatherer shows ore and herb nodes on the map and minimap; our farming capture (UI-13, STORY-074/075) already records what each loot window gave, when, and a map-percent position cell. Together they could rank spots and routes by measured value per hour, e.g. *Copper Ore: 3 cells in Elwynn, about N nodes per hour on your own runs*, and show how a route's real yield compares with its node count.
 - **First, check:** whether Gatherer (or an alternative) loads on Forever, and whether its SavedVariables hold node positions we can read as data. Gatherer comes from the Auctioneer authors, so treat it like Auctioneer: ideas only, no code, until its licence is checked (AGENTS.md).
