@@ -52,18 +52,18 @@ def evidence(source: Source, snapshot: dict | None = None) -> Evidence:
                     freshness=assess(snapshot, datetime.now(UTC), source['max_age_hours']) if snapshot else None)
 
 
-def _stamp(path: Path) -> tuple:
+def stamp(path: Path) -> tuple:
     stat = path.stat() if path.exists() else None
     return (stat.st_mtime_ns, stat.st_size) if stat else ()
 
 
-def _inputs(source: Source, now: datetime) -> tuple:
+def inputs(source: Source, now: datetime) -> tuple:
     """Everything load_explorer reads: the source, its database, the config folder and the clock bucket."""
     config_files = sorted(p for p in (ROOT / 'config').rglob('*') if p.is_file())
     return (repr(sorted(source.items(), key=lambda kv: kv[0])),
-            _stamp(Path(source['data_dir']) / 'brownstone.duckdb'),
-            _stamp(Path(source['data_dir']) / 'brownstone.duckdb.wal'),  # Unflushed imports.
-            tuple((p.as_posix(), _stamp(p)) for p in config_files),
+            stamp(Path(source['data_dir']) / 'brownstone.duckdb'),
+            stamp(Path(source['data_dir']) / 'brownstone.duckdb.wal'),  # Unflushed imports.
+            tuple((p.as_posix(), stamp(p)) for p in config_files),
             int(now.timestamp() // (CACHE_MINUTES * 60)))
 
 
@@ -72,7 +72,7 @@ def explorer(source: Source) -> dict:
 
     Callers only read the result, so one copy is shared between requests."""
     now = datetime.now(UTC)
-    key = _inputs(source, now)
+    key = inputs(source, now)
     with _lock:  # One build at a time; concurrent requests wait for it rather than repeat it.
         cached = _cache.get(source['source_id'])
         if cached and cached[0] == key:

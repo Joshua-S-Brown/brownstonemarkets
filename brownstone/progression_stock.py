@@ -3,6 +3,7 @@ from fractions import Fraction
 from math import ceil
 
 from . import farming, today_holdings
+from .money import after_cut
 from .today import Ladder
 
 
@@ -88,8 +89,7 @@ def summarize(steps, auction_cut):
                 row['purchased_units'] += material['purchased_units']
     for row in held.values():
         price = row.pop('unit_worth_copper')
-        row['worth_copper'] = (int(price * row['units'] * (1 - Fraction(str(auction_cut))))
-                               if price else None)
+        row['worth_copper'] = after_cut(price, row['units'], auction_cut) if price else None
         row.pop('expected_units', None)
         row['units'] = float(row['units'])
     for row in buys.values():

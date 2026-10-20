@@ -4,13 +4,11 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from app_helpers import api_client
 from test_item_ledger import chat, mail, receive, row, snapshot
 from test_ledger import bags, burst
 from test_stock import fixture
 
-import api
 from api import context
 from api import ledger as adapter
 from brownstone import item_ledger, ledger, ledger_view, stock
@@ -22,9 +20,7 @@ def browser(tmp_path, monkeypatch):
     monkeypatch.setattr(context, "enabled", lambda: [source])
     monkeypatch.setattr(adapter, "_cache", {})
     monkeypatch.setattr(context.recipe_catalogs, "parse_catalogs", lambda _: ([], []))
-    app = FastAPI()
-    api.install(app, tmp_path, "secret")
-    with TestClient(app) as client:
+    with api_client(tmp_path, "secret") as client:
         yield client, source
 
 

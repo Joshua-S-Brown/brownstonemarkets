@@ -22,7 +22,7 @@ def connection(config):
 
 
 def compare(db, config, ids=None):
-    return removed.compare_pair(db, config, removed.scan_pairs(db, config)[0], ids)
+    return removed._compare(db, config, removed.scan_pairs(db, config)[0], ids)
 
 
 def test_identical_reprice_quantity_buyout_and_excluded(tmp_path):
@@ -100,9 +100,6 @@ def test_pairs_gap_eligibility_one_scan_tsm_and_no_bridging(tmp_path):
         history = removed.item_history(db, config, 1)
         assert history['pairs'][0]['skipped'] and not history['pairs'][1]['skipped']
         assert removed.top_removals(db, config, [1])['pair'] == pairs[1]
-        invalid = {**pairs[0], 'earlier': pairs[1]['earlier']}
-        with pytest.raises(ValueError, match='consecutive'):
-            removed.compare_pair(db, config, invalid)
         db.execute("DELETE FROM addon_scans WHERE scan_id='third'")
         assert 'Gap too long' in removed.top_removals(db, config, [1])['note']
         db.execute("DELETE FROM addon_scans WHERE scan_id='old'")

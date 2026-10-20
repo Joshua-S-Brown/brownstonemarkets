@@ -156,7 +156,6 @@ def test_no_catalog_bottom_once_and_empty_catalogs():
     result = hiring.summaries(context())
     assert result['no_catalog'].count('herbalism') == result['no_catalog'].count('skinning') == 1
     assert 'mining' not in result['no_catalog']
-    assert hiring.NO_CATALOG == 'no catalog: gathering income and supply are not modelled'
     assert hiring.summaries(context([], {}))['rows'] == []
 
 

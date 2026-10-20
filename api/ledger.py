@@ -202,7 +202,7 @@ class Ledger(BaseModel):
 
 def cached(chosen):
     now = datetime.now(UTC)
-    stamp = (*context._inputs(chosen, now), context._stamp(stock.targets_path(chosen["data_dir"], chosen["source_id"])))
+    stamp = (*context.inputs(chosen, now), context.stamp(stock.targets_path(chosen["data_dir"], chosen["source_id"])))
     entry = _cache.get(chosen["source_id"])
     if entry is None or entry[0] != stamp:
         catalogs, _ = recipe_catalogs.parse_catalogs(recipe_catalogs.find_catalogs(context.ROOT / "config"))

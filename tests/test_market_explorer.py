@@ -139,8 +139,8 @@ def test_movement_limit_order_identity_dedup_and_missing_changes(monkeypatch):
     catalog = {'items_by_id': dict.fromkeys(range(1, 16))}
     moved = me.scan_movement(None, config, [catalog], NOW)
     assert len(moved['rows']) == 10
-    assert [r['item_id'] for r in moved['rows']] == list(range(14, 4, -1))
-    assert moved['rows'][0]['variant_state'] == 'unresolved'
+    assert [r['item_id'] for r in moved['rows']] == [15, *range(14, 5, -1)]  # An appeared price leads.
+    assert moved['rows'][1]['variant_state'] == 'unresolved'
     comparison['items'] = [missing]
     assert me.scan_movement(None, config, [catalog], NOW)['rows'] == [missing]
 

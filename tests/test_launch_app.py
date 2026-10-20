@@ -133,42 +133,11 @@ def test_fingerprint_covers_surviving_code_without_old_entry(monkeypatch, tmp_pa
         assert launch_app.code_fingerprint() != before
 
 
-@pytest.mark.parametrize('query,target', [
-    ('', '/app/today'), ('source=missing&place=Market', '/app/today'),
-    ('source=test', '/app/today?source=test&view=route'),
-    ('source=test&place=unknown', '/app/today?source=test&view=route'),
-    ('source=test&view=This+session', '/app/today?source=test&view=level-up'),
-    ('source=test&view=Today+plan&tab=Plan', '/app/today?source=test&view=opportunities'),
-    ('source=test&view=bad&tab=Queue', '/app/today?source=test&view=route'),
-    ('source=test&view=opportunities', '/app/today?source=test&view=opportunities'),
-    ('source=test&view=route', '/app/today?source=test&view=route'),
-    ('source=test&view=level-up', '/app/today?source=test&view=level-up'),
-    ('source=test&place=Team', '/app/team?source=test'),
-    ('source=test&place=Stock', '/app/ledger?source=test'),
-    ('source=test&place=Data', '/app/today?source=test&sheet=data'),
-    ('source=test&place=Market&item=123&origin_place=Today&origin_tab=Queue&origin_view=This+session',
-     '/app/market?source=test&inspect=123&origin_place=Today&origin_tab=Queue&origin_view=This+session'),
-    ('source=test&place=Market&item=123&origin_place=Market&origin_item=42&origin_name=Cloth',
-     '/app/market?source=test&inspect=123&origin_place=Market&origin_item=42&origin_name=Cloth'),
-    ('source=test&place=Market&item=123&origin_place=Market&origin_item=-1&origin_name=bad',
-     '/app/market?source=test&inspect=123'),
-    ('source=test&place=Market&origin_place=Today&origin_tab=bad&origin_view=This+session',
-     '/app/market?source=test'),
-])
-def test_legacy_redirect(monkeypatch, tmp_path, query, target):
-    monkeypatch.setattr(brownstone_app.context, 'enabled', lambda: [{'source_id': 'test'}])
+def test_root_opens_today():
     args = argparse.Namespace(native=True, ready_file=None, focus_token='token', code_fingerprint='code')
     with TestClient(brownstone_app.configure_launch(args, 'http://127.0.0.1:1234')) as client:
-        response = client.get('/?' + query, follow_redirects=False)
-        assert response.status_code == 307
-        assert response.headers['location'] == target
-
-
-def test_legacy_redirect_with_unreadable_config(monkeypatch):
-    def broken():
-        raise ValueError('bad config')
-    monkeypatch.setattr(brownstone_app.context, 'enabled', broken)
-    assert brownstone_app.legacy_url('test', 'Market', 2589) == '/app/today'
+        response = client.get('/?source=test&place=Market', follow_redirects=False)
+        assert (response.status_code, response.headers['location']) == (307, '/app/today')
 
 
 @pytest.mark.parametrize('native', [False, True])

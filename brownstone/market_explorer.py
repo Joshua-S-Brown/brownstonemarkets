@@ -9,12 +9,13 @@ from .crafting import basis_prices, evaluate_recipe
 from .deposits import auction_deposit
 from .freshness import assess
 from .metrics import read_scan_metrics
+from .money import after_cut
 from .recipe_graph import RecipeGraph, label_routes, made_by_label, route_catalog
 from .recipe_import import GAME_PATHS
 from .session_options import base_signal
 from .skillups import build_skillups
 from .storage import scope_predicate
-from .today import _net, undercut_price
+from .today import undercut_price
 from .today_characters import project_recipes, recipe_status, team_makeable
 from .today_loading import load_holdings, load_today, load_today_characters
 from .today_settings import TodaySettings
@@ -153,7 +154,9 @@ def scan_movement(db, config, catalogs, now) -> dict:
     comparison = scan_changes.compare_scans(db, config, scans[0]['scan_id'], scans[1]['scan_id'], ids)
     rows = [r for r in comparison['items'] if any(r['earlier'][k] != r['later'][k]
                                                   for k in ('min_buyout', 'units'))]
-    rows.sort(key=lambda r: (-abs(r['change']['min_buyout'] or 0), -abs(r['change']['units'] or 0),
+    # A price or count that appeared or vanished has no change value: it leads, as the largest movement.
+    rows.sort(key=lambda r: (*(key for c in (r['change']['min_buyout'], r['change']['units'])
+                               for key in (c is not None, -abs(c or 0))),
                              r['item_id'], r['variant_state'] or '', r['variant_id'] or ''))
     later = comparison['later']['finished_at'].astimezone(UTC)
     largest: dict[int, dict] = {}
@@ -335,7 +338,7 @@ def material_uses(result, item_id):
         return []
     metric = base_signal(page['metrics'], item_id) or {}
     post = undercut_price(metric.get('min_buyout'), metric.get('max_stack_size'))
-    auction = _net(post, 1, result['config']['auction_cut']) if post is not None else None
+    auction = after_cut(post, 1, result['config']['auction_cut']) if post is not None else None
     vendor = page['vendor_sell']
     vendor = vendor if vendor is not None and vendor > 0 else None
     options = [dict(action='sell', value_copper=auction, reason='' if auction is not None else

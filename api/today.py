@@ -136,7 +136,7 @@ def cached_plan(request, chosen):
     now = datetime.now(UTC)
     path = today_settings.settings_path(chosen['data_dir'], chosen['source_id'])
     # Output state can be sent straight back without rebuilding the same reserved plan.
-    key = (*context._inputs(chosen, now), context._stamp(path))
+    key = (*context.inputs(chosen, now), context.stamp(path))
     with _lock:
         cached = _cache.get(chosen['source_id'])
         identity = plan_identity(request.state)

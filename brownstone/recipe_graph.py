@@ -146,8 +146,3 @@ def made_by_label(step):
     profession = step.get('profession', '').replace('-', ' ').title()
     maker = step.get('made_by')
     return f'{maker}, {profession}' if maker else profession
-
-
-def step_label(step):
-    maker = made_by_label(step)
-    return step["item_name"] + (f" · {maker}" if maker else "")

@@ -5,7 +5,6 @@ without expanding units; the clock and all scoped evidence are supplied by the c
 """
 from bisect import bisect_left, bisect_right
 from collections import Counter
-from decimal import Decimal
 
 from . import sales, today_holdings
 from .action_board import catalog_for_row, compatible_catalogs, rank_catalogs
@@ -13,6 +12,7 @@ from .crafting import basis_prices
 from .deposits import auction_deposit
 from .freshness import assess
 from .markets import MARKET_KEYS
+from .money import after_cut
 from .recipe_graph import RecipeGraph, route_catalog
 from .today_characters import filter_candidates, project_recipes, team_makeable
 from .today_confidence import confidence, purchase_confidence, route_notes
@@ -45,10 +45,6 @@ class Ladder:
         """Unreserved units in complete listings whose unit ceiling is at most price."""
         end = max(start, bisect_right(self.prices, price) - 1)
         return self.units[end] - self.units[start]
-
-
-def _net(price, quantity, auction_cut):
-    return int(Decimal(price * quantity) * (Decimal(1) - Decimal(str(auction_cut))))
 
 
 def _quote(choices, batch, ladders, reserved, holdings=None, row=None):
@@ -215,7 +211,7 @@ def _candidates(catalogs, observations, market, snapshot, now, max_age_hours, au
             if vendor_cap and choice['method'] != 'vendor':
                 choice['vendor_price_cap_copper'] = vendor_cap
             price = sales.get(choice['item_id'])
-            choice['held_unit_copper'] = _net(price, 1, auction_cut) if price else choice['unit_cost_copper']
+            choice['held_unit_copper'] = after_cut(price, 1, auction_cut) if price else choice['unit_cost_copper']
         rows.append({**row, "output_quantity": recipe["output_quantity"],
                      "material_names": {p["item_id"]: catalog["items_by_id"][p["item_id"]]["name"]
                                         for p in [*row["shopping_choices"], *row["holding_steps"]]},
@@ -428,8 +424,8 @@ def _sell(row, metrics, auction_cut, vendor_prices=None):
         undercut = min(undercut, post_cap) // step * step or None
     vendor = (vendor_prices or {}).get(row['output_item_id'])
     vendor = vendor if vendor is not None and vendor > 0 else None
-    vendor_instead = vendor is not None and undercut is not None and _net(undercut, 1, auction_cut) <= vendor
-    profit = (_net(undercut, row["output_quantity"], auction_cut) * row["batch_size"] - row["batch_cost_copper"]
+    vendor_instead = vendor is not None and undercut is not None and after_cut(undercut, 1, auction_cut) <= vendor
+    profit = (after_cut(undercut, row["output_quantity"], auction_cut) * row["batch_size"] - row["batch_cost_copper"]
               if undercut else None)
     if vendor_instead:
         profit = vendor * row['output_quantity'] * row['batch_size'] - row['batch_cost_copper']
@@ -484,7 +480,7 @@ def _held_evidence(crafts, sells, holdings, units, captures, max_age_hours, auct
         for row, sell in zip(crafts, sells, strict=True):
             sell.update(held_outputs=row['held_outputs'],
                         held_value_copper=(sell['vendor_sell_copper'] * sum(u['units'] for u in row['held_outputs'])
-                                           if sell.get('vendor_instead') else _net(sell['undercut_copper'],
+                                           if sell.get('vendor_instead') else after_cut(sell['undercut_copper'],
                                               sum(u['units'] for u in row['held_outputs']),
                                               auction_cut) if sell['undercut_copper'] else None))
             sell['confidence_reasons'] = row['confidence_reasons']
@@ -586,19 +582,6 @@ def apply_removals(plan, removals):
     # Queue lines copy only quantities and costs, so cheap-now metrics are not needed.
     plan["queue"] = session_queue(plan["craft"], _shopping(plan["craft"], None), plan["sell"])
     return plan
-
-
-def purchase_uses(crafts):
-    """Group reserved purchased units by item/route and output, including stack surplus."""
-    uses = {}
-    for row in crafts:
-        for purchase in row['purchases']:
-            if purchase['method'] == 'held':
-                continue
-            outputs = uses.setdefault((purchase['item_id'], purchase['method']), {})
-            name = row['output_name']
-            outputs[name] = outputs.get(name, 0) + purchase['purchased_units']
-    return uses
 
 
 def craft_details(row):

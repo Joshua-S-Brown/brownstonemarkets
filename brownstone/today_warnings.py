@@ -1,11 +1,6 @@
 """Today-only price and removal warnings over supplied UI-10/11 evidence."""
 
 PRICE_NOTE = 'priced at the typical earlier price, not the current lowest'
-REMOVAL_EVIDENCE = (
-    'Removed early is an upper bound on purchases, so zero means nobody bought one in these gaps, '
-    'except a purchase replaced by an identical listing. Time-left bounds are Classic assumptions '
-    'pending a Forever check (UI-10).'
-)
 
 
 def base_signals(result):

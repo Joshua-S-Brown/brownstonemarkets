@@ -9,13 +9,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from app_helpers import api_client, listing_evidence_app
 from app_helpers import app as fixture_app
-from app_helpers import listing_evidence_app
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from test_today import MARKET, NOW, SNAPSHOT, catalog
 
-import api
 from api import today
 from brownstone import today_loading, today_session
 from brownstone.today import apply_removals, build_today, craft_details
@@ -29,9 +26,7 @@ TOKEN = {'X-Brownstone-Token': 'offline-token'}
 def browser(tmp_path, monkeypatch):
     _, source, path = fixture_app(tmp_path, monkeypatch)
     monkeypatch.setattr(today, '_cache', {})
-    server = FastAPI()
-    api.install(server, tmp_path / 'dist', 'offline-token')
-    with TestClient(server) as client:
+    with api_client(tmp_path / 'dist', 'offline-token') as client:
         yield client, source, path
 
 

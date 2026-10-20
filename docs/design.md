@@ -25,7 +25,7 @@ CLI collection bytes are written before validation, so failures stay inspectable
 
 ## App and modules
 
-`brownstone_app.py` owns the plain FastAPI loopback server, legacy URL redirects,
+`brownstone_app.py` owns the plain FastAPI loopback server, the `/` redirect to Today,
 launcher token endpoints and lifecycle. Uvicorn runs on 127.0.0.1; native mode binds
 an ephemeral socket and runs it in a thread while pywebview owns the main thread.
 First load activates the 1280×900 selectable-text window and atomically publishes
@@ -34,8 +34,8 @@ for the five-minute idle stop. URL and navigation rules are UI-07/UI-18.
 
 `launch_app.py` owns native launch, browser fallback and the path/byte fingerprint
 of both entries plus brownstone/views/api Python and web sources. Reuse/restart
-requires authenticated launcher state. `views/today_rows.py` projects framework-free
-rows/wording; the web app owns display and per-tab state.
+requires authenticated launcher state. `views/today_rows.py` holds framework-free
+Today wording; the web app owns display and per-tab state.
 
 Dependencies point inward: entry → views/api → brownstone; brownstone never imports display
 frameworks, views or api. Calculation modules take supplied data/clock and do not download.
@@ -60,7 +60,7 @@ from one loopback FastAPI server, launcher token and pywebview window.
 Flow: page → source-keyed TanStack query → API → projection → model. Writes invalidate source queries.
 Libraries: React/Router, TanStack Query/Table, Radix dialog/popover/tabs/tooltip, cmdk, Recharts.
 CSS modules use shared tokens; fonts ship in `web/public`. Vitest with Testing Library runs offline; `brownstone gates` adds
-`npm run check` (ESLint, `tsc --noEmit`, Vitest, schema currency) once `web/` exists, and CI
+`npm run check` (ESLint, `tsc --noEmit`, Vitest, schema currency), and CI
 runs it after `npm ci`. Money vectors: `tests/fixtures/money_vectors.json`, read by both suites.
 
 Supply chains: `supply_chain.py` projects cached Market routes; `api/chains.py` adapts outputs and forced batches.
@@ -163,7 +163,7 @@ journal/diagnostics/errors. Latest: capture then sequence. Tuples retain nils; n
   separately from invoice gross/deposit/cut/net (rules: UI-14); raw storage is unchanged.
   `today_loading` passes `sales_data` into `build_today` for Today; `sales.combined` attaches scoped
   display evidence before `today_confidence` labels the selected plan. Today v12, no ranking/sizing
-  changes. Sell/table/card share `today_rows.sales_text`. Market's item-only `item_summary` loads
+  changes. Market's item-only `item_summary` loads
   per-character outcomes and scoped unidentified count for Our activity.
   `beta_report` supplies validated matching-house journal and parsed scan names to the same projection;
   `beta_markdown` lists attempts/outcomes including money evidence. No schema/addon changes.
@@ -188,7 +188,7 @@ value 1 means sold awaiting delivery); beta raw evidence remains required.
 
 Rules live in `requirements.md` → UI-10; raw time-left capture remains ADDON-09.
 `removed_listings.scan_pairs` uses `scan_changes.eligible_scans` without bridging eligible scans.
-`compare_pair` validates adjacency and reads only `scan_listings` through `scope_predicate`, scan ID
+`_compare` reads one pair from `scan_pairs` only through `scan_listings`, `scope_predicate`, scan ID
 and snapshot ID. SQL aggregates exact identities/quantities/whole-stack buyouts/time-left buckets,
 then reuses `scan_changes._MATCH_SQL` for legacy compatibility. Item filters retain every identity
 of each selected ID. Python compares key multiplicities and assigns the shortest earlier buckets
@@ -240,7 +240,7 @@ Read-only wrappers load history/selected ladder; SQL groups matching listings by
   chosen shopping leaves, all-craft expansion, cost, net revenue, profit, margin and break-even.
   Optional `forced` item→method overrides flow through the same walker; pure `route_options`
   supplies its buy/vendor/craft candidates. No override preserves existing costs and maker selection.
-- `Decimal` rounds auction cuts.
+- `money.after_cut` floors every sale after the auction cut (whole or expected units); break-even rounds up with `Decimal`.
 - `today_data.read_today_evidence` supplies CRAFT-09 counts separately from costs/ranking,
   scoped by source, full market, scan/snapshot and variant.
 - Discovery supplies `catalog_id` from the selection-file stem; standalone catalogs use
@@ -424,7 +424,6 @@ Rules: `requirements.md` → Today. Framework-free calculations.
   Queue held actions and post annotations survive `apply_removals` rebuilding. Purpose catalog/recipe keys
   resolve to Route stop numbers after gold mail in `queue_with_gold`.
 
-  `purchase_uses(crafts)` groups purchased units per item/route and output (Shopping list For);
   `session_queue` projects reserved shopping, route steps in postorder and posts without re-quoting.
 - **Session.** `today_session.plan_context` fingerprints catalogs, market, snapshot, settings,
   freshness limit, auction cut, Today version, character evidence and holdings (capture identity/counts, not age); a changed context resets
@@ -436,7 +435,6 @@ Rules: `requirements.md` → Today. Framework-free calculations.
   `queue_state` checks identity; `route_stops` groups adjacent Queue lines. The web keeps
   tab/source state in sessionStorage. `api/today.py` caches inputs like `context.explorer`, plus
   settings and state minus ticks/Hide Low; Level up is lazy. Our move reuses Today's query.
-  Legacy URLs: `brownstone_app.legacy_url`.
 
 
 ### This session (STORY-063)
@@ -614,7 +612,7 @@ UI-09 defines ordering, distinct-item limit and handling of missing evidence.
 `item_chain` and `item_activity` project web contracts through `api/market.py`.
 `market_presentation.level_items` reuses progression rank evidence and catalog skill-up bands;
 UI-09 defines the default filter. UI-11 defines card selection before its five-row limit.
-Legacy `/` item URLs redirect to `/app/market`; the inspector retains UI-07 origins/back stack.
+The inspector retains UI-07 origins/back stack.
 
 The palette renders up to 50 identity hits; the grid searches every snapshot item by name/ID. IDs, incompatible catalog versions,
 expanded quantities and comparison evidence remain on demand. No writes.

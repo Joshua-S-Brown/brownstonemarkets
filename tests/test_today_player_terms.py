@@ -91,29 +91,10 @@ def test_gold_spending_excludes_held_and_reserves_donors_own_crafts(monkeypatch)
         {'stage': 'gold mail', 'name': 'A', 'character': 'B', 'copper': 90}]
 
 
-def test_money_projections_and_unknowns():
-    from brownstone.today import craft_details
-    from views.today_rows import buy_row, craft_row, material_row, sell_row, vendor_row
-
+def test_buy_and_sell_flags_stay_booleans():
     result = plan()
-    craft, sell = result['craft'][0], result['sell'][0]
-    rows = [craft_row(craft, sell), sell_row(sell), buy_row(result['buy'][0], {}),
-            material_row(craft_details(craft)['materials'][0]), vendor_row({
-                'item_id': 1, 'purchased_units': 2, 'cost_copper': 1234, 'vendor_sell_copper': 700,
-                'highest_unit_copper': 617, 'gain_copper': 166, 'stale': False}, {})]
-    for row in rows:
-        for key, value in row.items():
-            assert '(g)' not in key
-            if key.endswith('_copper'):
-                assert type(value) is int or value is None
-            else:
-                assert not isinstance(value, (float, bool))
-    assert rows[2]['Cheap now'] == 'yes'
-    assert rows[1]['Thin'] == 'no'
-    assert isinstance(rows[1]['Warnings'], str)
-    sell['undercut_batch_profit_copper'] = None
-    assert sell_row(sell)['Profit at undercut for batch'] == 'unknown'
-    assert craft_row(craft, sell)['Profit basis'] == 'at cautious sale price'
+    assert result['buy'][0]['cheap_now'] is True
+    assert result['sell'][0]['thin'] is False
 
 
 def test_merge_level_and_train_require_same_tier_and_kind():

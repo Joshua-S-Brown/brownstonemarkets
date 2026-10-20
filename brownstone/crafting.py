@@ -4,8 +4,10 @@ from __future__ import annotations
 import tomllib
 from collections import defaultdict
 from collections.abc import Mapping
-from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
+from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
+
+from .money import after_cut
 
 ROLES = {"material", "vendor_material", "intermediate", "finished"}
 
@@ -338,8 +340,7 @@ def evaluate_recipe(catalog: dict, recipe_id: int, prices: dict[int, int], aucti
     valid_sale = _positive(sale)
     valid = not missing and valid_sale
     retained = Decimal(1) - Decimal(str(auction_cut))
-    net_revenue = (_to_copper(Decimal(sale * recipe["output_quantity"]) * retained, ROUND_FLOOR)
-                   if valid_sale else None)
+    net_revenue = after_cut(sale, recipe["output_quantity"], auction_cut) if valid_sale and sale is not None else None
     break_even = (_to_copper(Decimal(total) / (retained * recipe["output_quantity"]), ROUND_CEILING)
                   if not missing else None)
     profit = net_revenue - total if valid and net_revenue is not None else None

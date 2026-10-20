@@ -13,11 +13,9 @@ from brownstone.today import (
     _quote,
     apply_removals,
     craft_details,
-    purchase_uses,
 )
 from brownstone.today_holdings import gold_cost
 from brownstone.today_settings import TodaySettings
-from views.today_rows import buy_row
 
 
 def vendor_catalog():
@@ -53,12 +51,7 @@ def test_split_purchases_reconcile_buy_details_queue_removals_and_display():
     assert p['today_version'] == TODAY_VERSION == 15
     assert gold_cost(craft['purchases']) == p['shopping_total_copper'] == 255
     assert sum(r['cost_copper'] for r in craft_details(craft)['materials']) == 255
-    uses = purchase_uses(p['craft'])
-    assert uses[(1, 'buy')] == {'Fixture 3': 6}
-    assert uses[(1, 'vendor')] == {'Fixture 3': 4}
-    rendered = [buy_row(r, {1: 'Cloth', 2: 'Thread'}) for r in p['buy'] if r['item_id'] == 1]
-    assert {r['Route'] for r in rendered} == {'buy', 'vendor'}
-    assert {r['Purchased units'] for r in rendered} == {6, 4}
+    assert {(r['method'], r['purchased_units']) for r in p['buy'] if r['item_id'] == 1} == {('buy', 6), ('vendor', 4)}
     before = deepcopy(p['queue'])
     apply_removals(p, {3: {'pairs': 3, 'units': 0}})
     lines = [r for r in p['queue']['lines'] if r.get('item_id') == 1]

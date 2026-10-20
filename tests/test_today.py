@@ -568,7 +568,6 @@ def test_deposits_cover_crafted_and_held_without_affecting_plan(hours, stack):
     from brownstone.deposits import auction_deposit
     from brownstone.today import apply_removals
     from brownstone.today_session import queue_line_text, queue_total
-    from views.today_rows import sell_row
 
     args = dict(metrics={3: {'min_buyout': 200, 'listings': 3, 'units': 8,
                              'largest_stack_units': 3, 'max_stack_size': stack}},
@@ -582,8 +581,6 @@ def test_deposits_cover_crafted_and_held_without_affecting_plan(hours, stack):
     sell = result['sell'][0]
     deposit = auction_deposit(40, result['craft'][0]['batch_size'] + 2, stack, hours, 'alliance')
     assert sell['deposit_copper'] == deposit
-    assert sell_row(sell)['Deposit_copper'] == deposit
-    assert 'lost if it expires' in sell_row(sell)['Deposit']
     assert result['queue']['deposits_to_post_copper'] == deposit
     assert f'Deposits to post: {format_money(deposit)}' in queue_total(result['queue'])
     before = result['queue']
@@ -596,11 +593,9 @@ def test_deposits_cover_crafted_and_held_without_affecting_plan(hours, stack):
 
 def test_unknown_deposit_propagates_to_sell_queue_and_total():
     from brownstone.today_session import queue_line_text, queue_total
-    from views.today_rows import sell_row
 
     result = plan()
     assert result['sell'][0]['deposit_copper'] is None
-    assert 'deposit unknown' in sell_row(result['sell'][0])['Deposit']
     assert 'deposit unknown' in queue_line_text(result['queue']['lines'][-1])
     assert 'Deposits to post: unknown' in queue_total(result['queue'])
     assert result['queue']['deposits_to_post_copper'] is None
@@ -646,13 +641,11 @@ def test_neutral_and_mixed_unknown_deposits_keep_total_unknown():
 
 def test_measured_zero_deposit_displays_zero_and_empty_queue_sums_to_zero():
     from brownstone.today_session import queue_line_text, queue_total
-    from views.today_rows import sell_row
 
     result = plan(TodaySettings(10000, 1, 'fixed', post_duration_hours=2), vendor_prices={3: 11},
                   metrics={3: {'min_buyout': 200, 'listings': 3, 'units': 8,
                                'largest_stack_units': 3, 'max_stack_size': 1}})
-    assert sell_row(result['sell'][0])['Deposit_copper'] == 0
-    assert sell_row(result['sell'][0])['Deposit'] == '0c at 2h, lost if it expires'
+    assert result['sell'][0]['deposit_copper'] == 0
     assert 'deposit 0c' in queue_line_text(result['queue']['lines'][-1])
     assert 'Deposits to post: 0c' in queue_total(result['queue'])
     assert plan(TodaySettings())['queue']['deposits_to_post_copper'] == 0
@@ -688,7 +681,6 @@ def test_vendor_floor_after_cut_and_board_value(stack, lowest, vendor, fallback)
     from test_today_holdings import evidence
 
     from brownstone.today_session import headline_profit, queue_line_text, queue_total, route_stops
-    from views.today_rows import sell_row
 
     c = catalog()
     c['recipes_by_id'][30]['output_quantity'] = 2
@@ -709,7 +701,6 @@ def test_vendor_floor_after_cut_and_board_value(stack, lowest, vendor, fallback)
     assert queue['expected_profit_copper'] == sell['undercut_batch_profit_copper']
     assert queue['deposits_to_post_copper'] == (0 if fallback else sell['deposit_copper'])
     assert ('vendor it instead' in queue_line_text(line)) is fallback
-    assert ('vendor it instead' in sell_row(sell)['Action']) is fallback
     assert ('at vendor value' in headline_profit(craft, sell)['profit_basis']) is fallback
     if fallback:
         assert line['unit_copper'] == vendor

@@ -3,12 +3,9 @@ from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from app_helpers import team_app
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from app_helpers import api_client, team_app
 from test_today_characters import CHARACTER
 
-import api
 from api import context, team
 from brownstone import character_snapshots, hiring, team_plan, team_view, today_loading, today_session
 from brownstone.today_settings import TodaySettings
@@ -20,9 +17,7 @@ def browser(tmp_path, monkeypatch):
     monkeypatch.setattr(team, '_cache', {})
     monkeypatch.setattr(context, 'ROOT', tmp_path)
     (tmp_path / 'config').mkdir(exist_ok=True)
-    server = FastAPI()
-    api.install(server, tmp_path / 'dist', 'offline-token')
-    with TestClient(server) as client:
+    with api_client(tmp_path / 'dist', 'offline-token') as client:
         yield client, source, catalog, data
 
 
@@ -147,8 +142,8 @@ def test_one_board_per_window_lazy_hire_detail_and_invalidation(browser, monkeyp
     get(browser, 'team/hire/tailoring')
     assert len(detail_calls) == 1
     assert get(browser, 'team/hire/unknown').status_code == 404
-    original_inputs = context._inputs
-    monkeypatch.setattr(context, '_inputs', lambda *args: (*original_inputs(*args), 'changed-config'))
+    original_inputs = context.inputs
+    monkeypatch.setattr(context, 'inputs', lambda *args: (*original_inputs(*args), 'changed-config'))
     get(browser)
     assert len(board_calls) == 3
     path = browser[1]['data_dir'] / 'brownstone.duckdb'

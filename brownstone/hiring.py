@@ -9,7 +9,6 @@ from .session_options import NEXT_TIER
 
 CAPS = (*NEXT_TIER, 300)
 TIER_FEES = 'tier fees not included (unknown)'
-NO_CATALOG = 'no catalog: gathering income and supply are not modelled'
 SECONDARY = {185, 129, 356}  # Cooking, First Aid, Fishing: no primary slot.
 # Slot-only mappings: CRAFT-13's Classic skill-page evidence; other IDs reuse Character eligibility.
 SKILL_IDS = today_characters.PROFESSION_SKILL_IDS | {'herbalism': 182, 'skinning': 393, 'fishing': 356}

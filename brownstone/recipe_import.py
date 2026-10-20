@@ -30,8 +30,7 @@ from .crafting import (
 )
 
 GAME_PATHS = {"classic": "classic", "forever": "forever"}  # Catalog game_version -> Wowhead path segment.
-# Wowhead lists Cooking and First Aid as secondary skills; every other crafting profession under professions.
-SECONDARY_SKILLS = frozenset({"cooking", "first-aid"})
+# Wowhead lists Cooking and First Aid under secondary-skills; every other crafting profession under professions.
 _CANONICAL = re.compile(r'<link rel="canonical" href="(https://www\.wowhead\.com/([a-z-]+)/spells/'
                         r'(?:professions|secondary-skills)/([a-z-]+))">')
 _NOT_A_LIST = ("Not a Wowhead profession spell list page (no canonical .../spells/professions/... or "

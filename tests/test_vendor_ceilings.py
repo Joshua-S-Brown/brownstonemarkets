@@ -11,7 +11,7 @@ from brownstone.action_board import rank_catalogs
 from brownstone.crafting import evaluate_recipe, parse_recipe_catalog
 from brownstone.recipe_catalogs import find_catalogs, parse_catalogs
 from brownstone.recipe_import import _catalog_item, build_catalog, dumps_catalog
-from views.today_rows import craft_row, sell_row, vendor_cap_label
+from views.today_rows import vendor_cap_label
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -86,7 +86,6 @@ def test_crafted_vendor_output_sale_post_and_labels_are_capped():
     assert row['profit_by_basis'] == {'cautious': 67, 'listed': 87}
     assert row['batch_profit_copper'] == sell['undercut_batch_profit_copper']
     assert vendor_cap_label(row) == vendor_cap_label(sell) == 'capped at vendor price 1s 24c'
-    assert craft_row(row, sell)['Vendor ceiling'] == sell_row(sell)['Vendor ceiling'] == vendor_cap_label(row)
     assert c['items_by_id'][3]['role'] == 'finished'
     assert c['recipes_by_id'][30]['inputs'][0]['quantity'] == 2
     board = rank_catalogs([c], {1: {'min_buyout': 20}, 3: {'min_buyout': 200}},
@@ -184,7 +183,7 @@ def test_label_only_when_vendor_price_lowered_the_value():
     p = plan(catalogs=[c])
     row, sell = p['craft'][0], p['sell'][0]
     assert row['sale_price_copper'] == 200 and sell['undercut_copper'] == 199
-    assert vendor_cap_label(row) == vendor_cap_label(sell) == craft_row(row, sell)['Vendor ceiling'] == ''
+    assert vendor_cap_label(row) == vendor_cap_label(sell) == ''
     c['items_by_id'][3]['vendor_price_copper'] = 200
     sell = plan(catalogs=[c])['sell'][0]
     assert sell['undercut_copper'] == 199 and vendor_cap_label(sell) == ''

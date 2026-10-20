@@ -11,7 +11,6 @@ from brownstone.today import TODAY_VERSION, _batch, _candidates, _quote, apply_r
 from brownstone.today_characters import project_recipes
 from brownstone.today_session import plan_context, queue_line_text
 from brownstone.today_settings import TodaySettings
-from views.today_rows import material_card_rows, sell_row
 
 
 def evidence(*rows, age=1, unknown_bank=False):
@@ -79,7 +78,7 @@ def test_leaf_reduces_gold_but_held_value_counts_in_profit():
     assert result['shopping_total_copper'] == result['queue']['gold_needed_copper'] == 10
     assert [r['item_id'] for r in result['buy']] == [2]
     assert result['sell'][0]['undercut_batch_profit_copper'] == 161
-    assert material_card_rows(craft_details(row)['materials'])[0]['Cost'] == 'worth 18c if sold'
+    assert [(m['method'], m['cost_copper']) for m in craft_details(row)['materials']][0] == ('held', 18)
 
 
 @pytest.mark.parametrize('yield_units,count,used,crafts,leaf', [(1, 2, 2, 0, 0), (2, 1, 0, 1, 4),
@@ -199,8 +198,7 @@ def test_held_outputs_separate_value_without_profit_credit():
     result = plan(settings, holdings_data=evidence((3, 2, 'Basilly', 'bank')))
     sell = result['sell'][0]
     assert sell['held_value_copper'] == 378
-    assert sell_row(sell)['Held by'] == 'Basilly (bank): 2'
-    assert sell_row(sell)['Held units'] == 2
+    assert [(u['character'], u['kind'], u['units']) for u in sell['held_outputs']] == [('Basilly', 'bank', 2)]
     assert 'post 1 crafted + 2 held' in queue_line_text(result['queue']['lines'][-1])
     assert result['queue']['expected_profit_copper'] == baseline['queue']['expected_profit_copper']
     assert result['craft'][0]['batch_profit_copper'] == baseline['craft'][0]['batch_profit_copper']

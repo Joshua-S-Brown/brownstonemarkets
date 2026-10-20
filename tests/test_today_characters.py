@@ -14,7 +14,6 @@ from brownstone.today_characters import (
     resolve_character,
 )
 from brownstone.today_settings import TodaySettings, load_settings, save_settings
-from views.today_rows import _character_columns
 
 CHARACTER = ("Basilly", "Beta", "Alliance")
 
@@ -87,10 +86,10 @@ def test_training_cost_display_not_subtracted_and_unknown_cost():
     assert without_makers(result["queue"]) == without_makers(original["queue"])
     assert result["buy"] == original["buy"]
     assert next(line for line in result["queue"]["lines"] if line["stage"] == "craft")["made_by"] == "Basilly"
-    assert _character_columns(result["craft"][0]) == {"Can make": "Train now", "Learning": "Training: 1s"}
+    assert (result["craft"][0]["craft_status"], result["craft"][0]["training_cost_copper"]) == ("Train now", 100)
     c["recipes_by_id"][30].pop("training_cost_copper")
     result = plan(settings, catalogs=[c], character_data={CHARACTER: state()})
-    assert _character_columns(result["craft"][0])["Learning"] == "Training: cost unknown"
+    assert result["craft"][0]["training_cost_copper"] is None
 
 
 def test_filter_before_plan_reservations_and_queue_unknown_kept():
@@ -123,7 +122,7 @@ def test_who_can_make_it_and_missing_character_fallback():
     assert resolve_character(("Gone", "Beta", "Alliance"), data) is None
     assert len(available_characters(data)) == 3
     result = plan(catalogs=[c], character_data=data)
-    assert _character_columns(result["craft"][0])["Who can make it"] == "Basilly, Other"
+    assert result["craft"][0]["who_can_make_it"] == ["Basilly", "Other"]
 
 
 def test_catalog_differences_optional_and_legacy_reagents():

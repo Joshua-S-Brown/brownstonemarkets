@@ -9,45 +9,16 @@ import threading
 import time
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from urllib.parse import urlencode
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from api import context, install
+from api import install
 from api.presence import connected
 from brownstone import config as configuration
 
 ROOT = Path(__file__).resolve().parent
-
-
-def legacy_url(source='', place='Today', item=None, view='', tab='Craft', origin_place='',
-               origin_tab='', origin_view='', origin_item='', origin_name=''):
-    try:
-        known = any(s['source_id'] == source for s in context.enabled())
-    except (OSError, ValueError):  # The web app explains an unreadable config.
-        known = False
-    if not source or not known:
-        return '/app/today'
-    values = {'source': source}
-    target = {'Market': 'market', 'Team': 'team', 'Stock': 'ledger'}.get(place, 'today')
-    if place == 'Market':
-        if item is not None:
-            values['inspect'] = item
-        if (origin_place == 'Today' and origin_tab in ('Plan', 'Shopping list', 'Sell', 'Queue', 'Extras')
-                and origin_view in ('Today plan', 'This session')):
-            values.update(origin_place=origin_place, origin_tab=origin_tab, origin_view=origin_view)
-        elif (origin_place == 'Market' and origin_item.isascii() and origin_item.isdecimal()
-              and len(origin_item) <= 10 and 0 < int(origin_item) < 2**32 and origin_name.strip()):
-            values.update(origin_place=origin_place, origin_item=origin_item, origin_name=origin_name[:200])
-    elif place == 'Data':
-        values['sheet'] = 'data'
-    elif target == 'today':
-        values['view'] = view if view in ('route', 'opportunities', 'level-up') else (
-            'level-up' if view == 'This session' else
-            'opportunities' if view == 'Today plan' and tab in ('Craft', 'Plan') else 'route')
-    return '/app/' + target + '?' + urlencode(values)
 
 
 class BrowserIdle:
@@ -120,11 +91,8 @@ def configure_launch(args, url):
     install(app, ROOT / 'web/dist', args.focus_token)
 
     @app.get('/', include_in_schema=False)
-    def redirect(source: str = '', place: str = 'Today', item: int | None = None, view: str = '',
-                 tab: str = 'Craft', origin_place: str = '', origin_tab: str = '', origin_view: str = '',
-                 origin_item: str = '', origin_name: str = ''):
-        return RedirectResponse(legacy_url(source, place, item, view, tab, origin_place, origin_tab,
-                                           origin_view, origin_item, origin_name))
+    def redirect():
+        return RedirectResponse('/app/today')
 
     @app.post('/_brownstone/stop', include_in_schema=False)
     async def stop(token: str = ''):

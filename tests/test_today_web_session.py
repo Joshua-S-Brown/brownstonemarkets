@@ -68,11 +68,12 @@ def test_same_profit_reserved_materials_sales_and_vendor_evidence():
     from test_today import catalog
     data = sales.project([*posted(item=3, price=18), invoice(count=3, total=54, cut=2)], {3: {'Linen Cloth'}})
     result = plan(sales_data=data)
-    assert today_rows.sales_text(result['sell'][0]['your_sales']) == '3 of 3 sold · 17c each after cut'
+    sales_row = result['sell'][0]['your_sales']
+    assert (sales_row['sold'], sales_row['resolved'], sales_row['average_copper']) == (3, 3, 17)
     c = catalog()
     c['items_by_id'][3]['vendor_price_copper'] = 124
     result = plan(catalogs=[c])
-    assert today_rows.sell_row(result['sell'][0])['Vendor ceiling'] == 'capped at vendor price 1s 24c'
+    assert today_rows.vendor_cap_label(result['sell'][0]) == 'capped at vendor price 1s 24c'
     for listings in (True, False):
         result = plan(**({} if listings else {'listings': None, 'metrics': None}))
         original = deepcopy(result)
@@ -94,7 +95,6 @@ def test_cross_profession_queue_postorder_names_and_context_reset():
     texts = [today_session.queue_line(line) for line in result['queue']['lines'] if line['stage'] == 'craft']
     assert 'Keenagen, Mining' in texts[0] and 'Armorer, Blacksmithing' in texts[1]
     assert 'Basilly, Tailoring' in texts[2]
-    assert today_rows.PLAN_RESET == today_session.PLAN_RESET
     state['context'] = 'old'
     state['ticks'] = {'0': True}
     _, changed, note = today_session.session_plan(args,state)

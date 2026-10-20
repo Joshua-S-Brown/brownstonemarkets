@@ -1,12 +1,19 @@
 """Money standard: store and calculate integer copper; display gold.
 
-Tables show decimal gold (four places, so one copper is exact and columns sort numerically).
+Reports show decimal gold where a number column is needed (``to_gold``).
 Headline numbers and prose use the in-game ``12g 34s 56c`` form.
 """
 
+from fractions import Fraction
+from math import floor
+
 COPPER_PER_SILVER = 100
 COPPER_PER_GOLD = 10_000
-GOLD_TABLE_FORMAT = "%.4f"
+
+
+def after_cut(price: int, quantity: int | Fraction, auction_cut: float) -> int:
+    """Sale proceeds after the auction house cut, floored to whole copper; ``quantity`` may be expected units."""
+    return floor(price * Fraction(quantity) * (1 - Fraction(str(auction_cut))))
 
 
 def to_gold(copper: int | None) -> float | None:

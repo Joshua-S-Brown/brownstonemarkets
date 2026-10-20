@@ -83,14 +83,8 @@ def _classify(buckets, removed, gap):
     return counts, chosen
 
 
-def compare_pair(db, config, pair, item_ids=None) -> dict:
-    """Calculate an adjacent eligible pair only; excessive gaps carry no numeric evidence."""
-    if pair not in scan_pairs(db, config):
-        raise ValueError('Choose consecutive eligible scans from the selected source and full market')
-    return _compare(db, config, pair, item_ids)
-
-
 def _compare(db, config, pair, item_ids=None) -> dict:
+    """Compare one adjacent eligible pair; excessive gaps carry no numeric evidence."""
     if pair['skipped']:
         return {**pair, 'items': []}
     items: dict = {}

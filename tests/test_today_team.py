@@ -14,7 +14,6 @@ from brownstone.pipeline import import_scans
 from brownstone.professions import latest_data
 from brownstone.today_characters import NO_CHARACTER_EVIDENCE, PROFESSION_SKILL_IDS, recipe_status
 from brownstone.today_settings import TodaySettings, load_settings, save_settings
-from views.today_rows import _character_columns
 
 
 def skills_state(ids=(), *, modern=True, incomplete=False):
@@ -82,7 +81,7 @@ def test_team_union_names_bags_only_and_unchanged_reservations():
     data = {CHARACTER: state(learned=True), other: skills_state()}
     team = plan(catalogs=[c], character_data=data)
     selected = plan(TodaySettings(10000, 1, 'fixed', character=CHARACTER), catalogs=[c], character_data=data)
-    assert _character_columns(team['craft'][0]) == {'Who can make it': 'Basilly'}
+    assert 'craft_status' not in team['craft'][0] and team['craft'][0]['who_can_make_it'] == ['Basilly']
     for field in ('buy', 'sell', 'shopping_total_copper', 'queue'):
         assert team[field] == selected[field]
     assert plan(TodaySettings(10000, 1, 'fixed', character=other),
@@ -102,7 +101,6 @@ def test_unknown_switch_and_no_character_fallback():
     assert result['hidden'] == {'unknown for every character': 1}
     included = plan(replace(settings, include_unknown=True), character_data=unknown)
     assert included['craft'][0]['craft_status'] == 'Unknown'
-    assert _character_columns(included['craft'][0])['Can make'] == 'Unknown'
     assert included['today_version'] == 15
     excluded = plan(replace(settings, include_unknown=True), character_data={CHARACTER: skills_state()})
     assert not excluded['craft'] and excluded['hidden'] == {'no character has this profession': 1}

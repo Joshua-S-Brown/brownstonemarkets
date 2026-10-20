@@ -14,7 +14,6 @@ from brownstone.beta_markdown import _your_sales
 from brownstone.config import _validate_flood, build_source
 from brownstone.markets import MARKET_KEYS
 from brownstone.storage import ensure_schema
-from views.today_rows import sales_text, sell_row
 
 FIXTURES = Path(__file__).parent / 'fixtures' / 'sales'
 KEY = ('Fixture', 'Fixture Realm', 'Alliance')
@@ -162,13 +161,12 @@ def test_returns_rate_rounding_runs_reset_and_name_from_attachment():
     x = sales.project(records)
     row = x['items'][0]
     assert (row['expired'], row['cancelled'], row['expiry_run']) == (2, 2, 3)
-    assert sales_text(row) == '0 of 4 sold'
+    assert (row['sold'], row['resolved']) == (0, 4)
     records.append(invoice(count=3, total=132, cut=6, at=2300))
     row = sales.project(records)['items'][0]
     assert (row['sold'], row['resolved'], row['average_copper'], row['expiry_run']) == (3, 7, 42, 0)
     assert row['newest_sale'] == 2300
-    assert sales_text(row) == '3 of 7 sold · 42c each after cut'
-    assert sales_text(sales.combined(sales.project(posted()), 2589)) == 'none resolved yet'
+    assert not (sales.combined(sales.project(posted()), 2589) or {}).get('resolved')
 
 
 def test_today_display_only_low_reason_and_character_aggregation():
@@ -179,7 +177,7 @@ def test_today_display_only_low_reason_and_character_aggregation():
     assert before['shopping_total_copper'] == after['shopping_total_copper']
     assert after['sell'][0]['confidence'] == 'Low'
     assert 'expired 3 times running' in after['craft'][0]['confidence_reasons']
-    assert sell_row(after['sell'][0])['Your sales'] == '0 of 3 sold'
+    assert (after['sell'][0]['your_sales']['sold'], after['sell'][0]['your_sales']['resolved']) == (0, 3)
     assert sales.combined(data, 3, ('Other', 'Fixture Realm', 'Alliance'))['resolved'] == 0
     assert sales.combined(data, 3, KEY)['expiry_run'] == 3
     higher = plan(sales_data=data, market={**MARKET, 'max_expiries': 4})

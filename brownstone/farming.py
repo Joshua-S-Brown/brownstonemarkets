@@ -4,6 +4,8 @@ from collections import Counter, defaultdict
 from fractions import Fraction
 from statistics import median
 
+from .money import after_cut
+
 ITEM = re.compile(r'\|Hitem:(\d+)')
 QUANTITY = re.compile(r'\|h(?:\|r)?\s*x(\d+)\s*[.!]?\s*$')
 
@@ -141,7 +143,7 @@ def valued(history, sell_prices, signals, auction_cut, vendor_prices=None):
         price = price if price is not None and price > 0 else None
         signal = base_signal(signals, row['item_id'])
         typical = signal['overshoot'].get('typical_copper') if signal else None
-        value = int(row['units_per_hour'] * price * (1 - Fraction(str(auction_cut)))) if price else None
+        value = after_cut(price, row['units_per_hour'], auction_cut) if price else None
         rows.append(row | {'item_name': signal.get('item_name') if signal else None, 'sell_price_copper': price,
                            'value_per_hour_copper': value,
                            'typical_price_copper': typical})
@@ -189,7 +191,7 @@ def _spot_item(item, units, sell_prices, vendor_prices, cut):
     vendor = vendor_prices.get(item)
     if price is not None and price > 0:
         return {'item_id': item, 'units': units, 'basis': 'auction', 'unit_copper': price,
-                'value_copper': int(units * price * (1 - cut))}
+                'value_copper': after_cut(price, units, cut)}
     if vendor is not None and vendor > 0:
         return {'item_id': item, 'units': units, 'basis': 'vendor', 'unit_copper': vendor,
                 'value_copper': units * vendor}
@@ -202,7 +204,7 @@ def _value_spot(spot, sell_prices, vendor_prices, auction_cut):
     disagreements = [{'item_id': item, 'scan_copper': vendor_prices[item], 'loot_copper': price}
                      for item, values in sorted(spot.get('loot_vendor_observations', {}).items()) for price in values
                      if _positive(vendor_prices.get(item)) and vendor_prices[item] != price]
-    items = [_spot_item(item, units, sell_prices, prices, Fraction(str(auction_cut)))
+    items = [_spot_item(item, units, sell_prices, prices, auction_cut)
              for item, units in sorted(spot['items'].items())]
     auction = sum(r['value_copper'] for r in items if r['basis'] == 'auction')
     vendor = sum(r['value_copper'] for r in items if r['basis'] == 'vendor')

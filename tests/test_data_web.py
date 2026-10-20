@@ -6,12 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 import duckdb
 import pytest
-from app_helpers import preview_addon
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from app_helpers import api_client, preview_addon
 from test_scans import finished_now, listing, scan, write_scans
 
-import api
 from api import context, data
 from brownstone import cli, import_review, pipeline, scan_inputs
 
@@ -21,9 +18,7 @@ def browser(tmp_path, monkeypatch):
     _, source = preview_addon(tmp_path, monkeypatch)
     monkeypatch.setattr(data, "_registry", {})
     monkeypatch.setattr(data, "_writer", threading.Lock())
-    app = FastAPI()
-    api.install(app, tmp_path, "secret")
-    with TestClient(app) as client:
+    with api_client(tmp_path, "secret") as client:
         yield client, source
 
 

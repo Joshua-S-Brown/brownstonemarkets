@@ -351,14 +351,14 @@ def build(chosen, window, now):
 
 def current(chosen):
     """Any build of this source in the current input generation; hire detail does not depend on the window."""
-    stamp = context._inputs(chosen, datetime.now(UTC))
+    stamp = context.inputs(chosen, datetime.now(UTC))
     return next((entry for (source, _), (seen, entry) in _cache.items()
                  if source == chosen['source_id'] and seen == stamp), None)
 
 
 def cached(chosen, window):
     now = datetime.now(UTC)
-    stamp = context._inputs(chosen, now)
+    stamp = context.inputs(chosen, now)
     key = (chosen['source_id'], window)
     entry = _cache.get(key)
     if entry and entry[0] == stamp:

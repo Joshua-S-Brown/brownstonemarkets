@@ -2,8 +2,7 @@
 from datetime import UTC, datetime
 
 from . import action_board, hiring, progression, recipe_catalogs, skillups, today_characters
-from .money import format_money
-from .today import _net
+from .money import after_cut, format_money
 from .today_characters import available_characters
 from .today_funds import recorded_balances
 
@@ -173,7 +172,8 @@ def character_holdings(items, captures, plan, stops, prices, vendor_prices, auct
         # Tonight's Route use or mail outranks a best-use suggestion.
         action = own or mail or _best_use((uses or {}).get(item['item_id'], [])) if base else None
         if not action:
-            action = 'sell' if price is not None and vendor is not None and _net(price, 1, auction_cut) > vendor else (
+            sells = price is not None and vendor is not None and after_cut(price, 1, auction_cut) > vendor
+            action = 'sell' if sells else (
                 ('vendor it instead' if price is not None else 'vendor') if vendor else 'keep')
         rows.append(item | dict(vendor_copper=vendor, unit_copper=price,
                                 value_copper=price * item['units'] if price is not None else None,

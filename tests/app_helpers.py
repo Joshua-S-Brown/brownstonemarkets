@@ -1,17 +1,30 @@
-"""Framework-free synthetic app evidence shared by offline tests."""
+"""Synthetic app evidence and an offline API client shared by tests."""
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from conftest import make_source
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from test_progression import evidence, progression_catalog
 from test_today import catalog
 from test_today_characters import CHARACTER
 
+import api
 from brownstone.config import read_sources
 from brownstone.pipeline import run
 from brownstone.today_settings import TodaySettings, save_settings, settings_path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@contextmanager
+def api_client(dist, token='offline-token'):
+    """The installed API and web routes in a test client, as the launcher serves them."""
+    server = FastAPI()
+    api.install(server, dist, token)
+    with TestClient(server) as client:
+        yield client
 
 def app(tmp_path, monkeypatch, *, stale=False, corrupt=False):
     source = make_source(tmp_path / 'data', game_version='classic', realm='mankrik', faction='alliance',
